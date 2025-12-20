@@ -1,0 +1,37 @@
+// import animationData from "@/Components/widgets/msoeawqm.json";
+// import animationData from "@/Components/widgets/USA.json";
+// import animationData from "@/Components/widgets/adwosptt.json"; //Ancora
+// import animationData from "@/Components/widgets/auvicynv.json"; //Cubo girando
+// import animationData from "@/Components/widgets/cnyeuzxc.json"; // Telefone
+// import animationData from "@/Components/widgets/dklbhvrt.json"; //Usuário
+// import animationData from "@/Components/widgets/etwtznjn.json"; //Estrelas
+// import animationData from "@/Components/widgets/fhtaantg.json"; //Mala
+// import animationData from "@/Components/widgets/gsqxdxog.json"; //Lixeira
+// import animationData from "@/Components/widgets/hfmdczge.json"; //Banco
+// import animationData from "@/Components/widgets/hrqwmuhr.json"; //Deslike
+// import animationData from "@/Components/widgets/hzomhqxz.json"; // Xicara de Cha
+// import animationData from "@/Components/widgets/itykargr.json"; //Caixa de entrada
+// import animationData from "@/Components/widgets/kbtmbyzy.json"; //Relogio
+// import animationData from "@/Components/widgets/kkcllwsu.json"; // Coração
+// import animationData from "@/Components/widgets/lupuorrc.json"; //Sucesso
+// import animationData from "@/Components/widgets/msoeawqm.json"; //Lupa
+// import animationData from "@/Components/widgets/nkmsrxys.json"; //Presente
+// import animationData from "@/Components/widgets/oclwxpmm.json"; //Chave de boca
+// import animationData from "@/Components/widgets/pithnlch.json"; //Sorriso
+// import animationData from "@/Components/widgets/pvbjsfif.json"; //Pasta
+// import animationData from "@/Components/widgets/qhviklyi.json"; //Moeda
+// import animationData from "@/Components/widgets/rahcoaeu.json"; //Like e Deslike
+// import animationData from "@/Components/widgets/rhvddzym.json"; //Carta
+// import animationData from "@/Components/widgets/smauprql.json"; //Cofrinho
+// import animationData from "@/Components/widgets/spxnqpau.json"; // Saudações
+// import animationData from "@/Components/widgets/sygggnra.json"; // Relatorio
+// import animationData from "@/Components/widgets/tdrtiskw.json"; // Atenção
+// import animationData from "@/Components/widgets/tqywkdcz.json"; // Sucesso 2
+// import animationData from "@/Components/widgets/ucvsemjq.json"; // Ticket
+// import animationData from "@/Components/widgets/uetqnvvg.json"; //Caminhão
+// import animationData from "@/Components/widgets/vaeagfzc.json"; // Moeda 2
+// import animationData from "@/Components/widgets/world.json"; // Não Funciona
+// import animationData from "@/Components/widgets/xhebrhsj.json"; Cubo 2
+// import animationData from "@/Components/widgets/xulniijg.json"; // Grafico
+// import animationData from "@/Components/widgets/yeallgsa.json"; // Cofrinho 2
+// import animationData from "@/Components/widgets/zpxybbhl.json"; // Conversa
