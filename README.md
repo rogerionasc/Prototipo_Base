@@ -211,8 +211,7 @@ Usuário padrão:
 
 ## 💾 Modelo do Banco de Dados
 
-```mermaid
-erDiagram
+```erDiagram
 
     CONTAS {
         INT id PK
