@@ -218,6 +218,12 @@ config:
   theme: dark
   layout: elk
 ---
+---
+config:
+  look: neo
+  theme: dark
+  layout: elk
+---
 erDiagram
 	direction TB
 
@@ -518,7 +524,7 @@ erDiagram
 	PROFISSIONAIS_SAUDE ||--o{ PRESCRICOES : prescreve
 	PRONTUARIOS ||--o{ SOLICITACAO_EXAMES : possui
 	PROFISSIONAIS_SAUDE ||--o{ SOLICITACAO_EXAMES : solicita
-    
+        
 ```
 
 
