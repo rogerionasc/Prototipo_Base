@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\VelzonRoutesController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PacienteController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +24,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get('medicos', 'medico');
         Route::get('usuarios', 'usuario');
         Route::get('componentes', 'componentes')->name('componentes');
+        Route::get('configuracao', 'configuracao')->name('configuracao.index');
 
 
         // pages routes
@@ -58,6 +60,22 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
             Route::get("/test-page", "test_func");
             // other routes
         });
+
+        // Pacientes routes
+        Route::get("/pacientes", [PacienteController::class, "index"]);
+        Route::post("/pacientes", [PacienteController::class, "store"])->name('pacientes.store');
+
+        // Parametrização routes
+        Route::get("/parametros", [VelzonRoutesController::class, "parametros_index"])->name('parametros.index');
+        Route::post("/parametros/estado-civil", [VelzonRoutesController::class, "parametros_store_estado_civil"])->name('parametros.estado_civil.store');
+        Route::post("/parametros/tipo-sanguineo", [VelzonRoutesController::class, "parametros_store_tipo_sanguineo"])->name('parametros.tipo_sanguineo.store');
+        Route::put("/parametros/estado-civil/{id}", [VelzonRoutesController::class, "parametros_update_estado_civil"])->name('parametros.estado_civil.update');
+        Route::delete("/parametros/estado-civil/{id}", [VelzonRoutesController::class, "parametros_destroy_estado_civil"])->name('parametros.estado_civil.destroy');
+        Route::put("/parametros/tipo-sanguineo/{id}", [VelzonRoutesController::class, "parametros_update_tipo_sanguineo"])->name('parametros.tipo_sanguineo.update');
+        Route::delete("/parametros/tipo-sanguineo/{id}", [VelzonRoutesController::class, "parametros_destroy_tipo_sanguineo"])->name('parametros.tipo_sanguineo.destroy');
+        Route::post("/parametros/canal-aviso", [VelzonRoutesController::class, "parametros_store_canal_aviso"])->name('parametros.canal_aviso.store');
+        Route::put("/parametros/canal-aviso/{id}", [VelzonRoutesController::class, "parametros_update_canal_aviso"])->name('parametros.canal_aviso.update');
+        Route::delete("/parametros/canal-aviso/{id}", [VelzonRoutesController::class, "parametros_destroy_canal_aviso"])->name('parametros.canal_aviso.destroy');
 
     });
 });

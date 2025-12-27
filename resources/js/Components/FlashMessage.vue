@@ -72,26 +72,38 @@
 
   const pickMessage = () => {
     if (page.props.flash.success) {
-      currentType.value = 'success'
-      currentMessage.value = page.props.flash.success
+      const msg = page.props.flash.success
+      const t = 'success'
+      if (visible.value && currentMessage.value === msg && currentType.value === t) return
+      currentType.value = t
+      currentMessage.value = msg
       triggerShow()
       return
     }
     if (page.props.flash.error) {
-      currentType.value = 'danger'
-      currentMessage.value = page.props.flash.error
+      const msg = page.props.flash.error
+      const t = 'danger'
+      if (visible.value && currentMessage.value === msg && currentType.value === t) return
+      currentType.value = t
+      currentMessage.value = msg
       triggerShow()
       return
     }
     if (page.props.flash.warning) {
-      currentType.value = 'warning'
-      currentMessage.value = page.props.flash.warning
+      const msg = page.props.flash.warning
+      const t = 'warning'
+      if (visible.value && currentMessage.value === msg && currentType.value === t) return
+      currentType.value = t
+      currentMessage.value = msg
       triggerShow()
       return
     }
     if (page.props.flash.info) {
-      currentType.value = 'info'
-      currentMessage.value = page.props.flash.info
+      const msg = page.props.flash.info
+      const t = 'info'
+      if (visible.value && currentMessage.value === msg && currentType.value === t) return
+      currentType.value = t
+      currentMessage.value = msg
       triggerShow()
       return
     }

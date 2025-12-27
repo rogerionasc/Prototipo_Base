@@ -4,7 +4,7 @@
 
 .choices {
     position: relative;
-    margin-bottom: 24px;
+    margin-bottom: 0;
     font-size: 16px;
 
     &:focus {
@@ -31,7 +31,7 @@
     [hidden] {
         display: none !important;
     }
-    
+
     // data-type = select-one
     &[data-type*='select-one'] {
         cursor: pointer;
@@ -150,12 +150,12 @@
 
 //Select Light
 .input-light {
-    .choices__inner { 
+    .choices__inner {
         background-color: var(--#{$prefix}light);
         border: none;
     }
 }
-  
+
 .choices__inner {
     display: inline-block;
     vertical-align: middle;
@@ -169,20 +169,20 @@
     overflow: hidden;
 }
 
-  
+
 .is-focused,
 .is-open {
     .choices__inner {
         border-color: $input-focus-border-color;
     }
 }
-  
+
 .choices__list {
     margin: 0;
     padding-left: 0;
     list-style: none;
 }
-  
+
 .choices__list--single {
     display: inline-block;
     padding: 4px 16px 4px 4px;
@@ -222,7 +222,7 @@
     }
 }
 
-  
+
 .is-disabled {
     .choices__list--multiple {
         .choices__item {
@@ -231,7 +231,7 @@
         }
     }
 }
-  
+
 .choices__list--dropdown {
     visibility: hidden;
     z-index: 1;
@@ -273,13 +273,21 @@
         display: none;
     }
 }
-  
+
+
+// Pode remover para voltar a cor padrão da lista de opções
+.choices__list--dropdown .choices__item[aria-selected="true"],
+.choices__list--dropdown .choices__item--selectable.is-highlighted {
+    color: $green_sheen;
+    background-color: rgba($green_sheen, 0.12);
+}
+
 .is-open{
     .choices__list--dropdown {
         border-color: $dropdown-border-color;
     }
 }
-  
+
 .is-flipped{
     .choices__list--dropdown {
         top: auto;
@@ -293,7 +301,7 @@
         }
     }
 }
-  
+
 .choices__list--dropdown{
     .choices__list {
         position: relative;
@@ -309,9 +317,9 @@
         padding: $dropdown-item-padding-y $dropdown-item-padding-x $dropdown-item-padding-y 16px;
     }
 }
-  
 
-  
+
+
 @media (min-width: 640px) {
     .choices__list--dropdown {
         .choices__item--selectable {
@@ -333,24 +341,24 @@
             }
         }
     }
-    
+
 
 }
-  
+
 .choices__item {
     cursor: default;
 }
-  
+
 .choices__item--selectable {
     cursor: pointer;
 }
-  
+
 .choices__item--disabled {
     cursor: not-allowed;
     user-select: none;
     opacity: 0.5;
 }
-  
+
 .choices__heading {
     font-weight: $font-weight-semibold;
     font-size: 12px;
@@ -358,7 +366,7 @@
     border-bottom: 1px solid var(--#{$prefix}border-color);
     color: var(--#{$prefix}secondary-color);
 }
-  
+
 .choices__button {
     text-indent: -9999px;
     appearance: none;
@@ -371,7 +379,7 @@
         outline: none;
     }
 }
-  
+
 .choices__input {
     display: inline-block;
     vertical-align: baseline;
@@ -390,7 +398,7 @@
         color: $input-placeholder-color;
     }
 }
-  
+
 .choices__placeholder {
     color: $input-placeholder-color;
     opacity: 1;

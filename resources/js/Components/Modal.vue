@@ -1,15 +1,13 @@
 <template>
     <!-- Componente de Modal reutilizável -->
     <div>
+      <div v-show="modelValue" class="modal-backdrop"></div>
       <div id="myModal" class="modal zoomIn" :class="[showClass]" tabindex="9999"
           aria-labelledby="myModalLabel" aria-hidden="true"
           :style="{ display: modelValue ? 'block' : 'none' }">
 
-          <!-- Backdrop (fundo escurecido) vem primeiro DENTRO do modal -->
-          <div v-show="modelValue" class="modal-backdrop"></div>
-
           <!-- Conteúdo principal do modal -->
-          <div class="modal-dialog modal-dialog-centered modal-lg" ref="modalDialog">
+          <div :class="['modal-dialog','modal-dialog-centered', size ? `modal-${size}` : null]" ref="modalDialog">
             <div class="modal-content">
               <div class="modal-header">
                 <h5 class="modal-title" id="myModalLabel">{{ title }}</h5>
@@ -54,6 +52,10 @@ const props = defineProps({
     nameButton: {
         type: String,
         default: 'Salvar'
+    },
+    size: {
+        type: String,
+        default: 'lg'
     }
 });
 
@@ -83,6 +85,11 @@ watch(() => props.modelValue, async (val) => {
         if (modalDialog.value) {
             modalDialog.value.style.animation = 'zoomIn 0.3s ease';
         }
+        setTimeout(() => {
+            if (window.initChoices) {
+                window.initChoices();
+            }
+        }, 0);
     } else {
         // Modal está fechando
         enableScroll(); // Habilita a barra de rolagem
@@ -102,6 +109,7 @@ onBeforeUnmount(() => {
 <style scoped>
 /* Estilização do dialog do modal */
 .modal-dialog {
+    position: relative;
     z-index: 1060; /* opcional, se quiser animar o conteúdo separadamente */
 }
 
@@ -111,11 +119,11 @@ onBeforeUnmount(() => {
 
 /* Fundo escurecido do modal */
 .modal-backdrop {
-  position: absolute; /* dentro da modal */
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   z-index: 1040;
   background-color: rgba(0, 0, 0, 0.1);
 }
@@ -130,8 +138,8 @@ onBeforeUnmount(() => {
     top: 0;
     left: 0;
     z-index: 1050; /* acima do backdrop */
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     overflow: auto;
 }
 

@@ -31,17 +31,13 @@ export default {
           icon: "ri-user-heart-fill",
           title: this.$t("t-patient"),
           type: "link",
-          target: "#pacientes",
-          children: [
-            { href: "/pacientes", label: this.$t("t-register") },
-            { href: "/pacientes/editar", label: this.$t("t-edit") }
-          ]
+          target: "/pacientes",
+        //   children: [
+        //     { href: "/pacientes", label: this.$t("t-register") },
+        //     { href: "/pacientes/editar", label: this.$t("t-edit") }
+        //   ]
         },
-        {
-          title: this.$t("t-settings"),
-          type: "title",
-          icon: "ri-more-fill"
-        },
+
         {
             icon: "ri-user-fill",
             title: this.$t("t-user"),

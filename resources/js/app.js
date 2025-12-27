@@ -16,6 +16,7 @@ import VueTheMask from 'vue-the-mask';
 
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import Choices from 'choices.js';
 
 import store from "./state/store";
 import i18n from './i18n'
@@ -45,3 +46,38 @@ createInertiaApp({
         color: '#4B5563',
     },
 });
+
+function initChoices() {
+    const selects = document.querySelectorAll('select[data-choices]');
+    selects.forEach((el) => {
+        if (el.dataset.choicesInitialized === 'true') return;
+        try {
+            const isMultiple = el.hasAttribute('multiple');
+            const instance = new Choices(el, {
+                searchEnabled: true,
+                searchChoices: true,
+                removeItemButton: isMultiple,
+                shouldSort: false,
+                searchFields: ['label', 'value'],
+                noResultsText: 'Nem resultado encontrado',
+                fuseOptions: {
+                    threshold: 0.0,
+                    ignoreLocation: true,
+                    minMatchCharLength: 1
+                }
+            });
+            el.dataset.choicesInitialized = 'true';
+            el._choicesInstance = instance;
+        } catch (e) {
+            console.error('Choices init error:', e);
+        }
+    });
+}
+
+document.addEventListener('inertia:finish', () => {
+    setTimeout(initChoices, 0);
+});
+window.addEventListener('load', () => {
+    setTimeout(initChoices, 0);
+});
+window.initChoices = initChoices;

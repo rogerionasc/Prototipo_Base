@@ -215,4 +215,6 @@
     "t-register": "Cadastar",
     "t-patient": "Paciente",
     "t-user": "Usuário"
+    ,
+    "t-parametrizacao": "Parametrização"
 }

@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\EstadoCivil;
+use App\Models\TipoSanguineo;
+use App\Models\CanalAviso;
 
 class VelzonRoutesController extends Controller
 {
@@ -14,6 +17,17 @@ class VelzonRoutesController extends Controller
 
     public function componentes() {
         return Inertia::render('Componentes/Index');
+    }
+
+    public function configuracao() {
+        $estados = EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
+        $tipos = TipoSanguineo::select('id','descricao')->orderBy('descricao')->get();
+        $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
+        return Inertia::render('Configuracao/Index', [
+            'estadosCivis' => $estados,
+            'tiposSanguineos' => $tipos,
+            'canaisAviso' => $canais,
+        ]);
     }
 
     public function usuario()
@@ -125,6 +139,104 @@ class VelzonRoutesController extends Controller
 
     public function auth_success_msg_cover() {
         return Inertia::render('auth-pages/success-msg/cover');
+    }
+
+    public function parametros_index() {
+        $estados = EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
+        $tipos = TipoSanguineo::select('id','descricao')->orderBy('descricao')->get();
+        $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
+        return Inertia::render('Parametros/Index', [
+            'estadosCivis' => $estados,
+            'tiposSanguineos' => $tipos,
+            'canaisAviso' => $canais,
+        ]);
+    }
+
+    public function parametros_store_estado_civil(Request $request) {
+        $data = $request->validate([
+            'descricao' => ['required','string','max:100','unique:estado_civil,descricao'],
+        ], [
+            'descricao.required' => 'Informe a descrição.',
+            'descricao.unique' => 'Este estado civil já está cadastrado.',
+        ]);
+        EstadoCivil::create($data);
+        return back()->with('success','Estado civil cadastrado');
+    }
+
+    public function parametros_update_estado_civil(Request $request, int $id) {
+        $data = $request->validate([
+            'descricao' => ['required','string','max:100','unique:estado_civil,descricao,' . $id],
+        ], [
+            'descricao.required' => 'Informe a descrição.',
+            'descricao.unique' => 'Este estado civil já está cadastrado.',
+        ]);
+        $estado = EstadoCivil::findOrFail($id);
+        $estado->update($data);
+        return back()->with('success','Estado civil atualizado');
+    }
+
+    public function parametros_destroy_estado_civil(int $id) {
+        $estado = EstadoCivil::findOrFail($id);
+        $estado->delete();
+        return back()->with('success','Estado civil removido');
+    }
+
+    public function parametros_store_tipo_sanguineo(Request $request) {
+        $data = $request->validate([
+            'descricao' => ['required','string','max:50','unique:tipo_sanguineo,descricao'],
+        ], [
+            'descricao.required' => 'Informe a descrição.',
+            'descricao.unique' => 'Este tipo sanguíneo já está cadastrado.',
+        ]);
+        TipoSanguineo::create($data);
+        return back()->with('success','Tipo sanguíneo cadastrado');
+    }
+
+    public function parametros_update_tipo_sanguineo(Request $request, int $id) {
+        $data = $request->validate([
+            'descricao' => ['required','string','max:50','unique:tipo_sanguineo,descricao,' . $id],
+        ], [
+            'descricao.required' => 'Informe a descrição.',
+            'descricao.unique' => 'Este tipo sanguíneo já está cadastrado.',
+        ]);
+        $tipo = TipoSanguineo::findOrFail($id);
+        $tipo->update($data);
+        return back()->with('success','Tipo sanguíneo atualizado');
+    }
+
+    public function parametros_destroy_tipo_sanguineo(int $id) {
+        $tipo = TipoSanguineo::findOrFail($id);
+        $tipo->delete();
+        return back()->with('success','Tipo sanguíneo removido');
+    }
+
+    public function parametros_store_canal_aviso(Request $request) {
+        $data = $request->validate([
+            'nome' => ['required','string','max:100','unique:canais_aviso,nome'],
+        ], [
+            'nome.required' => 'Informe o nome.',
+            'nome.unique' => 'Este canal de aviso já está cadastrado.',
+        ]);
+        CanalAviso::create($data);
+        return back()->with('success','Canal de aviso cadastrado');
+    }
+
+    public function parametros_update_canal_aviso(Request $request, int $id) {
+        $data = $request->validate([
+            'nome' => ['required','string','max:100','unique:canais_aviso,nome,' . $id],
+        ], [
+            'nome.required' => 'Informe o nome.',
+            'nome.unique' => 'Este canal de aviso já está cadastrado.',
+        ]);
+        $canal = CanalAviso::findOrFail($id);
+        $canal->update($data);
+        return back()->with('success','Canal de aviso atualizado');
+    }
+
+    public function parametros_destroy_canal_aviso(int $id) {
+        $canal = CanalAviso::findOrFail($id);
+        $canal->delete();
+        return back()->with('success','Canal de aviso removido');
     }
 
 }
