@@ -218,8 +218,66 @@ config:
   theme: dark
   layout: elk
 ---
+---
+config:
+  look: neo
+  theme: dark
+  layout: elk
+---
 erDiagram
     direction TB
+
+    CONVENIO {
+        INT id PK
+        VARCHAR descricao
+        VARCHAR tipo
+        VARCHAR empresa_id
+        INT ans
+        INT dias_recebimento
+        INT dias_retorno
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    PACIENTES {
+        INT id PK
+        VARCHAR nome
+        VARCHAR cpf
+        VARCHAR rg
+        VARCHAR sexo
+        DATE data_nascimento
+        VARCHAR naturalidade
+        INT estado_civil_id FK
+        DECIMAL altura
+        DECIMAL peso
+        VARCHAR cor_pele
+        INT endereco_id FK
+        BOOLEAN receber_avisos
+        VARCHAR celular
+        VARCHAR telefone
+        VARCHAR email
+        INT canal_aviso_id FK
+        VARCHAR profissao
+        VARCHAR escolaridade
+        VARCHAR nome_mae
+        VARCHAR nome_pai
+        INT tipo_sanguineo_id FK
+        TEXT observacoes
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    PACIENTE_CONVENIO {
+        INT id PK
+        INT paciente_id FK
+        INT convenio_id FK
+        VARCHAR numero_carteira
+        VARCHAR plano
+        DATE validade
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
     CONTAS {
         INT id PK
@@ -283,35 +341,6 @@ erDiagram
         VARCHAR celular
         VARCHAR telefone
         VARCHAR email
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    PACIENTES {
-        INT id PK
-        VARCHAR nome
-        VARCHAR cpf
-        VARCHAR rg
-        VARCHAR sexo
-        DATE data_nascimento
-        VARCHAR naturalidade
-        INT estado_civil_id FK
-        VARCHAR convenio
-        DECIMAL altura
-        DECIMAL peso
-        VARCHAR cor_pele
-        INT endereco_id FK
-        BOOLEAN receber_avisos
-        VARCHAR celular
-        VARCHAR telefone
-        VARCHAR email
-        INT canal_aviso_id FK
-        VARCHAR profissao
-        VARCHAR escolaridade
-        VARCHAR nome_mae
-        VARCHAR nome_pai
-        INT tipo_sanguineo_id FK
-        TEXT observacoes
         DATETIME created_at
         DATETIME updated_at
     }
@@ -478,6 +507,7 @@ erDiagram
         DATETIME created_at
         DATETIME updated_at
     }
+
     CONTAS ||--o{ USUARIOS : possui
     ENDERECOS ||--o{ PACIENTES : reside_em
     ENDERECOS ||--o{ RESPONSAVEIS : reside_em
@@ -488,6 +518,10 @@ erDiagram
     PACIENTES ||--o{ PACIENTE_RESPONSAVEL : possui
     RESPONSAVEIS ||--o{ PACIENTE_RESPONSAVEL : vincula
     PACIENTES ||--|| PRONTUARIOS : gera
+
+    PACIENTES ||--o{ PACIENTE_CONVENIO : possui
+    CONVENIO ||--o{ PACIENTE_CONVENIO : vincula
+
     PROFISSIONAIS_SAUDE ||--o{ PROFISSIONAL_ESPECIALIDADE : possui
     ESPECIALIDADES ||--o{ PROFISSIONAL_ESPECIALIDADE : classifica
     PROFISSIONAIS_SAUDE ||--o{ AGENDA_MEDICA : define

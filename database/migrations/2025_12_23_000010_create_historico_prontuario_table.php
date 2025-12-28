@@ -15,6 +15,7 @@ return new class extends Migration
                 $table->dateTime('data_registro')->nullable();
                 $table->text('descricao')->nullable();
                 $table->timestamps();
+                $table->softDeletes();
             });
         }
     }

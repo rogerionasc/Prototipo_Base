@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('cidade')->nullable();
             $table->string('complemento')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -6,20 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Procedimento extends Model
+class Conta extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'procedimentos';
+    protected $table = 'contas';
 
     protected $fillable = [
         'nome',
-        'descricao',
-        'valor',
+        'cnpj',
     ];
-
-    public function agendamentos()
-    {
-        return $this->hasMany(Agendamento::class, 'procedimento_id');
-    }
 }

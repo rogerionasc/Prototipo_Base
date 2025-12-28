@@ -16,6 +16,7 @@ return new class extends Migration
             $table->text('observacoes')->nullable();
             $table->boolean('ativa')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

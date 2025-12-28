@@ -20,6 +20,7 @@ return new class extends Migration
             $table->decimal('valor_cobrado', 10, 2)->nullable();
             $table->text('observacoes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
             $table->foreign('agendamento_origem_id')->references('id')->on('agendamentos')->nullOnDelete();
         });
     }

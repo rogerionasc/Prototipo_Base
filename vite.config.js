@@ -3,6 +3,14 @@ import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
+    // server: {
+    //     host: 'localhost',
+    //     port: 5173,
+    //     strictPort: true,
+    //     hmr: {
+    //         host: 'localhost',
+    //     },
+    // },
     build: {
         chunkSizeWarningLimit: 4000,
     },

@@ -25,7 +25,7 @@
                     </div>
                     <div class="col-md-3">
                         <label for="sexo" class="form-label">Sexo</label>
-                        <select v-model="form.sexo" data-choices class="form-select mb-0" id="sexo">
+                        <select v-model="form.sexo" data-choices class="form-select mb-0" id="sexo" ref="sexoSelect">
                             <option selected disabled value="">Selecione...</option>
                             <option value="Masculino">Masculino</option>
                             <option value="Feminino">Feminino</option>
@@ -43,7 +43,7 @@
                     </div>
                     <div class="col-md-3">
                         <label for="estadoCivil" class="form-label">Estado Civil</label>
-                        <select v-model="form.estado_civil_id" class="form-select mb-0" id="estadoCivil" data-choices :class="{ 'is-invalid': form.errors.estado_civil_id }">
+                        <select v-model="form.estado_civil_id" class="form-select mb-0" id="estadoCivil" data-choices ref="estadoCivilSelect" :class="{ 'is-invalid': form.errors.estado_civil_id }">
                             <option selected disabled value="">Selecione...</option>
                             <option v-for="ec in estadosCivis" :key="ec.id" :value="ec.id">{{ ec.descricao }}</option>
                         </select>
@@ -53,7 +53,10 @@
                     </div>
                     <div class="col-md-3">
                         <label for="convenio" class="form-label">Convênio</label>
-                        <input v-model="form.convenio" type="text" class="form-control" id="convenio" placeholder="Convênio">
+                        <select v-model="form.convenio_id" data-choices class="form-select" id="convenio" ref="convenioSelect">
+                            <option selected disabled value="">Selecione...</option>
+                            <option v-for="cv in convenios" :key="cv.id" :value="cv.id">{{ cv.descricao }}</option>
+                        </select>
                     </div>
                     <div class="col-md-2">
                         <label for="altura" class="form-label">Altura (m)</label>
@@ -69,7 +72,7 @@
                     </div>
                     <div class="col-md-3">
                         <label for="tipoSanguineo" class="form-label">Tipo Sanguíneo</label>
-                        <select v-model="form.tipo_sanguineo_id" data-choices class="form-select" id="tipoSanguineo" :class="{ 'is-invalid': form.errors.tipo_sanguineo_id }">
+                        <select v-model="form.tipo_sanguineo_id" data-choices class="form-select" id="tipoSanguineo" ref="tipoSanguineoSelect" :class="{ 'is-invalid': form.errors.tipo_sanguineo_id }">
                             <option selected disabled value="">Selecione...</option>
                             <option v-for="ts in tiposSanguineos" :key="ts.id" :value="ts.id">{{ ts.descricao }}</option>
                         </select>
@@ -100,7 +103,7 @@
 
                     <div class="col-md-3">
                         <label for="canalAviso" class="form-label">Canal de Aviso</label>
-                        <select v-model="form.canal_aviso_id" data-choices class="form-select" id="canalAviso" :class="{ 'is-invalid': form.errors.canal_aviso_id }">
+                        <select v-model="form.canal_aviso_id" data-choices class="form-select" id="canalAviso" ref="canalAvisoSelect" :class="{ 'is-invalid': form.errors.canal_aviso_id }">
                             <option selected disabled value="">Selecione...</option>
                             <option v-for="ca in canaisAviso" :key="ca.id" :value="ca.id">{{ ca.nome }}</option>
                         </select>
@@ -168,13 +171,19 @@ import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/l10n/pt.js";
 const flatpickrOptions = { altInput: true, altFormat: "d M, Y", dateFormat: "Y-m-d", locale: "pt" };
 import { useForm } from "@inertiajs/vue3";
-import { ref, defineExpose } from "vue";
-const { estadosCivis, tiposSanguineos, canaisAviso } = defineProps({
+import { ref, defineExpose, onMounted, nextTick, watch } from "vue";
+const { estadosCivis, tiposSanguineos, canaisAviso, convenios } = defineProps({
     estadosCivis: { type: Array, default: () => [] },
     tiposSanguineos: { type: Array, default: () => [] },
     canaisAviso: { type: Array, default: () => [] },
+    convenios: { type: Array, default: () => [] },
 });
 const formEl = ref(null);
+const sexoSelect = ref(null);
+const estadoCivilSelect = ref(null);
+const tipoSanguineoSelect = ref(null);
+const canalAvisoSelect = ref(null);
+const convenioSelect = ref(null);
 const form = useForm({
     nome: "",
     cpf: "",
@@ -183,7 +192,7 @@ const form = useForm({
     data_nascimento: "",
     naturalidade: "",
     estado_civil_id: "",
-    convenio: "",
+    convenio_id: "",
     altura: null,
     peso: null,
     cor_pele: "",
@@ -205,6 +214,11 @@ const form = useForm({
     cidade: "",
     complemento: "",
 });
+watch(() => form.sexo, async (v) => { await nextTick(); if (window.syncChoiceValue && sexoSelect.value) window.syncChoiceValue(sexoSelect.value, v || ""); }, { immediate: true });
+watch(() => form.estado_civil_id, async (v) => { await nextTick(); if (window.syncChoiceValue && estadoCivilSelect.value) window.syncChoiceValue(estadoCivilSelect.value, v != null ? String(v) : ""); }, { immediate: true });
+watch(() => form.tipo_sanguineo_id, async (v) => { await nextTick(); if (window.syncChoiceValue && tipoSanguineoSelect.value) window.syncChoiceValue(tipoSanguineoSelect.value, v != null ? String(v) : ""); }, { immediate: true });
+watch(() => form.canal_aviso_id, async (v) => { await nextTick(); if (window.syncChoiceValue && canalAvisoSelect.value) window.syncChoiceValue(canalAvisoSelect.value, v != null ? String(v) : ""); }, { immediate: true });
+watch(() => form.convenio_id, async (v) => { await nextTick(); if (window.syncChoiceValue && convenioSelect.value) window.syncChoiceValue(convenioSelect.value, v != null ? String(v) : ""); }, { immediate: true });
 const submit = (onSuccess) => {
     if (formEl.value && !formEl.value.checkValidity()) {
         formEl.value.classList.add('was-validated');
@@ -218,7 +232,42 @@ const submit = (onSuccess) => {
         },
     });
 };
-defineExpose({ submit, form });
+const submitUpdate = (id, onSuccess) => {
+    if (formEl.value && !formEl.value.checkValidity()) {
+        formEl.value.classList.add('was-validated');
+        return;
+    }
+    form.put(`/pacientes/${id}`, {
+        onSuccess: () => {
+            formEl.value?.classList.remove('was-validated');
+            if (onSuccess) onSuccess();
+        },
+    });
+};
+const syncChoices = async () => {
+    await nextTick();
+    if (window.syncChoiceValue && sexoSelect.value) window.syncChoiceValue(sexoSelect.value, form.sexo || "");
+    if (window.syncChoiceValue && estadoCivilSelect.value) window.syncChoiceValue(estadoCivilSelect.value, form.estado_civil_id != null && form.estado_civil_id !== '' ? String(form.estado_civil_id) : "");
+    if (window.syncChoiceValue && tipoSanguineoSelect.value) window.syncChoiceValue(tipoSanguineoSelect.value, form.tipo_sanguineo_id != null && form.tipo_sanguineo_id !== '' ? String(form.tipo_sanguineo_id) : "");
+    if (window.syncChoiceValue && canalAvisoSelect.value) window.syncChoiceValue(canalAvisoSelect.value, form.canal_aviso_id != null && form.canal_aviso_id !== '' ? String(form.canal_aviso_id) : "");
+    if (window.syncChoiceValue && convenioSelect.value) window.syncChoiceValue(convenioSelect.value, form.convenio_id != null && form.convenio_id !== '' ? String(form.convenio_id) : "");
+};
+defineExpose({ submit, submitUpdate, form, syncChoices });
+onMounted(async () => {
+    await nextTick();
+    if (window.initChoices) window.initChoices();
+    await nextTick();
+    if (sexoSelect.value) sexoSelect.value.addEventListener("change", (e) => { form.sexo = e?.target?.value ?? form.sexo; });
+    if (estadoCivilSelect.value) estadoCivilSelect.value.addEventListener("change", (e) => { form.estado_civil_id = e?.target?.value ?? form.estado_civil_id; });
+    if (tipoSanguineoSelect.value) tipoSanguineoSelect.value.addEventListener("change", (e) => { form.tipo_sanguineo_id = e?.target?.value ?? form.tipo_sanguineo_id; });
+    if (canalAvisoSelect.value) canalAvisoSelect.value.addEventListener("change", (e) => { form.canal_aviso_id = e?.target?.value ?? form.canal_aviso_id; });
+    if (convenioSelect.value) convenioSelect.value.addEventListener("change", (e) => { form.convenio_id = e?.target?.value ?? form.convenio_id; });
+    if (window.syncChoiceValue && sexoSelect.value) window.syncChoiceValue(sexoSelect.value, form.sexo || "");
+    if (window.syncChoiceValue && estadoCivilSelect.value) window.syncChoiceValue(estadoCivilSelect.value, form.estado_civil_id != null && form.estado_civil_id !== '' ? String(form.estado_civil_id) : "");
+    if (window.syncChoiceValue && tipoSanguineoSelect.value) window.syncChoiceValue(tipoSanguineoSelect.value, form.tipo_sanguineo_id != null && form.tipo_sanguineo_id !== '' ? String(form.tipo_sanguineo_id) : "");
+    if (window.syncChoiceValue && canalAvisoSelect.value) window.syncChoiceValue(canalAvisoSelect.value, form.canal_aviso_id != null && form.canal_aviso_id !== '' ? String(form.canal_aviso_id) : "");
+    if (window.syncChoiceValue && convenioSelect.value) window.syncChoiceValue(convenioSelect.value, form.convenio_id != null && form.convenio_id !== '' ? String(form.convenio_id) : "");
+});
 </script>
 <style scoped>
 .choices {

@@ -45,6 +45,13 @@ export default {
             target: "/usuarios",
         },
         {
+            icon: "ri-shield-cross-line",
+            title: "Convênio",
+            type: "link",
+            target: "/convenios",
+            routeName: "convenios.index",
+        },
+        {
             icon: "ri-layout-grid-fill",
             title: this.$t("t-components"),
             type: "link",
@@ -241,7 +248,7 @@ export default {
             <Link
               v-else
               class="nav-link menu-link"
-              :href="item.target.replace('#', '')"
+              :href="item.routeName ? route(item.routeName) : item.target.replace('#', '')"
             >
               <i :class="item.icon"></i>
               <span>{{ item.title }}</span>

@@ -14,6 +14,7 @@ return new class extends Migration
                 $table->foreignId('profissional_saude_id')->constrained('profissionais_saude')->cascadeOnDelete();
                 $table->foreignId('especialidade_id')->constrained('especialidades')->cascadeOnDelete();
                 $table->timestamps();
+                $table->softDeletes();
                 $table->unique(['profissional_saude_id', 'especialidade_id'], 'ps_esp_unique');
             });
         }

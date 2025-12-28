@@ -8,9 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('tipo_sanguineo', function (Blueprint $table) {
+        Schema::create('contas', function (Blueprint $table) {
             $table->id();
-            $table->string('descricao');
+            $table->string('nome');
+            $table->string('cnpj')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
@@ -18,6 +19,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('tipo_sanguineo');
+        Schema::dropIfExists('contas');
     }
 };

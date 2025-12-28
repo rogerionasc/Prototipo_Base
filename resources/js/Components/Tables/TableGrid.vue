@@ -345,10 +345,12 @@ function initGrid() {
     }
 }
 
-// Observa mudanças nos dados filtrados e reinicializa a tabela
-watch([filteredData], () => {
+watch(filteredData, () => {
     nextTick(initGrid);
-});
+}, { deep: true });
+watch(() => props.data, () => {
+    nextTick(initGrid);
+}, { deep: true });
 
 // Remove listeners ao desmontar o componente
 onBeforeUnmount(() => {

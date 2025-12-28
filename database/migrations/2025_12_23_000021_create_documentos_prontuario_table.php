@@ -17,6 +17,7 @@ return new class extends Migration
             $table->text('conteudo_final')->nullable();
             $table->boolean('assinado')->default(false);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

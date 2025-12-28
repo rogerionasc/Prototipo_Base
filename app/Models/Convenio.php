@@ -6,20 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class HistoricoProntuario extends Model
+class Convenio extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'historico_prontuario';
+    protected $table = 'convenios';
 
     protected $fillable = [
-        'atendimento_id',
-        'data_registro',
         'descricao',
+        'tipo',
+        'empresa_id',
+        'ans',
+        'dias_recebimento',
+        'dias_retorno',
     ];
 
-    public function atendimento()
+    public function empresa()
     {
-        return $this->belongsTo(Atendimento::class, 'atendimento_id');
+        return $this->belongsTo(Conta::class, 'empresa_id');
     }
 }

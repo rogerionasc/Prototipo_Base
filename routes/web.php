@@ -3,6 +3,7 @@
 use App\Http\Controllers\VelzonRoutesController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PacienteController;
+use App\Http\Controllers\ConvenioController;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,6 +65,15 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         // Pacientes routes
         Route::get("/pacientes", [PacienteController::class, "index"]);
         Route::post("/pacientes", [PacienteController::class, "store"])->name('pacientes.store');
+        Route::put("/pacientes/{id}", [PacienteController::class, "update"])->name('pacientes.update');
+        Route::delete("/pacientes/{id}", [PacienteController::class, "destroy"])->name('pacientes.destroy');
+        Route::delete("/pacientes/bulk", [PacienteController::class, "destroyMany"])->name('pacientes.destroy_many');
+
+        // Convênios routes
+        Route::get("/convenios", [ConvenioController::class, "index"])->name('convenios.index');
+        Route::post("/convenios", [ConvenioController::class, "store"])->name('convenios.store');
+        Route::put("/convenios/{id}", [ConvenioController::class, "update"])->name('convenios.update');
+        Route::delete("/convenios/{id}", [ConvenioController::class, "destroy"])->name('convenios.destroy');
 
         // Parametrização routes
         Route::get("/parametros", [VelzonRoutesController::class, "parametros_index"])->name('parametros.index');

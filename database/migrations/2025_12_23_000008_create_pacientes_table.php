@@ -17,7 +17,6 @@ return new class extends Migration
             $table->date('data_nascimento')->nullable();
             $table->string('naturalidade')->nullable();
             $table->foreignId('estado_civil_id')->nullable()->constrained('estado_civil')->nullOnDelete();
-            $table->string('convenio')->nullable();
             $table->decimal('altura', 5, 2)->nullable();
             $table->decimal('peso', 5, 2)->nullable();
             $table->string('cor_pele')->nullable();
@@ -34,6 +33,7 @@ return new class extends Migration
             $table->foreignId('tipo_sanguineo_id')->nullable()->constrained('tipo_sanguineo')->nullOnDelete();
             $table->text('observacoes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

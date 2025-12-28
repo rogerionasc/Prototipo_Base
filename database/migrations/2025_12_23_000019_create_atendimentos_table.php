@@ -20,6 +20,7 @@ return new class extends Migration
             $table->text('evolucao')->nullable();
             $table->string('cid')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

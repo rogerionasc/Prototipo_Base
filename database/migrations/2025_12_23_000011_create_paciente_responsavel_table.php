@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
             $table->foreignId('responsavel_id')->constrained('responsaveis')->cascadeOnDelete();
             $table->timestamps();
+            $table->softDeletes();
             $table->unique(['paciente_id', 'responsavel_id']);
         });
     }

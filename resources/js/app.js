@@ -75,9 +75,40 @@ function initChoices() {
 }
 
 document.addEventListener('inertia:finish', () => {
-    setTimeout(initChoices, 0);
+    setTimeout(() => {
+        initChoices();
+        autoSyncChoices();
+    }, 0);
 });
 window.addEventListener('load', () => {
-    setTimeout(initChoices, 0);
+    setTimeout(() => {
+        initChoices();
+        autoSyncChoices();
+    }, 0);
 });
 window.initChoices = initChoices;
+function autoSyncChoices() {
+    try {
+        const selects = document.querySelectorAll('select[data-choices]');
+        selects.forEach((el) => {
+            const v = el.value != null ? String(el.value) : '';
+            syncChoiceValue(el, v);
+        });
+    } catch (e) {
+        console.error('Choices auto-sync error:', e);
+    }
+}
+window.autoSyncChoices = autoSyncChoices;
+function syncChoiceValue(el, value) {
+    try {
+        if (!el) return;
+        const v = value != null ? String(value) : '';
+        const inst = el._choicesInstance || el.choices;
+        el.value = v;
+        if (inst && typeof inst.setChoiceByValue === 'function') inst.setChoiceByValue(v);
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch (e) {
+        console.error('Choices sync error:', e);
+    }
+}
+window.syncChoiceValue = syncChoiceValue;

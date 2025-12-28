@@ -15,6 +15,7 @@ return new class extends Migration
             $table->text('conteudo_template')->nullable();
             $table->boolean('ativo')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
