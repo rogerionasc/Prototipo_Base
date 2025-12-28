@@ -404,11 +404,33 @@
     opacity: 1;
 }
 
-
 [data-bs-theme="dark"]{
     .choices[data-type*=select-one]{
         .choices__button{
             filter: $btn-close-white-filter;
         }
     }
+}
+
+.choices.is-invalid {
+    .choices__inner {
+        border-color: $danger;
+    }
+}
+select.form-select.is-invalid + .choices {
+    .choices__inner {
+        border-color: $danger;
+    }
+}
+select[data-choices].is-invalid ~ .invalid-feedback {
+    display: block;
+}
+.choices.is-invalid ~ .invalid-feedback {
+    display: block;
+}
+.was-validated select[data-choices]:invalid ~ .invalid-feedback {
+    display: block;
+}
+.was-validated select[data-choices]:invalid + .choices .choices__inner {
+    border-color: $danger;
 }

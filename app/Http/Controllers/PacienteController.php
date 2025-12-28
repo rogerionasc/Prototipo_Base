@@ -8,6 +8,8 @@ use App\Models\EstadoCivil;
 use App\Models\TipoSanguineo;
 use App\Models\CanalAviso;
 use App\Models\Convenio;
+use App\Models\Parentesco;
+use App\Models\Responsavel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,6 +29,7 @@ class PacienteController extends Controller
             'email',
             'celular',
             'sexo',
+            'tem_responsavel',
             'receber_avisos',
             'naturalidade',
             'altura',
@@ -67,11 +70,84 @@ class PacienteController extends Controller
               ->limit(1)
               ->select('pc.convenio_id');
         }, 'convenio_id')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.nome');
+        }, 'responsavel_nome')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.parentesco_id');
+        }, 'responsavel_parentesco_id')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.cpf');
+        }, 'responsavel_cpf')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.rg');
+        }, 'responsavel_rg')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select(DB::raw("DATE_FORMAT(r.data_nascimento, '%Y-%m-%d')"));
+        }, 'responsavel_data_nascimento')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.celular');
+        }, 'responsavel_celular')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.telefone');
+        }, 'responsavel_telefone')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.email');
+        }, 'responsavel_email')
         ->get();
         $estadosCivis = EstadoCivil::select('id', 'descricao')->orderBy('descricao')->get();
         $tiposSanguineos = TipoSanguineo::select('id', 'descricao')->orderBy('descricao')->get();
         $canaisAviso = CanalAviso::select('id', 'nome')->orderBy('nome')->get();
         $convenios = Convenio::select('id','descricao')->orderBy('descricao')->get();
+        $parentescos = Parentesco::select('id', 'descricao')->orderBy('descricao')->get();
 
         return Inertia::render("Pacientes/Index", [
             'pacientes' => $pacientes,
@@ -79,6 +155,7 @@ class PacienteController extends Controller
             'tiposSanguineos' => $tiposSanguineos,
             'canaisAviso' => $canaisAviso,
             'convenios' => $convenios,
+            'parentescos' => $parentescos,
         ]);
     }
 
@@ -107,6 +184,7 @@ class PacienteController extends Controller
             'altura' => ['nullable', 'numeric'],
             'peso' => ['nullable', 'numeric'],
             'cor_pele' => ['nullable', 'string', 'max:255'],
+            'tem_responsavel' => ['nullable', 'boolean'],
             'receber_avisos' => ['nullable', 'boolean'],
             'celular' => ['nullable', 'string', 'max:30'],
             'telefone' => ['nullable', 'string', 'max:30'],
@@ -131,6 +209,16 @@ class PacienteController extends Controller
         ]);
 
         // dd($data);
+        $responsavelData = $request->validate([
+            'responsavel_nome' => ['required_if:tem_responsavel,1,true,on', 'nullable', 'string', 'max:255'],
+            'responsavel_parentesco_id' => ['required_if:tem_responsavel,1,true,on', 'nullable', 'integer', 'exists:parentescos,id'],
+            'responsavel_cpf' => ['nullable', 'string', 'max:14'],
+            'responsavel_rg' => ['nullable', 'string', 'max:20'],
+            'responsavel_data_nascimento' => ['nullable', 'date_format:Y-m-d'],
+            'responsavel_celular' => ['nullable', 'string', 'max:30'],
+            'responsavel_telefone' => ['nullable', 'string', 'max:30'],
+            'responsavel_email' => ['nullable', 'email', 'max:255'],
+        ]);
 
         foreach (['estado_civil_id', 'canal_aviso_id', 'tipo_sanguineo_id'] as $fk) {
             if (empty($data[$fk])) {
@@ -165,6 +253,22 @@ class PacienteController extends Controller
         }
 
         $paciente = Paciente::create($data);
+
+        if ($request->boolean('tem_responsavel')) {
+            $r = Responsavel::create([
+                'nome' => $responsavelData['responsavel_nome'] ?? null,
+                'parentesco_id' => $responsavelData['responsavel_parentesco_id'] ?? null,
+                'cpf' => $responsavelData['responsavel_cpf'] ?? null,
+                'rg' => $responsavelData['responsavel_rg'] ?? null,
+                'data_nascimento' => $responsavelData['responsavel_data_nascimento'] ?? null,
+                'celular' => $responsavelData['responsavel_celular'] ?? null,
+                'telefone' => $responsavelData['responsavel_telefone'] ?? null,
+                'email' => $responsavelData['responsavel_email'] ?? null,
+            ]);
+            if ($r && $r->id) {
+                $paciente->responsaveis()->syncWithoutDetaching([$r->id]);
+            }
+        }
 
         if (!empty($data['convenio_id'])) {
             DB::table('paciente_convenio')
@@ -214,6 +318,7 @@ class PacienteController extends Controller
             'altura' => ['nullable', 'numeric'],
             'peso' => ['nullable', 'numeric'],
             'cor_pele' => ['nullable', 'string', 'max:255'],
+            'tem_responsavel' => ['nullable', 'boolean'],
             'receber_avisos' => ['nullable', 'boolean'],
             'celular' => ['nullable', 'string', 'max:30'],
             'telefone' => ['nullable', 'string', 'max:30'],
@@ -235,6 +340,17 @@ class PacienteController extends Controller
             'canal_aviso_id.exists' => 'Selecione um canal de aviso válido.',
             'tipo_sanguineo_id.exists' => 'Selecione um tipo sanguíneo válido.',
             'convenio_id.exists' => 'Selecione um convênio válido.',
+        ]);
+
+        $responsavelData = $request->validate([
+            'responsavel_nome' => ['required_if:tem_responsavel,1,true,on', 'nullable', 'string', 'max:255'],
+            'responsavel_parentesco_id' => ['required_if:tem_responsavel,1,true,on', 'nullable', 'integer', 'exists:parentescos,id'],
+            'responsavel_cpf' => ['nullable', 'string', 'max:14'],
+            'responsavel_rg' => ['nullable', 'string', 'max:20'],
+            'responsavel_data_nascimento' => ['nullable', 'date_format:Y-m-d'],
+            'responsavel_celular' => ['nullable', 'string', 'max:30'],
+            'responsavel_telefone' => ['nullable', 'string', 'max:30'],
+            'responsavel_email' => ['nullable', 'email', 'max:255'],
         ]);
 
         foreach (['estado_civil_id', 'canal_aviso_id', 'tipo_sanguineo_id'] as $fk) {
@@ -282,6 +398,45 @@ class PacienteController extends Controller
         }
 
         $paciente->update($data);
+
+        if ($request->boolean('tem_responsavel')) {
+            $existing = $paciente->responsaveis()->withTrashed()->orderBy('paciente_responsavel.created_at', 'desc')->first();
+            if ($existing) {
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+                $existing->update([
+                    'nome' => $responsavelData['responsavel_nome'] ?? $existing->nome,
+                    'parentesco_id' => $responsavelData['responsavel_parentesco_id'] ?? $existing->parentesco_id,
+                    'cpf' => $responsavelData['responsavel_cpf'] ?? $existing->cpf,
+                    'rg' => $responsavelData['responsavel_rg'] ?? $existing->rg,
+                    'data_nascimento' => $responsavelData['responsavel_data_nascimento'] ?? $existing->data_nascimento,
+                    'celular' => $responsavelData['responsavel_celular'] ?? $existing->celular,
+                    'telefone' => $responsavelData['responsavel_telefone'] ?? $existing->telefone,
+                    'email' => $responsavelData['responsavel_email'] ?? $existing->email,
+                ]);
+            } else {
+                $r = Responsavel::create([
+                    'nome' => $responsavelData['responsavel_nome'] ?? null,
+                    'parentesco_id' => $responsavelData['responsavel_parentesco_id'] ?? null,
+                    'cpf' => $responsavelData['responsavel_cpf'] ?? null,
+                    'rg' => $responsavelData['responsavel_rg'] ?? null,
+                    'data_nascimento' => $responsavelData['responsavel_data_nascimento'] ?? null,
+                    'celular' => $responsavelData['responsavel_celular'] ?? null,
+                    'telefone' => $responsavelData['responsavel_telefone'] ?? null,
+                    'email' => $responsavelData['responsavel_email'] ?? null,
+                ]);
+                if ($r && $r->id) {
+                    $paciente->responsaveis()->syncWithoutDetaching([$r->id]);
+                }
+            }
+        } else {
+            $existing = $paciente->responsaveis()->withTrashed()->orderBy('paciente_responsavel.created_at', 'desc')->first();
+            if ($existing && !$existing->trashed()) {
+                $existing->delete();
+            }
+            // Mantém o vínculo na tabela pivô para futura restauração.
+        }
 
         if (array_key_exists('convenio_id', $data)) {
             if (!empty($data['convenio_id'])) {

@@ -35,6 +35,10 @@ class Paciente extends Model
         'nome_pai',
         'tipo_sanguineo_id',
         'observacoes',
+        'tem_responsavel',
+    ];
+    protected $casts = [
+        'tem_responsavel' => 'boolean',
     ];
 
     public function estadoCivil()

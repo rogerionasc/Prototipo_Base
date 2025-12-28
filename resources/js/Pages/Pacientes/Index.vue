@@ -5,13 +5,15 @@
         <TableGrid :columns="columns" :data="pacientesLocal" :tableTitle="'Todos os Pacientes'" :showStatus="false"
             :searchPlaceholder="'Buscar por paciente'" @modalDdeletarMultiplos="openModalDeleteMulti"
             @delete="openModalDelete" @edit="openModalEdit" @show="openModalShow" @add="openModalAdd" />
-        <Modal v-model="showModal" :title="modalTitle" size="xl" @save="onSavePaciente">
+        <Modal v-model="showModal" :title="modalTitle" size="xl" :name-button="saveButtonText" :processing="saveProcessing" @save="onSavePaciente">
             <PacienteForm
                 ref="pacienteFormRef"
+                :key="formKey"
                 :estados-civis="props.estadosCivis"
                 :tipos-sanguineos="props.tiposSanguineos"
                 :canais-aviso="props.canaisAviso"
                 :convenios="props.convenios"
+                :parentescos="props.parentescos"
             />
         </Modal>
         <ModalDelete v-model="deleteModal" :title="'Excluir Paciente'" :subTitle="deleteSubTitle" :item-delete="pacienteToDelete" @save="confirmDelete" />
@@ -27,7 +29,7 @@ import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import PacienteForm from "@/Pages/Pacientes/Create.vue";
-import { ref, nextTick, watch } from "vue";
+import { ref, nextTick, watch, computed, watchEffect } from "vue";
 
 const props = defineProps({
     pacientes: { type: Array, default: () => [] },
@@ -35,6 +37,7 @@ const props = defineProps({
     tiposSanguineos: { type: Array, default: () => [] },
     canaisAviso: { type: Array, default: () => [] },
     convenios: { type: Array, default: () => [] },
+    parentescos: { type: Array, default: () => [] },
 });
 const pacientesLocal = ref([...(props.pacientes || [])]);
 watch(() => props.pacientes, (v) => { pacientesLocal.value = [...(v || [])]; });
@@ -47,15 +50,24 @@ const columns = [
     { id: "email", name: "Email" },
     { id: "data_nascimento", name: "Nascimento" },
     { id: "convenio", name: "Convênio" },
+    { id: "tem_responsavel", name: "Tem Responsável" },
 ];
 
 const showModal = ref(false);
 const modalTitle = ref('Adicionar Paciente');
+const formKey = ref(0);
 function openModalAdd() {
     modalTitle.value = 'Adicionar Paciente';
     showModal.value = true;
 }
 const pacienteFormRef = ref(null);
+const saveProcessing = ref(false);
+watchEffect(() => {
+    const c = pacienteFormRef.value;
+    saveProcessing.value = !!(c?.processingRef?.value ?? c?.form?.processing);
+});
+const isEditing = ref(false);
+const saveButtonText = computed(() => isEditing.value ? 'Atualizar' : 'Salvar');
 
 // chamar o método submit exposto pelo componente filho PacienteForm.
 function onSavePaciente() {
@@ -83,6 +95,7 @@ function onSavePaciente() {
                         tipo_sanguineo_id: f.tipo_sanguineo_id ?? '',
                         canal_aviso_id: f.canal_aviso_id ?? '',
                         receber_avisos: !!f.receber_avisos,
+                        tem_responsavel: !!f.tem_responsavel,
                         convenio_id: f.convenio_id ?? '',
                         convenio: selectedConvenioDesc,
                         rg: f.rg || '',
@@ -108,10 +121,16 @@ function onSavePaciente() {
             showModal.value = false;
             isEditing.value = false;
             editingId.value = null;
+        }, {
+            onStart: () => { saveProcessing.value = true; },
+            onFinish: () => { saveProcessing.value = false; },
         });
     } else {
         pacienteFormRef.value?.submit(() => {
             showModal.value = false;
+        }, {
+            onStart: () => { saveProcessing.value = true; },
+            onFinish: () => { saveProcessing.value = false; },
         });
     }
 }
@@ -158,8 +177,21 @@ function confirmBulkDelete() {
         }
     });
 }
-const isEditing = ref(false);
 const editingId = ref(null);
+watch(showModal, async (v) => {
+    if (!v) {
+        isEditing.value = false;
+        editingId.value = null;
+        await nextTick();
+        if (pacienteFormRef.value?.form) {
+            try {
+                pacienteFormRef.value.form.clearErrors?.();
+                pacienteFormRef.value.form.reset?.();
+            } catch (e) {}
+        }
+        formKey.value += 1;
+    }
+});
 async function openModalEdit(id) {
     const p = pacientesLocal.value.find(px => String(px.id) === String(id));
     if (!p) return;
@@ -180,6 +212,7 @@ async function openModalEdit(id) {
         f.convenio_id = p.convenio_id ?? '';
         f.sexo = p.sexo || '';
         f.receber_avisos = !!p.receber_avisos;
+        f.tem_responsavel = !!p.tem_responsavel;
         f.altura = p.altura ?? null;
         f.peso = p.peso ?? null;
         f.cor_pele = p.cor_pele || '';
@@ -198,6 +231,14 @@ async function openModalEdit(id) {
         f.estado_civil_id = p.estado_civil_id ?? '';
         f.tipo_sanguineo_id = p.tipo_sanguineo_id ?? '';
         f.canal_aviso_id = p.canal_aviso_id ?? '';
+        f.responsavel_nome = p.responsavel_nome || '';
+        f.responsavel_parentesco_id = p.responsavel_parentesco_id ?? '';
+        f.responsavel_cpf = p.responsavel_cpf || '';
+        f.responsavel_rg = p.responsavel_rg || '';
+        f.responsavel_data_nascimento = p.responsavel_data_nascimento || '';
+        f.responsavel_celular = p.responsavel_celular || '';
+        f.responsavel_telefone = p.responsavel_telefone || '';
+        f.responsavel_email = p.responsavel_email || '';
     }
     await nextTick();
     if (pacienteFormRef.value?.syncChoices) {

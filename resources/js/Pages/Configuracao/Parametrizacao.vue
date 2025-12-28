@@ -83,6 +83,77 @@
         <BCol lg="6">
           <BCard class="shadow-sm h-100">
             <BCardHeader class="bg-light-subtle p-3 border-0">
+              <BCardTitle><i class="ri-team-line text-primary me-2"></i>Parentesco</BCardTitle>
+            </BCardHeader>
+            <BCardBody>
+              <p class="text-muted mb-3">Opções usadas no cadastro.</p>
+              <div class="d-flex justify-content-end align-items-center mb-3">
+                <span class="badge bg-primary-subtle text-primary">Total: {{ parentescosLocal?.length || 0 }}</span>
+              </div>
+              <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
+                <BRow class="g-3 align-items-end">
+                  <BCol md="8">
+                    <label for="parentescoDescricao" class="form-label">Descrição</label>
+                    <input v-model="formParentesco.descricao" type="text" class="form-control" id="parentescoDescricao" :class="{ 'is-invalid': formParentesco.errors.descricao }" placeholder="Ex.: Pai, Mãe, Tutor" />
+                    <div class="invalid-feedback">{{ formParentesco.errors.descricao }}</div>
+                  </BCol>
+                  <BCol md="4">
+                    <button type="button" class="btn btn-primary w-100" :disabled="formParentesco.processing" @click="saveParentesco">Adicionar</button>
+                  </BCol>
+                </BRow>
+              </div>
+              <div class="mt-4 table-responsive">
+                <table class="table table-sm table-hover align-middle table-nowrap">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 80px;">ID</th>
+                      <th>Descrição</th>
+                      <th style="width: 120px;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="p in parentescosLocal" :key="p.id">
+                      <template v-if="editingParentescoId !== p.id">
+                        <td>#{{ p.id }}</td>
+                        <td>{{ p.descricao }}</td>
+                        <td>
+                          <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-soft-info" @click="startEditParentesco(p)" title="Editar">
+                              <i class="ri-pencil-line align-bottom"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-soft-danger" @click="destroyParentesco(p.id)" title="Excluir">
+                              <i class="ri-delete-bin-line align-bottom"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </template>
+                      <template v-else>
+                        <td>#{{ p.id }}</td>
+                        <td>
+                          <input v-model="editParentesco.descricao" type="text" class="form-control" :class="{ 'is-invalid': editParentesco.errors.descricao }" placeholder="Descrição" />
+                          <div class="invalid-feedback">{{ editParentesco.errors.descricao }}</div>
+                        </td>
+                        <td>
+                          <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-success btn-sm" :disabled="editParentesco.processing" @click="updateParentesco">Salvar</button>
+                            <button type="button" class="btn btn-light btn-sm" @click="cancelEditParentesco">Cancelar</button>
+                          </div>
+                        </td>
+                      </template>
+                    </tr>
+                    <tr v-if="!parentescosLocal?.length">
+                      <td colspan="3" class="text-muted">Nenhum parentesco cadastrado</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </BCardBody>
+          </BCard>
+        </BCol>
+
+        <BCol lg="6">
+          <BCard class="shadow-sm h-100">
+            <BCardHeader class="bg-light-subtle p-3 border-0">
               <BCardTitle><i class="ri-heart-pulse-line text-primary me-2"></i>Tipo Sanguíneo</BCardTitle>
             </BCardHeader>
             <BCardBody>
@@ -235,15 +306,18 @@ const props = defineProps({
   estadosCivis: { type: Array, default: () => [] },
   tiposSanguineos: { type: Array, default: () => [] },
   canaisAviso: { type: Array, default: () => [] },
+  parentescos: { type: Array, default: () => [] },
 });
 
 const estadosCivisLocal = ref([...(props.estadosCivis || [])]);
 const tiposSanguineosLocal = ref([...(props.tiposSanguineos || [])]);
 const canaisAvisoLocal = ref([...(props.canaisAviso || [])]);
+const parentescosLocal = ref([...(props.parentescos || [])]);
 
 watch(() => props.estadosCivis, (v) => { estadosCivisLocal.value = [...(v || [])]; });
 watch(() => props.tiposSanguineos, (v) => { tiposSanguineosLocal.value = [...(v || [])]; });
 watch(() => props.canaisAviso, (v) => { canaisAvisoLocal.value = [...(v || [])]; });
+watch(() => props.parentescos, (v) => { parentescosLocal.value = [...(v || [])]; });
 
 const formEstadoCivil = useForm({ descricao: "" });
 const editEstadoCivil = useForm({ descricao: "" });
@@ -256,6 +330,10 @@ const editingTipoSangId = ref(null);
 const formCanalAviso = useForm({ nome: "" });
 const editCanalAviso = useForm({ nome: "" });
 const editingCanalAvisoId = ref(null);
+
+const formParentesco = useForm({ descricao: "" });
+const editParentesco = useForm({ descricao: "" });
+const editingParentescoId = ref(null);
 
 /* Busca removida nos cards de parametrização */
 
@@ -356,6 +434,37 @@ const destroyCanalAviso = (id) => {
   deleteModal.value = true;
 };
 
+const saveParentesco = () => {
+  formParentesco.post("/parametros/parentesco", {
+    onSuccess: () => {
+      formParentesco.reset();
+    },
+    preserveScroll: true,
+  });
+};
+const startEditParentesco = (p) => {
+  editingParentescoId.value = p.id;
+  editParentesco.descricao = p.descricao;
+};
+const cancelEditParentesco = () => {
+  editingParentescoId.value = null;
+  editParentesco.reset();
+};
+const updateParentesco = () => {
+  editParentesco.put(`/parametros/parentesco/${editingParentescoId.value}`, {
+    onSuccess: () => {
+      editingParentescoId.value = null;
+      editParentesco.reset();
+    },
+    preserveScroll: true,
+  });
+};
+const destroyParentesco = (id) => {
+  const item = (props.parentescos || []).find(p => p.id === id);
+  deleteContext.value = { type: 'parentesco', id, nome: item?.descricao || '' };
+  deleteModal.value = true;
+};
+
 const confirmDelete = () => {
   const ctx = deleteContext.value || {};
   const f = useForm({});
@@ -365,6 +474,8 @@ const confirmDelete = () => {
     f.delete(`/parametros/tipo-sanguineo/${ctx.id}`, { preserveScroll: true });
   } else if (ctx.type === 'canal_aviso') {
     f.delete(`/parametros/canal-aviso/${ctx.id}`, { preserveScroll: true });
+  } else if (ctx.type === 'parentesco') {
+    f.delete(`/parametros/parentesco/${ctx.id}`, { preserveScroll: true });
   }
   deleteModal.value = false;
   deleteContext.value = { type: '', id: null, nome: '' };

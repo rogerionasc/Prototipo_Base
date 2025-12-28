@@ -92,7 +92,7 @@
 
 <script setup>
 import { useForm } from "@inertiajs/vue3";
-import { ref, defineExpose, onMounted, nextTick, watch } from "vue";
+import { ref, defineExpose, onMounted, nextTick, watch, toRef } from "vue";
 
 const formEl = ref(null);
 const tipoSelect = ref(null);
@@ -159,12 +159,14 @@ onMounted(async () => {
   }
 });
 
-const submit = (onSuccess) => {
+const submit = (onSuccess, hooks = {}) => {
   if (formEl.value && !formEl.value.checkValidity()) {
     formEl.value.classList.add("was-validated");
     return;
   }
   form.post("/convenios", {
+    onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
+    onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
     onSuccess: () => {
       formEl.value?.classList.remove("was-validated");
       if (onSuccess) onSuccess();
@@ -172,12 +174,14 @@ const submit = (onSuccess) => {
     },
   });
 };
-const submitUpdate = (id, onSuccess) => {
+const submitUpdate = (id, onSuccess, hooks = {}) => {
   if (formEl.value && !formEl.value.checkValidity()) {
     formEl.value.classList.add("was-validated");
     return;
   }
   form.put(`/convenios/${id}`, {
+    onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
+    onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
     onSuccess: () => {
       formEl.value?.classList.remove("was-validated");
       if (onSuccess) onSuccess();
@@ -185,7 +189,7 @@ const submitUpdate = (id, onSuccess) => {
   });
 };
 
-defineExpose({ form, submit, submitUpdate });
+defineExpose({ form, submit, submitUpdate, processingRef: toRef(form, "processing") });
 
 </script>
 

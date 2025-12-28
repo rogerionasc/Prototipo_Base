@@ -24,7 +24,10 @@
                 <!-- Botão de cancelar -->
                 <button type="button" class="btn btn-light" @click="$emit('update:modelValue', false)">Cancelar</button>
                 <!-- Botão de ação principal -->
-                <button type="button" class="btn btn-success" @click="$emit('save')">{{ nameButton }}</button>
+                <button type="button" class="btn btn-success" :disabled="props.processing" @click="$emit('save')">
+                  <span v-if="props.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                  {{ nameButton }}
+                </button>
               </div>
             </div>
           </div>
@@ -56,7 +59,11 @@ const props = defineProps({
     size: {
         type: String,
         default: 'lg'
-    }
+    },
+    processing: {
+        type: Boolean,
+        default: false
+    },
 });
 
 // Classe para animação de exibição

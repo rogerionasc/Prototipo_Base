@@ -13,7 +13,7 @@
       @edit="openModalEdit"
       @show="openModalShow"
     />
-    <Modal v-model="showModal" :title="modalTitle" size="lg" @save="onSaveConvenio">
+    <Modal v-model="showModal" :title="modalTitle" size="lg" :name-button="saveButtonText" :processing="saveProcessing" @save="onSaveConvenio">
       <ConvenioForm ref="convenioFormRef" :contas="contas" />
     </Modal>
     <ModalDelete
@@ -34,7 +34,7 @@
   import Modal from "@/Components/Modal.vue";
   import ModalDelete from "@/Components/ModalDelete.vue";
 import ConvenioForm from "./Create.vue";
- import { ref, nextTick } from "vue";
+import { ref, nextTick, computed, watchEffect } from "vue";
 
  const { convenios, contas } = defineProps({
    convenios: { type: Array, default: () => [] },
@@ -48,30 +48,42 @@ import ConvenioForm from "./Create.vue";
    { id: "ans", name: "ANS" },
  ];
 
- const showModal = ref(false);
- const modalTitle = ref('Adicionar Convênio');
- const convenioFormRef = ref(null);
- const isEditing = ref(false);
- const editingId = ref(null);
+const showModal = ref(false);
+const modalTitle = ref('Adicionar Convênio');
+const convenioFormRef = ref(null);
+const saveProcessing = ref(false);
+watchEffect(() => {
+  const c = convenioFormRef.value;
+  saveProcessing.value = !!(c?.processingRef?.value ?? c?.form?.processing);
+});
+const isEditing = ref(false);
+const editingId = ref(null);
+const saveButtonText = computed(() => isEditing.value ? 'Atualizar' : 'Salvar');
  function openModalAdd() {
    isEditing.value = false;
    modalTitle.value = 'Adicionar Convênio';
    showModal.value = true;
  }
- async function onSaveConvenio() {
-   if (!convenioFormRef.value) return;
-   if (isEditing.value && editingId.value) {
-     convenioFormRef.value?.submitUpdate(editingId.value, () => {
-       showModal.value = false;
-       isEditing.value = false;
-       editingId.value = null;
-     });
-   } else {
-     convenioFormRef.value?.submit(() => {
-       showModal.value = false;
-     });
-   }
- }
+async function onSaveConvenio() {
+  if (!convenioFormRef.value) return;
+  if (isEditing.value && editingId.value) {
+    convenioFormRef.value?.submitUpdate(editingId.value, () => {
+      showModal.value = false;
+      isEditing.value = false;
+      editingId.value = null;
+    }, {
+      onStart: () => { saveProcessing.value = true; },
+      onFinish: () => { saveProcessing.value = false; },
+    });
+  } else {
+    convenioFormRef.value?.submit(() => {
+      showModal.value = false;
+    }, {
+      onStart: () => { saveProcessing.value = true; },
+      onFinish: () => { saveProcessing.value = false; },
+    });
+  }
+}
  const deleteModal = ref(false);
  const convenioToDelete = ref({});
  const deleteSubTitle = ref('Deseja realmente excluir');
@@ -111,4 +123,3 @@ import ConvenioForm from "./Create.vue";
  }
  function openModalShow(id) { }
  </script>
-

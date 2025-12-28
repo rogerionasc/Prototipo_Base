@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use App\Models\EstadoCivil;
 use App\Models\TipoSanguineo;
 use App\Models\CanalAviso;
+use App\Models\Parentesco;
 
 class VelzonRoutesController extends Controller
 {
@@ -23,10 +24,12 @@ class VelzonRoutesController extends Controller
         $estados = EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
         $tipos = TipoSanguineo::select('id','descricao')->orderBy('descricao')->get();
         $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
+        $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
         return Inertia::render('Configuracao/Index', [
             'estadosCivis' => $estados,
             'tiposSanguineos' => $tipos,
             'canaisAviso' => $canais,
+            'parentescos' => $parentescos,
         ]);
     }
 
@@ -145,10 +148,12 @@ class VelzonRoutesController extends Controller
         $estados = EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
         $tipos = TipoSanguineo::select('id','descricao')->orderBy('descricao')->get();
         $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
+        $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
         return Inertia::render('Parametros/Index', [
             'estadosCivis' => $estados,
             'tiposSanguineos' => $tipos,
             'canaisAviso' => $canais,
+            'parentescos' => $parentescos,
         ]);
     }
 
@@ -237,6 +242,35 @@ class VelzonRoutesController extends Controller
         $canal = CanalAviso::findOrFail($id);
         $canal->delete();
         return back()->with('success','Canal de aviso removido');
+    }
+
+    public function parametros_store_parentesco(Request $request) {
+        $data = $request->validate([
+            'descricao' => ['required','string','max:100','unique:parentescos,descricao'],
+        ], [
+            'descricao.required' => 'Informe a descrição.',
+            'descricao.unique' => 'Este parentesco já está cadastrado.',
+        ]);
+        Parentesco::create($data);
+        return back()->with('success','Parentesco cadastrado');
+    }
+
+    public function parametros_update_parentesco(Request $request, int $id) {
+        $data = $request->validate([
+            'descricao' => ['required','string','max:100','unique:parentescos,descricao,' . $id],
+        ], [
+            'descricao.required' => 'Informe a descrição.',
+            'descricao.unique' => 'Este parentesco já está cadastrado.',
+        ]);
+        $p = Parentesco::findOrFail($id);
+        $p->update($data);
+        return back()->with('success','Parentesco atualizado');
+    }
+
+    public function parametros_destroy_parentesco(int $id) {
+        $p = Parentesco::findOrFail($id);
+        $p->delete();
+        return back()->with('success','Parentesco removido');
     }
 
 }

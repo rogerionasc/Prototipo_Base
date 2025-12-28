@@ -15,10 +15,11 @@
           <template #title>
             <i class="ri-equalizer-line d-block fs-3xl mb-1"></i>Parametrização
           </template>
-          <ParametrizacaoBody
+          <Parametrizacao
             :estadosCivis="props.estadosCivis"
             :tiposSanguineos="props.tiposSanguineos"
             :canaisAviso="props.canaisAviso"
+            :parentescos="props.parentescos"
           />
         </BTab>
         <BTab>
@@ -67,11 +68,12 @@
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import { Head, Link } from "@inertiajs/vue3";
-import ParametrizacaoBody from "./ParametrizacaoBody.vue";
+import Parametrizacao from "./Parametrizacao.vue";
 const props = defineProps({
   estadosCivis: { type: Array, default: () => [] },
   tiposSanguineos: { type: Array, default: () => [] },
   canaisAviso: { type: Array, default: () => [] },
+  parentescos: { type: Array, default: () => [] },
 });
 </script>
 <style scoped>

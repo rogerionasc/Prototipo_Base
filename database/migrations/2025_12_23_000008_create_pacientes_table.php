@@ -32,6 +32,7 @@ return new class extends Migration
             $table->string('nome_pai')->nullable();
             $table->foreignId('tipo_sanguineo_id')->nullable()->constrained('tipo_sanguineo')->nullOnDelete();
             $table->text('observacoes')->nullable();
+            $table->boolean('tem_responsavel')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });
