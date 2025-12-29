@@ -8,6 +8,7 @@ use App\Models\EstadoCivil;
 use App\Models\TipoSanguineo;
 use App\Models\CanalAviso;
 use App\Models\Parentesco;
+use App\Models\Especialidade;
 
 class VelzonRoutesController extends Controller
 {
@@ -25,11 +26,13 @@ class VelzonRoutesController extends Controller
         $tipos = TipoSanguineo::select('id','descricao')->orderBy('descricao')->get();
         $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
         $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
+        $especialidades = Especialidade::select('id','nome','codigo','descricao','ativo')->orderBy('nome')->get();
         return Inertia::render('Configuracao/Index', [
             'estadosCivis' => $estados,
             'tiposSanguineos' => $tipos,
             'canaisAviso' => $canais,
             'parentescos' => $parentescos,
+            'especialidades' => $especialidades,
         ]);
     }
 

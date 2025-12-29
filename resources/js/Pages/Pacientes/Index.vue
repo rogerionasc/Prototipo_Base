@@ -50,7 +50,6 @@ const columns = [
     { id: "email", name: "Email" },
     { id: "data_nascimento", name: "Nascimento" },
     { id: "convenio", name: "Convênio" },
-    { id: "tem_responsavel", name: "Tem Responsável" },
 ];
 
 const showModal = ref(false);

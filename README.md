@@ -218,12 +218,6 @@ config:
   theme: dark
   layout: elk
 ---
----
-config:
-  look: neo
-  theme: dark
-  layout: elk
----
 erDiagram
     direction TB
 

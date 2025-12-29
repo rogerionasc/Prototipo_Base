@@ -261,7 +261,8 @@ function initGrid() {
             id: 'actions',
             name: 'Ações',
             formatter: (cell, row) => {
-                const rowId = row.cells[1].data;
+                const idIndex = props.showCheckbox ? 1 : 0;
+                const rowId = row.cells[idIndex]?.data;
                 // Captura o objeto completo da linha
                 const rowData = filteredData.value.find(r => {
                     let idCol;

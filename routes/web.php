@@ -4,6 +4,7 @@ use App\Http\Controllers\VelzonRoutesController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\ConvenioController;
+use App\Http\Controllers\EspecialidadeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -74,6 +75,11 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/convenios", [ConvenioController::class, "store"])->name('convenios.store');
         Route::put("/convenios/{id}", [ConvenioController::class, "update"])->name('convenios.update');
         Route::delete("/convenios/{id}", [ConvenioController::class, "destroy"])->name('convenios.destroy');
+
+        // Especialidades Médicas routes
+        Route::post("/especialidades", [EspecialidadeController::class, "store"])->name('especialidades.store');
+        Route::put("/especialidades/{id}", [EspecialidadeController::class, "update"])->name('especialidades.update');
+        Route::delete("/especialidades/{id}", [EspecialidadeController::class, "destroy"])->name('especialidades.destroy');
 
         // Parametrização routes
         Route::post("/parametros/estado-civil", [VelzonRoutesController::class, "parametros_store_estado_civil"])->name('parametros.estado_civil.store');

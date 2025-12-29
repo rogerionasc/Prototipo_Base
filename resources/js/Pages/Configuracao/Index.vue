@@ -2,7 +2,7 @@
   <Layout>
     <Head title="Configurações" />
     <PageHeader title="Configurações" pageTitle="Menu" />
-    <BRow class="g-4 mt-1">
+    <BRow class="g-0">
       <BTabs
         nav-class="custom-verti-nav-pills text-center config-nav"
         nav-wrapper-class="col-lg-3 config-nav-wrapper"
@@ -24,35 +24,41 @@
         </BTab>
         <BTab>
           <template #title>
-            <i class="ri-user-settings-line d-block fs-3xl mb-1"></i>Usuários
+            <i class="ri-first-aid-kit-line d-block fs-3xl mb-1"></i>Especialidades
+          </template>
+          <Especialidade :especialidades="props.especialidades" />
+        </BTab>
+        <BTab>
+          <template #title>
+            <i class="ri-layout-grid-line d-block fs-3xl mb-1"></i>Tabela TUSS
           </template>
           <BCard class="shadow-sm config-card">
             <BCardBody>
               <div class="d-flex align-items-start">
                 <div class="flex-grow-1">
-                  <h5 class="mb-2">Usuários</h5>
-                  <p class="text-muted mb-3">Gerencie usuários e permissões do sistema.</p>
+                  <h5 class="mb-2">Tabela TUSS</h5>
+                  <p class="text-muted mb-3">Gerencie os procedimentos padronizados pela tabela TUSS.</p>
                 </div>
-                <i class="ri-user-settings-line text-primary fs-20 ms-3"></i>
+                <i class="ri-layout-grid-line text-primary fs-20 ms-3"></i>
               </div>
               <div class="d-flex justify-content-end">
-                <Link href="/usuarios" class="btn btn-soft-primary">Abrir Usuários</Link>
+                <Link href="/componentes" class="btn btn-soft-primary">Abrir Componentes</Link>
               </div>
             </BCardBody>
           </BCard>
         </BTab>
-        <BTab>
+                <BTab>
           <template #title>
-            <i class="ri-layout-grid-line d-block fs-3xl mb-1"></i>Componentes
+            <i class="ri-file-list-3-line d-block fs-3xl mb-1"></i>Procedimentos
           </template>
           <BCard class="shadow-sm config-card">
             <BCardBody>
               <div class="d-flex align-items-start">
                 <div class="flex-grow-1">
-                  <h5 class="mb-2">Componentes</h5>
-                  <p class="text-muted mb-3">Visualize e teste componentes reutilizáveis da interface.</p>
+                  <h5 class="mb-2">Procedimentos</h5>
+                  <p class="text-muted mb-3">Gerencie os procedimentos da tabela propria.</p>
                 </div>
-                <i class="ri-layout-grid-line text-primary fs-20 ms-3"></i>
+                <i class="ri-file-list-3-line text-primary fs-20 ms-3"></i>
               </div>
               <div class="d-flex justify-content-end">
                 <Link href="/componentes" class="btn btn-soft-primary">Abrir Componentes</Link>
@@ -69,11 +75,13 @@ import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Parametrizacao from "./Parametrizacao.vue";
+import Especialidade from "./Especialidade.vue";
 const props = defineProps({
   estadosCivis: { type: Array, default: () => [] },
   tiposSanguineos: { type: Array, default: () => [] },
   canaisAviso: { type: Array, default: () => [] },
   parentescos: { type: Array, default: () => [] },
+  especialidades: { type: Array, default: () => [] },
 });
 </script>
 <style scoped>
