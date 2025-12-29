@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('procedimento_convenio', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('procedimento_id')->constrained('procedimentos')->cascadeOnDelete();
-            $table->foreignId('convenio_id')->constrained('convenios')->cascadeOnDelete();
+            $table->foreignId('procedimento_id')->constrained('procedimentos');
+            $table->foreignId('convenio_id')->constrained('convenios');
             $table->decimal('valor_convenio', 10, 2)->nullable();
             $table->boolean('ativo')->default(true);
             $table->timestamps();

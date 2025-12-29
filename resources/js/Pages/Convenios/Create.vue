@@ -16,6 +16,7 @@
           id="descricao"
           placeholder="Nome do convênio"
           required
+          maxlength="120"
         />
         <div class="invalid-feedback">Informe a descrição.</div>
       </div>

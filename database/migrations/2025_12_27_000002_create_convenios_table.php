@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('convenios', function (Blueprint $table) {
             $table->id();
-            $table->string('descricao');
-            $table->string('tipo')->nullable();
+            $table->string('descricao', 120);
+            $table->string('tipo', 20)->nullable();
             $table->foreignId('empresa_id')->nullable()->constrained('contas')->nullOnDelete();
             $table->unsignedInteger('ans')->nullable();
             $table->unsignedInteger('dias_recebimento')->nullable();

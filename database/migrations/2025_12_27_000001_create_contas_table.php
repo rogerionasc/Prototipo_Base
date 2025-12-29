@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('contas', function (Blueprint $table) {
             $table->id();
-            $table->string('nome');
-            $table->string('cnpj')->nullable();
+            $table->string('nome', 120);
+            $table->string('cnpj', 18)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

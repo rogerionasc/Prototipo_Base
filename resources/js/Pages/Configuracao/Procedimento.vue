@@ -10,7 +10,7 @@
           <BCol md="6">
             <label for="procNome" class="form-label">Nome</label>
             <span class="text-danger ms-1">*</span>
-            <input placeholder="Ex: Consulta Geral" v-model="formCreate.nome" type="text" id="procNome" class="form-control" :class="{ 'is-invalid': formCreate.errors.nome }" />
+            <input placeholder="Ex: Consulta Geral" v-model="formCreate.nome" type="text" id="procNome" class="form-control" :class="{ 'is-invalid': formCreate.errors.nome }" maxlength="120" />
             <div class="invalid-feedback">{{ formCreate.errors.nome }}</div>
           </BCol>
           <BCol md="6">
@@ -79,7 +79,7 @@
           <BCol md="6">
             <label for="procEditNome" class="form-label">Nome</label>
             <span class="text-danger ms-1">*</span>
-            <input placeholder="Ex: Consulta Geral" v-model="formEdit.nome" type="text" id="procEditNome" class="form-control" :class="{ 'is-invalid': formEdit.errors.nome }" />
+            <input placeholder="Ex: Consulta Geral" v-model="formEdit.nome" type="text" id="procEditNome" class="form-control" :class="{ 'is-invalid': formEdit.errors.nome }" maxlength="120" />
             <div class="invalid-feedback">{{ formEdit.errors.nome }}</div>
           </BCol>
           <BCol md="6">

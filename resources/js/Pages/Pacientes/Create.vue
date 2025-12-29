@@ -7,7 +7,7 @@
                         <label for="nome" class="form-label">Nome</label>
                         <span class="text-danger ms-1">*</span>
                         <input v-model="form.nome" type="text" class="form-control" id="nome"
-                            placeholder="Nome completo" required>
+                            placeholder="Nome completo" required maxlength="120">
                         <div class="invalid-feedback">
                             Por favor, insira o nome completo.
                         </div>
@@ -16,7 +16,7 @@
                         <label for="cpf" class="form-label">CPF</label>
                         <span class="text-danger ms-1">*</span>
                         <input v-model="form.cpf" v-mask="'###.###.###-##'" type="text" class="form-control"
-                            :class="{ 'is-invalid': form.errors.cpf }" id="cpf" placeholder="000.000.000-00" required>
+                            :class="{ 'is-invalid': form.errors.cpf }" id="cpf" placeholder="000.000.000-00" required maxlength="14">
                         <div class="invalid-feedback">
                             {{ form.errors.cpf || 'Por favor, insira o CPF.' }}
                         </div>
@@ -24,7 +24,7 @@
                     <div class="col-md-3">
                         <label for="rg" class="form-label">RG</label>
                         <input v-model="form.rg" v-mask="'###.###.###'" type="text" class="form-control" id="rg"
-                            placeholder="000.000.000">
+                            placeholder="000.000.000" maxlength="11">
                     </div>
                     <div class="col-md-3">
                         <label for="sexo" class="form-label">Sexo</label>
@@ -43,7 +43,7 @@
                     <div class="col-md-3">
                         <label for="naturalidade" class="form-label">Naturalidade</label>
                         <input v-model="form.naturalidade" type="text" class="form-control" id="naturalidade"
-                            placeholder="Cidade/UF">
+                            placeholder="Cidade/UF" maxlength="60">
                     </div>
                     <div class="col-md-3">
                         <label for="estadoCivil" class="form-label">Estado Civil</label>
@@ -77,7 +77,7 @@
                     <div class="col-md-2">
                         <label for="corPele" class="form-label">Cor da Pele</label>
                         <input v-model="form.cor_pele" type="text" class="form-control" id="corPele"
-                            placeholder="Cor da pele">
+                            placeholder="Cor da pele" maxlength="20">
                     </div>
                     <div class="col-md-3">
                         <label for="tipoSanguineo" class="form-label">Tipo Sanguíneo</label>
@@ -94,27 +94,27 @@
                     <div class="col-md-3">
                         <label for="telefone" class="form-label">Telefone</label>
                         <input v-model="form.telefone" v-mask="'(##) ##### ####'" type="text" class="form-control"
-                            id="telefone" placeholder="(00) 0000-0000">
+                            id="telefone" placeholder="(00) 0000-0000" maxlength="15">
                     </div>
                     <div class="col-md-6">
                         <label for="email" class="form-label">E-mail</label>
                         <input v-model="form.email" type="email" class="form-control" id="email"
-                            placeholder="email@dominio.com">
+                            placeholder="email@dominio.com" maxlength="100">
                     </div>
                     <div class="col-md-3">
                         <label for="celular" class="form-label">Celular</label>
                         <input v-model="form.celular" v-mask="'(##) #####-####'" type="text" class="form-control"
-                            id="celular" placeholder="(00) 00000-0000">
+                            id="celular" placeholder="(00) 00000-0000" maxlength="15">
                     </div>
                     <div class="col-md-3">
                         <label for="profissao" class="form-label">Profissão</label>
                         <input v-model="form.profissao" type="text" class="form-control" id="profissao"
-                            placeholder="Profissão">
+                            placeholder="Profissão" maxlength="60">
                     </div>
                     <div class="col-md-3">
                         <label for="escolaridade" class="form-label">Escolaridade</label>
                         <input v-model="form.escolaridade" type="text" class="form-control" id="escolaridade"
-                            placeholder="Escolaridade">
+                            placeholder="Escolaridade" maxlength="60">
                     </div>
 
                     <div class="col-md-3">
@@ -139,12 +139,12 @@
                     <div class="col-md-6">
                         <label for="nomeMae" class="form-label">Nome da Mãe</label>
                         <input v-model="form.nome_mae" type="text" class="form-control" id="nomeMae"
-                            placeholder="Nome da mãe">
+                            placeholder="Nome da mãe" maxlength="120">
                     </div>
                     <div class="col-md-6">
                         <label for="nomePai" class="form-label">Nome do Pai</label>
                         <input v-model="form.nome_pai" type="text" class="form-control" id="nomePai"
-                            placeholder="Nome do pai">
+                            placeholder="Nome do pai" maxlength="120">
                     </div>
                     <div class="col-md-12">
                         <label for="temResponsavel" class="form-label">Paciente possui responsável?</label>
@@ -159,7 +159,7 @@
                         <div class="col-md-6">
                             <label for="responsavelNome" class="form-label">Nome do Responsável</label>
                             <span class="text-danger ms-1">*</span>
-                            <input v-model="form.responsavel_nome" :required="form.tem_responsavel" type="text" class="form-control" :class="{ 'is-invalid': form.errors.responsavel_nome }" id="responsavelNome" placeholder="Nome completo do responsável">
+                            <input v-model="form.responsavel_nome" :required="form.tem_responsavel" type="text" class="form-control" :class="{ 'is-invalid': form.errors.responsavel_nome }" id="responsavelNome" placeholder="Nome completo do responsável" maxlength="120">
                             <div class="invalid-feedback">
                                 {{ form.errors.responsavel_nome || 'Campo obrigatório quando há responsável.' }}
                             </div>
@@ -181,30 +181,30 @@
                         </div>
                         <div class="col-md-3">
                             <label for="responsavelCpf" class="form-label">CPF</label>
-                            <input v-model="form.responsavel_cpf" v-mask="'###.###.###-##'" type="text" class="form-control" id="responsavelCpf" placeholder="000.000.000-00">
+                            <input v-model="form.responsavel_cpf" v-mask="'###.###.###-##'" type="text" class="form-control" id="responsavelCpf" placeholder="000.000.000-00" maxlength="14">
                         </div>
                         <div class="col-md-3">
                             <label for="responsavelRg" class="form-label">RG</label>
-                            <input v-model="form.responsavel_rg" v-mask="'###.###.###'" type="text" class="form-control" id="responsavelRg" placeholder="000.000.000">
+                            <input v-model="form.responsavel_rg" v-mask="'###.###.###'" type="text" class="form-control" id="responsavelRg" placeholder="000.000.000" maxlength="11">
                         </div>
                         <div class="col-md-3">
                             <label for="responsavelCelular" class="form-label">Celular</label>
-                            <input v-model="form.responsavel_celular" v-mask="'(##) #####-####'" type="text" class="form-control" id="responsavelCelular" placeholder="(00) 00000-0000">
+                            <input v-model="form.responsavel_celular" v-mask="'(##) #####-####'" type="text" class="form-control" id="responsavelCelular" placeholder="(00) 00000-0000" maxlength="15">
                         </div>
                         <div class="col-md-3">
                             <label for="responsavelTelefone" class="form-label">Telefone</label>
-                            <input v-model="form.responsavel_telefone" v-mask="'(##) ##### ####'" type="text" class="form-control" id="responsavelTelefone" placeholder="(00) 0000-0000">
+                            <input v-model="form.responsavel_telefone" v-mask="'(##) ##### ####'" type="text" class="form-control" id="responsavelTelefone" placeholder="(00) 0000-0000" maxlength="15">
                         </div>
                         <div class="col-md-6">
                             <label for="responsavelEmail" class="form-label">E-mail</label>
-                            <input v-model="form.responsavel_email" type="email" class="form-control" id="responsavelEmail" placeholder="email@dominio.com">
+                            <input v-model="form.responsavel_email" type="email" class="form-control" id="responsavelEmail" placeholder="email@dominio.com" maxlength="100">
                         </div>
                     </div>
 
                     <div class="col-md-12">
                         <label for="observacoes" class="form-label">Observações</label>
                         <textarea v-model="form.observacoes" class="form-control" id="observacoes" rows="4"
-                            placeholder="Anotações gerais"></textarea>
+                            placeholder="Anotações gerais" maxlength="500"></textarea>
                     </div>
                 </div>
             </BTab>
@@ -212,29 +212,29 @@
                 <div class="row g-3 mt-2">
                     <div class="col-md-3">
                         <label for="cep" class="form-label">CEP</label>
-                        <input v-model="form.cep" type="text" class="form-control" id="cep" placeholder="00000-000">
+                        <input v-model="form.cep" type="text" class="form-control" id="cep" placeholder="00000-000" maxlength="9">
                     </div>
                     <div class="col-md-6">
                         <label for="endereco" class="form-label">Endereço</label>
                         <input v-model="form.endereco" type="text" class="form-control" id="endereco"
-                            placeholder="Rua, Avenida, Travessa">
+                            placeholder="Rua, Avenida, Travessa" maxlength="120">
                     </div>
                     <div class="col-md-3">
                         <label for="numero" class="form-label">Número</label>
-                        <input v-model="form.numero" type="text" class="form-control" id="numero" placeholder="Número">
+                        <input v-model="form.numero" type="text" class="form-control" id="numero" placeholder="Número" maxlength="10">
                     </div>
                     <div class="col-md-4">
                         <label for="bairro" class="form-label">Bairro</label>
-                        <input v-model="form.bairro" type="text" class="form-control" id="bairro" placeholder="Bairro">
+                        <input v-model="form.bairro" type="text" class="form-control" id="bairro" placeholder="Bairro" maxlength="60">
                     </div>
                     <div class="col-md-4">
                         <label for="cidade" class="form-label">Cidade</label>
-                        <input v-model="form.cidade" type="text" class="form-control" id="cidade" placeholder="Cidade">
+                        <input v-model="form.cidade" type="text" class="form-control" id="cidade" placeholder="Cidade" maxlength="60">
                     </div>
                     <div class="col-md-4">
                         <label for="complemento" class="form-label">Complemento</label>
                         <input v-model="form.complemento" type="text" class="form-control" id="complemento"
-                            placeholder="Apartamento, Bloco, etc.">
+                            placeholder="Apartamento, Bloco, etc." maxlength="60">
                     </div>
                 </div>
             </BTab>

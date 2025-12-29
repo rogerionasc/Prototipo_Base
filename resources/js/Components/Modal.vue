@@ -1,10 +1,10 @@
 <template>
     <!-- Componente de Modal reutilizável -->
     <div>
-      <div v-show="modelValue" class="modal-backdrop"></div>
+      <div v-show="modelValue" class="modal-backdrop" :style="{ zIndex: backdropZIndex }"></div>
       <div id="myModal" class="modal zoomIn" :class="[showClass]" tabindex="9999"
           aria-labelledby="myModalLabel" aria-hidden="true"
-          :style="{ display: modelValue ? 'block' : 'none' }">
+          :style="{ display: modelValue ? 'block' : 'none', zIndex: zIndex }">
 
           <!-- Conteúdo principal do modal -->
           <div :class="['modal-dialog','modal-dialog-centered', size ? `modal-${size}` : null]" ref="modalDialog">
@@ -63,6 +63,14 @@ const props = defineProps({
     processing: {
         type: Boolean,
         default: false
+    },
+    zIndex: {
+        type: Number,
+        default: 1050
+    },
+    backdropZIndex: {
+        type: Number,
+        default: 1040
     },
 });
 

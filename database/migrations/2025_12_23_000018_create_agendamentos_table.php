@@ -10,10 +10,10 @@ return new class extends Migration
     {
         Schema::create('agendamentos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('agenda_medica_id')->constrained('agenda_medica')->cascadeOnDelete();
+            $table->foreignId('agenda_medica_id')->constrained('agenda_medica');
             $table->date('data');
             $table->time('hora');
-            $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
+            $table->foreignId('paciente_id')->constrained('pacientes');
             $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos')->nullOnDelete();
             $table->foreignId('status_id')->nullable()->constrained('status_agendamento')->nullOnDelete();
             $table->unsignedBigInteger('agendamento_origem_id')->nullable();

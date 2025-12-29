@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('especialidades', function (Blueprint $table) {
             $table->id();
-            $table->string('nome');
-            $table->string('codigo')->nullable();
+            $table->string('nome', 120);
+            $table->string('codigo', 20)->nullable();
             $table->text('descricao')->nullable();
             $table->boolean('ativo')->default(true);
             $table->timestamps();

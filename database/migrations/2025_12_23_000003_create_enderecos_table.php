@@ -10,12 +10,12 @@ return new class extends Migration
     {
         Schema::create('enderecos', function (Blueprint $table) {
             $table->id();
-            $table->string('cep')->nullable();
-            $table->string('endereco');
-            $table->string('numero')->nullable();
-            $table->string('bairro')->nullable();
-            $table->string('cidade')->nullable();
-            $table->string('complemento')->nullable();
+            $table->string('cep', 9)->nullable();
+            $table->string('endereco', 120);
+            $table->string('numero', 10)->nullable();
+            $table->string('bairro', 60)->nullable();
+            $table->string('cidade', 60)->nullable();
+            $table->string('complemento', 60)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

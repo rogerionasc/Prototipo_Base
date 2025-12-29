@@ -10,18 +10,19 @@ return new class extends Migration
     {
         Schema::create('profissionais_saude', function (Blueprint $table) {
             $table->id();
-            $table->string('nome');
-            $table->string('cpf')->nullable()->index();
-            $table->string('rg')->nullable();
-            $table->string('sexo')->nullable();
+            $table->string('nome', 120);
+            $table->string('cpf', 14)->nullable()->index();
+            $table->string('rg', 11)->nullable();
+            $table->string('sexo', 20)->nullable();
             $table->date('data_nascimento')->nullable();
-            $table->string('naturalidade')->nullable();
+            $table->string('naturalidade', 60)->nullable();
             $table->foreignId('estado_civil_id')->nullable()->constrained('estado_civil')->nullOnDelete();
-            $table->string('cnes')->nullable();
+            $table->string('cnes', 7)->nullable();
+            $table->string('crm', 12)->nullable()->index();
             $table->foreignId('endereco_id')->nullable()->constrained('enderecos')->nullOnDelete();
-            $table->string('celular')->nullable();
-            $table->string('telefone')->nullable();
-            $table->string('email')->nullable();
+            $table->string('celular', 15)->nullable();
+            $table->string('telefone', 15)->nullable();
+            $table->string('email', 100)->nullable();
             $table->text('observacoes')->nullable();
             $table->timestamps();
             $table->softDeletes();

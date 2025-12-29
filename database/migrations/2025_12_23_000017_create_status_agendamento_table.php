@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('status_agendamento', function (Blueprint $table) {
             $table->id();
-            $table->string('descricao');
+            $table->string('descricao', 60);
             $table->timestamps();
             $table->softDeletes();
         });

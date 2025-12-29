@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('procedimentos', function (Blueprint $table) {
             $table->id();
-            $table->string('nome');
-            $table->string('descricao')->nullable();
+            $table->string('nome', 120);
+            $table->string('descricao', 120)->nullable();
             $table->foreignId('categoria_id')->nullable();
             $table->boolean('eh_tratamento')->default(false);
             $table->unsignedInteger('quantidade_sessoes')->nullable();

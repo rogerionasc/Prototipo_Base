@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('categorias_procedimento', function (Blueprint $table) {
             $table->id();
-            $table->string('nome');
+            $table->string('nome', 120);
             $table->timestamps();
             $table->softDeletes();
         });
@@ -21,4 +21,3 @@ return new class extends Migration
         Schema::dropIfExists('categorias_procedimento');
     }
 };
-

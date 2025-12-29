@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('prescricoes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('prontuario_id')->constrained('prontuarios')->cascadeOnDelete();
-            $table->foreignId('profissional_saude_id')->constrained('profissionais_saude')->cascadeOnDelete();
+            $table->foreignId('prontuario_id')->constrained('prontuarios');
+            $table->foreignId('profissional_saude_id')->constrained('profissionais_saude');
             $table->dateTime('data_prescricao')->nullable();
             $table->text('prescricao')->nullable();
             $table->text('observacoes')->nullable();

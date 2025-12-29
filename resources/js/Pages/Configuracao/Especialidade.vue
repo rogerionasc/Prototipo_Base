@@ -10,12 +10,12 @@
           <BCol md="4">
             <label for="espNome" class="form-label">Nome</label>
             <span class="text-danger ms-1">*</span>
-            <input v-model="formCreate.nome" type="text" class="form-control" id="espNome" :class="{ 'is-invalid': formCreate.errors.nome }" placeholder="Ex.: Cardiologia" />
+            <input v-model="formCreate.nome" type="text" class="form-control" id="espNome" :class="{ 'is-invalid': formCreate.errors.nome }" placeholder="Ex.: Cardiologia" maxlength="120" />
             <div class="invalid-feedback">{{ formCreate.errors.nome }}</div>
           </BCol>
           <BCol md="3">
             <label for="espCodigo" class="form-label">Código</label>
-            <input v-model="formCreate.codigo" type="text" class="form-control" id="espCodigo" placeholder="Ex.: CARD" />
+            <input v-model="formCreate.codigo" type="text" class="form-control" id="espCodigo" placeholder="Ex.: CARD" maxlength="20" />
           </BCol>
           <BCol md="3">
             <label for="espAtivo" class="form-label">Ativa</label>
@@ -54,12 +54,12 @@
         <BRow class="g-3">
           <BCol md="6">
             <label for="espEditNome" class="form-label">Nome</label>
-            <input v-model="formEdit.nome" type="text" id="espEditNome" class="form-control" :class="{ 'is-invalid': formEdit.errors.nome }" />
+            <input v-model="formEdit.nome" type="text" id="espEditNome" class="form-control" :class="{ 'is-invalid': formEdit.errors.nome }" maxlength="120" />
             <div class="invalid-feedback">{{ formEdit.errors.nome }}</div>
           </BCol>
           <BCol md="6">
             <label for="espEditCodigo" class="form-label">Código</label>
-            <input v-model="formEdit.codigo" type="text" id="espEditCodigo" class="form-control" />
+            <input v-model="formEdit.codigo" type="text" id="espEditCodigo" class="form-control" maxlength="20" />
           </BCol>
         </BRow>
         <BRow class="g-3 mt-0">

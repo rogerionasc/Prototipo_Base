@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('sessoes_tratamento', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('procedimento_id')->constrained('procedimentos')->cascadeOnDelete();
-            $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
+            $table->foreignId('procedimento_id')->constrained('procedimentos');
+            $table->foreignId('paciente_id')->constrained('pacientes');
             $table->unsignedInteger('numero_sessao');
             $table->date('data_prevista')->nullable();
             $table->boolean('realizada')->default(false);

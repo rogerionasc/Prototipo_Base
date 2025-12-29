@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('historico_prontuario', function (Blueprint $table) {
-            $table->foreign('atendimento_id')->references('id')->on('atendimentos')->cascadeOnDelete();
+            $table->foreign('atendimento_id')->references('id')->on('atendimentos');
         });
     }
 

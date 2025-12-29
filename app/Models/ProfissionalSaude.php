@@ -21,6 +21,7 @@ class ProfissionalSaude extends Model
         'naturalidade',
         'estado_civil_id',
         'cnes',
+        'crm',
         'endereco_id',
         'celular',
         'telefone',
@@ -40,7 +41,8 @@ class ProfissionalSaude extends Model
 
     public function especialidades()
     {
-        return $this->belongsToMany(Especialidade::class, 'profissional_especialidade', 'profissional_saude_id', 'especialidade_id');
+        return $this->belongsToMany(Especialidade::class, 'profissional_especialidade', 'profissional_saude_id', 'especialidade_id')
+            ->withPivot('qre');
     }
 
     public function agendas()

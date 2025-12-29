@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('modelos_documentos', function (Blueprint $table) {
             $table->id();
-            $table->string('tipo');
-            $table->string('nome');
+            $table->string('tipo', 50);
+            $table->string('nome', 120);
             $table->text('conteudo_template')->nullable();
             $table->boolean('ativo')->default(true);
             $table->timestamps();

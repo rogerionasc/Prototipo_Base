@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('canais_aviso', function (Blueprint $table) {
             $table->id();
-            $table->string('nome');
+            $table->string('nome', 60);
             $table->timestamps();
             $table->softDeletes();
         });

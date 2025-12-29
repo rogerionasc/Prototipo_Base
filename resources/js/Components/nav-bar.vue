@@ -759,7 +759,7 @@ export default {
             </template>
             <h6 class="dropdown-header">Bem vindo {{ $page.props.auth.user.nome }} {{ $page.props.auth.user.sobrenome }}!</h6>
             <Link class="dropdown-item" :href="route('profile.show')"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle">Profile</span>
+            <span class="align-middle">Perfil</span>
             </Link>
             <Link class="dropdown-item" v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')"><i class="mdi mdi-key-variant text-muted fs-16 align-middle me-1"></i>
             <span class="align-middle"> API Tokens</span>

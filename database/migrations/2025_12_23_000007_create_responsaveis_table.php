@@ -10,15 +10,15 @@ return new class extends Migration
     {
         Schema::create('responsaveis', function (Blueprint $table) {
             $table->id();
-            $table->string('nome');
-            $table->foreignId('parentesco_id')->constrained('parentescos')->cascadeOnDelete();
-            $table->string('cpf')->nullable();
-            $table->string('rg')->nullable();
+            $table->string('nome', 120);
+            $table->foreignId('parentesco_id')->constrained('parentescos');
+            $table->string('cpf', 14)->nullable();
+            $table->string('rg', 11)->nullable();
             $table->date('data_nascimento')->nullable();
             $table->foreignId('endereco_id')->nullable()->constrained('enderecos')->nullOnDelete();
-            $table->string('celular')->nullable();
-            $table->string('telefone')->nullable();
-            $table->string('email')->nullable();
+            $table->string('celular', 15)->nullable();
+            $table->string('telefone', 15)->nullable();
+            $table->string('email', 100)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

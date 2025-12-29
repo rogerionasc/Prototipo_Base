@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 use App\Models\EstadoCivil;
 use App\Models\TipoSanguineo;
 use App\Models\CanalAviso;
@@ -49,7 +50,42 @@ class VelzonRoutesController extends Controller
 
     public function medico()
     {
-        return Inertia::render('Doctor/Index');
+        $profissionais = \App\Models\ProfissionalSaude::select(
+                'profissionais_saude.id',
+                'nome',
+                'cpf',
+                'rg',
+                'sexo',
+                DB::raw("DATE_FORMAT(profissionais_saude.data_nascimento, '%Y-%m-%d') AS data_nascimento"),
+                'naturalidade',
+                'estado_civil_id',
+                'cnes',
+                'crm',
+                'endereco_id',
+                'email',
+                'telefone',
+                'celular',
+                'observacoes',
+                DB::raw("COALESCE(e.cep,'') AS cep"),
+                DB::raw("COALESCE(e.endereco,'') AS endereco"),
+                DB::raw("COALESCE(e.numero,'') AS numero"),
+                DB::raw("COALESCE(e.bairro,'') AS bairro"),
+                DB::raw("COALESCE(e.cidade,'') AS cidade"),
+                DB::raw("COALESCE(e.complemento,'') AS complemento"),
+            )
+            ->leftJoin('enderecos as e', 'e.id', '=', 'profissionais_saude.endereco_id')
+            ->with(['especialidades' => function($q) {
+                $q->select('especialidades.id','nome')->withPivot('qre');
+            }])
+            ->orderBy('nome')
+            ->get();
+        $especialidades = \App\Models\Especialidade::select('id','nome','codigo','descricao','ativo')->orderBy('nome')->get();
+        $estadosCivis = \App\Models\EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
+        return Inertia::render('Doctor/Index', [
+            'profissionais' => $profissionais,
+            'especialidades' => $especialidades,
+            'estadosCivis' => $estadosCivis,
+        ]);
     }
 
     public function dashboard()

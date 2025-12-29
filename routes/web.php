@@ -87,6 +87,11 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/procedimentos/{id}", [ProcedimentoController::class, "update"])->name('procedimentos.update');
         Route::delete("/procedimentos/{id}", [ProcedimentoController::class, "destroy"])->name('procedimentos.destroy');
 
+        // Profissionais de Saúde routes
+        Route::post("/profissionais-saude", [\App\Http\Controllers\ProfissionalSaudeController::class, "store"])->name('profissionais_saude.store');
+        Route::put("/profissionais-saude/{id}", [\App\Http\Controllers\ProfissionalSaudeController::class, "update"])->name('profissionais_saude.update');
+        Route::delete("/profissionais-saude/{id}", [\App\Http\Controllers\ProfissionalSaudeController::class, "destroy"])->name('profissionais_saude.destroy');
+
         // Parametrização routes
         Route::post("/parametros/estado-civil", [VelzonRoutesController::class, "parametros_store_estado_civil"])->name('parametros.estado_civil.store');
         Route::post("/parametros/tipo-sanguineo", [VelzonRoutesController::class, "parametros_store_tipo_sanguineo"])->name('parametros.tipo_sanguineo.store');

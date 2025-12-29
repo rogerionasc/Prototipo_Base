@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('documentos_prontuario', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('prontuario_id')->constrained('prontuarios')->cascadeOnDelete();
-            $table->foreignId('modelo_documento_id')->constrained('modelos_documentos')->cascadeOnDelete();
-            $table->foreignId('profissional_saude_id')->constrained('profissionais_saude')->cascadeOnDelete();
+            $table->foreignId('prontuario_id')->constrained('prontuarios');
+            $table->foreignId('modelo_documento_id')->constrained('modelos_documentos');
+            $table->foreignId('profissional_saude_id')->constrained('profissionais_saude');
             $table->dateTime('data_emissao')->nullable();
             $table->text('conteudo_final')->nullable();
             $table->boolean('assinado')->default(false);

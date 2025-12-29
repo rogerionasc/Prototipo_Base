@@ -409,6 +409,7 @@ erDiagram
         VARCHAR naturalidade
         INT estado_civil_id FK
         VARCHAR cnes
+        VARCHAR crm
         INT endereco_id FK
         VARCHAR celular
         VARCHAR telefone
@@ -421,6 +422,7 @@ erDiagram
     PROFISSIONAL_ESPECIALIDADE {
         INT profissional_saude_id FK
         INT especialidade_id FK
+        VARCHAR qre
         DATETIME created_at
         DATETIME updated_at
     }
@@ -538,49 +540,64 @@ erDiagram
         DATETIME updated_at
     }
 
-    %% RELACIONAMENTOS
+    %% ISOLADO
     CONTAS ||--o{ USUARIOS : possui
 
+    %% ENDERECOS
     ENDERECOS ||--o{ PACIENTES : reside_em
     ENDERECOS ||--o{ RESPONSAVEIS : reside_em
     ENDERECOS ||--o{ PROFISSIONAIS_SAUDE : reside_em
 
+    %% PACIENTE
     TIPO_SANGUINEO ||--o{ PACIENTES : possui
     CANAIS_AVISO ||--o{ PACIENTES : utiliza
-
     PACIENTES ||--|| PRONTUARIOS : gera
 
     PACIENTES ||--o{ PACIENTE_CONVENIO : possui
     CONVENIO ||--o{ PACIENTE_CONVENIO : vincula
 
+    %% RESPONSÁVEIS
+    PARENTESCOS ||--o{ RESPONSAVEIS : define
+    PACIENTES ||--o{ PACIENTE_RESPONSAVEL : possui
+    RESPONSAVEIS ||--o{ PACIENTE_RESPONSAVEL : vincula
+
+    %% PROCEDIMENTOS
     CATEGORIAS_PROCEDIMENTO ||--o{ PROCEDIMENTOS : classifica
     CONVENIO ||--o{ PROCEDIMENTO_CONVENIO : possui
     PROCEDIMENTOS ||--o{ PROCEDIMENTO_CONVENIO : vincula
 
+    %% TRATAMENTOS
     PROCEDIMENTOS ||--o{ SESSOES_TRATAMENTO : gera
     PACIENTES ||--o{ SESSOES_TRATAMENTO : realiza
-
     SESSOES_TRATAMENTO ||--|| AGENDAMENTOS : gera
 
+    %% AGENDA
+    PROFISSIONAIS_SAUDE ||--o{ AGENDA_MEDICA : define
     AGENDA_MEDICA ||--o{ AGENDAMENTOS : permite
+    PACIENTES ||--o{ AGENDAMENTOS : agenda
+    PROCEDIMENTOS ||--o{ AGENDAMENTOS : refere
     STATUS_AGENDAMENTO ||--o{ AGENDAMENTOS : status
 
+    %% ATENDIMENTO
     AGENDAMENTOS ||--|| ATENDIMENTOS : gera
     PRONTUARIOS ||--o{ ATENDIMENTOS : registra
     PROFISSIONAIS_SAUDE ||--o{ ATENDIMENTOS : realiza
     ESPECIALIDADES ||--o{ ATENDIMENTOS : atua
 
-    ATENDIMENTOS ||--o{ HISTORICO_PRONTUARIO : registra
+    %% ESPECIALIDADES
+    PROFISSIONAIS_SAUDE ||--o{ PROFISSIONAL_ESPECIALIDADE : possui
+    ESPECIALIDADES ||--o{ PROFISSIONAL_ESPECIALIDADE : classifica
 
+    %% PRONTUÁRIO
+    ATENDIMENTOS ||--o{ HISTORICO_PRONTUARIO : registra
     PRONTUARIOS ||--o{ DOCUMENTOS_PRONTUARIO : possui
     MODELOS_DOCUMENTOS ||--o{ DOCUMENTOS_PRONTUARIO : origina
     PROFISSIONAIS_SAUDE ||--o{ DOCUMENTOS_PRONTUARIO : emite
-
     PRONTUARIOS ||--o{ PRESCRICOES : possui
     PROFISSIONAIS_SAUDE ||--o{ PRESCRICOES : prescreve
-
     PRONTUARIOS ||--o{ SOLICITACAO_EXAMES : possui
     PROFISSIONAIS_SAUDE ||--o{ SOLICITACAO_EXAMES : solicita
+
             
 ```
 
