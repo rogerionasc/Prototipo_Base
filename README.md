@@ -221,6 +221,36 @@ config:
 erDiagram
     direction TB
 
+    CONTAS {
+        INT id PK
+        VARCHAR nome
+        VARCHAR cnpj
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    USUARIOS {
+        INT id PK
+        VARCHAR nome
+        VARCHAR email
+        VARCHAR senha_hash
+        INT conta_id FK
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    ENDERECOS {
+        INT id PK
+        VARCHAR cep
+        VARCHAR endereco
+        VARCHAR numero
+        VARCHAR bairro
+        VARCHAR cidade
+        VARCHAR complemento
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
     CONVENIO {
         INT id PK
         VARCHAR descricao
@@ -229,6 +259,39 @@ erDiagram
         INT ans
         INT dias_recebimento
         INT dias_retorno
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    CATEGORIAS_PROCEDIMENTO {
+        INT id PK
+        VARCHAR nome
+        TEXT descricao
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    PROCEDIMENTOS {
+        INT id PK
+        VARCHAR nome
+        VARCHAR descricao
+        INT categoria_id FK
+        BOOLEAN eh_tratamento
+        INT quantidade_sessoes
+        DECIMAL valor
+        DECIMAL comissao_percentual
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    PROCEDIMENTO_CONVENIO {
+        INT id PK
+        INT procedimento_id FK
+        INT convenio_id FK
+        DECIMAL valor_convenio
+        BOOLEAN ativo
         DATETIME created_at
         DATETIME updated_at
     }
@@ -273,36 +336,6 @@ erDiagram
         DATETIME updated_at
     }
 
-    CONTAS {
-        INT id PK
-        VARCHAR nome
-        VARCHAR cnpj
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    USUARIOS {
-        INT id PK
-        VARCHAR nome
-        VARCHAR email
-        VARCHAR senha_hash
-        INT conta_id FK
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    ENDERECOS {
-        INT id PK
-        VARCHAR cep
-        VARCHAR endereco
-        VARCHAR numero
-        VARCHAR bairro
-        VARCHAR cidade
-        VARCHAR complemento
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
     TIPO_SANGUINEO {
         INT id PK
         VARCHAR descricao
@@ -339,28 +372,19 @@ erDiagram
         DATETIME updated_at
     }
 
+    PACIENTE_RESPONSAVEL {
+        INT paciente_id FK
+        INT responsavel_id FK
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
     PRONTUARIOS {
         INT id PK
         INT paciente_id FK
         VARCHAR codigo
         DATE data_abertura
         BOOLEAN ativo
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    HISTORICO_PRONTUARIO {
-        INT id PK
-        INT atendimento_id FK
-        DATETIME data_registro
-        TEXT descricao
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    PACIENTE_RESPONSAVEL {
-        INT paciente_id FK
-        INT responsavel_id FK
         DATETIME created_at
         DATETIME updated_at
     }
@@ -411,18 +435,20 @@ erDiagram
         DATETIME updated_at
     }
 
-    PROCEDIMENTOS {
+    STATUS_AGENDAMENTO {
         INT id PK
-        VARCHAR nome
         VARCHAR descricao
-        DECIMAL valor
         DATETIME created_at
         DATETIME updated_at
     }
 
-    STATUS_AGENDAMENTO {
+    SESSOES_TRATAMENTO {
         INT id PK
-        VARCHAR descricao
+        INT procedimento_id FK
+        INT paciente_id FK
+        INT numero_sessao
+        DATE data_prevista
+        BOOLEAN realizada
         DATETIME created_at
         DATETIME updated_at
     }
@@ -434,6 +460,7 @@ erDiagram
         TIME hora
         INT paciente_id FK
         INT procedimento_id FK
+        INT sessao_tratamento_id FK
         INT status_id FK
         INT agendamento_origem_id FK
         DECIMAL valor_cobrado
@@ -453,6 +480,15 @@ erDiagram
         DATETIME fim_atendimento
         TEXT evolucao
         VARCHAR cid
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    HISTORICO_PRONTUARIO {
+        INT id PK
+        INT atendimento_id FK
+        DATETIME data_registro
+        TEXT descricao
         DATETIME created_at
         DATETIME updated_at
     }
@@ -502,38 +538,47 @@ erDiagram
         DATETIME updated_at
     }
 
+    %% RELACIONAMENTOS
     CONTAS ||--o{ USUARIOS : possui
+
     ENDERECOS ||--o{ PACIENTES : reside_em
     ENDERECOS ||--o{ RESPONSAVEIS : reside_em
     ENDERECOS ||--o{ PROFISSIONAIS_SAUDE : reside_em
+
     TIPO_SANGUINEO ||--o{ PACIENTES : possui
     CANAIS_AVISO ||--o{ PACIENTES : utiliza
-    PARENTESCOS ||--o{ RESPONSAVEIS : define
-    PACIENTES ||--o{ PACIENTE_RESPONSAVEL : possui
-    RESPONSAVEIS ||--o{ PACIENTE_RESPONSAVEL : vincula
+
     PACIENTES ||--|| PRONTUARIOS : gera
 
     PACIENTES ||--o{ PACIENTE_CONVENIO : possui
     CONVENIO ||--o{ PACIENTE_CONVENIO : vincula
 
-    PROFISSIONAIS_SAUDE ||--o{ PROFISSIONAL_ESPECIALIDADE : possui
-    ESPECIALIDADES ||--o{ PROFISSIONAL_ESPECIALIDADE : classifica
-    PROFISSIONAIS_SAUDE ||--o{ AGENDA_MEDICA : define
+    CATEGORIAS_PROCEDIMENTO ||--o{ PROCEDIMENTOS : classifica
+    CONVENIO ||--o{ PROCEDIMENTO_CONVENIO : possui
+    PROCEDIMENTOS ||--o{ PROCEDIMENTO_CONVENIO : vincula
+
+    PROCEDIMENTOS ||--o{ SESSOES_TRATAMENTO : gera
+    PACIENTES ||--o{ SESSOES_TRATAMENTO : realiza
+
+    SESSOES_TRATAMENTO ||--|| AGENDAMENTOS : gera
+
     AGENDA_MEDICA ||--o{ AGENDAMENTOS : permite
-    PACIENTES ||--o{ AGENDAMENTOS : agenda
-    PROCEDIMENTOS ||--o{ AGENDAMENTOS : refere
     STATUS_AGENDAMENTO ||--o{ AGENDAMENTOS : status
-    AGENDAMENTOS ||--o{ AGENDAMENTOS : retorno
+
     AGENDAMENTOS ||--|| ATENDIMENTOS : gera
     PRONTUARIOS ||--o{ ATENDIMENTOS : registra
     PROFISSIONAIS_SAUDE ||--o{ ATENDIMENTOS : realiza
     ESPECIALIDADES ||--o{ ATENDIMENTOS : atua
+
     ATENDIMENTOS ||--o{ HISTORICO_PRONTUARIO : registra
+
     PRONTUARIOS ||--o{ DOCUMENTOS_PRONTUARIO : possui
     MODELOS_DOCUMENTOS ||--o{ DOCUMENTOS_PRONTUARIO : origina
     PROFISSIONAIS_SAUDE ||--o{ DOCUMENTOS_PRONTUARIO : emite
+
     PRONTUARIOS ||--o{ PRESCRICOES : possui
     PROFISSIONAIS_SAUDE ||--o{ PRESCRICOES : prescreve
+
     PRONTUARIOS ||--o{ SOLICITACAO_EXAMES : possui
     PROFISSIONAIS_SAUDE ||--o{ SOLICITACAO_EXAMES : solicita
             

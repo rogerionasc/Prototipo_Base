@@ -15,11 +15,22 @@ class Procedimento extends Model
     protected $fillable = [
         'nome',
         'descricao',
+        'categoria_id',
+        'eh_tratamento',
+        'quantidade_sessoes',
+        'valor',
+        'comissao_percentual',
+        'ativo',
         'valor',
     ];
 
     public function agendamentos()
     {
         return $this->hasMany(Agendamento::class, 'procedimento_id');
+    }
+
+    public function categoria()
+    {
+        return $this->belongsTo(CategoriaProcedimento::class, 'categoria_id');
     }
 }

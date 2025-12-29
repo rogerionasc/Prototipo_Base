@@ -20,6 +20,7 @@
             :tiposSanguineos="props.tiposSanguineos"
             :canaisAviso="props.canaisAviso"
             :parentescos="props.parentescos"
+            :categoriasProcedimento="props.categoriasProcedimento"
           />
         </BTab>
         <BTab>
@@ -33,38 +34,22 @@
             <i class="ri-layout-grid-line d-block fs-3xl mb-1"></i>Tabela TUSS
           </template>
           <BCard class="shadow-sm config-card">
+            <BCardHeader class="bg-light-subtle p-3 border-0">
+              <BCardTitle><i class="ri-layout-grid-line text-primary me-2"></i>Tabela TUSS</BCardTitle>
+            </BCardHeader>
             <BCardBody>
-              <div class="d-flex align-items-start">
-                <div class="flex-grow-1">
-                  <h5 class="mb-2">Tabela TUSS</h5>
-                  <p class="text-muted mb-3">Gerencie os procedimentos padronizados pela tabela TUSS.</p>
-                </div>
-                <i class="ri-layout-grid-line text-primary fs-20 ms-3"></i>
-              </div>
+              <p class="text-muted mb-3">Gerencie os procedimentos padronizados pela tabela TUSS.</p>
               <div class="d-flex justify-content-end">
                 <Link href="/componentes" class="btn btn-soft-primary">Abrir Componentes</Link>
               </div>
             </BCardBody>
           </BCard>
         </BTab>
-                <BTab>
+        <BTab>
           <template #title>
             <i class="ri-file-list-3-line d-block fs-3xl mb-1"></i>Procedimentos
           </template>
-          <BCard class="shadow-sm config-card">
-            <BCardBody>
-              <div class="d-flex align-items-start">
-                <div class="flex-grow-1">
-                  <h5 class="mb-2">Procedimentos</h5>
-                  <p class="text-muted mb-3">Gerencie os procedimentos da tabela propria.</p>
-                </div>
-                <i class="ri-file-list-3-line text-primary fs-20 ms-3"></i>
-              </div>
-              <div class="d-flex justify-content-end">
-                <Link href="/componentes" class="btn btn-soft-primary">Abrir Componentes</Link>
-              </div>
-            </BCardBody>
-          </BCard>
+          <Procedimento :procedimentos="props.procedimentos" :categoriasProcedimento="props.categoriasProcedimento" />
         </BTab>
       </BTabs>
     </BRow>
@@ -76,12 +61,15 @@ import PageHeader from "@/Components/page-header.vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Parametrizacao from "./Parametrizacao.vue";
 import Especialidade from "./Especialidade.vue";
+import Procedimento from "./Procedimento.vue";
 const props = defineProps({
   estadosCivis: { type: Array, default: () => [] },
   tiposSanguineos: { type: Array, default: () => [] },
   canaisAviso: { type: Array, default: () => [] },
   parentescos: { type: Array, default: () => [] },
   especialidades: { type: Array, default: () => [] },
+  procedimentos: { type: Array, default: () => [] },
+  categoriasProcedimento: { type: Array, default: () => [] },
 });
 </script>
 <style scoped>
@@ -99,9 +87,25 @@ const props = defineProps({
   background: var(--vz-light-bg-subtle);
 }
 :deep(.config-nav-wrapper) {
-  background: #fff;
+  background: var(--vz-secondary-bg);
   border: 1px solid var(--vz-border-color);
-  border-radius: 12px;
+  border-radius: 12px 0 0 12px;
   padding: 12px;
+}
+:global([data-bs-theme="light"] .config-nav-wrapper) {
+  border-right: 0 !important;
+}
+:global([data-bs-theme="dark"] .config-nav-wrapper) {
+  background: var(--vz-secondary-bg) !important;
+  border-color: var(--vz-secondary-bg) !important;
+}
+:global([data-bs-theme="dark"] .config-card) {
+  background: var(--vz-secondary-bg) !important;
+  border-color: var(--vz-secondary-bg) !important;
+}
+:global([data-bs-theme="light"] .config-card) {
+  background: #fff !important;
+  border-color: #fff !important;
+  border-left: 0 !important;
 }
 </style>

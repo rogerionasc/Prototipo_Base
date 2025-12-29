@@ -1,13 +1,10 @@
 <template>
   <BCard class="shadow-sm config-card">
+    <BCardHeader class="bg-light-subtle p-3 border-0">
+      <BCardTitle><i class="ri-first-aid-kit-line text-primary me-2"></i>Cadastro de Especialidades</BCardTitle>
+    </BCardHeader>
     <BCardBody>
-      <div class="d-flex align-items-start">
-        <div class="flex-grow-1">
-          <h5 class="mb-2">Cadastro de Especialidades</h5>
-          <p class="text-muted mb-3">Gerencie especialidades médicas disponíveis no sistema.</p>
-        </div>
-        <i class="ri-first-aid-kit-line text-primary fs-20 ms-3"></i>
-      </div>
+      <p class="text-muted mb-3">Gerencie especialidades médicas disponíveis no sistema.</p>
       <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
         <BRow class="g-3 align-items-end">
           <BCol md="4">

@@ -42,6 +42,7 @@
           data-choices
           class="form-select"
           id="empresa"
+          ref="empresaSelect"
         >
           <option disabled value="">Selecione...</option>
           <option
@@ -96,8 +97,10 @@ import { ref, defineExpose, onMounted, nextTick, watch, toRef } from "vue";
 
 const formEl = ref(null);
 const tipoSelect = ref(null);
+const empresaSelect = ref(null);
 
 let tipoChoices = null;
+let empresaChoices = null;
 
 const form = useForm({
   descricao: "",
@@ -113,6 +116,9 @@ const form = useForm({
 ====================== */
 const getChoicesInstance = () => {
   return tipoSelect.value?._choicesInstance || tipoSelect.value?.choices || null;
+};
+const getEmpresaChoicesInstance = () => {
+  return empresaSelect.value?._choicesInstance || empresaSelect.value?.choices || null;
 };
 
 /* ======================
@@ -135,6 +141,19 @@ watch(
 const onTipoChange = (e) => {
   form.tipo = e?.target?.value ?? form.tipo;
 };
+watch(
+  () => form.empresa_id,
+  async (value) => {
+    await nextTick();
+    if (window.syncChoiceValue && empresaSelect.value) {
+      window.syncChoiceValue(empresaSelect.value, value ?? "");
+    }
+  },
+  { immediate: true }
+);
+const onEmpresaChange = (e) => {
+  form.empresa_id = e?.target?.value ?? form.empresa_id;
+};
 
 onMounted(async () => {
   await nextTick();
@@ -147,15 +166,22 @@ onMounted(async () => {
   // Captura a instância após init
   await nextTick();
   tipoChoices = getChoicesInstance();
+  empresaChoices = getEmpresaChoicesInstance();
 
   // Escuta mudanças do Choices
   if (tipoSelect.value) {
     tipoSelect.value.addEventListener("change", onTipoChange);
   }
+  if (empresaSelect.value) {
+    empresaSelect.value.addEventListener("change", onEmpresaChange);
+  }
 
   // Força valor inicial (update)
   if (window.syncChoiceValue && tipoSelect.value) {
     window.syncChoiceValue(tipoSelect.value, form.tipo || "");
+  }
+  if (window.syncChoiceValue && empresaSelect.value) {
+    window.syncChoiceValue(empresaSelect.value, form.empresa_id ?? "");
   }
 });
 

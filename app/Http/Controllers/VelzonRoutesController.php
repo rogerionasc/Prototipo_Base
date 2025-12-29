@@ -9,6 +9,8 @@ use App\Models\TipoSanguineo;
 use App\Models\CanalAviso;
 use App\Models\Parentesco;
 use App\Models\Especialidade;
+use App\Models\CategoriaProcedimento;
+use App\Models\Procedimento;
 
 class VelzonRoutesController extends Controller
 {
@@ -27,12 +29,16 @@ class VelzonRoutesController extends Controller
         $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
         $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
         $especialidades = Especialidade::select('id','nome','codigo','descricao','ativo')->orderBy('nome')->get();
+        $categoriasProcedimento = CategoriaProcedimento::select('id','nome')->orderBy('nome')->get();
+        $procedimentos = Procedimento::select('id','nome','descricao','categoria_id','eh_tratamento','quantidade_sessoes','valor','comissao_percentual','ativo')->orderBy('nome')->get();
         return Inertia::render('Configuracao/Index', [
             'estadosCivis' => $estados,
             'tiposSanguineos' => $tipos,
             'canaisAviso' => $canais,
             'parentescos' => $parentescos,
             'especialidades' => $especialidades,
+            'categoriasProcedimento' => $categoriasProcedimento,
+            'procedimentos' => $procedimentos,
         ]);
     }
 
@@ -276,4 +282,32 @@ class VelzonRoutesController extends Controller
         return back()->with('success','Parentesco removido');
     }
 
+    public function parametros_store_categoria_procedimento(Request $request) {
+        $data = $request->validate([
+            'nome' => ['required','string','max:255','unique:categorias_procedimento,nome'],
+        ], [
+            'nome.required' => 'Informe o nome.',
+            'nome.unique' => 'Esta categoria já está cadastrada.',
+        ]);
+        CategoriaProcedimento::create($data);
+        return back()->with('success','Categoria cadastrada');
+    }
+
+    public function parametros_update_categoria_procedimento(Request $request, int $id) {
+        $data = $request->validate([
+            'nome' => ['required','string','max:255','unique:categorias_procedimento,nome,' . $id],
+        ], [
+            'nome.required' => 'Informe o nome.',
+            'nome.unique' => 'Esta categoria já está cadastrada.',
+        ]);
+        $cat = CategoriaProcedimento::findOrFail($id);
+        $cat->update($data);
+        return back()->with('success','Categoria atualizada');
+    }
+
+    public function parametros_destroy_categoria_procedimento(int $id) {
+        $cat = CategoriaProcedimento::findOrFail($id);
+        $cat->delete();
+        return back()->with('success','Categoria removida');
+    }
 }

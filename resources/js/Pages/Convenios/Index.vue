@@ -71,6 +71,7 @@ async function onSaveConvenio() {
       showModal.value = false;
       isEditing.value = false;
       editingId.value = null;
+      router.reload({ only: ['convenios'] });
     }, {
       onStart: () => { saveProcessing.value = true; },
       onFinish: () => { saveProcessing.value = false; },
@@ -78,6 +79,7 @@ async function onSaveConvenio() {
   } else {
     convenioFormRef.value?.submit(() => {
       showModal.value = false;
+      router.reload({ only: ['convenios'] });
     }, {
       onStart: () => { saveProcessing.value = true; },
       onFinish: () => { saveProcessing.value = false; },

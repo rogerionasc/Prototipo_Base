@@ -12,7 +12,12 @@ return new class extends Migration
             $table->id();
             $table->string('nome');
             $table->string('descricao')->nullable();
+            $table->foreignId('categoria_id')->nullable();
+            $table->boolean('eh_tratamento')->default(false);
+            $table->unsignedInteger('quantidade_sessoes')->nullable();
             $table->decimal('valor', 10, 2)->nullable();
+            $table->decimal('comissao_percentual', 5, 2)->default(0)->nullable();
+            $table->boolean('ativo')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });
