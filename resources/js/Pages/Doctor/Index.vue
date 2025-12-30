@@ -36,6 +36,26 @@ const tableData = computed(() => {
 });
 const singleModal = ref(false);
 const isCreating = ref(false);
+const diaryModal = ref(false);
+const diaryProcessing = ref(false);
+const diaryProfId = ref(null);
+const diaSemanaOptions = [
+  { value: 0, label: 'Domingo' },
+  { value: 1, label: 'Segunda' },
+  { value: 2, label: 'Terça' },
+  { value: 3, label: 'Quarta' },
+  { value: 4, label: 'Quinta' },
+  { value: 5, label: 'Sexta' },
+  { value: 6, label: 'Sábado' },
+];
+const agendaForm = useForm({
+  profissional_saude_id: null,
+  itens: [{ dia_semana: null, hora_inicio: '', hora_fim: '' }],
+});
+const diaryProfNome = computed(() => {
+  const p = (profissionaisLocal.value || []).find(px => String(px.id) === String(diaryProfId.value));
+  return p?.nome || '';
+});
 const deleteModal = ref(false);
 const deleteItem = ref({});
 const saveProcessing = ref(false);
@@ -304,6 +324,114 @@ function confirmDelete() {
     }
   });
 }
+
+function openDiary(id) {
+  diaryProfId.value = id != null ? Number(id) : null;
+  agendaForm.reset();
+  agendaForm.clearErrors();
+  agendaForm.profissional_saude_id = diaryProfId.value;
+  agendaForm.itens = [{ dia_semana: null, hora_inicio: '', hora_fim: '' }];
+  diaryModal.value = true;
+  nextTick(() => { if (window.initChoices) window.initChoices(); });
+  if (diaryProfId.value) {
+    try {
+      window.axios.get(`/agenda-medica/${diaryProfId.value}`).then((res) => {
+        const itens = Array.isArray(res?.data?.itens) ? res.data.itens : [];
+        if (itens.length > 0) {
+          agendaForm.itens = itens.map(it => ({
+            id: it.id,
+            dia_semana: it.dia_semana,
+            hora_inicio: (it.hora_inicio || '').toString().slice(0, 5),
+            hora_fim: (it.hora_fim || '').toString().slice(0, 5),
+          }));
+        }
+      }).catch(() => {});
+    } catch (e) {}
+  }
+}
+function addAgendaItem() {
+  const arr = agendaForm.itens || [];
+  if (arr.length >= 7) return;
+  arr.push({ dia_semana: null, hora_inicio: '', hora_fim: '' });
+  agendaForm.itens = [...arr];
+  nextTick(() => { if (window.initChoices) window.initChoices(); });
+}
+function removeAgendaItem(idx) {
+  const arr = agendaForm.itens || [];
+  if (idx >= 0 && idx < arr.length) {
+    const item = arr[idx];
+    if (item?.id) {
+      useForm({}).delete(`/agenda-medica/${item.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+          arr.splice(idx, 1);
+          agendaForm.itens = [...arr];
+        }
+      });
+    } else {
+      arr.splice(idx, 1);
+      agendaForm.itens = [...arr];
+    }
+  }
+}
+const selectedDaysLabels = computed(() => {
+  const vals = (agendaForm.itens || []).map(it => it.dia_semana).filter(v => v != null);
+  return vals.map(v => (diaSemanaOptions.find(o => o.value === v)?.label)).filter(Boolean);
+});
+const canAddMoreDays = computed(() => {
+  return (agendaForm.itens || []).length < 7;
+});
+function availableDays(idx) {
+  const chosen = new Set((agendaForm.itens || []).map((x, i) => i !== idx ? x.dia_semana : null).filter(v => v != null));
+  return diaSemanaOptions.filter(o => !chosen.has(o.value) || o.value === agendaForm.itens[idx]?.dia_semana);
+}
+function isInvalidRange(it) {
+  if (!it?.hora_inicio || !it?.hora_fim) return false;
+  return it.hora_inicio >= it.hora_fim;
+}
+function addWeekdays() {
+  const arr = agendaForm.itens || [];
+  const set = new Set(arr.map(it => it.dia_semana));
+  [1,2,3,4,5].forEach(d => {
+    if (arr.length < 7 && !set.has(d)) {
+      arr.push({ dia_semana: d, hora_inicio: '', hora_fim: '' });
+      set.add(d);
+    }
+  });
+  agendaForm.itens = [...arr];
+  nextTick(() => { if (window.initChoices) window.initChoices(); });
+}
+function clearAgendaItems() {
+  agendaForm.itens = [{ dia_semana: null, hora_inicio: '', hora_fim: '' }];
+  nextTick(() => { if (window.initChoices) window.initChoices(); });
+}
+function submitAgenda() {
+  const itens = (agendaForm.itens || []).map(it => {
+    let hi = (it.hora_inicio || '').toString().slice(0, 5);
+    let hf = (it.hora_fim || '').toString().slice(0, 5);
+    if (!hi && !hf) {
+      hi = '00:00';
+      hf = '23:59';
+    }
+    return {
+      dia_semana: it.dia_semana,
+      hora_inicio: hi,
+      hora_fim: hf,
+    };
+  }).filter(it => it.dia_semana != null);
+  const payload = {
+    profissional_saude_id: agendaForm.profissional_saude_id,
+    itens,
+  };
+  useForm(payload).post('/agenda-medica', {
+    preserveScroll: true,
+    onStart: () => { diaryProcessing.value = true; },
+    onFinish: () => { diaryProcessing.value = false; },
+    onSuccess: () => {
+      diaryModal.value = false;
+    },
+  });
+}
 </script>
 
 <template>
@@ -320,10 +448,12 @@ function confirmDelete() {
       :showActions="true"
       :showPerPagination="true"
       :showAddButton="true"
+      :showDiaryButton="true"
       @add="openAdd"
       @delete="askDelete"
       @edit="startEditById"
       @show="() => {}"
+      @diary="openDiary"
     />
     <Modal
       v-model="singleModal"
@@ -609,6 +739,79 @@ function confirmDelete() {
         </BTabs>
       </template>
     </Modal>
+    <Modal
+      v-model="diaryModal"
+      :title="'Agenda Médica'"
+      :name-button="'Salvar'"
+      :processing="diaryProcessing"
+      @save="submitAgenda"
+    >
+      <div class="agenda-area">
+        <BRow class="g-2 mb-3">
+          <BCol md="12">
+            <div class="fw-semibold">Profissional: {{ diaryProfNome }}</div>
+          </BCol>
+        </BRow>
+        <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fw-medium">Defina os dias e horários</div>
+            <div class="d-flex align-items-center">
+              <button type="button" class="btn btn-soft-primary me-2" @click="addWeekdays">Dias úteis</button>
+              <button type="button" class="btn btn-soft-secondary me-2" @click="addAgendaItem">
+                <i class="ri-add-line align-bottom me-1"></i> Adicionar dia
+              </button>
+              <button type="button" class="btn btn-soft-secondary me-2" disabled v-if="!canAddMoreDays">
+                Limite: 7 dias
+              </button>
+              <button type="button" class="btn btn-soft-warning" @click="clearAgendaItems">
+                <i class="ri-restart-line align-bottom me-1"></i> Limpar
+              </button>
+            </div>
+          </div>
+          <div class="mb-2" v-if="selectedDaysLabels.length > 0">
+            <span class="badge bg-primary me-1" v-for="l in selectedDaysLabels" :key="l">{{ l }}</span>
+          </div>
+          <div class="agenda-table-wrapper">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="w-25">Dia da semana</th>
+                  <th class="w-25">Início</th>
+                  <th class="w-25">Fim</th>
+                  <th class="text-end w-25">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(it, idx) in agendaForm.itens" :key="idx">
+                  <td>
+                    <div class="position-relative">
+                      <select v-model.number="it.dia_semana" class="form-select">
+                        <option :value="null" disabled>Selecione...</option>
+                        <option v-for="d in availableDays(idx)" :key="d.value" :value="d.value">{{ d.label }}</option>
+                      </select>
+                    </div>
+                  </td>
+                  <td>
+                    <input v-model="it.hora_inicio" type="time" class="form-control" />
+                    <div class="text-muted small mt-1">Deixe vazio para dia todo</div>
+                  </td>
+                  <td>
+                    <input v-model="it.hora_fim" type="time" class="form-control" />
+                    <div v-if="isInvalidRange(it)" class="text-danger small mt-1">Início deve ser menor que fim</div>
+                    <div class="text-muted small" v-if="!it.hora_inicio && !it.hora_fim">Vazio = 00:00 até 23:59</div>
+                  </td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-soft-danger" @click="removeAgendaItem(idx)">
+                      <i class="ri-delete-bin-5-fill align-bottom me-1"></i> Remover
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </Modal>
 <Modal
   v-model="espAddModal"
   :title="'Adicionar Especialidade'"
@@ -650,3 +853,24 @@ function confirmDelete() {
     />
   </Layout>
 </template>
+
+<style scoped>
+.agenda-area .agenda-table-wrapper,
+.agenda-area table,
+.agenda-area thead,
+.agenda-area tbody,
+.agenda-area tr,
+.agenda-area td {
+  overflow: visible;
+}
+.agenda-area td {
+  position: relative;
+}
+.modal .choices.is-open .choices__list--dropdown {
+  z-index: 2100;
+}
+.agenda-area .choices {
+  position: relative;
+  z-index: 1;
+}
+</style>

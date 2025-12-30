@@ -29,7 +29,7 @@
  import "gridjs/dist/theme/mermaid.css";
  import Layout from "@/Layouts/main.vue";
  import PageHeader from "@/Components/page-header.vue";
- import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
   import TableGrid from "@/Components/Tables/TableGrid.vue";
   import Modal from "@/Components/Modal.vue";
   import ModalDelete from "@/Components/ModalDelete.vue";

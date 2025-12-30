@@ -129,7 +129,7 @@
   </template>
   <script setup>
   import { useForm, router } from "@inertiajs/vue3";
-  import { ref, watch, computed } from "vue";
+  import { ref, watch, computed, nextTick } from "vue";
   import TableGrid from "@/Components/Tables/TableGrid.vue";
   import Modal from "@/Components/Modal.vue";
   import ModalDelete from "@/Components/ModalDelete.vue";
@@ -188,15 +188,22 @@
     valor: null,
     comissao_percentual: null,
   });
+  function toBool(v) {
+    return v === true || v === 1 || v === '1';
+  }
   function startEdit(p) {
     editingId.value = p.id;
     formEdit.nome = p.nome || "";
     formEdit.categoria_id = p.categoria_id || null;
-    formEdit.eh_tratamento = !!p.eh_tratamento;
+    formEdit.eh_tratamento = toBool(p.eh_tratamento);
     formEdit.quantidade_sessoes = p.quantidade_sessoes || null;
     formEdit.valor = p.valor || null;
     formEdit.comissao_percentual = p.comissao_percentual || null;
     editModal.value = true;
+    nextTick(() => {
+      if (window.initChoices) window.initChoices();
+      if (window.autoSyncChoices) window.autoSyncChoices();
+    });
   }
   function startEditById(id) {
     const p = (procedimentosLocal.value || []).find(x => String(x.id) === String(id));

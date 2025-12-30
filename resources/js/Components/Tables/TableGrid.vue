@@ -24,6 +24,7 @@ const props = defineProps({
     showActions: { type: Boolean, default: true }, // Exibe botões de ação
     showPerPagination: { type: Boolean, default: true }, // Exibe seleção de itens por página
     tableTitle: { type: String, default: 'Listas ...' }, // Título da tabela
+    showDiaryButton: { type: Boolean, default: false }, // Exibe botão de agenda (diary) somente se habilitado
 });
 
 // -------------------- EMITS --------------------
@@ -33,7 +34,8 @@ const emit = defineEmits([
     'modalDdeletarMultiplos', // Evento para deletar múltiplos itens
     'delete',             // Evento para deletar um item
     'edit',               // Evento para editar um item
-    'show'                // Evento para visualizar um item
+    'show',               // Evento para visualizar um item
+    'diary'               // Evento para visualizar o diário de um item
 ]);
 
 // -------------------- REFS E VARIÁVEIS REATIVAS --------------------
@@ -280,6 +282,7 @@ function initGrid() {
                         <button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Excluir"><i class="ri-delete-bin-5-fill align-bottom"></i></button>
                         <button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" title="Editar"><i class="ri-pencil-fill align-bottom"></i></button>
                         <button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" title="Visualizar"><i class="ri-eye-fill align-bottom"></i></button>
+                        ${props.showDiaryButton ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" title="Agenda"><i class="ri-calendar-2-line align-bottom"></i></button>` : ``}
                     </div>
                 `);
             }
@@ -333,6 +336,7 @@ function initGrid() {
         }
         else if(action === 'edit') emit('edit', id);
         else if(action === 'show') emit('show', id);
+        else if(action === 'diary') emit('diary', id);
     };
     wrapper.value.addEventListener('change', changeListener);
     wrapper.value.addEventListener('click', clickListener);

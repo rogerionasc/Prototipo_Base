@@ -6,6 +6,7 @@ use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\ConvenioController;
 use App\Http\Controllers\EspecialidadeController;
 use App\Http\Controllers\ProcedimentoController;
+use App\Http\Controllers\AgendaMedicaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -86,6 +87,11 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/procedimentos", [ProcedimentoController::class, "store"])->name('procedimentos.store');
         Route::put("/procedimentos/{id}", [ProcedimentoController::class, "update"])->name('procedimentos.update');
         Route::delete("/procedimentos/{id}", [ProcedimentoController::class, "destroy"])->name('procedimentos.destroy');
+
+        // Agenda Médica routes
+        Route::post("/agenda-medica", [AgendaMedicaController::class, "store"])->name('agenda_medica.store');
+        Route::get("/agenda-medica/{id}", [AgendaMedicaController::class, "showByProfissional"])->name('agenda_medica.show_by_prof');
+        Route::delete("/agenda-medica/{id}", [AgendaMedicaController::class, "destroy"])->name('agenda_medica.destroy');
 
         // Profissionais de Saúde routes
         Route::post("/profissionais-saude", [\App\Http\Controllers\ProfissionalSaudeController::class, "store"])->name('profissionais_saude.store');

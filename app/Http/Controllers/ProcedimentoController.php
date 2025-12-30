@@ -37,6 +37,8 @@ class ProcedimentoController extends Controller
             'comissao_percentual' => ['nullable', 'numeric'],
             'ativo' => ['nullable', 'boolean'],
         ]);
+        $data['eh_tratamento'] = isset($data['eh_tratamento']) ? (bool)$data['eh_tratamento'] : false;
+        $data['ativo'] = isset($data['ativo']) ? (bool)$data['ativo'] : true;
         $proc = Procedimento::findOrFail($id);
         $proc->update($data);
         return back()->with('success', 'Procedimento atualizado');
@@ -49,4 +51,3 @@ class ProcedimentoController extends Controller
         return back()->with('success', 'Procedimento excluído');
     }
 }
-
