@@ -218,313 +218,387 @@ config:
   theme: dark
   layout: elk
 ---
----
-config:
-  look: neo
-  theme: dark
-  layout: elk
----
 erDiagram
-	direction TB
+    direction TB
 
-	CONTAS {
-		INT id PK
-		VARCHAR nome
-		VARCHAR cnpj
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    CONTAS {
+        INT id PK
+        VARCHAR nome
+        VARCHAR cnpj
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	USUARIOS {
-		INT id PK
-		VARCHAR nome
-		VARCHAR email
-		VARCHAR senha_hash
-		INT conta_id FK
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    USUARIOS {
+        INT id PK
+        VARCHAR nome
+        VARCHAR email
+        VARCHAR senha_hash
+        INT conta_id FK
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	ESTADO_CIVIL {
-		INT id PK
-		VARCHAR descricao
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    ENDERECOS {
+        INT id PK
+        VARCHAR cep
+        VARCHAR endereco
+        VARCHAR numero
+        VARCHAR bairro
+        VARCHAR cidade
+        VARCHAR complemento
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	ENDERECOS {
-		INT id PK
-		VARCHAR cep
-		VARCHAR endereco
-		VARCHAR numero
-		VARCHAR bairro
-		VARCHAR cidade
-		VARCHAR complemento
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    CONVENIO {
+        INT id PK
+        VARCHAR descricao
+        VARCHAR tipo
+        VARCHAR empresa_id
+        INT ans
+        INT dias_recebimento
+        INT dias_retorno
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	TIPO_SANGUINEO {
-		INT id PK
-		VARCHAR descricao
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    CATEGORIAS_PROCEDIMENTO {
+        INT id PK
+        VARCHAR nome
+        TEXT descricao
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	CANAIS_AVISO {
-		INT id PK
-		VARCHAR nome
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PROCEDIMENTOS {
+        INT id PK
+        VARCHAR nome
+        VARCHAR descricao
+        INT categoria_id FK
+        BOOLEAN eh_tratamento
+        INT quantidade_sessoes
+        DECIMAL valor
+        DECIMAL comissao_percentual
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	PARENTESCOS {
-		INT id PK
-		VARCHAR descricao
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PROCEDIMENTO_CONVENIO {
+        INT id PK
+        INT procedimento_id FK
+        INT convenio_id FK
+        DECIMAL valor_convenio
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	RESPONSAVEIS {
-		INT id PK
-		VARCHAR nome
-		INT parentesco_id FK
-		VARCHAR cpf
-		VARCHAR rg
-		DATE data_nascimento
-		INT endereco_id FK
-		VARCHAR celular
-		VARCHAR telefone
-		VARCHAR email
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PACIENTES {
+        INT id PK
+        VARCHAR nome
+        VARCHAR cpf
+        VARCHAR rg
+        VARCHAR sexo
+        DATE data_nascimento
+        VARCHAR naturalidade
+        INT estado_civil_id FK
+        DECIMAL altura
+        DECIMAL peso
+        VARCHAR cor_pele
+        INT endereco_id FK
+        BOOLEAN receber_avisos
+        VARCHAR celular
+        VARCHAR telefone
+        VARCHAR email
+        INT canal_aviso_id FK
+        VARCHAR profissao
+        VARCHAR escolaridade
+        VARCHAR nome_mae
+        VARCHAR nome_pai
+        INT tipo_sanguineo_id FK
+        TEXT observacoes
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	PACIENTES {
-		INT id PK
-		VARCHAR nome
-		VARCHAR cpf
-		VARCHAR rg
-		VARCHAR sexo
-		DATE data_nascimento
-		VARCHAR naturalidade
-		INT estado_civil_id FK
-		VARCHAR convenio
-		DECIMAL altura
-		DECIMAL peso
-		VARCHAR cor_pele
-		INT endereco_id FK
-		BOOLEAN receber_avisos
-		VARCHAR celular
-		VARCHAR telefone
-		VARCHAR email
-		INT canal_aviso_id FK
-		VARCHAR profissao
-		VARCHAR escolaridade
-		VARCHAR nome_mae
-		VARCHAR nome_pai
-		INT tipo_sanguineo_id FK
-		TEXT observacoes
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PACIENTE_CONVENIO {
+        INT id PK
+        INT paciente_id FK
+        INT convenio_id FK
+        VARCHAR numero_carteira
+        VARCHAR plano
+        DATE validade
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	PRONTUARIOS {
-		INT id PK
-		INT paciente_id FK
-		VARCHAR codigo
-		DATE data_abertura
-		BOOLEAN ativo
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    TIPO_SANGUINEO {
+        INT id PK
+        VARCHAR descricao
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	HISTORICO_PRONTUARIO {
-		INT id PK
-		INT atendimento_id FK
-		DATETIME data_registro
-		TEXT descricao
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    CANAIS_AVISO {
+        INT id PK
+        VARCHAR nome
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	PACIENTE_RESPONSAVEL {
-		INT paciente_id FK
-		INT responsavel_id FK
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PARENTESCOS {
+        INT id PK
+        VARCHAR descricao
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	ESPECIALIDADES {
-		INT id PK
-		VARCHAR nome
-		VARCHAR codigo
-		TEXT descricao
-		BOOLEAN ativo
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    RESPONSAVEIS {
+        INT id PK
+        VARCHAR nome
+        INT parentesco_id FK
+        VARCHAR cpf
+        VARCHAR rg
+        DATE data_nascimento
+        INT endereco_id FK
+        VARCHAR celular
+        VARCHAR telefone
+        VARCHAR email
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	PROFISSIONAIS_SAUDE {
-		INT id PK
-		VARCHAR nome
-		VARCHAR cpf
-		VARCHAR rg
-		VARCHAR sexo
-		DATE data_nascimento
-		VARCHAR naturalidade
-		INT estado_civil_id FK
-		VARCHAR cnes
-		INT endereco_id FK
-		VARCHAR celular
-		VARCHAR telefone
-		VARCHAR email
-		TEXT observacoes
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PACIENTE_RESPONSAVEL {
+        INT paciente_id FK
+        INT responsavel_id FK
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	PROFISSIONAL_ESPECIALIDADE {
-		INT profissional_saude_id FK
-		INT especialidade_id FK
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PRONTUARIOS {
+        INT id PK
+        INT paciente_id FK
+        VARCHAR codigo
+        DATE data_abertura
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	AGENDA_MEDICA {
-		INT id PK
-		INT profissional_saude_id FK
-		INT dia_semana
-		TIME hora_inicio
-		TIME hora_fim
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    ESPECIALIDADES {
+        INT id PK
+        VARCHAR nome
+        VARCHAR codigo
+        TEXT descricao
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	PROCEDIMENTOS {
-		INT id PK
-		VARCHAR nome
-		VARCHAR descricao
-		DECIMAL valor
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PROFISSIONAIS_SAUDE {
+        INT id PK
+        VARCHAR nome
+        VARCHAR cpf
+        VARCHAR rg
+        VARCHAR sexo
+        DATE data_nascimento
+        VARCHAR naturalidade
+        INT estado_civil_id FK
+        VARCHAR cnes
+        VARCHAR crm
+        INT endereco_id FK
+        VARCHAR celular
+        VARCHAR telefone
+        VARCHAR email
+        TEXT observacoes
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	STATUS_AGENDAMENTO {
-		INT id PK
-		VARCHAR descricao
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PROFISSIONAL_ESPECIALIDADE {
+        INT profissional_saude_id FK
+        INT especialidade_id FK
+        VARCHAR qre
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	AGENDAMENTOS {
-		INT id PK
-		INT agenda_medica_id FK
-		DATE data
-		TIME hora
-		INT paciente_id FK
-		INT procedimento_id FK
-		INT status_id FK
-		INT agendamento_origem_id FK
-		DECIMAL valor_cobrado
-		TEXT observacoes
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    AGENDA_MEDICA {
+        INT id PK
+        INT profissional_saude_id FK
+        INT dia_semana
+        TIME hora_inicio
+        TIME hora_fim
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	ATENDIMENTOS {
-		INT id PK
-		INT agendamento_id FK
-		INT prontuario_id FK
-		INT profissional_saude_id FK
-		INT especialidade_id FK
-		DATE data
-		DATETIME inicio_atendimento
-		DATETIME fim_atendimento
-		TEXT evolucao
-		VARCHAR cid
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    STATUS_AGENDAMENTO {
+        INT id PK
+        VARCHAR descricao
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	MODELOS_DOCUMENTOS {
-		INT id PK
-		VARCHAR tipo
-		VARCHAR nome
-		TEXT conteudo_template
-		BOOLEAN ativo
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    SESSOES_TRATAMENTO {
+        INT id PK
+        INT procedimento_id FK
+        INT paciente_id FK
+        INT numero_sessao
+        DATE data_prevista
+        BOOLEAN realizada
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	DOCUMENTOS_PRONTUARIO {
-		INT id PK
-		INT prontuario_id FK
-		INT modelo_documento_id FK
-		INT profissional_saude_id FK
-		DATETIME data_emissao
-		TEXT conteudo_final
-		BOOLEAN assinado
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    AGENDAMENTOS {
+        INT id PK
+        INT agenda_medica_id FK
+        DATE data
+        TIME hora
+        INT paciente_id FK
+        INT procedimento_id FK
+        INT sessao_tratamento_id FK
+        INT status_id FK
+        INT agendamento_origem_id FK
+        DECIMAL valor_cobrado
+        TEXT observacoes
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	PRESCRICOES {
-		INT id PK
-		INT prontuario_id FK
-		INT profissional_saude_id FK
-		DATETIME data_prescricao
-		TEXT prescricao
-		TEXT observacoes
-		BOOLEAN ativa
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    ATENDIMENTOS {
+        INT id PK
+        INT agendamento_id FK
+        INT prontuario_id FK
+        INT profissional_saude_id FK
+        INT especialidade_id FK
+        DATE data
+        DATETIME inicio_atendimento
+        DATETIME fim_atendimento
+        TEXT evolucao
+        VARCHAR cid
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-	SOLICITACAO_EXAMES {
-		INT id PK
-		INT prontuario_id FK
-		INT profissional_saude_id FK
-		TEXT prescricao
-		TEXT observacoes
-		BOOLEAN ativa
-		DATETIME created_at
-		DATETIME updated_at
-	}
-	CONTAS ||--o{ USUARIOS : possui
-	ESTADO_CIVIL ||--o{ PACIENTES : possui
-	ESTADO_CIVIL ||--o{ RESPONSAVEIS : possui
-	ESTADO_CIVIL ||--o{ PROFISSIONAIS_SAUDE : possui
-	ENDERECOS ||--o{ PACIENTES : reside_em
-	ENDERECOS ||--o{ RESPONSAVEIS : reside_em
-	ENDERECOS ||--o{ PROFISSIONAIS_SAUDE : reside_em
-	TIPO_SANGUINEO ||--o{ PACIENTES : possui
-	CANAIS_AVISO ||--o{ PACIENTES : utiliza
-	PARENTESCOS ||--o{ RESPONSAVEIS : define
-	PACIENTES ||--o{ PACIENTE_RESPONSAVEL : possui
-	RESPONSAVEIS ||--o{ PACIENTE_RESPONSAVEL : vincula
-	PACIENTES ||--|| PRONTUARIOS : gera
-	PROFISSIONAIS_SAUDE ||--o{ PROFISSIONAL_ESPECIALIDADE : possui
-	ESPECIALIDADES ||--o{ PROFISSIONAL_ESPECIALIDADE : classifica
-	PROFISSIONAIS_SAUDE ||--o{ AGENDA_MEDICA : define
-	AGENDA_MEDICA ||--o{ AGENDAMENTOS : permite
-	PACIENTES ||--o{ AGENDAMENTOS : agenda
-	PROCEDIMENTOS ||--o{ AGENDAMENTOS : refere
-	STATUS_AGENDAMENTO ||--o{ AGENDAMENTOS : status
-	AGENDAMENTOS ||--o{ AGENDAMENTOS : retorno
-	AGENDAMENTOS ||--|| ATENDIMENTOS : gera
-	PRONTUARIOS ||--o{ ATENDIMENTOS : registra
-	PROFISSIONAIS_SAUDE ||--o{ ATENDIMENTOS : realiza
-	ESPECIALIDADES ||--o{ ATENDIMENTOS : atua
-	ATENDIMENTOS ||--o{ HISTORICO_PRONTUARIO : registra
-	PRONTUARIOS ||--o{ DOCUMENTOS_PRONTUARIO : possui
-	MODELOS_DOCUMENTOS ||--o{ DOCUMENTOS_PRONTUARIO : origina
-	PROFISSIONAIS_SAUDE ||--o{ DOCUMENTOS_PRONTUARIO : emite
-	PRONTUARIOS ||--o{ PRESCRICOES : possui
-	PROFISSIONAIS_SAUDE ||--o{ PRESCRICOES : prescreve
-	PRONTUARIOS ||--o{ SOLICITACAO_EXAMES : possui
-	PROFISSIONAIS_SAUDE ||--o{ SOLICITACAO_EXAMES : solicita
-        
+    HISTORICO_PRONTUARIO {
+        INT id PK
+        INT atendimento_id FK
+        DATETIME data_registro
+        TEXT descricao
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    MODELOS_DOCUMENTOS {
+        INT id PK
+        VARCHAR tipo
+        VARCHAR nome
+        TEXT conteudo_template
+        BOOLEAN ativo
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    DOCUMENTOS_PRONTUARIO {
+        INT id PK
+        INT prontuario_id FK
+        INT modelo_documento_id FK
+        INT profissional_saude_id FK
+        DATETIME data_emissao
+        TEXT conteudo_final
+        BOOLEAN assinado
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    PRESCRICOES {
+        INT id PK
+        INT prontuario_id FK
+        INT profissional_saude_id FK
+        DATETIME data_prescricao
+        TEXT prescricao
+        TEXT observacoes
+        BOOLEAN ativa
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    SOLICITACAO_EXAMES {
+        INT id PK
+        INT prontuario_id FK
+        INT profissional_saude_id FK
+        TEXT prescricao
+        TEXT observacoes
+        BOOLEAN ativa
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    %% ISOLADO
+    CONTAS ||--o{ USUARIOS : possui
+
+    %% ENDERECOS
+    ENDERECOS ||--o{ PACIENTES : reside_em
+    ENDERECOS ||--o{ RESPONSAVEIS : reside_em
+    ENDERECOS ||--o{ PROFISSIONAIS_SAUDE : reside_em
+
+    %% PACIENTE
+    TIPO_SANGUINEO ||--o{ PACIENTES : possui
+    CANAIS_AVISO ||--o{ PACIENTES : utiliza
+    PACIENTES ||--|| PRONTUARIOS : gera
+
+    PACIENTES ||--o{ PACIENTE_CONVENIO : possui
+    CONVENIO ||--o{ PACIENTE_CONVENIO : vincula
+
+    %% RESPONSÁVEIS
+    PARENTESCOS ||--o{ RESPONSAVEIS : define
+    PACIENTES ||--o{ PACIENTE_RESPONSAVEL : possui
+    RESPONSAVEIS ||--o{ PACIENTE_RESPONSAVEL : vincula
+
+    %% PROCEDIMENTOS
+    CATEGORIAS_PROCEDIMENTO ||--o{ PROCEDIMENTOS : classifica
+    CONVENIO ||--o{ PROCEDIMENTO_CONVENIO : possui
+    PROCEDIMENTOS ||--o{ PROCEDIMENTO_CONVENIO : vincula
+
+    %% TRATAMENTOS
+    PROCEDIMENTOS ||--o{ SESSOES_TRATAMENTO : gera
+    PACIENTES ||--o{ SESSOES_TRATAMENTO : realiza
+    SESSOES_TRATAMENTO ||--|| AGENDAMENTOS : gera
+
+    %% AGENDA
+    PROFISSIONAIS_SAUDE ||--o{ AGENDA_MEDICA : define
+    AGENDA_MEDICA ||--o{ AGENDAMENTOS : permite
+    PACIENTES ||--o{ AGENDAMENTOS : agenda
+    PROCEDIMENTOS ||--o{ AGENDAMENTOS : refere
+    STATUS_AGENDAMENTO ||--o{ AGENDAMENTOS : status
+
+    %% ATENDIMENTO
+    AGENDAMENTOS ||--|| ATENDIMENTOS : gera
+    PRONTUARIOS ||--o{ ATENDIMENTOS : registra
+    PROFISSIONAIS_SAUDE ||--o{ ATENDIMENTOS : realiza
+    ESPECIALIDADES ||--o{ ATENDIMENTOS : atua
+
+    %% ESPECIALIDADES
+    PROFISSIONAIS_SAUDE ||--o{ PROFISSIONAL_ESPECIALIDADE : possui
+    ESPECIALIDADES ||--o{ PROFISSIONAL_ESPECIALIDADE : classifica
+
+    %% PRONTUÁRIO
+    ATENDIMENTOS ||--o{ HISTORICO_PRONTUARIO : registra
+    PRONTUARIOS ||--o{ DOCUMENTOS_PRONTUARIO : possui
+    MODELOS_DOCUMENTOS ||--o{ DOCUMENTOS_PRONTUARIO : origina
+    PROFISSIONAIS_SAUDE ||--o{ DOCUMENTOS_PRONTUARIO : emite
+    PRONTUARIOS ||--o{ PRESCRICOES : possui
+    PROFISSIONAIS_SAUDE ||--o{ PRESCRICOES : prescreve
+    PRONTUARIOS ||--o{ SOLICITACAO_EXAMES : possui
+    PROFISSIONAIS_SAUDE ||--o{ SOLICITACAO_EXAMES : solicita
+
+            
 ```
 
 
