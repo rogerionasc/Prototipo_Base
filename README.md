@@ -232,7 +232,6 @@ erDiagram
     
 	CAIXAS {
 		INT id PK
-		INT conta_id FK
 		VARCHAR descricao
 		VARCHAR tipo
 		BOOLEAN bloquear_receber

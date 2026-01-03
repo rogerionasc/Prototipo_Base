@@ -8,6 +8,8 @@ use App\Http\Controllers\EspecialidadeController;
 use App\Http\Controllers\ProcedimentoController;
 use App\Http\Controllers\AgendaMedicaController;
 use App\Http\Controllers\OrcamentoController;
+use App\Http\Controllers\CaixaController;
+use App\Http\Controllers\MovimentacaoCaixaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,6 +80,18 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/convenios", [ConvenioController::class, "store"])->name('convenios.store');
         Route::put("/convenios/{id}", [ConvenioController::class, "update"])->name('convenios.update');
         Route::delete("/convenios/{id}", [ConvenioController::class, "destroy"])->name('convenios.destroy');
+
+        // Caixas routes
+        Route::get("/cadastro-caixa", [CaixaController::class, "create"])->name('caixas.create');
+        Route::post("/caixas", [CaixaController::class, "store"])->name('caixas.store');
+        Route::put("/caixas/{id}", [CaixaController::class, "update"])->name('caixas.update');
+        Route::delete("/caixas/{id}", [CaixaController::class, "destroy"])->name('caixas.destroy');
+
+        // Movimentações de Caixa routes
+        Route::get("/movimentacoes-caixa", [MovimentacaoCaixaController::class, "index"])->name('movimentacoes_caixa.index');
+        Route::post("/movimentacoes-caixa", [MovimentacaoCaixaController::class, "store"])->name('movimentacoes_caixa.store');
+        Route::put("/movimentacoes-caixa/{id}", [MovimentacaoCaixaController::class, "update"])->name('movimentacoes_caixa.update');
+        Route::delete("/movimentacoes-caixa/{id}", [MovimentacaoCaixaController::class, "destroy"])->name('movimentacoes_caixa.destroy');
 
         // Especialidades Médicas routes
         Route::post("/especialidades", [EspecialidadeController::class, "store"])->name('especialidades.store');

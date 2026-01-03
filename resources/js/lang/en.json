@@ -214,5 +214,6 @@
     "t-customer": "Customer",
     "t-estimate": "Estimate",
     "t-finance": "Finance",
-    "t-till": "Till"
+    "t-till": "Till",
+    "t-movements": "Movements"
 }

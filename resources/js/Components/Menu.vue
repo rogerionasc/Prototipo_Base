@@ -36,7 +36,8 @@ export default {
                     type: "link",
                     target: "#financeiro",
                     children: [
-                        { href: "/caixa", label: this.$t("t-till") },
+                        { href: "/caixa", label: this.$t("t-till") },//Abertura e Fechamento de Caixa
+                        { href: "/cadastro-caixa", label: this.$t("t-register") },//Cadastro de Caixa
                     ]
                 },
                 {

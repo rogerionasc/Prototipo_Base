@@ -219,5 +219,6 @@
     "t-customer": "Atendimento",
     "t-estimate": "Orçamento",
     "t-finance": "Financeiro",
-    "t-till": "Caixa"
+    "t-till": "Caixa",
+    "t-movements": "Movimentação"
 }
