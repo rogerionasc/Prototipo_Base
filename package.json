@@ -65,6 +65,7 @@
         "vue3-echarts": "^1.1.0",
         "vue3-google-map": "^0.18.0",
         "vue3-lottie": "^3.3.1",
-        "vuex": "^4.1.0"
+        "vuex": "^4.1.0",
+        "html2pdf.js": "^0.10.1"
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\ConvenioController;
 use App\Http\Controllers\EspecialidadeController;
 use App\Http\Controllers\ProcedimentoController;
 use App\Http\Controllers\AgendaMedicaController;
+use App\Http\Controllers\OrcamentoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,6 +88,17 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/procedimentos", [ProcedimentoController::class, "store"])->name('procedimentos.store');
         Route::put("/procedimentos/{id}", [ProcedimentoController::class, "update"])->name('procedimentos.update');
         Route::delete("/procedimentos/{id}", [ProcedimentoController::class, "destroy"])->name('procedimentos.destroy');
+
+        // Orçamentos routes
+        Route::get("/orcamentos", [OrcamentoController::class, "index"])->name('orcamentos.index');
+        Route::post("/orcamentos", [OrcamentoController::class, "store"])->name('orcamentos.store');
+        Route::get("/orcamentos/{id}", [OrcamentoController::class, "show"])->whereNumber('id')->name('orcamentos.show');
+        Route::put("/orcamentos/{id}", [OrcamentoController::class, "update"])->whereNumber('id')->name('orcamentos.update');
+        Route::get("/orcamentos/search", [OrcamentoController::class, "search"])->name('orcamentos.search');
+        Route::get("/orcamentos/{id}/print", [OrcamentoController::class, "print"])->whereNumber('id')->name('orcamentos.print');
+        Route::get("/pacientes/{id}/orcamentos", [OrcamentoController::class, "byPaciente"])->whereNumber('id')->name('orcamentos.by_paciente');
+        Route::put("/orcamentos/{id}/approve", [OrcamentoController::class, "approve"])->whereNumber('id')->name('orcamentos.approve');
+        Route::put("/orcamentos/{id}/unapprove", [OrcamentoController::class, "unapprove"])->whereNumber('id')->name('orcamentos.unapprove');
 
         // Agenda Médica routes
         Route::post("/agenda-medica", [AgendaMedicaController::class, "store"])->name('agenda_medica.store');

@@ -215,5 +215,9 @@
     "t-register": "Cadastar",
     "t-patient": "Paciente",
     "t-user": "Usuário",
-    "t-parametrizacao": "Parametrização"
+    "t-parametrizacao": "Parametrização",
+    "t-customer": "Atendimento",
+    "t-estimate": "Orçamento",
+    "t-finance": "Financeiro",
+    "t-till": "Caixa"
 }

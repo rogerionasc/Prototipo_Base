@@ -18,6 +18,98 @@
         </Modal>
         <ModalDelete v-model="deleteModal" :title="'Excluir Paciente'" :subTitle="deleteSubTitle" :item-delete="pacienteToDelete" @save="confirmDelete" />
         <ModalDelete v-model="bulkDeleteModal" :title="'Excluir Pacientes'" :subTitle="bulkDeleteSubTitle" :item-delete="bulkDeleteSummary" @save="confirmBulkDelete" />
+        <Modal
+            v-model="showViewModal"
+            :title="'Paciente'"
+            size="xl"
+            :name-button="'Fechar'"
+            :processing="false"
+            @save="fecharViewModal"
+        >
+            <BTabs nav-class="nav-tabs-custom text-muted">
+                <BTab title="Informações">
+                    <div class="row g-3 mt-2" v-if="selectedPaciente">
+                        <div class="col-md-6">
+                            <label class="form-label">Nome</label>
+                            <div class="fw-medium">{{ selectedPaciente.nome }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">CPF</label>
+                            <div class="fw-medium">{{ selectedPaciente.cpf }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <div class="fw-medium">{{ selectedPaciente.email || '-' }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Celular</label>
+                            <div class="fw-medium">{{ selectedPaciente.celular || '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Sexo</label>
+                            <div class="fw-medium">{{ selectedPaciente.sexo || '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nascimento</label>
+                            <div class="fw-medium">{{ selectedPaciente.data_nascimento || '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Convênio</label>
+                            <div class="fw-medium">{{ selectedPaciente.convenio || 'Particular' }}</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Endereço</label>
+                            <div class="fw-medium">
+                                {{ [selectedPaciente.endereco, selectedPaciente.numero, selectedPaciente.bairro, selectedPaciente.cidade].filter(Boolean).join(', ') || '-' }}
+                            </div>
+                        </div>
+                        <div class="col-md-12" v-if="selectedPaciente.observacoes">
+                            <label class="form-label">Observações</label>
+                            <div class="fw-medium">{{ selectedPaciente.observacoes }}</div>
+                        </div>
+                    </div>
+                </BTab>
+                <BTab title="Orçamentos">
+                    <div class="mt-2">
+                        <div v-if="(orcamentosPaciente || []).length === 0" class="text-muted">Nenhum orçamento encontrado</div>
+                        <div v-else class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Número</th>
+                                        <th>Emissão</th>
+                                        <th>Validade</th>
+                                        <th class="text-end">Bruto</th>
+                                        <th class="text-end">Desconto</th>
+                                        <th class="text-end">Total</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="o in orcamentosPaciente" :key="o.id">
+                                        <td>{{ o.numero }}</td>
+                                        <td>{{ o.data_emissao }}</td>
+                                        <td>{{ o.validade }}</td>
+                                        <td class="text-end">{{ formatCurrencyBR(o.valor_bruto) }}</td>
+                                        <td class="text-end">{{ formatCurrencyBR(o.desconto) }}</td>
+                                        <td class="text-end">{{ formatCurrencyBR(o.valor_total) }}</td>
+                                        <td>
+                                            <span v-if="o.aprovado" class="badge bg-success">Aprovado</span>
+                                            <span v-else class="badge bg-warning">Aguardando aprovação</span>
+                                        </td>
+                                        <td>
+                                            <button v-if="!o.aprovado" class="btn btn-sm btn-success me-2" @click="aprovarOrcamento(o.id)">Aprovar</button>
+                                            <button v-else class="btn btn-sm btn-danger" @click="cancelarAprovacao(o.id)">Cancelar aprovação</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </BTab>
+            </BTabs>
+        </Modal>
     </Layout>
 </template>
 <script setup>
@@ -67,6 +159,14 @@ watchEffect(() => {
 });
 const isEditing = ref(false);
 const saveButtonText = computed(() => isEditing.value ? 'Atualizar' : 'Salvar');
+
+const showViewModal = ref(false);
+const selectedPaciente = ref(null);
+const orcamentosPaciente = ref([]);
+function formatCurrencyBR(v) {
+    const n = Number(v || 0);
+    return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 // chamar o método submit exposto pelo componente filho PacienteForm.
 function onSavePaciente() {
@@ -245,6 +345,52 @@ async function openModalEdit(id) {
     }
 }
 function openModalShow(id) {
-    alert('Mostrar: ID ' + JSON.stringify(id));
+    const p = pacientesLocal.value.find(px => String(px.id) === String(id));
+    if (!p) return;
+    selectedPaciente.value = { ...p };
+    showViewModal.value = true;
+    orcamentosPaciente.value = [];
+    try {
+        window.axios.get(`/pacientes/${p.id}/orcamentos`).then((res) => {
+            const arr = Array.isArray(res?.data?.orcamentos) ? res.data.orcamentos : [];
+            orcamentosPaciente.value = arr.map(o => ({
+                id: o.id,
+                numero: o.numero,
+                data_emissao: o.data_emissao,
+                validade: o.validade,
+                valor_bruto: o.valor_bruto,
+                desconto: o.desconto,
+                valor_total: o.valor_total,
+                aprovado: !!o.aprovado,
+            }));
+        }).catch(() => {});
+    } catch (e) {}
+}
+function fecharViewModal() {
+    showViewModal.value = false;
+    selectedPaciente.value = null;
+    orcamentosPaciente.value = [];
+}
+function aprovarOrcamento(id) {
+    if (!id) return;
+    try {
+        window.axios.put(`/orcamentos/${id}/approve`).then(() => {
+            const idx = (orcamentosPaciente.value || []).findIndex(x => String(x.id) === String(id));
+            if (idx !== -1) {
+                orcamentosPaciente.value[idx] = { ...orcamentosPaciente.value[idx], aprovado: true };
+            }
+        }).catch(() => {});
+    } catch (e) {}
+}
+function cancelarAprovacao(id) {
+    if (!id) return;
+    try {
+        window.axios.put(`/orcamentos/${id}/unapprove`).then(() => {
+            const idx = (orcamentosPaciente.value || []).findIndex(x => String(x.id) === String(id));
+            if (idx !== -1) {
+                orcamentosPaciente.value[idx] = { ...orcamentosPaciente.value[idx], aprovado: false };
+            }
+        }).catch(() => {});
+    } catch (e) {}
 }
 </script>

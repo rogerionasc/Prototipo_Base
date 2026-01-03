@@ -449,6 +449,7 @@ function submitAgenda() {
       :showPerPagination="true"
       :showAddButton="true"
       :showDiaryButton="true"
+      :actionsConfig="{ delete: true, edit: true, show: true, diary: true }"
       @add="openAdd"
       @delete="askDelete"
       @edit="startEditById"

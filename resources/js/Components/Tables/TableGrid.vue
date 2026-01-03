@@ -16,7 +16,7 @@ import LottieComponent from "@/Components/widgets/lottie.vue";
 const props = defineProps({
     data: { type: Array, default: () => [] }, // Dados da tabela
     columns: { type: Array, default: () => ["ID", "Nome", "Email", "Cargo", "Empresa", "País"] }, // Colunas
-    showStatus: { type: Boolean, default: true }, // Exibe coluna de status
+    showStatus: { type: Boolean, default: false }, // Exibe coluna de status
     search: { type: Boolean, default: true }, // Exibe campo de busca
     searchPlaceholder: { type: String, default: 'Buscar...' }, // Placeholder do campo de busca
     showCheckbox: { type: Boolean, default: true }, // Exibe checkbox nas linhas
@@ -25,6 +25,7 @@ const props = defineProps({
     showPerPagination: { type: Boolean, default: true }, // Exibe seleção de itens por página
     tableTitle: { type: String, default: 'Listas ...' }, // Título da tabela
     showDiaryButton: { type: Boolean, default: false }, // Exibe botão de agenda (diary) somente se habilitado
+    actionsConfig: { type: Object, default: () => ({ delete: true, edit: true, show: true, diary: false, print: false, download: false }) },
 });
 
 // -------------------- EMITS --------------------
@@ -35,7 +36,9 @@ const emit = defineEmits([
     'delete',             // Evento para deletar um item
     'edit',               // Evento para editar um item
     'show',               // Evento para visualizar um item
-    'diary'               // Evento para visualizar o diário de um item
+    'diary',              // Evento para visualizar o diário de um item
+    'print',              // Evento para imprimir um item
+    'download'            // Evento para baixar um item
 ]);
 
 // -------------------- REFS E VARIÁVEIS REATIVAS --------------------
@@ -217,11 +220,17 @@ function initGrid() {
             },
             ...props.columns.map((col, idx) => {
                 if (typeof col === 'object') {
-                    return {
-                        id: col.id ? String(col.id) : String(col.name).toLowerCase(),
+                    const computedId = col.id
+                        ? String(col.id)
+                        : (typeof col.name === 'string' ? String(col.name).toLowerCase() : `col_${idx}`);
+                    const out = {
+                        id: computedId,
                         name: col.name,
-                        sort: true
+                        sort: typeof col.sort === 'boolean' ? col.sort : true
                     };
+                    if (typeof col.formatter === 'function') out.formatter = col.formatter;
+                    if (col.attributes) out.attributes = col.attributes;
+                    return out;
                 } else {
                     return {
                         id: String(col).toLowerCase(),
@@ -234,11 +243,17 @@ function initGrid() {
     } else {
         gridColumns = props.columns.map((col, idx) => {
             if (typeof col === 'object') {
-                return {
-                    id: col.id ? String(col.id) : String(col.name).toLowerCase(),
+                const computedId = col.id
+                    ? String(col.id)
+                    : (typeof col.name === 'string' ? String(col.name).toLowerCase() : `col_${idx}`);
+                const out = {
+                    id: computedId,
                     name: col.name,
-                    sort: true
+                    sort: typeof col.sort === 'boolean' ? col.sort : true
                 };
+                if (typeof col.formatter === 'function') out.formatter = col.formatter;
+                if (col.attributes) out.attributes = col.attributes;
+                return out;
             } else {
                 return {
                     id: String(col).toLowerCase(),
@@ -263,31 +278,41 @@ function initGrid() {
             id: 'actions',
             name: 'Ações',
             formatter: (cell, row) => {
+                if (!row || !row.cells || !Array.isArray(row.cells)) {
+                    return html(`<div class="d-flex gap-2"></div>`);
+                }
                 const idIndex = props.showCheckbox ? 1 : 0;
-                const rowId = row.cells[idIndex]?.data;
-                // Captura o objeto completo da linha
+                const firstCell = row.cells[idIndex]?.data;
+                let idCol;
+                if (props.columns[0] && typeof props.columns[0] === 'object') {
+                    idCol = props.columns[0].id || props.columns[0].name;
+                } else {
+                    idCol = props.columns[0];
+                }
                 const rowData = filteredData.value.find(r => {
-                    let idCol;
-                    if (props.columns[0] && typeof props.columns[0] === 'object') {
-                        idCol = props.columns[0].id || props.columns[0].name;
-                    } else {
-                        idCol = props.columns[0];
-                    }
                     if (!idCol) return false;
-                    return String(r[idCol]) === String(rowId) || String(r.id) === String(rowId);
+                    return String(r[idCol]) === String(firstCell) || String(r.id) === String(firstCell);
                 }) || {};
-                // Passa o objeto completo no evento
-                return html(`
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Excluir"><i class="ri-delete-bin-5-fill align-bottom"></i></button>
-                        <button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" title="Editar"><i class="ri-pencil-fill align-bottom"></i></button>
-                        <button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" title="Visualizar"><i class="ri-eye-fill align-bottom"></i></button>
-                        ${props.showDiaryButton ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" title="Agenda"><i class="ri-calendar-2-line align-bottom"></i></button>` : ``}
-                    </div>
-                `);
+                const rowId = rowData?.id ?? firstCell;
+                const ac = props.actionsConfig || { delete: true, edit: true, show: true, diary: false };
+                const buttons = [
+                    ac.delete ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Excluir"><i class="ri-delete-bin-5-fill align-bottom"></i></button>` : ``,
+                    ac.edit ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Editar"><i class="ri-pencil-fill align-bottom"></i></button>` : ``,
+                    ac.show ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Visualizar"><i class="ri-eye-fill align-bottom"></i></button>` : ``,
+                    ac.print ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Imprimir"><i class="ri-printer-fill align-bottom"></i></button>` : ``,
+                    ac.download ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Baixar"><i class="ri-download-line align-bottom"></i></button>` : ``,
+                    (props.showDiaryButton && ac.diary) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Agenda"><i class="ri-calendar-2-line align-bottom"></i></button>` : ``
+                ].join('');
+                return html(`<div class="d-flex gap-2">${buttons}</div>`);
             }
         });
     }
+    gridColumns = gridColumns.map(c => {
+        if (c && typeof c.formatter !== 'undefined' && typeof c.formatter !== 'function') {
+            delete c.formatter;
+        }
+        return c;
+    });
     // Cria a instância do Grid.js
     const grid = new Grid({
         columns: gridColumns,
@@ -326,17 +351,21 @@ function initGrid() {
         if (!target) return;
         const action = target.getAttribute('data-action');
         const id = target.getAttribute('data-id');
-        // Recupera o objeto completo da linha se for delete
-        if(action === 'delete') {
-            let rowObj = {};
-            try {
-                rowObj = JSON.parse(target.getAttribute('data-row'));
-            } catch (e) {}
+        let rowObj = {};
+        try { rowObj = JSON.parse(target.getAttribute('data-row')); } catch (e) {}
+        if (action === 'delete') {
             emit('delete', rowObj);
+        } else if (action === 'edit') {
+            emit('edit', rowObj?.id ?? id);
+        } else if (action === 'show') {
+            emit('show', rowObj?.id ?? id);
+        } else if (action === 'diary') {
+            emit('diary', rowObj?.id ?? id);
+        } else if (action === 'print') {
+            emit('print', rowObj?.id ?? id, rowObj);
+        } else if (action === 'download') {
+            emit('download', rowObj?.id ?? id, rowObj);
         }
-        else if(action === 'edit') emit('edit', id);
-        else if(action === 'show') emit('show', id);
-        else if(action === 'diary') emit('diary', id);
     };
     wrapper.value.addEventListener('change', changeListener);
     wrapper.value.addEventListener('click', clickListener);
@@ -456,13 +485,19 @@ onMounted(async () => {
   width: 100% !important;
 }
 
-/* Limita a largura das colunas e adiciona reticências */
 .table th, .table td {
   max-width: 192px !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
-  /* word-break: break-all !important; */
-  /* Removido white-space: normal e word-break para evitar conflito */
+}
+.table td {
+  padding: 0.25rem 0.5rem !important;
+}
+.table tbody td:last-child {
+  width: 1%;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: initial !important;
 }
 </style>
