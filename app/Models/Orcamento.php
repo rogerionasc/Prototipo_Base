@@ -28,7 +28,7 @@ class Orcamento extends Model
     ];
 
     protected $casts = [
-        'data_emissao' => 'date:d-m-Y',
+        'data_emissao' => 'datetime',
         'validade' => 'date:d-m-Y',
         'valor_bruto' => 'decimal:2',
         'desconto' => 'decimal:2',

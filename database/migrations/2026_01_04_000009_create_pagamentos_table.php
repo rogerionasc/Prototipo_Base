@@ -16,7 +16,7 @@ return new class extends Migration
                 $table->foreignId('movimentacao_id')->nullable()->constrained('movimentacoes_caixa')->nullOnDelete();
                 $table->decimal('valor', 10, 2)->default(0);
                 $table->string('forma_pagamento', 50)->nullable();
-                $table->date('data_pagamento')->nullable();
+                $table->datetime('data_pagamento')->nullable();
                 $table->boolean('confirmado')->default(false);
                 $table->string('status', 30)->default('pendente');
                 $table->text('recusa_justificativa')->nullable();

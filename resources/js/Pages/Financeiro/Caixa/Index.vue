@@ -11,11 +11,14 @@
       :showCheckbox="false"
       :showAddButton="true"
       :showActions="true"
-      :actionsConfig="{ delete: true, edit: true, show: false, diary: false, print: false, download: false }"
+      :actionsConfig="{ delete: true, edit: true, show: false, diary: false, print: false, download: false, receive: true }"
+      :actionsLabels="{ delete: 'Excluir', edit: 'Editar', show: 'Visualizar', diary: 'Agenda', print: 'Imprimir', download: 'Baixar', restore: 'Reabrir', receive: 'Display PIX' }"
+      :actionsButtonText="{ receive: 'Abrir Display' }"
       @add="openModalAdd"
       @delete="openModalDelete"
       @edit="openModalEdit"
       @show="openModalShow"
+      @receive="openPixDisplay"
     />
     <Modal v-model="showModal" :title="modalTitle" size="lg" :name-button="saveButtonText" :processing="form.processing" @save="onSaveCaixa">
       <form class="row g-3 needs-validation" novalidate ref="formEl">
@@ -212,11 +215,11 @@ async function openModalEdit(rowOrId) {
    deleteModal.value = true;
  }
 
- function confirmDelete() {
-   const id = caixaToDelete.value?.id;
-   if (!id) { deleteModal.value = false; return; }
-   const f = useForm({});
-   f.delete(`/caixas/${id}`, {
+function confirmDelete() {
+  const id = caixaToDelete.value?.id;
+  if (!id) { deleteModal.value = false; return; }
+  const f = useForm({});
+  f.delete(`/caixas/${id}`, {
      preserveScroll: true,
      onSuccess: () => {
        deleteModal.value = false;
@@ -226,13 +229,20 @@ async function openModalEdit(rowOrId) {
    });
  }
 
- function openModalShow(id) {}
+function openModalShow(id) {}
 
- watch(() => form.tipo, async (value) => {
-   await nextTick();
-   if (window.syncChoiceValue && tipoSelect.value) {
-     window.syncChoiceValue(tipoSelect.value, value || "");
-   }
+function openPixDisplay(rowOrId) {
+  const id = typeof rowOrId === 'object' ? rowOrId?.id : rowOrId;
+  if (!id) return;
+  const url = `/pix/display?caixa_id=${encodeURIComponent(String(id))}`;
+  window.open(url, '_blank');
+}
+
+watch(() => form.tipo, async (value) => {
+  await nextTick();
+  if (window.syncChoiceValue && tipoSelect.value) {
+    window.syncChoiceValue(tipoSelect.value, value || "");
+  }
  }, { immediate: true });
 
  const onTipoChange = (e) => {

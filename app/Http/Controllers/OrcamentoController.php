@@ -112,9 +112,10 @@ class OrcamentoController extends Controller
         $valorTotal = max(0, $valorBruto - $desconto);
 
         $numero = 'ORC-' . now()->format('YmdHis');
-        $deYmd = isset($data['data_emissao'])
-            ? Carbon::createFromFormat('d-m-Y', $data['data_emissao'])->format('Y-m-d')
-            : now()->toDateString();
+        $de = isset($data['data_emissao'])
+            ? Carbon::createFromFormat('d-m-Y', $data['data_emissao'])->setTimeFrom(Carbon::now())
+            : Carbon::now();
+        $deYmd = $de->format('Y-m-d H:i:s');
         $vaYmd = isset($data['validade'])
             ? Carbon::createFromFormat('d-m-Y', $data['validade'])->format('Y-m-d')
             : now()->addDays(30)->toDateString();
@@ -294,9 +295,10 @@ class OrcamentoController extends Controller
         $desconto = (float)($data['desconto'] ?? 0);
         $valorTotal = max(0, $valorBruto - $desconto);
 
-        $deYmd = isset($data['data_emissao'])
-            ? Carbon::createFromFormat('d-m-Y', $data['data_emissao'])->format('Y-m-d')
-            : $orcamento->data_emissao;
+        $de = isset($data['data_emissao'])
+            ? Carbon::createFromFormat('d-m-Y', $data['data_emissao'])->setTimeFrom(Carbon::now())
+            : Carbon::parse($orcamento->data_emissao);
+        $deYmd = $de->format('Y-m-d H:i:s');
         $vaYmd = isset($data['validade'])
             ? Carbon::createFromFormat('d-m-Y', $data['validade'])->format('Y-m-d')
             : $orcamento->validade;

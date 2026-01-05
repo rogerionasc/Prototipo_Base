@@ -15,6 +15,7 @@ return new class extends Migration
                 $table->string('tipo', 50);
                 $table->boolean('bloquear_receber')->default(false);
                 $table->boolean('bloquear_pagar')->default(false);
+                $table->string('link_display')->nullable();
                 $table->boolean('ativo')->default(true);
                 $table->timestamps();
             });

@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('orcamentos', function (Blueprint $table) {
             $table->id();
             $table->string('numero', 30)->unique();
-            $table->date('data_emissao')->nullable();
-            $table->date('validade')->nullable();
+            $table->datetime('data_emissao')->nullable();
+            $table->datetime('validade')->nullable();
             $table->foreignId('profissional_saude_id')->constrained('profissionais_saude');
             $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();
             $table->foreignId('paciente_id')->constrained('pacientes');

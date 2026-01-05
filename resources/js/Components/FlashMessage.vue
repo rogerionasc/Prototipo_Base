@@ -62,6 +62,7 @@
       `alert-${type.value}`
     ]
   })
+  const shown = ref(new Set())
 
   const triggerShow = () => {
     visible.value = true
@@ -74,37 +75,45 @@
     if (page.props.flash.success) {
       const msg = page.props.flash.success
       const t = 'success'
-      if (visible.value && currentMessage.value === msg && currentType.value === t) return
+      const key = `${t}:${msg}`
+      if (shown.value.has(key)) return
       currentType.value = t
       currentMessage.value = msg
       triggerShow()
+      shown.value.add(key)
       return
     }
     if (page.props.flash.error) {
       const msg = page.props.flash.error
       const t = 'danger'
-      if (visible.value && currentMessage.value === msg && currentType.value === t) return
+      const key = `${t}:${msg}`
+      if (shown.value.has(key)) return
       currentType.value = t
       currentMessage.value = msg
       triggerShow()
+      shown.value.add(key)
       return
     }
     if (page.props.flash.warning) {
       const msg = page.props.flash.warning
       const t = 'warning'
-      if (visible.value && currentMessage.value === msg && currentType.value === t) return
+      const key = `${t}:${msg}`
+      if (shown.value.has(key)) return
       currentType.value = t
       currentMessage.value = msg
       triggerShow()
+      shown.value.add(key)
       return
     }
     if (page.props.flash.info) {
       const msg = page.props.flash.info
       const t = 'info'
-      if (visible.value && currentMessage.value === msg && currentType.value === t) return
+      const key = `${t}:${msg}`
+      if (shown.value.has(key)) return
       currentType.value = t
       currentMessage.value = msg
       triggerShow()
+      shown.value.add(key)
       return
     }
   }
@@ -116,6 +125,9 @@
   watch(() => page.props.flash, () => {
     pickMessage()
   }, { deep: true })
+  watch(() => page.url, () => {
+    shown.value = new Set()
+  })
   </script>
 
   <style scoped>

@@ -12,6 +12,10 @@ return new class extends Migration
             $table->id();
             $table->string('nome', 120);
             $table->string('cnpj', 18)->nullable();
+            $table->string('pix_chave', 140)->nullable();
+            $table->string('pix_nome', 120)->nullable();
+            $table->string('pix_cidade', 120)->nullable();
+            $table->string('pix_descricao', 140)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

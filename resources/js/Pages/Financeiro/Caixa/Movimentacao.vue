@@ -94,15 +94,16 @@
                         class="position-static d-inline-block"
                         dropstart
                         auto-close="outside"
-                        toggle-class="btn btn-sm btn-success"
+                        :toggle-class="isAguardandoPix(row) ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-success'"
                         menu-class="shadow-lg"
-                        variant="success"
+                        :variant="isAguardandoPix(row) ? 'warning' : 'success'"
                         size="sm"
                         :split="true"
-                        @click="confirmarPagamento(row.id)"
+                        @click="isAguardandoPix(row) ? (cancelProcessing[row.id] ? null : cancelarPix(row.id)) : abrirReceber(row.id)"
                       >
                         <template #button-content>
-                          <i class="ri-money-dollar-box-line align-bottom me-1"></i>Receber
+                          <span v-if="isAguardandoPix(row) && cancelProcessing[row.id]" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                          <i :class="isAguardandoPix(row) ? 'ri-close-circle-line align-bottom me-1' : 'ri-money-dollar-box-line align-bottom me-1'"></i>{{ isAguardandoPix(row) ? 'Cancelar' : 'Receber' }}
                         </template>
                         <BDropdownItem @click="abrirRecusar(row.id)">
                           <i class="ri-close-circle-line text-danger me-2"></i>Recusar
@@ -293,6 +294,71 @@
         </div>
       </div>
     </Modal>
+    <Modal v-model="showPixConfigModal" :title="'Configurar PIX'" :name-button="'Salvar'" :processing="pixConfigProcessing" size="md" @save="salvarPixConfig">
+      <div class="vstack gap-3">
+        <div>
+          <label class="form-label">Chave PIX</label>
+          <input v-model.trim="pixConfig.chave" type="text" class="form-control" placeholder="e-mail, cpf/cnpj ou chave aleatória" />
+        </div>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label">Nome do recebedor</label>
+            <input v-model.trim="pixConfig.recebedor_nome" type="text" class="form-control" placeholder="Nome Fantasia" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cidade do recebedor</label>
+            <input v-model.trim="pixConfig.recebedor_cidade" type="text" class="form-control" placeholder="Cidade" />
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Descrição</label>
+          <input v-model.trim="pixConfig.descricao" type="text" class="form-control" placeholder="Descrição opcional" />
+        </div>
+        <div class="invalid-feedback d-block" v-if="pixConfigError">{{ pixConfigError }}</div>
+      </div>
+    </Modal>
+    <Modal v-model="showReceberModal" :title="'Receber Pagamento'" :name-button="'Prosseguir'" :processing="receberProcessing" size="md" @save="prosseguirRecebimento">
+      <div class="vstack gap-3">
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="d-flex flex-column">
+              <span class="text-muted">Paciente</span>
+              <span class="fw-semibold">{{ receberInfo.paciente || "—" }}</span>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="d-flex flex-column">
+              <span class="text-muted">Valor</span>
+              <span class="fw-semibold">{{ formatCurrency(receberInfo.valor || 0) }}</span>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="d-flex flex-column">
+              <span class="text-muted">Emissão</span>
+              <span class="fw-semibold">{{ receberInfo.emissao || "—" }}</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Forma de pagamento</label>
+          <div class="hstack gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" id="fpix" value="PIX" v-model="formaRecebimento" />
+              <label class="form-check-label" for="fpix">PIX</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" id="fdin" value="DINHEIRO" v-model="formaRecebimento" />
+              <label class="form-check-label" for="fdin">Dinheiro</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" id="fcart" value="CARTAO" v-model="formaRecebimento" />
+              <label class="form-check-label" for="fcart">Cartão</label>
+            </div>
+          </div>
+          <div class="invalid-feedback d-block" v-if="receberError">{{ receberError }}</div>
+        </div>
+      </div>
+    </Modal>
     <Modal v-model="showCaixaModal" :title="'Caixa indisponível'" :name-button="'Fechar'" :processing="false" size="md" @save="showCaixaModal=false">
       <div class="vstack gap-2">
         <div class="alert alert-warning" role="alert">
@@ -445,7 +511,7 @@
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import { Head, useForm, router } from "@inertiajs/vue3";
-import { ref, computed, toRef, watch, nextTick, onMounted } from "vue";
+import { ref, computed, toRef, watch, nextTick, onMounted, onUnmounted } from "vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
 import axios from "axios";
@@ -479,6 +545,14 @@ const pagamentosFiltered = computed(() => {
 });
 const pendentesTotal = computed(() => {
   try { return (pagamentosFiltered.value || []).reduce((acc, r) => acc + Number(r.valor || 0), 0); } catch (e) { return 0; }
+});
+const hasPixPendente = computed(() => {
+  const cid = openForm.caixa_id;
+  return (pagamentosLocal.value || []).some(r =>
+    String(r?.status || '').toLowerCase() === 'pendente' &&
+    String(r?.forma_pagamento || '').toUpperCase() === 'PIX' &&
+    (!cid || String(r?.caixa_id) === String(cid))
+  );
 });
 const ultimosElegant = computed(() => (ultimosPagamentosFiltered.value || []));
 function isDropUp(idx) {
@@ -698,6 +772,70 @@ function abrirRecusar(id) {
   recusaError.value = "";
   showRecusarModal.value = true;
 }
+const showReceberModal = ref(false);
+const receberPagamentoId = ref(null);
+const formaRecebimento = ref("PIX");
+const cancelProcessing = ref({});
+const receberProcessing = ref(false);
+const receberError = ref("");
+const receberInfo = computed(() => {
+  const id = receberPagamentoId.value;
+  if (!id) return {};
+  const r = (pagamentosLocal.value || []).find(x => String(x.id) === String(id));
+  return {
+    paciente: r?.paciente || "—",
+    valor: Number(r?.valor || 0),
+    emissao: r?.data_orcamento || "—",
+  };
+});
+function abrirReceber(id) {
+  receberPagamentoId.value = id;
+  formaRecebimento.value = "PIX";
+  receberError.value = "";
+  showReceberModal.value = true;
+}
+function isAguardandoPix(row) {
+  return String(row?.status || '').toLowerCase() === 'pendente' && String(row?.forma_pagamento || '').toUpperCase() === 'PIX';
+}
+function cancelarPix(id) {
+  if (!id) return;
+  cancelProcessing.value[id] = true;
+  const f = useForm({});
+  f.put(`/pagamentos/${id}/cancel-pix`, {
+    onSuccess: async () => {
+      await new Promise((resolve) => {
+        router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
+      });
+    },
+    onError: () => { /* noop */ },
+    onFinish: () => {
+      cancelProcessing.value[id] = false;
+    },
+  });
+}
+function prosseguirRecebimento() {
+  const id = receberPagamentoId.value;
+  if (!id) { showReceberModal.value = false; return; }
+  receberError.value = "";
+  if (formaRecebimento.value === "PIX") {
+    if (!isCaixaDisponivelReceber.value) { showCaixaModal.value = true; return; }
+    const f = useForm({ caixa_id: openForm.caixa_id });
+    f.put(`/pagamentos/${id}/prepare-pix`, {
+      onSuccess: async () => {
+        showReceberModal.value = false;
+        await new Promise((resolve) => {
+          router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
+        });
+      },
+      onError: () => {
+        showReceberModal.value = false;
+      },
+    });
+  } else {
+    confirmarPagamento(id, formaRecebimento.value);
+    showReceberModal.value = false;
+  }
+}
 function confirmarRecusa() {
   const id = recusarId.value;
   if (!id) { showRecusarModal.value = false; return; }
@@ -747,12 +885,13 @@ function reabrirMov(id) {
   });
 }
 
-function confirmarPagamento(id) {
+function confirmarPagamento(id, forma = null) {
   if (!id) return;
   // Requer um caixa selecionado e movimentação aberta
   if (!isCaixaDisponivelReceber.value) { showCaixaModal.value = true; return; }
   const f = useForm({
     caixa_id: openForm.caixa_id,
+    forma_pagamento: forma || null,
   });
   f.put(`/pagamentos/${id}/confirm`, {
     onSuccess: async () => {
@@ -771,6 +910,85 @@ const showSaldoModal = ref(false);
 const saldoInicial = ref("");
 const saldoError = ref("");
 
+const showPixConfigModal = ref(false);
+const pixConfigProcessing = ref(false);
+const pixConfigError = ref("");
+const pixConfig = ref({ chave: "", recebedor_nome: "", recebedor_cidade: "", descricao: "" });
+async function carregarPixConfig() {
+  try {
+    const resp = await axios.get('/config/pix');
+    pixConfig.value = {
+      chave: resp.data?.chave || "",
+      recebedor_nome: resp.data?.recebedor_nome || "",
+      recebedor_cidade: resp.data?.recebedor_cidade || "",
+      descricao: resp.data?.descricao || "",
+    };
+  } catch (e) { /* noop */ }
+}
+async function salvarPixConfig() {
+  if (!String(pixConfig.value.chave || "").trim()) {
+    pixConfigError.value = "Informe a chave PIX.";
+    return;
+  }
+  pixConfigError.value = "";
+  pixConfigProcessing.value = true;
+  try {
+    await axios.put('/config/pix', pixConfig.value);
+    showPixConfigModal.value = false;
+  } finally {
+    pixConfigProcessing.value = false;
+  }
+}
+
+const pendentesPolling = ref(false);
+let pendTimer = null;
+function startPendentesPolling() {
+  if (pendTimer) clearInterval(pendTimer);
+  pendTimer = setInterval(async () => {
+    if (openForm.caixa_id && currentMovId.value) {
+      await new Promise((resolve) => {
+        router.reload({ only: ["pagamentosPendentes","ultimosPagamentos"], preserveScroll: true, preserveState: true, onFinish: () => resolve() });
+      });
+    }
+  }, 3000);
+  pendentesPolling.value = true;
+}
+function stopPendentesPolling() {
+  if (pendTimer) { clearInterval(pendTimer); pendTimer = null; }
+  pendentesPolling.value = false;
+}
+onMounted(() => {
+  if (typeof document !== "undefined") {
+    const onVis = () => {
+      if (document.hidden || !hasPixPendente.value || !showReceberModal.value) {
+        stopPendentesPolling();
+      } else {
+        startPendentesPolling();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    visibilityCleanup = () => document.removeEventListener("visibilitychange", onVis);
+  }
+});
+watch(() => openForm.caixa_id, () => {
+  stopPendentesPolling();
+});
+watch(showReceberModal, (nv) => {
+  if (nv && hasPixPendente.value && (!('document' in globalThis) || !document.hidden)) {
+    startPendentesPolling();
+  } else {
+    stopPendentesPolling();
+  }
+});
+let visibilityCleanup = null;
+onUnmounted(() => {
+  stopPendentesPolling();
+  if (typeof visibilityCleanup === "function") {
+    try { visibilityCleanup(); } catch (e) {}
+    visibilityCleanup = null;
+  }
+});
+
 function parseValor(val) {
   const s = String(val || "").trim();
   if (!s) return 0;
@@ -778,6 +996,132 @@ function parseValor(val) {
   return Number.isNaN(n) ? NaN : n;
 }
 
+// PIX helpers
+async function getPixConfig() {
+  try {
+    const resp = await axios.get('/config/pix');
+    return resp.data || {};
+  } catch (e) {
+    return {};
+  }
+}
+function sanitizeText(s, max) {
+  const t = (String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')).toUpperCase();
+  return t.slice(0, max || t.length);
+}
+function sanitizeTxid(s) {
+  const t = String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return t.slice(0, 25);
+}
+function emvField(id, value) {
+  const v = String(value || '');
+  const len = String(v.length).padStart(2, '0');
+  return `${id}${len}${v}`;
+}
+function crc16(payload) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < payload.length; i++) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) !== 0) {
+        crc = (crc << 1) ^ 0x1021;
+      } else {
+        crc <<= 1;
+      }
+      crc &= 0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+function buildPixPayload({ chave, recebedor_nome, recebedor_cidade, txid, valor }) {
+  const merchantAccountInfo = emvField('00', 'BR.GOV.BCB.PIX') + emvField('01', String(chave || ''));
+  const mai = emvField('26', merchantAccountInfo);
+  const amount = Number(valor || 0).toFixed(2);
+  const payloadSemCRC =
+    emvField('00','01') +
+    emvField('01','11') +
+    mai +
+    emvField('52','0000') +
+    emvField('53','986') +
+    emvField('54', amount) +
+    emvField('58','BR') +
+    emvField('59', sanitizeText(recebedor_nome || 'RECEBEDOR', 25)) +
+    emvField('60', sanitizeText(recebedor_cidade || 'CIDADE', 15)) +
+    emvField('62', emvField('05', String(txid || 'TX')) ) +
+    '6304';
+  const crc = crc16(payloadSemCRC);
+  return payloadSemCRC + crc;
+}
+async function abrirPixWindow(pagamentoId) {
+  const row = (pagamentosLocal.value || []).find(r => String(r.id) === String(pagamentoId));
+  const valor = Number(row?.valor || 0);
+  const cfg = await getPixConfig();
+  const txid = sanitizeTxid(`PAG${String(pagamentoId)}`);
+  const payload = buildPixPayload({
+    chave: cfg?.chave || '',
+    recebedor_nome: cfg?.recebedor_nome || '',
+    recebedor_cidade: cfg?.recebedor_cidade || '',
+    txid,
+    valor,
+  });
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.title = 'Pagamento PIX';
+  const link = w.document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css';
+  w.document.head.appendChild(link);
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(payload)}`;
+  const container = w.document.createElement('div');
+  container.className = 'container py-4';
+  container.innerHTML = `
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body text-center">
+            <h5 class="card-title mb-3">Pagamento via PIX</h5>
+            <p class="text-muted mb-1">Valor</p>
+            <div class="fs-4 fw-semibold mb-3">${valor.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+            <img src="${qrUrl}" alt="QR Code PIX" class="img-fluid mb-3" style="max-width: 260px;" />
+            <div class="text-start">
+              <label class="form-label">Copia e Cola</label>
+              <textarea class="form-control" rows="4">${payload}</textarea>
+            </div>
+            <div class="d-grid gap-2 mt-3">
+              <button class="btn btn-success" id="btnConfirm">Confirmar Recebimento</button>
+              <button class="btn btn-outline-secondary" id="btnClose">Fechar</button>
+            </div>
+            <div class="alert alert-warning mt-3 d-none" id="msgWarn">Falha ao confirmar. Verifique se o caixa está disponível.</div>
+            <div class="alert alert-success mt-3 d-none" id="msgOk">Pagamento confirmado!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  w.document.body.className = 'bg-light';
+  w.document.body.appendChild(container);
+  const id = pagamentoId;
+  const caixaId = openForm.caixa_id;
+  const btnConfirm = w.document.getElementById('btnConfirm');
+  const btnClose = w.document.getElementById('btnClose');
+  const msgOk = w.document.getElementById('msgOk');
+  const msgWarn = w.document.getElementById('msgWarn');
+  btnConfirm && btnConfirm.addEventListener('click', async () => {
+    try {
+      const resp = await fetch('/pagamentos/' + id + '/confirm', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With':'XMLHttpRequest' },
+        body: JSON.stringify({ caixa_id: caixaId, forma_pagamento: 'PIX' })
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      msgOk && msgOk.classList.remove('d-none');
+      msgWarn && msgWarn.classList.add('d-none');
+    } catch (e) {
+      msgWarn && msgWarn.classList.remove('d-none');
+    }
+  });
+  btnClose && btnClose.addEventListener('click', () => { w.close(); });
+}
 function confirmarAbertura() {
   const v = parseValor(saldoInicial.value);
   if (!(v >= 0)) {

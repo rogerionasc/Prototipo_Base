@@ -95,6 +95,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::delete("/movimentacoes-caixa/{id}", [MovimentacaoCaixaController::class, "destroy"])->name('movimentacoes_caixa.destroy');
         Route::put("/movimentacoes-caixa/{id}/reopen", [MovimentacaoCaixaController::class, "reopen"])->name('movimentacoes_caixa.reopen');
 
+        // PIX config
+        Route::get("/config/pix", [\App\Http\Controllers\PixConfigController::class, "show"]);
+        Route::put("/config/pix", [\App\Http\Controllers\PixConfigController::class, "update"]);
         // Especialidades Médicas routes
         Route::post("/especialidades", [EspecialidadeController::class, "store"])->name('especialidades.store');
         Route::put("/especialidades/{id}", [EspecialidadeController::class, "update"])->name('especialidades.update');
@@ -124,6 +127,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/pagamentos/{id}/refuse", [\App\Http\Controllers\PagamentoController::class, "refuse"])->whereNumber('id')->name('pagamentos.refuse');
         Route::put("/pagamentos/{id}/unrefuse", [\App\Http\Controllers\PagamentoController::class, "unrefuse"])->whereNumber('id')->name('pagamentos.unrefuse');
         Route::get("/pagamentos-recusados", [\App\Http\Controllers\PagamentoController::class, "recusados"])->name('pagamentos.recusados');
+        // PIX display
+        Route::get("/pix/display", [\App\Http\Controllers\PagamentoController::class, "displayPix"])->name('pix.display');
+        Route::get("/pix/current", [\App\Http\Controllers\PagamentoController::class, "currentPix"])->name('pix.current');
+        Route::put("/pagamentos/{id}/prepare-pix", [\App\Http\Controllers\PagamentoController::class, "preparePix"])->whereNumber('id')->name('pagamentos.prepare_pix');
+        Route::put("/pagamentos/{id}/cancel-pix", [\App\Http\Controllers\PagamentoController::class, "cancelPix"])->whereNumber('id')->name('pagamentos.cancel_pix');
+        Route::post("/pix/mp/checkout", [\App\Http\Controllers\PagamentoController::class, "mpCheckout"])->name('pix.mp.checkout');
+        Route::post("/pix/mp/status-check", [\App\Http\Controllers\PagamentoController::class, "mpStatusCheck"])->name('pix.mp.status_check');
         Route::get("/agenda-medica/{id}", [AgendaMedicaController::class, "showByProfissional"])->name('agenda_medica.show_by_prof');
         Route::delete("/agenda-medica/{id}", [AgendaMedicaController::class, "destroy"])->name('agenda_medica.destroy');
 
@@ -157,3 +167,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
     });
 });
+
+// PIX webhook (sem autenticação)
+Route::post('/pix/webhook', [\App\Http\Controllers\PagamentoController::class, 'pixWebhook'])->name('pix.webhook');
+Route::post('/pix/mp/webhook', [\App\Http\Controllers\PagamentoController::class, 'mpWebhook'])->name('pix.mp.webhook');

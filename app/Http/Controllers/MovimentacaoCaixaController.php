@@ -68,7 +68,7 @@ class MovimentacaoCaixaController extends Controller
                 'p.confirmado',
                 'p.status',
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
-                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_orcamento")
+                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y %H:%i') AS data_orcamento")
             )
             ->where('p.confirmado', false)
             ->where('p.status', 'pendente')
