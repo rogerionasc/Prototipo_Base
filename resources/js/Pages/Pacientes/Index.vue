@@ -100,6 +100,7 @@
                                         </td>
                                         <td>
                                             <button v-if="!o.aprovado" class="btn btn-sm btn-success me-2" @click="aprovarOrcamento(o.id)">Aprovar</button>
+                                            <span v-else-if="o.pago" class="badge bg-info">Pago</span>
                                             <button v-else class="btn btn-sm btn-danger" @click="cancelarAprovacao(o.id)">Cancelar aprovação</button>
                                         </td>
                                     </tr>
@@ -353,16 +354,17 @@ function openModalShow(id) {
     try {
         window.axios.get(`/pacientes/${p.id}/orcamentos`).then((res) => {
             const arr = Array.isArray(res?.data?.orcamentos) ? res.data.orcamentos : [];
-            orcamentosPaciente.value = arr.map(o => ({
-                id: o.id,
-                numero: o.numero,
-                data_emissao: o.data_emissao,
-                validade: o.validade,
-                valor_bruto: o.valor_bruto,
-                desconto: o.desconto,
-                valor_total: o.valor_total,
-                aprovado: !!o.aprovado,
-            }));
+                orcamentosPaciente.value = arr.map(o => ({
+                    id: o.id,
+                    numero: o.numero,
+                    data_emissao: o.data_emissao,
+                    validade: o.validade,
+                    valor_bruto: o.valor_bruto,
+                    desconto: o.desconto,
+                    valor_total: o.valor_total,
+                    aprovado: !!o.aprovado,
+                    pago: !!o.pago,
+                }));
         }).catch(() => {});
     } catch (e) {}
 }

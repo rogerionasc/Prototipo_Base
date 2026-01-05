@@ -140,7 +140,14 @@
   const procedimentosLocal = ref([...(props.procedimentos || [])]);
   const categoriasLocal = ref([...(props.categoriasProcedimento || [])]);
   watch(() => props.procedimentos, (v) => { procedimentosLocal.value = [...(v || [])]; });
-  watch(() => props.categoriasProcedimento, (v) => { categoriasLocal.value = [...(v || [])]; });
+  watch(() => props.categoriasProcedimento, (v) => {
+    categoriasLocal.value = [...(v || [])];
+    nextTick(() => {
+      refreshChoicesById('procCategoria');
+      refreshChoicesById('procEditCategoria');
+      if (window.autoSyncChoices) window.autoSyncChoices();
+    });
+  });
   const columns = [
     { id: "id", name: "ID" },
     { id: "nome", name: "Nome" },
@@ -244,5 +251,19 @@
   }
   function openShow(id) {
     alert('Procedimento: ' + JSON.stringify(id));
+  }
+  function refreshChoicesById(id) {
+    try {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const inst = el._choicesInstance || el.choices;
+      if (inst && typeof inst.destroy === 'function') {
+        try { inst.destroy(); } catch (_) {}
+        delete el.dataset.choicesInitialized;
+        delete el._choicesInstance;
+      }
+      if (window.initChoices) window.initChoices();
+      if (window.autoSyncChoices) window.autoSyncChoices();
+    } catch (e) { /* noop */ }
   }
   </script>

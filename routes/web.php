@@ -90,8 +90,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         // Movimentações de Caixa routes
         Route::get("/movimentacoes-caixa", [MovimentacaoCaixaController::class, "index"])->name('movimentacoes_caixa.index');
         Route::post("/movimentacoes-caixa", [MovimentacaoCaixaController::class, "store"])->name('movimentacoes_caixa.store');
+        Route::get("/movimentacoes-caixa/{id}", [MovimentacaoCaixaController::class, "show"])->whereNumber('id')->name('movimentacoes_caixa.show');
         Route::put("/movimentacoes-caixa/{id}", [MovimentacaoCaixaController::class, "update"])->name('movimentacoes_caixa.update');
         Route::delete("/movimentacoes-caixa/{id}", [MovimentacaoCaixaController::class, "destroy"])->name('movimentacoes_caixa.destroy');
+        Route::put("/movimentacoes-caixa/{id}/reopen", [MovimentacaoCaixaController::class, "reopen"])->name('movimentacoes_caixa.reopen');
 
         // Especialidades Médicas routes
         Route::post("/especialidades", [EspecialidadeController::class, "store"])->name('especialidades.store');
@@ -116,6 +118,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
         // Agenda Médica routes
         Route::post("/agenda-medica", [AgendaMedicaController::class, "store"])->name('agenda_medica.store');
+
+        // Pagamentos
+        Route::put("/pagamentos/{id}/confirm", [\App\Http\Controllers\PagamentoController::class, "confirm"])->whereNumber('id')->name('pagamentos.confirm');
+        Route::put("/pagamentos/{id}/refuse", [\App\Http\Controllers\PagamentoController::class, "refuse"])->whereNumber('id')->name('pagamentos.refuse');
+        Route::put("/pagamentos/{id}/unrefuse", [\App\Http\Controllers\PagamentoController::class, "unrefuse"])->whereNumber('id')->name('pagamentos.unrefuse');
+        Route::get("/pagamentos-recusados", [\App\Http\Controllers\PagamentoController::class, "recusados"])->name('pagamentos.recusados');
         Route::get("/agenda-medica/{id}", [AgendaMedicaController::class, "showByProfissional"])->name('agenda_medica.show_by_prof');
         Route::delete("/agenda-medica/{id}", [AgendaMedicaController::class, "destroy"])->name('agenda_medica.destroy');
 

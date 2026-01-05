@@ -162,22 +162,22 @@
                                 :key="o.id"
                                 class="list-group-item d-flex justify-content-between align-items-center"
                             >
-                                <span class="d-flex flex-column">
-                                    <span class="fw-bold">{{ o.numero }}</span>
-                                    <span class="text-muted small">{{ o.criado_em }}</span>
-                                </span>
-                                <span class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-soft-info" type="button" @click="handleConsultEdit(o.id)" title="Editar">
-                                        <i class="ri-pencil-fill align-bottom"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-soft-primary" type="button" @click="handleUltimoApprove(o.id)" :disabled="o.aprovado" :title="o.aprovado ? 'Já aprovado' : 'Aprovar'">
-                                        <i class="ri-check-fill align-bottom"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-soft-warning" type="button" @click="handleConsultPrint(o.id)" title="Imprimir">
-                                        <i class="ri-printer-fill align-bottom"></i>
-                                    </button>
-                                </span>
-                            </li>
+                            <span class="d-flex flex-column">
+                                <span class="fw-bold">{{ o.numero }}</span>
+                                <span class="text-muted small">{{ o.criado_em }}</span>
+                            </span>
+                            <span class="d-flex gap-2">
+                                <button class="btn btn-sm btn-soft-info" type="button" @click="handleConsultEdit(o.id)" :disabled="o.pago" :title="o.pago ? 'Pagamento confirmado' : 'Editar'">
+                                    <i class="ri-pencil-fill align-bottom"></i>
+                                </button>
+                                <button class="btn btn-sm btn-soft-primary" type="button" @click="handleUltimoApprove(o.id)" :disabled="o.aprovado || o.pago" :title="o.pago ? 'Pagamento confirmado' : (o.aprovado ? 'Já aprovado' : 'Aprovar')">
+                                    <i class="ri-check-fill align-bottom"></i>
+                                </button>
+                                <button class="btn btn-sm btn-soft-warning" type="button" @click="handleConsultPrint(o.id)" title="Imprimir">
+                                    <i class="ri-printer-fill align-bottom"></i>
+                                </button>
+                            </span>
+                        </li>
                             <li v-if="!ultimosLocal || ultimosLocal.length === 0" class="list-group-item text-muted">
                                 Sem orçamentos recentes
                             </li>
@@ -200,6 +200,20 @@
             <TableGrid :columns="consultColumns" :data="orcamentosConsultaGrid" :tableTitle="'Resultados da Busca'"
                 :search="false" :showCheckbox="false" :showAddButton="false" :showStatus="false" :showActions="true"
                 :actionsConfig="{ delete: false, edit: true, show: false, diary: false, print: true, download: true }" @edit="handleConsultEdit" @print="handleConsultPrint" @download="handleConsultDownload" />
+        </Modal>
+        <Modal v-model="approveSuccessModal" :title="'Sucesso'" :name-button="'Ver Orçamento'" :processing="false" size="md" @save="viewApprovedBudget">
+            <div class="text-center py-2">
+                <div class="mx-auto rounded-circle bg-success-subtle" style="width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
+                    <i class="ri-check-fill text-success" style="font-size:28px;"></i>
+                </div>
+                <h5 class="mt-3 mb-1">Orçamento aprovado</h5>
+                <p class="text-muted mb-3">Número {{ approveSuccessInfo.numero || '—' }} foi aprovado com sucesso.</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <button class="btn btn-soft-warning btn-sm" type="button" @click="printApprovedBudget">
+                        <i class="ri-printer-fill align-bottom me-1"></i>Imprimir
+                    </button>
+                </div>
+            </div>
         </Modal>
     </Layout>
     <div ref="pdfContainer" style="position: fixed; left: -10000px; top: -10000px; opacity: 0; pointer-events: none;">
@@ -244,6 +258,9 @@ const ultimosLocal = ref([...(props.ultimos || [])]);
 const pdfContainer = ref(null);
 const downloadOrcamento = ref({});
 const downloadItens = ref([]);
+const approveSuccessModal = ref(false);
+const approveSuccessInfo = ref({ numero: null });
+const approveSuccessId = ref(null);
 
 watch(() => props.pacientes, v => pacientesLocal.value = [...(v || [])]);
 watch(() => props.profissionais, v => profissionaisLocal.value = [...(v || [])]);
@@ -261,6 +278,7 @@ const form = useForm({
     desconto: 0,
     faturamento_previsto: false,
     aprovado: false,
+    pago: false,
     itens: [],
 });
 const isEditing = ref(false);
@@ -392,6 +410,7 @@ const valorTotal = computed(() => {
 const locked = computed(() => {
     try {
         const apr = !!form.aprovado;
+        const pago = !!form.pago;
         const s = String(form.validade || '').trim();
         let exp = false;
         if (s && s.includes('-')) {
@@ -404,9 +423,9 @@ const locked = computed(() => {
             const n0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             exp = n0.getTime() > v0.getTime();
         }
-        return apr || exp;
+        return apr || exp || pago;
     } catch (e) {
-        return !!form.aprovado;
+        return !!form.aprovado || !!form.pago;
     }
 });
 
@@ -575,10 +594,25 @@ function handleUltimoApprove(id) {
     window.axios.put(`/orcamentos/${budgetId}/approve`).then(() => {
       try {
         const i = (ultimosLocal.value || []).findIndex(x => String(x.id) === String(budgetId));
-        if (i >= 0) ultimosLocal.value[i].aprovado = true;
+        if (i >= 0) {
+          ultimosLocal.value[i].aprovado = true;
+          approveSuccessInfo.value = { numero: ultimosLocal.value[i]?.numero || null };
+        }
       } catch (e) {}
+      approveSuccessId.value = budgetId;
+      approveSuccessModal.value = true;
     }).catch(() => {});
   } catch (e) {}
+}
+function viewApprovedBudget() {
+  const id = approveSuccessId.value;
+  if (id) handleConsultEdit(id);
+  approveSuccessModal.value = false;
+}
+function printApprovedBudget() {
+  const id = approveSuccessId.value;
+  if (id) handleConsultPrint(id);
+  approveSuccessModal.value = false;
 }
 function handleConsultDownload(id) {
   const budgetId = typeof id === 'object' ? (id?.id ?? null) : id;
@@ -639,6 +673,7 @@ function carregarOrcamento(id) {
             form.desconto = Number(o.desconto || 0);
             form.faturamento_previsto = !!o.faturamento_previsto;
             form.aprovado = !!o.aprovado;
+            form.pago = !!o.pago;
             itensLocal.value = itens.map(it => ({
                 procedimento_id: it.procedimento_id,
                 quantidade: it.quantidade,

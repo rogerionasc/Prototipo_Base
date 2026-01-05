@@ -228,8 +228,7 @@ erDiagram
 		DATETIME created_at  ""  
 		DATETIME updated_at  ""  
 	}
-
-    
+   
 	CAIXAS {
 		INT id PK
 		VARCHAR descricao
@@ -245,6 +244,7 @@ erDiagram
 		INT id PK
 		INT orcamento_id FK
 		INT caixa_id FK
+		INT movimentacao_id FK
 		DECIMAL valor
 		VARCHAR forma_pagamento
 		DATE data_pagamento
@@ -269,10 +269,24 @@ erDiagram
 		DECIMAL saldo_movimento
 		DECIMAL valor_diferenca
 		TEXT observacoes_fechamento
+		DATETIME fechado_em
 		DATETIME created_at
 		DATETIME updated_at
 	}
 
+	CONFERENCIAS {
+		INT id PK
+		INT movimentacao_caixa_id FK
+		INT caixa_id FK
+		INT usuario_id FK
+		DECIMAL valor_credito
+        DECIMAL valor_debito
+        DECIMAL valor_pix
+        DECIMAL valor_dinheiro
+		DATETIME conferido_em
+		DATETIME created_at
+		DATETIME updated_at
+	}
 
 	USUARIOS {
 		INT id PK ""  
@@ -670,7 +684,26 @@ erDiagram
 	PAGAMENTOS||--||FATURAMENTOS:"origina"
     CAIXAS ||--o{ PAGAMENTOS : "recebe"
 	CAIXAS ||--o{ MOVIMENTACOES_CAIXA : "fecha"
+	MOVIMENTACOES_CAIXA ||--o{ PAGAMENTOS : "lança"
+    MOVIMENTACOES_CAIXA ||--o{ CONFERENCIAS : "possui"
+	CAIXAS ||--o{ CONFERENCIAS : "é_conferido"
                     
+```
+
+# Atualização de Banco Existente
+
+Para bases já instaladas, aplicar as alterações diretamente no banco:
+
+```sql
+ALTER TABLE pagamentos
+  ADD COLUMN movimentacao_id BIGINT UNSIGNED NULL AFTER caixa_id;
+
+ALTER TABLE pagamentos
+  ADD CONSTRAINT pagamentos_movimentacao_id_foreign
+  FOREIGN KEY (movimentacao_id) REFERENCES movimentacoes_caixa(id) ON DELETE SET NULL;
+
+ALTER TABLE movimentacoes_caixa
+  ADD COLUMN fechado_em DATETIME NULL AFTER observacoes_fechamento;
 ```
 
 

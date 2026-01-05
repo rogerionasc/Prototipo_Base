@@ -30,14 +30,15 @@ export default {
                         { href: "/orcamentos", label: this.$t("t-estimate") },
                     ]
                 },
-                                {
+                {
                     icon: "ri-money-dollar-box-line",
                     title: this.$t("t-finance"),
                     type: "link",
                     target: "#financeiro",
                     children: [
-                        { href: "/caixa", label: this.$t("t-till") },//Abertura e Fechamento de Caixa
-                        { href: "/cadastro-caixa", label: this.$t("t-register") },//Cadastro de Caixa
+                        { href: "/movimentacoes-caixa", label: this.$t("t-till") },
+                        { href: "/cadastro-caixa", label: this.$t("t-register") },
+                        { href: "/pagamentos-recusados", label: this.$t("t-refused") }
                     ]
                 },
                 {

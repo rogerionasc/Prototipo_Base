@@ -12,6 +12,8 @@ use App\Models\Paciente;
 use App\Models\ProfissionalSaude;
 use App\Models\Convenio;
 use App\Models\Procedimento;
+use App\Models\Pagamento;
+use App\Models\MovimentacaoCaixa;
 
 class OrcamentoController extends Controller
 {
@@ -35,6 +37,13 @@ class OrcamentoController extends Controller
                 'o.aprovado',
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
             )
+            ->selectSub(function ($q) {
+                $q->from('pagamentos as pg')
+                  ->whereColumn('pg.orcamento_id', 'o.id')
+                  ->where('pg.confirmado', true)
+                  ->limit(1)
+                  ->select(DB::raw('1'));
+            }, 'pago')
             ->orderByDesc('o.updated_at')
             ->limit(10)
             ->get();
@@ -144,6 +153,13 @@ class OrcamentoController extends Controller
                 'valor_total',
                 'aprovado'
             )
+            ->selectSub(function ($q) {
+                $q->from('pagamentos as p')
+                  ->whereColumn('p.orcamento_id', 'orcamentos.id')
+                  ->where('p.confirmado', true)
+                  ->limit(1)
+                  ->select(DB::raw('1'));
+            }, 'pago')
             ->where('paciente_id', $id)
             ->orderByDesc('created_at')
             ->get();
@@ -152,30 +168,52 @@ class OrcamentoController extends Controller
         ]);
     }
 
+
     public function show(string $id)
     {
-        $o = Orcamento::select(
-                'id',
-                'numero',
-                DB::raw("DATE_FORMAT(data_emissao, '%d-%m-%Y') AS data_emissao"),
-                DB::raw("DATE_FORMAT(validade, '%d-%m-%Y') AS validade"),
-                'paciente_id',
-                'profissional_saude_id',
-                'convenio_id',
-                'valor_bruto',
-                'desconto',
-                'valor_total',
-                'faturamento_previsto',
-                'aprovado'
-            )->findOrFail($id);
-        $itens = OrcamentoProcedimento::select(
-                'id',
-                'procedimento_id',
-                'quantidade',
-                'valor_unitario',
-                'valor_total',
-                'observacoes'
-            )->where('orcamento_id', $id)->get();
+        $o = DB::table('orcamentos as o')
+            ->leftJoin('pacientes as p', 'p.id', '=', 'o.paciente_id')
+            ->select(
+                'o.id',
+                'o.numero',
+                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
+                DB::raw("DATE_FORMAT(o.validade, '%d-%m-%Y') AS validade"),
+                'o.paciente_id',
+                'o.profissional_saude_id',
+                'o.convenio_id',
+                'o.valor_bruto',
+                'o.desconto',
+                'o.valor_total',
+                'o.faturamento_previsto',
+                'o.aprovado',
+                DB::raw("COALESCE(p.cpf,'') AS paciente_cpf")
+            )
+            ->selectSub(function ($q) {
+                $q->from('pagamentos as pg')
+                  ->whereColumn('pg.orcamento_id', 'o.id')
+                  ->where('pg.confirmado', true)
+                  ->limit(1)
+                  ->select(DB::raw('1'));
+            }, 'pago')
+            ->where('o.id', $id)
+            ->first();
+        if (!$o) {
+            abort(404);
+        }
+        $itens = DB::table('orcamento_procedimentos as op')
+            ->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id')
+            ->select(
+                'op.id',
+                'op.procedimento_id',
+                'op.quantidade',
+                'op.valor_unitario',
+                'op.valor_total',
+                'op.observacoes',
+                DB::raw("COALESCE(pr.nome,'') AS procedimento_nome")
+            )
+            ->where('op.orcamento_id', $id)
+            ->whereNull('op.deleted_at')
+            ->get();
         return response()->json([
             'orcamento' => $o,
             'itens' => $itens,
@@ -186,6 +224,10 @@ class OrcamentoController extends Controller
     {
         $orcamento = Orcamento::findOrFail($id);
         $isApproved = !!$orcamento->aprovado;
+        $hasPaid = DB::table('pagamentos')
+            ->where('orcamento_id', $orcamento->id)
+            ->where('confirmado', true)
+            ->exists();
         $isExpired = false;
         try {
             $vd = (string)$orcamento->validade;
@@ -194,10 +236,10 @@ class OrcamentoController extends Controller
                 $isExpired = Carbon::now()->gt($d);
             }
         } catch (\Throwable $e) { }
-        if ($isApproved || $isExpired) {
+        if ($isApproved || $isExpired || $hasPaid) {
             return response()->json([
                 'errors' => [
-                    'orcamento' => ['Orçamento bloqueado por aprovação ou validade expirada.']
+                    'orcamento' => ['Orçamento bloqueado por aprovação, validade expirada ou pagamento confirmado.']
                 ]
             ], 422);
         }
@@ -368,8 +410,23 @@ class OrcamentoController extends Controller
         if ($orcamento->aprovado) {
             return response()->json(['success' => true, 'message' => 'Orçamento já aprovado']);
         }
-        $orcamento->aprovado = true;
-        $orcamento->save();
+        DB::transaction(function () use ($orcamento) {
+            $orcamento->aprovado = true;
+            $orcamento->save();
+            // Criar pagamento pendente se não existir
+            $exists = \App\Models\Pagamento::where('orcamento_id', $orcamento->id)->exists();
+            if (!$exists) {
+                \App\Models\Pagamento::create([
+                    'orcamento_id' => $orcamento->id,
+                    'caixa_id' => null,
+                    'valor' => (float)($orcamento->valor_total ?? 0),
+                    'forma_pagamento' => null,
+                    'data_pagamento' => null,
+                    'confirmado' => false,
+                    'status' => 'pendente',
+                ]);
+            }
+        });
         return response()->json(['success' => true]);
     }
 
@@ -379,8 +436,33 @@ class OrcamentoController extends Controller
         if (!$orcamento->aprovado) {
             return response()->json(['success' => true, 'message' => 'Orçamento já está aguardando aprovação']);
         }
-        $orcamento->aprovado = false;
-        $orcamento->save();
+        DB::transaction(function () use ($orcamento) {
+            $pag = Pagamento::where('orcamento_id', $orcamento->id)->first();
+            if ($pag && $pag->confirmado) {
+                $movId = (int)($pag->movimentacao_id ?? 0);
+                $mov = $movId ? MovimentacaoCaixa::find($movId) : null;
+                if ($mov) {
+                    $totEntradas = max(0, (float)($mov->total_entradas ?? 0) - (float)($pag->valor ?? 0));
+                    $totSaidas = (float)($mov->total_saidas ?? 0);
+                    $saldoInicial = (float)($mov->saldo_caixa ?? 0);
+                    $saldoMov = $saldoInicial + $totEntradas - $totSaidas;
+                    $mov->update([
+                        'total_entradas' => $totEntradas,
+                        'saldo_movimento' => $saldoMov,
+                    ]);
+                }
+                $pag->update([
+                    'caixa_id' => null,
+                    'movimentacao_id' => null,
+                    'forma_pagamento' => null,
+                    'data_pagamento' => null,
+                    'confirmado' => false,
+                    'status' => 'pendente',
+                ]);
+            }
+            $orcamento->aprovado = false;
+            $orcamento->save();
+        });
         return response()->json(['success' => true]);
     }
 }

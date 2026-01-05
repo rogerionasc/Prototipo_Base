@@ -215,5 +215,6 @@
     "t-estimate": "Estimate",
     "t-finance": "Finance",
     "t-till": "Till",
-    "t-movements": "Movements"
+    "t-movements": "Movements",
+    "t-refused": "Refused"
 }

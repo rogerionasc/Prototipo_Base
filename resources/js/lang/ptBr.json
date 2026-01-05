@@ -220,5 +220,6 @@
     "t-estimate": "Orçamento",
     "t-finance": "Financeiro",
     "t-till": "Caixa",
-    "t-movements": "Movimentação"
+    "t-movements": "Movimentação",
+    "t-refused": "Recusado"
 }

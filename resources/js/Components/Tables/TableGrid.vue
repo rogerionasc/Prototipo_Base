@@ -14,31 +14,35 @@ import LottieComponent from "@/Components/widgets/lottie.vue";
 // -------------------- PROPRIEDADES (PROPS) --------------------
 // Define as propriedades que o componente pode receber
 const props = defineProps({
-    data: { type: Array, default: () => [] }, // Dados da tabela
-    columns: { type: Array, default: () => ["ID", "Nome", "Email", "Cargo", "Empresa", "País"] }, // Colunas
-    showStatus: { type: Boolean, default: false }, // Exibe coluna de status
-    search: { type: Boolean, default: true }, // Exibe campo de busca
-    searchPlaceholder: { type: String, default: 'Buscar...' }, // Placeholder do campo de busca
-    showCheckbox: { type: Boolean, default: true }, // Exibe checkbox nas linhas
-    showAddButton: { type: Boolean, default: true }, // Exibe botão de adicionar
-    showActions: { type: Boolean, default: true }, // Exibe botões de ação
-    showPerPagination: { type: Boolean, default: true }, // Exibe seleção de itens por página
-    tableTitle: { type: String, default: 'Listas ...' }, // Título da tabela
-    showDiaryButton: { type: Boolean, default: false }, // Exibe botão de agenda (diary) somente se habilitado
-    actionsConfig: { type: Object, default: () => ({ delete: true, edit: true, show: true, diary: false, print: false, download: false }) },
+    data: { type: Array, default: () => [] },
+    columns: { type: Array, default: () => ["ID", "Nome", "Email", "Cargo", "Empresa", "País"] },
+    showStatus: { type: Boolean, default: false },
+    search: { type: Boolean, default: true },
+    searchPlaceholder: { type: String, default: 'Buscar...' },
+    showCheckbox: { type: Boolean, default: true },
+    showAddButton: { type: Boolean, default: true },
+    showActions: { type: Boolean, default: true },
+    showPerPagination: { type: Boolean, default: true },
+    tableTitle: { type: String, default: 'Listas ...' },
+    showDiaryButton: { type: Boolean, default: false },
+    actionsConfig: { type: Object, default: () => ({ delete: true, edit: true, show: true, diary: false, print: false, download: false, restore: false, receive: false }) },
+    actionsLabels: { type: Object, default: () => ({ delete: 'Excluir', edit: 'Editar', show: 'Visualizar', diary: 'Agenda', print: 'Imprimir', download: 'Baixar', restore: 'Reabrir', receive: 'Receber' }) },
+    actionsButtonText: { type: Object, default: () => ({}) },
 });
 
 // -------------------- EMITS --------------------
 // Define os eventos que o componente pode emitir
 const emit = defineEmits([
-    'add',   // Evento para abrir modal de adicionar
-    'modalDdeletarMultiplos', // Evento para deletar múltiplos itens
-    'delete',             // Evento para deletar um item
-    'edit',               // Evento para editar um item
-    'show',               // Evento para visualizar um item
-    'diary',              // Evento para visualizar o diário de um item
-    'print',              // Evento para imprimir um item
-    'download'            // Evento para baixar um item
+    'add',
+    'modalDdeletarMultiplos',
+    'delete',
+    'edit',
+    'show',
+    'diary',
+    'print',
+    'download',
+    'restore',
+    'receive'
 ]);
 
 // -------------------- REFS E VARIÁVEIS REATIVAS --------------------
@@ -295,13 +299,17 @@ function initGrid() {
                 }) || {};
                 const rowId = rowData?.id ?? firstCell;
                 const ac = props.actionsConfig || { delete: true, edit: true, show: true, diary: false };
+                const al = props.actionsLabels || {};
+                const bt = props.actionsButtonText || {};
                 const buttons = [
-                    ac.delete ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Excluir"><i class="ri-delete-bin-5-fill align-bottom"></i></button>` : ``,
-                    ac.edit ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Editar"><i class="ri-pencil-fill align-bottom"></i></button>` : ``,
-                    ac.show ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Visualizar"><i class="ri-eye-fill align-bottom"></i></button>` : ``,
-                    ac.print ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Imprimir"><i class="ri-printer-fill align-bottom"></i></button>` : ``,
-                    ac.download ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Baixar"><i class="ri-download-line align-bottom"></i></button>` : ``,
-                    (props.showDiaryButton && ac.diary) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="Agenda"><i class="ri-calendar-2-line align-bottom"></i></button>` : ``
+                    ac.delete ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.delete ?? 'Excluir'}"><i class="ri-delete-bin-5-fill align-bottom"></i>${bt.delete ? `<span class="d-none d-sm-inline ms-1">${bt.delete}</span>` : ''}</button>` : ``,
+                    ac.edit ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.edit ?? 'Editar'}"><i class="ri-pencil-fill align-bottom"></i>${bt.edit ? `<span class="d-none d-sm-inline ms-1">${bt.edit}</span>` : ''}</button>` : ``,
+                    ac.show ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.show ?? 'Visualizar'}"><i class="ri-eye-fill align-bottom"></i>${bt.show ? `<span class="d-none d-sm-inline ms-1">${bt.show}</span>` : ''}</button>` : ``,
+                    ac.restore ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="restore" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.restore ?? 'Reabrir'}"><i class="ri-refresh-line align-bottom"></i>${bt.restore ? `<span class="d-none d-sm-inline ms-1">${bt.restore}</span>` : ''}</button>` : ``,
+                    ac.print ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.print ?? 'Imprimir'}"><i class="ri-printer-fill align-bottom"></i>${bt.print ? `<span class="d-none d-sm-inline ms-1">${bt.print}</span>` : ''}</button>` : ``,
+                    ac.download ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.download ?? 'Baixar'}"><i class="ri-download-line align-bottom"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
+                    ac.receive ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.receive ?? 'Receber'}"><i class="ri-money-dollar-box-line align-bottom"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
+                    (props.showDiaryButton && ac.diary) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.diary ?? 'Agenda'}"><i class="ri-calendar-2-line align-bottom"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``
                 ].join('');
                 return html(`<div class="d-flex gap-2">${buttons}</div>`);
             }
@@ -365,6 +373,10 @@ function initGrid() {
             emit('print', rowObj?.id ?? id, rowObj);
         } else if (action === 'download') {
             emit('download', rowObj?.id ?? id, rowObj);
+        } else if (action === 'restore') {
+            emit('restore', rowObj?.id ?? id, rowObj);
+        } else if (action === 'receive') {
+            emit('receive', rowObj?.id ?? id, rowObj);
         }
     };
     wrapper.value.addEventListener('change', changeListener);
@@ -472,8 +484,16 @@ onMounted(async () => {
                     </div>
                 </div>
 
-                <!-- Container da tabela (só aparece quando o loader some) -->
-                <div v-show="!isLoading" ref="wrapper" class="table-card table-responsive mt-3 px-3"></div>
+                <!-- Container da tabela -->
+                <div v-show="!isLoading && filteredData.length > 0" ref="wrapper" class="table-card table-responsive mt-3 px-3"></div>
+                <!-- Empty state -->
+                <div v-if="!isLoading && filteredData.length === 0" class="d-flex justify-content-center align-items-center py-5">
+                    <div class="text-center">
+                        <LottieComponent :options="{ animationData, loop: true, autoplay: true }" :height="75" :width="75" />
+                        <h5 class="mt-2">Desculpa! Nenhum registro encontrado</h5>
+                        <p class="text-muted mb-0">Nós recomendamos utilizar o filtro para refinar melhor sua pesquisa.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

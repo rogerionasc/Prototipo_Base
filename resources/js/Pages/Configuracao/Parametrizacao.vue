@@ -454,7 +454,7 @@
 </template>
 
 <script setup>
-import { useForm } from "@inertiajs/vue3";
+import { useForm, router } from "@inertiajs/vue3";
 import { ref, watch, computed } from "vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 
@@ -643,6 +643,7 @@ const saveCategoria = () => {
     formCategoria.post("/parametros/categoria-procedimento", {
         onSuccess: () => {
             formCategoria.reset();
+            router.reload({ only: ['categoriasProcedimento'] });
         },
         preserveScroll: true,
     });
@@ -660,6 +661,7 @@ const updateCategoria = () => {
         onSuccess: () => {
             editingCategoriaId.value = null;
             editCategoria.reset();
+            router.reload({ only: ['categoriasProcedimento'] });
         },
         preserveScroll: true,
     });
@@ -706,6 +708,7 @@ const confirmDelete = () => {
             preserveScroll: true,
             onSuccess: () => {
                 categoriasLocal.value = (categoriasLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
+                router.reload({ only: ['categoriasProcedimento'] });
             }
         });
     }
