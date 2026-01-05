@@ -1,7 +1,7 @@
 import {createI18n} from 'vue-i18n'
 
 import en from './lang/en.json'
-import pt_BR from './lang/ptBR.json'
+import pt_BR from './lang/ptbr.json'
 
 const messages = {
   en,
