@@ -88,7 +88,7 @@ export default {
   }
 };
 </script>
-  
+
 <template>
   <div id="layout-wrapper">
     <NavBar />
