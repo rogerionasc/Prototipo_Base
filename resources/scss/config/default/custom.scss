@@ -696,6 +696,8 @@ File: Custom Css File
 }
 
 [data-bs-theme="dark"] {
+
+[data-bs-theme="dark"] {
   .fc {
     .fc-multimonth-daygrid {
       background: #212529 !important;
@@ -709,4 +711,18 @@ File: Custom Css File
       border-color: #32383E !important;
     }
   }
+}
+
+body {
+  font-size: 1rem;
+}
+
+.page-content {
+  font-size: 1rem;
+}
+
+.body-content {
+  font-size: 1rem;
+}
+
 }
