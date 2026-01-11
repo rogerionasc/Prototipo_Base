@@ -14,6 +14,9 @@ use App\Models\Convenio;
 use App\Models\Procedimento;
 use App\Models\Pagamento;
 use App\Models\MovimentacaoCaixa;
+use Illuminate\Support\Facades\Log;
+
+
 
 class OrcamentoController extends Controller
 {
@@ -389,12 +392,16 @@ public function searchPaid(Request $request)
     $pacienteId = $request->get('paciente_id');
     $procId = $request->get('procedimento_id');
 
+    Log::debug('Chegou no search-paid', [
+    'request' => request()->all()
+]);
+
     $query = DB::table('orcamentos as o')
         ->leftJoin('pacientes as p', 'p.id', '=', 'o.paciente_id')
         ->select(
             'o.id',
             'o.numero',
-            'o.data_emissao',
+            DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
             'o.paciente_id',
             'o.profissional_saude_id',
             'o.valor_total',
