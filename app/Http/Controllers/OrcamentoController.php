@@ -402,59 +402,40 @@ public function searchPaid(Request $request)
             DB::raw("COALESCE(p.cpf,'') AS cpf")
         )
 
-        // data do pagamento confirmado
-        ->selectSub(function ($q2) {
-            $q2->from('pagamentos as pg')
-               ->whereColumn('pg.orcamento_id', 'o.id')
-               ->where('pg.confirmado', true)
-               ->select(DB::raw("DATE_FORMAT(MAX(pg.data_pagamento), '%d-%m-%Y')"));
-        }, 'data_pagamento')
-
-        // total de procedimentos do orçamento
-        ->selectSub(function ($q3) {
-            $q3->from('orcamento_procedimentos as op')
-               ->whereColumn('op.orcamento_id', 'o.id')
-               ->whereNull('op.deleted_at')
-               ->select(DB::raw('COALESCE(SUM(op.quantidade),0)'));
-        }, 'procedimentos_total')
-
-        // total de agendamentos ativos do orçamento
-        ->selectSub(function ($q4) {
-            $q4->from('agendamentos as a')
-               ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
-               ->whereColumn('a.orcamento_id', 'o.id')
-               ->whereNull('a.deleted_at')
-               ->where(function ($qq) {
-                   $qq->whereNull('s.id')
-                      ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
-               })
-               ->select(DB::raw('COUNT(*)'));
-        }, 'agendamentos_ativos_total')
-
         // aprovado
         ->where('o.aprovado', true)
 
         // pagamento confirmado
-        ->whereExists(function ($q5) {
-            $q5->from('pagamentos as pg')
+        ->whereExists(function ($q2) {
+            $q2->from('pagamentos as pg')
                ->whereColumn('pg.orcamento_id', 'o.id')
                ->where('pg.confirmado', true)
                ->select(DB::raw(1));
         })
 
-        // regra principal via subqueries reais (sem HAVING)
+        /**
+         * 🔴 REGRA PRINCIPAL (ROBUSTA)
+         * Total de procedimentos > total de agendamentos NÃO cancelados
+         */
         ->whereRaw("
-            (SELECT COALESCE(SUM(op.quantidade),0)
-             FROM orcamento_procedimentos AS op
-             WHERE op.orcamento_id = o.id
-               AND op.deleted_at IS NULL)
-            >
-            (SELECT COUNT(*)
-             FROM agendamentos AS a
-             LEFT JOIN status_agendamento AS s ON s.id = a.status_id
-             WHERE a.orcamento_id = o.id
-               AND a.deleted_at IS NULL
-               AND (s.id IS NULL OR LOWER(s.descricao) NOT LIKE '%cancel%'))
+            (
+                SELECT COALESCE(SUM(op.quantidade),0)
+                FROM orcamento_procedimentos op
+                WHERE op.orcamento_id = o.id
+                  AND op.deleted_at IS NULL
+            ) >
+            (
+                SELECT COUNT(*)
+                FROM agendamentos a
+                WHERE a.orcamento_id = o.id
+                  AND a.deleted_at IS NULL
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM status_agendamento s
+                      WHERE s.id = a.status_id
+                        AND LOWER(COALESCE(s.descricao,'')) LIKE '%cancel%'
+                  )
+            )
         ");
 
     // filtro por paciente
@@ -466,44 +447,27 @@ public function searchPaid(Request $request)
     if (!empty($procId)) {
         $pid = (int) $procId;
 
-        // quantidade do procedimento no orçamento
-        $query->selectSub(function ($sub) use ($pid) {
-            $sub->from('orcamento_procedimentos as op')
-                ->whereColumn('op.orcamento_id', 'o.id')
-                ->where('op.procedimento_id', $pid)
-                ->whereNull('op.deleted_at')
-                ->select(DB::raw('COALESCE(SUM(op.quantidade),0)'));
-        }, 'proc_qtd_total');
-
-        // quantidade de agendamentos ativos desse procedimento
-        $query->selectSub(function ($sub) use ($pid) {
-            $sub->from('agendamentos as a')
-                ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
-                ->whereColumn('a.orcamento_id', 'o.id')
-                ->where('a.procedimento_id', $pid)
-                ->whereNull('a.deleted_at')
-                ->where(function ($qq) {
-                    $qq->whereNull('s.id')
-                       ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
-                })
-                ->select(DB::raw('COUNT(*)'));
-        }, 'proc_agendados_ativos_count');
-
-        // regra específica do procedimento via subqueries reais (sem HAVING)
         $query->whereRaw("
-            (SELECT COALESCE(SUM(op.quantidade),0)
-             FROM orcamento_procedimentos AS op
-             WHERE op.orcamento_id = o.id
-               AND op.procedimento_id = ?
-               AND op.deleted_at IS NULL)
-            >
-            (SELECT COUNT(*)
-             FROM agendamentos AS a
-             LEFT JOIN status_agendamento AS s ON s.id = a.status_id
-             WHERE a.orcamento_id = o.id
-               AND a.procedimento_id = ?
-               AND a.deleted_at IS NULL
-               AND (s.id IS NULL OR LOWER(s.descricao) NOT LIKE '%cancel%'))
+            (
+                SELECT COALESCE(SUM(op.quantidade),0)
+                FROM orcamento_procedimentos op
+                WHERE op.orcamento_id = o.id
+                  AND op.procedimento_id = ?
+                  AND op.deleted_at IS NULL
+            ) >
+            (
+                SELECT COUNT(*)
+                FROM agendamentos a
+                WHERE a.orcamento_id = o.id
+                  AND a.procedimento_id = ?
+                  AND a.deleted_at IS NULL
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM status_agendamento s
+                      WHERE s.id = a.status_id
+                        AND LOWER(COALESCE(s.descricao,'')) LIKE '%cancel%'
+                  )
+            )
         ", [$pid, $pid]);
     }
 
@@ -516,15 +480,14 @@ public function searchPaid(Request $request)
         });
     }
 
-    $results = $query
-        ->orderByDesc('o.updated_at')
-        ->limit(100)
-        ->get();
-
     return response()->json([
-        'orcamentos' => $results,
+        'orcamentos' => $query
+            ->orderByDesc('o.updated_at')
+            ->limit(100)
+            ->get(),
     ]);
 }
+
 
     public function print(string $id)
     {
