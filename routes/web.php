@@ -10,6 +10,7 @@ use App\Http\Controllers\AgendaMedicaController;
 use App\Http\Controllers\OrcamentoController;
 use App\Http\Controllers\CaixaController;
 use App\Http\Controllers\MovimentacaoCaixaController;
+use App\Http\Controllers\AgendamentoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -114,6 +115,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get("/orcamentos/{id}", [OrcamentoController::class, "show"])->whereNumber('id')->name('orcamentos.show');
         Route::put("/orcamentos/{id}", [OrcamentoController::class, "update"])->whereNumber('id')->name('orcamentos.update');
         Route::get("/orcamentos/search", [OrcamentoController::class, "search"])->name('orcamentos.search');
+        Route::get("/orcamentos/search-paid", [OrcamentoController::class, "searchPaid"])->name('orcamentos.search_paid');
         Route::get("/orcamentos/{id}/print", [OrcamentoController::class, "print"])->whereNumber('id')->name('orcamentos.print');
         Route::get("/pacientes/{id}/orcamentos", [OrcamentoController::class, "byPaciente"])->whereNumber('id')->name('orcamentos.by_paciente');
         Route::put("/orcamentos/{id}/approve", [OrcamentoController::class, "approve"])->whereNumber('id')->name('orcamentos.approve');
@@ -121,6 +123,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
         // Agenda Médica routes
         Route::post("/agenda-medica", [AgendaMedicaController::class, "store"])->name('agenda_medica.store');
+        Route::get("/agendamentos", [AgendamentoController::class, "index"])->name('agendamentos.index');
+        Route::post("/agendamentos", [AgendamentoController::class, "store"])->name('agendamentos.store');
+        Route::put("/agendamentos/{id}", [AgendamentoController::class, "update"])->whereNumber('id')->name('agendamentos.update');
+        Route::get("/agendamentos/latest", [AgendamentoController::class, "latest"])->name('agendamentos.latest');
+        Route::get("/agendas-medicas/by-date", [AgendamentoController::class, "agendasByDate"])->name('agendas_medicas.by_date');
+        Route::get("/agendas-medicas/counts-by-weekday", [AgendamentoController::class, "countsByWeekday"])->name('agendas_medicas.counts_by_weekday');
+        Route::get("/agendas-medicas/weekday-by-doctors", [AgendamentoController::class, "weekdayByDoctors"])->name('agendas_medicas.weekday_by_doctors');
+        Route::put("/agendamentos/{id}/cancel", [AgendamentoController::class, "cancel"])->whereNumber('id')->name('agendamentos.cancel');
 
         // Pagamentos
         Route::put("/pagamentos/{id}/confirm", [\App\Http\Controllers\PagamentoController::class, "confirm"])->whereNumber('id')->name('pagamentos.confirm');

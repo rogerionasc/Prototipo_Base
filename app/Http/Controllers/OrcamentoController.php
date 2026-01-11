@@ -144,25 +144,30 @@ class OrcamentoController extends Controller
 
     public function byPaciente(string $id)
     {
-        $orcamentos = Orcamento::select(
-                'id',
-                'numero',
-                DB::raw("DATE_FORMAT(data_emissao, '%d-%m-%Y') AS data_emissao"),
-                DB::raw("DATE_FORMAT(validade, '%d-%m-%Y') AS validade"),
-                'valor_bruto',
-                'desconto',
-                'valor_total',
-                'aprovado'
+        $orcamentos = DB::table('orcamentos as o')
+            ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
+            ->select(
+                'o.id',
+                'o.numero',
+                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
+                DB::raw("DATE_FORMAT(o.validade, '%d-%m-%Y') AS validade"),
+                'o.valor_bruto',
+                'o.desconto',
+                'o.valor_total',
+                'o.aprovado',
+                'o.paciente_id',
+                'o.profissional_saude_id',
+                DB::raw("COALESCE(pa.nome,'') AS paciente")
             )
             ->selectSub(function ($q) {
                 $q->from('pagamentos as p')
-                  ->whereColumn('p.orcamento_id', 'orcamentos.id')
+                  ->whereColumn('p.orcamento_id', 'o.id')
                   ->where('p.confirmado', true)
                   ->limit(1)
                   ->select(DB::raw('1'));
             }, 'pago')
-            ->where('paciente_id', $id)
-            ->orderByDesc('created_at')
+            ->where('o.paciente_id', $id)
+            ->orderByDesc('o.created_at')
             ->get();
         return response()->json([
             'orcamentos' => $orcamentos,
@@ -172,6 +177,7 @@ class OrcamentoController extends Controller
 
     public function show(string $id)
     {
+        // dd($id);
         $o = DB::table('orcamentos as o')
             ->leftJoin('pacientes as p', 'p.id', '=', 'o.paciente_id')
             ->select(
@@ -180,6 +186,7 @@ class OrcamentoController extends Controller
                 DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
                 DB::raw("DATE_FORMAT(o.validade, '%d-%m-%Y') AS validade"),
                 'o.paciente_id',
+                DB::raw("COALESCE(p.nome,'') AS paciente_nome"),
                 'o.profissional_saude_id',
                 'o.convenio_id',
                 'o.valor_bruto',
@@ -201,7 +208,8 @@ class OrcamentoController extends Controller
         if (!$o) {
             abort(404);
         }
-        $itens = DB::table('orcamento_procedimentos as op')
+        $includeAll = (bool)$request->query('include_all', false);
+        $itensQuery = DB::table('orcamento_procedimentos as op')
             ->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id')
             ->select(
                 'op.id',
@@ -213,8 +221,21 @@ class OrcamentoController extends Controller
                 DB::raw("COALESCE(pr.nome,'') AS procedimento_nome")
             )
             ->where('op.orcamento_id', $id)
-            ->whereNull('op.deleted_at')
-            ->get();
+            ->whereNull('op.deleted_at');
+        if (!$includeAll) {
+            $itensQuery->whereNotExists(function ($q) use ($id) {
+                $q->from('agendamentos as a')
+                  ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
+                  ->where('a.orcamento_id', $id)
+                  ->whereNull('a.deleted_at')
+                  ->whereColumn('a.procedimento_id', 'op.procedimento_id')
+                  ->where(function ($qq) {
+                      $qq->whereNull('s.id')
+                         ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
+                  });
+            });
+        }
+        $itens = $itensQuery->get();
         return response()->json([
             'orcamento' => $o,
             'itens' => $itens,
@@ -358,6 +379,51 @@ class OrcamentoController extends Controller
             });
         }
         $results = $query->orderByDesc('o.created_at')->limit(100)->get();
+        return response()->json([
+            'orcamentos' => $results,
+        ]);
+    }
+    public function searchPaid(Request $request)
+    {
+        // dd($request->all());
+        $q = trim((string) $request->get('q', ''));
+        $pacienteId = $request->get('paciente_id');
+        $query = DB::table('orcamentos as o')
+            ->leftJoin('pacientes as p', 'p.id', '=', 'o.paciente_id')
+            ->select(
+                'o.id',
+                'o.numero',
+                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
+                'o.paciente_id',
+                'o.profissional_saude_id',
+                'o.valor_total',
+                DB::raw("COALESCE(p.nome,'') AS paciente"),
+                DB::raw("COALESCE(p.cpf,'') AS cpf"),
+            )
+            ->selectSub(function ($q2) {
+                $q2->from('pagamentos as pg')
+                   ->whereColumn('pg.orcamento_id', 'o.id')
+                   ->where('pg.confirmado', true)
+                   ->select(DB::raw("DATE_FORMAT(MAX(pg.data_pagamento), '%d-%m-%Y')"));
+            }, 'data_pagamento')
+            ->where('o.aprovado', true)
+            ->whereExists(function ($q3) {
+                $q3->from('pagamentos as pg')
+                   ->whereColumn('pg.orcamento_id', 'o.id')
+                   ->where('pg.confirmado', true)
+                   ->select(DB::raw('1'));
+            });
+        if (!empty($pacienteId)) {
+            $query->where('o.paciente_id', $pacienteId);
+        }
+        if ($q !== '') {
+            $query->where(function ($qb) use ($q) {
+                $qb->where('o.numero', 'like', '%' . $q . '%')
+                   ->orWhere('p.nome', 'like', '%' . $q . '%')
+                   ->orWhere('p.cpf', 'like', '%' . $q . '%');
+            });
+        }
+        $results = $query->orderByDesc('o.updated_at')->limit(100)->get();
         return response()->json([
             'orcamentos' => $results,
         ]);

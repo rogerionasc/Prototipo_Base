@@ -50,8 +50,9 @@ createInertiaApp({
 function initChoices() {
     const selects = document.querySelectorAll('select[data-choices]');
     selects.forEach((el) => {
-        if (el.dataset.choicesInitialized === 'true') return;
+        if (el.dataset.choicesInitialized === 'true' || el._choicesInstance) return;
         try {
+            cleanupChoicesSiblings(el);
             const isMultiple = el.hasAttribute('multiple');
             const instance = new Choices(el, {
                 searchEnabled: true,
@@ -60,6 +61,8 @@ function initChoices() {
                 shouldSort: false,
                 searchFields: ['label', 'value'],
                 noResultsText: 'Nem resultado encontrado',
+                placeholder: true,
+                placeholderValue: 'Selecione',
                 fuseOptions: {
                     threshold: 0.0,
                     ignoreLocation: true,
@@ -68,10 +71,43 @@ function initChoices() {
             });
             el.dataset.choicesInitialized = 'true';
             el._choicesInstance = instance;
+            try { el.style.display = 'none'; } catch (_) {}
         } catch (e) {
             console.error('Choices init error:', e);
         }
     });
+}
+function initChoiceEl(el) {
+    try {
+        if (!el) return;
+        if (el.dataset.choicesInitialized === 'true' || el._choicesInstance) return;
+        cleanupChoicesSiblings(el);
+        el.dataset.choicesInitialized = 'true';
+        const isMultiple = el.hasAttribute('multiple');
+        const instance = new Choices(el, {
+            searchEnabled: true,
+            searchChoices: true,
+            removeItemButton: isMultiple,
+            shouldSort: false,
+            searchFields: ['label', 'value'],
+            noResultsText: 'Nem resultado encontrado',
+            placeholder: true,
+            placeholderValue: 'Selecione',
+            fuseOptions: {
+                threshold: 0.0,
+                ignoreLocation: true,
+                minMatchCharLength: 1
+            }
+        });
+        el._choicesInstance = instance;
+        const v = el.value != null ? String(el.value) : '';
+        syncChoiceValue(el, v);
+        setupInvalidClassObserver(el);
+        mirrorInvalidToWrapper(el);
+        try { el.style.display = 'none'; } catch (_) {}
+    } catch (e) {
+        console.error('Choices init error:', e);
+    }
 }
 
 document.addEventListener('inertia:finish', () => {
@@ -91,6 +127,7 @@ window.addEventListener('load', () => {
     }, 0);
 });
 window.initChoices = initChoices;
+window.initChoiceEl = initChoiceEl;
 function autoSyncChoices() {
     try {
         const selects = document.querySelectorAll('select[data-choices]');
@@ -131,8 +168,9 @@ function setupChoicesObserver() {
                     const nested = node.querySelectorAll ? node.querySelectorAll('select[data-choices]') : [];
                     nested.forEach((el) => targets.push(el));
                     targets.forEach((el) => {
-                        if (el.dataset.choicesInitialized === 'true') return;
+                        if (el.dataset.choicesInitialized === 'true' || el._choicesInstance) return;
                         try {
+                            cleanupChoicesSiblings(el);
                             const isMultiple = el.hasAttribute('multiple');
                             const inst = new Choices(el, {
                                 searchEnabled: true,
@@ -141,6 +179,8 @@ function setupChoicesObserver() {
                                 shouldSort: false,
                                 searchFields: ['label', 'value'],
                                 noResultsText: 'Nem resultado encontrado',
+                                placeholder: true,
+                                placeholderValue: 'Selecione',
                                 fuseOptions: {
                                     threshold: 0.0,
                                     ignoreLocation: true,
@@ -153,6 +193,7 @@ function setupChoicesObserver() {
                             syncChoiceValue(el, v);
                             setupInvalidClassObserver(el);
                             mirrorInvalidToWrapper(el);
+                            try { el.style.display = 'none'; } catch (_) {}
                         } catch (e) {
                             console.error('Choices init error:', e);
                         }
@@ -167,6 +208,68 @@ function setupChoicesObserver() {
     }
 }
 window.setupChoicesObserver = setupChoicesObserver;
+function pauseChoicesObserver() {
+    try {
+        if (window._choicesObserver && !window._choicesObserverPaused) {
+            window._choicesObserver.disconnect();
+            window._choicesObserverPaused = true;
+        }
+    } catch (e) {
+        console.error('Choices observer pause error:', e);
+    }
+}
+function resumeChoicesObserver() {
+    try {
+        if (window._choicesObserver && window._choicesObserverPaused) {
+            window._choicesObserver.observe(document.body, { childList: true, subtree: true });
+            window._choicesObserverPaused = false;
+        }
+    } catch (e) {
+        console.error('Choices observer resume error:', e);
+    }
+}
+window.pauseChoicesObserver = pauseChoicesObserver;
+window.resumeChoicesObserver = resumeChoicesObserver;
+function cleanupChoicesSiblings(el) {
+    try {
+        const p = el.parentElement;
+        if (!p) return;
+        const wraps = (p.matches('.choices') ? p.parentElement : p)?.querySelectorAll('.choices') || [];
+        wraps.forEach((w) => {
+            if (!w.contains(el)) w.remove();
+        });
+        if (p && p.classList && p.classList.contains('choices')) {
+            const grand = p.parentElement;
+            if (grand) {
+                grand.insertBefore(el, p);
+                p.remove();
+            }
+        }
+    } catch (e) {
+        console.error('Choices cleanup error:', e);
+    }
+}
+
+function destroyChoiceEl(el) {
+    try {
+        if (!el) return;
+        const inst = el._choicesInstance || el.choices;
+        if (inst && typeof inst.destroy === 'function') {
+            inst.destroy();
+        }
+        el._choicesInstance = null;
+        el.dataset.choicesInitialized = '';
+        const p = el.parentElement;
+        if (p && p.classList && p.classList.contains('choices')) {
+            try { p.remove(); } catch (_) {}
+        }
+        try { el.style.display = ''; } catch (_) {}
+        cleanupChoicesSiblings(el);
+    } catch (e) {
+        console.error('Choices destroy error:', e);
+    }
+}
+window.destroyChoiceEl = destroyChoiceEl;
 
 function mirrorInvalidToWrapper(el) {
     try {

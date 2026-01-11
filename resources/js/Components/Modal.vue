@@ -21,13 +21,16 @@
                 <slot></slot>
               </div>
               <div class="modal-footer">
-                <!-- Botão de cancelar -->
-                <button type="button" class="btn btn-light" @click="$emit('update:modelValue', false)">Cancelar</button>
-                <!-- Botão de ação principal -->
-                <button type="button" class="btn btn-success" :disabled="props.processing" @click="$emit('save')">
-                  <span v-if="props.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                  {{ nameButton }}
-                </button>
+                <div class="me-auto">
+                  <slot name="extraFooterLeft"></slot>
+                </div>
+                <div class="d-flex">
+                  <button type="button" class="btn btn-light" @click="$emit('update:modelValue', false)">Cancelar</button>
+                  <button type="button" class="btn btn-success ms-2" :disabled="props.processing" @click="$emit('save')">
+                    <span v-if="props.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    {{ nameButton }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -100,11 +103,6 @@ watch(() => props.modelValue, async (val) => {
         if (modalDialog.value) {
             modalDialog.value.style.animation = 'zoomIn 0.3s ease';
         }
-        setTimeout(() => {
-            if (window.initChoices) {
-                window.initChoices();
-            }
-        }, 0);
     } else {
         // Modal está fechando
         enableScroll(); // Habilita a barra de rolagem

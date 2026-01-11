@@ -18,6 +18,7 @@ class Agendamento extends Model
         'hora',
         'paciente_id',
         'procedimento_id',
+        'orcamento_id',
         'status_id',
         'agendamento_origem_id',
         'valor_cobrado',
@@ -57,5 +58,10 @@ class Agendamento extends Model
     public function atendimentos()
     {
         return $this->hasMany(Atendimento::class, 'agendamento_id');
+    }
+
+    public function orcamento()
+    {
+        return $this->belongsTo(Orcamento::class, 'orcamento_id');
     }
 }

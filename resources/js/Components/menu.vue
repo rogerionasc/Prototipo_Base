@@ -28,6 +28,7 @@ export default {
                     target: "#atendimentos",
                     children: [
                         { href: "/orcamentos", label: this.$t("t-estimate") },
+                        { href: "/agendamentos", label: "Agendamento" },
                     ]
                 },
                 {

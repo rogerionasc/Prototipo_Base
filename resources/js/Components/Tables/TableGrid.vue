@@ -28,6 +28,8 @@ const props = defineProps({
     actionsConfig: { type: Object, default: () => ({ delete: true, edit: true, show: true, diary: false, print: false, download: false, restore: false, receive: false }) },
     actionsLabels: { type: Object, default: () => ({ delete: 'Excluir', edit: 'Editar', show: 'Visualizar', diary: 'Agenda', print: 'Imprimir', download: 'Baixar', restore: 'Reabrir', receive: 'Receber' }) },
     actionsButtonText: { type: Object, default: () => ({}) },
+    actionsIcons: { type: Object, default: () => ({}) },
+    compactSpacing: { type: Boolean, default: false },
 });
 
 // -------------------- EMITS --------------------
@@ -301,8 +303,9 @@ function initGrid() {
                 const ac = props.actionsConfig || { delete: true, edit: true, show: true, diary: false };
                 const al = props.actionsLabels || {};
                 const bt = props.actionsButtonText || {};
+                const ai = props.actionsIcons || {};
                 const buttons = [
-                    ac.delete ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.delete ?? 'Excluir'}"><i class="ri-delete-bin-5-fill align-bottom"></i>${bt.delete ? `<span class="d-none d-sm-inline ms-1">${bt.delete}</span>` : ''}</button>` : ``,
+                    ac.delete ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.delete ?? 'Excluir'}"><i class="${ai.delete ?? 'ri-delete-bin-5-fill'} align-bottom"></i>${bt.delete ? `<span class="d-none d-sm-inline ms-1">${bt.delete}</span>` : ''}</button>` : ``,
                     ac.edit ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.edit ?? 'Editar'}"><i class="ri-pencil-fill align-bottom"></i>${bt.edit ? `<span class="d-none d-sm-inline ms-1">${bt.edit}</span>` : ''}</button>` : ``,
                     ac.show ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.show ?? 'Visualizar'}"><i class="ri-eye-fill align-bottom"></i>${bt.show ? `<span class="d-none d-sm-inline ms-1">${bt.show}</span>` : ''}</button>` : ``,
                     ac.restore ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="restore" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.restore ?? 'Reabrir'}"><i class="ri-refresh-line align-bottom"></i>${bt.restore ? `<span class="d-none d-sm-inline ms-1">${bt.restore}</span>` : ''}</button>` : ``,
@@ -432,9 +435,9 @@ onMounted(async () => {
 <template>
     <!-- Tabela -->
     <div class="row">
-        <div class="card card-body">
-            <div class="card-body px-0">
-                <h5 class="card-title mb-0 flex-grow-1 mb-3">{{ props.tableTitle }}</h5>
+        <div :class="props.compactSpacing ? 'card' : 'card card-body'">
+            <div :class="['card-body', props.compactSpacing ? 'px-0 pt-0' : 'px-0']">
+                <h5 :class="['card-title','mb-0','flex-grow-1', props.compactSpacing ? 'mb-1' : 'mb-3']">{{ props.tableTitle }}</h5>
                 <!-- Filtros -->
                 <BCardBody class="border border-dashed border-end-0 border-start-0 px-0">
                     <div class="d-flex justify-content-between align-items-center">
@@ -485,7 +488,7 @@ onMounted(async () => {
                 </div>
 
                 <!-- Container da tabela -->
-                <div v-show="!isLoading && filteredData.length > 0" ref="wrapper" class="table-card table-responsive mt-3 px-3"></div>
+                <div v-show="!isLoading && filteredData.length > 0" ref="wrapper" :class="['table-card','table-responsive', props.compactSpacing ? 'mt-2' : 'mt-3','px-3']"></div>
                 <!-- Empty state -->
                 <div v-if="!isLoading && filteredData.length === 0" class="d-flex justify-content-center align-items-center py-5">
                     <div class="text-center">

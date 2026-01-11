@@ -659,7 +659,7 @@ function handleConsultDownload(id) {
 function carregarOrcamento(id) {
     if (!id) return;
     try {
-        window.axios.get(`/orcamentos/${id}`).then((res) => {
+        window.axios.get(`/orcamentos/${id}?include_all=1`).then((res) => {
             const o = res?.data?.orcamento;
             const itens = Array.isArray(res?.data?.itens) ? res.data.itens : [];
             if (!o) return;
