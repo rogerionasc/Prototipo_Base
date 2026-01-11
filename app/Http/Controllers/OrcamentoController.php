@@ -394,7 +394,7 @@ public function searchPaid(Request $request)
         ->select(
             'o.id',
             'o.numero',
-            DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
+            'o.data_emissao',
             'o.paciente_id',
             'o.profissional_saude_id',
             'o.valor_total',
@@ -543,9 +543,9 @@ public function searchPaid(Request $request)
             $orcamento->aprovado = true;
             $orcamento->save();
             // Criar pagamento pendente se não existir
-            $exists = \App\Models\Pagamento::where('orcamento_id', $orcamento->id)->exists();
+            $exists = Pagamento::where('orcamento_id', $orcamento->id)->exists();
             if (!$exists) {
-                \App\Models\Pagamento::create([
+                Pagamento::create([
                     'orcamento_id' => $orcamento->id,
                     'caixa_id' => null,
                     'valor' => (float)($orcamento->valor_total ?? 0),
