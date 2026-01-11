@@ -396,6 +396,9 @@ export default {
         }, 250);
       } catch (e) {}
     },
+    "agendamentoForm.profissional_saude_id"() {
+      try { this.verificarAgendaProfissionalParaDia(); } catch (e) {}
+    },
   },
   methods: {
     onMoreLinkClick(arg) {
@@ -1066,11 +1069,17 @@ export default {
             ev.setProp("title", title);
           }
         }
-        Swal.fire({ icon: "success", title: "Agendamento atualizado", timer: 1200, showConfirmButton: false });
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, success: "Agendamento atualizado" };
+        } catch (_) {}
         this.modalEditarVisivel = false;
       } catch (e) {
         const msg = e?.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(' • ') : 'Falha ao atualizar';
-        Swal.fire({ icon: "error", title: msg || "Erro", timer: 2000, showConfirmButton: true });
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, error: String(msg || "Erro") };
+        } catch (_) {}
       } finally {
         this.processandoEdicao = false;
       }
@@ -1089,12 +1098,18 @@ export default {
           ev.setProp("classNames", ["bg-danger-subtle"]);
         }
         await this.buscarUltimosAgendamentos();
-        Swal.fire({ icon: "success", title: "Agendamento cancelado", timer: 1200, showConfirmButton: false });
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, success: "Agendamento cancelado" };
+        } catch (_) {}
         this.modalCancelamento = false;
         this.modalEditarVisivel = false;
       } catch (e) {
         this.modalCancelamento = false;
-        Swal.fire({ icon: "error", title: "Falha ao cancelar", timer: 1500, showConfirmButton: true });
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, error: "Falha ao cancelar" };
+        } catch (_) {}
       }
     },
 
@@ -1112,11 +1127,24 @@ export default {
         this.dataAgendaSelecionada = data;
         this.classeFundoDataSelecionada = (arr && arr.length > 0) ? this.paletaMedicos[0].bg : null;
         this.coresDataSelecionada = (arr || []).map((_, idx) => this.paletaMedicos[idx % this.paletaMedicos.length].bg);
+        this.verificarAgendaProfissionalParaDia();
         await this.buscarMapaDiasSemanaSelecionados();
       } catch (e) {
       } finally {
         this.carregandoAgendas = false;
       }
+    },
+    verificarAgendaProfissionalParaDia() {
+      try {
+        const pid = this.agendamentoForm?.profissional_saude_id ?? null;
+        const has = pid != null && (this.agendasHoje || []).some(a => String(a.profissional_saude_id) === String(pid));
+        if (pid != null && !has) {
+          try {
+            const fp = (this.$page?.props?.flash ?? {});
+            this.$page.props.flash = { ...fp, warning: "Profissional não possui agenda para o dia selecionado." };
+          } catch (_) {}
+        }
+      } catch (e) {}
     },
     obterTituloAgenda() {
       const today = moment().format("YYYY-MM-DD");
@@ -1473,7 +1501,10 @@ export default {
           });
           try { calendarApi.gotoDate(ag.data); } catch (e) {}
         }
-        Swal.fire({ icon: "success", title: "Agendamento criado", timer: 1200, showConfirmButton: false });
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, success: "Agendamento criado" };
+        } catch (_) {}
         this.modalAgendarVisivel = false;
         this.agendamentoForm = { paciente_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
         this.orcamentoSelecionado = null;
@@ -1484,7 +1515,10 @@ export default {
         await this.buscarUltimosAgendamentos();
       } catch (e) {
         const msg = e?.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(' • ') : 'Falha ao agendar';
-        Swal.fire({ icon: "error", title: msg || "Erro", timer: 2000, showConfirmButton: true });
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, error: String(msg || "Falha ao agendar") };
+        } catch (_) {}
       } finally {
         this.processandoCriacao = false;
       }

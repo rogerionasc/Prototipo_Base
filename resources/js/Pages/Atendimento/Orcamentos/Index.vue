@@ -11,15 +11,16 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">Paciente</label>
-                                <select data-choices v-model="form.paciente_id" class="form-select" ref="selPaciente" :disabled="locked">
+                                <select data-choices v-model="form.paciente_id" class="form-select" ref="selPaciente"
+                                    :disabled="locked">
                                     <option :value="null">Selecione</option>
                                     <option v-for="p in pacientesLocal" :key="p.id" :value="p.id">{{ p.nome }}</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Profissional</label>
-                                <select data-choices v-model="form.profissional_saude_id" class="form-select" :disabled="locked"
-                                    ref="selProfissional">
+                                <select data-choices v-model="form.profissional_saude_id" class="form-select"
+                                    :disabled="locked" ref="selProfissional">
                                     <option :value="null">Selecione</option>
                                     <option v-for="d in profissionaisLocal" :key="d.id" :value="d.id">{{ d.nome }}
                                     </option>
@@ -27,25 +28,26 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Convênio</label>
-                                <select data-choices v-model="form.convenio_id" class="form-select" ref="selConvenio" :disabled="locked">
+                                <select data-choices v-model="form.convenio_id" class="form-select" ref="selConvenio"
+                                    :disabled="locked">
                                     <option v-for="c in conveniosLocal" :key="c.id" :value="c.id">{{ c.descricao }}
                                     </option>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Data de Emissão</label>
-                                <flatPickr v-model="form.data_emissao" class="form-control" :config="flatpickrOptions" :disabled="locked"
-                                    placeholder="Selecione a data" />
+                                <flatPickr v-model="form.data_emissao" class="form-control" :config="flatpickrOptions"
+                                    :disabled="locked" placeholder="Selecione a data" />
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Validade</label>
-                                <flatPickr v-model="form.validade" class="form-control" :config="flatpickrOptions" :disabled="locked"
-                                    placeholder="Selecione a data" />
+                                <flatPickr v-model="form.validade" class="form-control" :config="flatpickrOptions"
+                                    :disabled="locked" placeholder="Selecione a data" />
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Desconto (R$)</label>
-                                <input :value="formatCurrency(form.desconto)" type="text" class="form-control" :disabled="locked"
-                                    @input="onCurrencyInputForm($event, 'desconto')" />
+                                <input :value="formatCurrency(form.desconto)" type="text" class="form-control"
+                                    :disabled="locked" @input="onCurrencyInputForm($event, 'desconto')" />
                             </div>
 
                             <div class="col-md-4">
@@ -61,8 +63,8 @@
 
                             <div class="col-md-3 d-flex align-items-end">
                                 <div class="form-check">
-                                    <input v-model="form.faturamento_previsto" class="form-check-input" type="checkbox" :disabled="locked"
-                                        id="fatPrev" />
+                                    <input v-model="form.faturamento_previsto" class="form-check-input" type="checkbox"
+                                        :disabled="locked" id="fatPrev" />
                                     <label class="form-check-label" for="fatPrev">Faturamento Previsto</label>
                                 </div>
                             </div>
@@ -101,15 +103,18 @@
                                                 <span>{{ formatCurrency(it.valor_total) }}</span>
                                             </td>
                                             <td class="text-end">
-                                                <button class="btn btn-outline-danger btn-sm" type="button" :disabled="locked"
-                                                    @click="removeItem(idx)">Remover</button>
+                                                <button class="btn btn-outline-danger btn-sm" type="button"
+                                                    :disabled="locked" @click="removeItem(idx)">Remover</button>
                                             </td>
                                         </tr>
-                                        <tr v-for="n in sessionCount(it.procedimento_id)" :key="`sess-${idx}-${n}`" class="session-row">
+                                        <tr v-for="n in sessionCount(it.procedimento_id)" :key="`sess-${idx}-${n}`"
+                                            class="session-row">
                                             <td colspan="4">
                                                 <div class="session-line">
                                                     <span class="session-dot"></span>
-                                                    <span class="session-badge"><i class="ri-calendar-line me-1"></i>Sessão {{ n }}/{{ sessionCount(it.procedimento_id) }}</span>
+                                                    <span class="session-badge"><i
+                                                            class="ri-calendar-line me-1"></i>Sessão {{ n }}/{{
+                                                        sessionCount(it.procedimento_id) }}</span>
                                                     <span class="session-text">Etapa do tratamento</span>
                                                 </div>
                                             </td>
@@ -141,7 +146,8 @@
                             <div class="col-md-8 text-end d-flex align-items-end justify-content-end">
                                 <button class="btn btn-soft-info me-2" type="button" @click="openConsultModal">Consultar
                                     Orçamento</button>
-                                <button class="btn btn-success" type="button" :disabled="saveProcessing || locked" @click="save">
+                                <button class="btn btn-success" type="button" :disabled="saveProcessing || locked"
+                                    @click="save">
                                     <span v-if="saveProcessing" class="spinner-border spinner-border-sm me-2" />
                                     Salvar Orçamento
                                 </button>
@@ -157,27 +163,29 @@
                     </div>
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
-                            <li
-                                v-for="o in ultimosLocal"
-                                :key="o.id"
-                                class="list-group-item d-flex justify-content-between align-items-center"
-                            >
-                            <span class="d-flex flex-column">
-                                <span class="fw-bold">{{ o.numero }}</span>
-                                <span class="text-muted small">{{ o.criado_em }}</span>
-                            </span>
-                            <span class="d-flex gap-2">
-                                <button class="btn btn-sm btn-soft-info" type="button" @click="handleConsultEdit(o.id)" :disabled="o.pago" :title="o.pago ? 'Pagamento confirmado' : 'Editar'">
-                                    <i class="ri-pencil-fill align-bottom"></i>
-                                </button>
-                                <button class="btn btn-sm btn-soft-primary" type="button" @click="handleUltimoApprove(o.id)" :disabled="o.aprovado || o.pago" :title="o.pago ? 'Pagamento confirmado' : (o.aprovado ? 'Já aprovado' : 'Aprovar')">
-                                    <i class="ri-check-fill align-bottom"></i>
-                                </button>
-                                <button class="btn btn-sm btn-soft-warning" type="button" @click="handleConsultPrint(o.id)" title="Imprimir">
-                                    <i class="ri-printer-fill align-bottom"></i>
-                                </button>
-                            </span>
-                        </li>
+                            <li v-for="o in ultimosLocal" :key="o.id"
+                                class="list-group-item d-flex justify-content-between align-items-center">
+                                <span class="d-flex flex-column">
+                                    <span class="fw-bold">{{ o.numero }}</span>
+                                    <span class="text-muted small">{{ o.criado_em }}</span>
+                                </span>
+                                <span class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-soft-info" type="button"
+                                        @click="handleConsultEdit(o.id)" :disabled="o.pago"
+                                        :title="o.pago ? 'Pagamento confirmado' : 'Editar'">
+                                        <i class="ri-pencil-fill align-bottom"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-soft-primary" type="button"
+                                        @click="handleUltimoApprove(o.id)" :disabled="o.aprovado || o.pago"
+                                        :title="o.pago ? 'Pagamento confirmado' : (o.aprovado ? 'Já aprovado' : 'Aprovar')">
+                                        <i class="ri-check-fill align-bottom"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-soft-warning" type="button"
+                                        @click="handleConsultPrint(o.id)" title="Imprimir">
+                                        <i class="ri-printer-fill align-bottom"></i>
+                                    </button>
+                                </span>
+                            </li>
                             <li v-if="!ultimosLocal || ultimosLocal.length === 0" class="list-group-item text-muted">
                                 Sem orçamentos recentes
                             </li>
@@ -199,11 +207,14 @@
             </div>
             <TableGrid :columns="consultColumns" :data="orcamentosConsultaGrid" :tableTitle="'Resultados da Busca'"
                 :search="false" :showCheckbox="false" :showAddButton="false" :showStatus="false" :showActions="true"
-                :actionsConfig="{ delete: false, edit: true, show: false, diary: false, print: true, download: true }" @edit="handleConsultEdit" @print="handleConsultPrint" @download="handleConsultDownload" />
+                :actionsConfig="{ delete: false, edit: true, show: false, diary: false, print: true, download: true }"
+                @edit="handleConsultEdit" @print="handleConsultPrint" @download="handleConsultDownload" />
         </Modal>
-        <Modal v-model="approveSuccessModal" :title="'Sucesso'" :name-button="'Ver Orçamento'" :processing="false" size="md" @save="viewApprovedBudget">
+        <Modal v-model="approveSuccessModal" :title="'Sucesso'" :name-button="'Ver Orçamento'" :processing="false"
+            size="md" @save="viewApprovedBudget">
             <div class="text-center py-2">
-                <div class="mx-auto rounded-circle bg-success-subtle" style="width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
+                <div class="mx-auto rounded-circle bg-success-subtle"
+                    style="width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
                     <i class="ri-check-fill text-success" style="font-size:28px;"></i>
                 </div>
                 <h5 class="mt-3 mb-1">Orçamento aprovado</h5>
@@ -528,14 +539,16 @@ const consultColumns = [
     { id: 'validade', name: 'Validade' },
     { id: 'paciente', name: 'Paciente' },
     { id: 'cpf', name: 'CPF' },
-    { id: 'status', name: 'Status', formatter: (cell) => {
-        const v = String(cell || '').toLowerCase();
-        const text = cell || '-';
-        let cls = 'bg-light text-dark';
-        if (v === 'aprovado') cls = 'bg-success-subtle text-success';
-        else if (v === 'aguardando aprovação' || v === 'pendente') cls = 'bg-warning-subtle text-warning';
-        return html(`<span class="badge ${cls}">${text}</span>`);
-    }},
+    {
+        id: 'status', name: 'Status', formatter: (cell) => {
+            const v = String(cell || '').toLowerCase();
+            const text = cell || '-';
+            let cls = 'bg-light text-dark';
+            if (v === 'aprovado') cls = 'bg-success-subtle text-success';
+            else if (v === 'aguardando aprovação' || v === 'pendente') cls = 'bg-warning-subtle text-warning';
+            return html(`<span class="badge ${cls}">${text}</span>`);
+        }
+    },
     { id: 'total', name: 'Total' },
 ];
 const orcamentosConsultaGrid = computed(() => {
@@ -579,82 +592,82 @@ watch(consultQuery, (v) => {
     _searchT = setTimeout(() => execConsultSearch(), 350);
 });
 function handleConsultEdit(id) {
-  if (!id) return;
-  carregarOrcamento(id);
+    if (!id) return;
+    carregarOrcamento(id);
 }
 function handleConsultPrint(id) {
-  const budgetId = typeof id === 'object' ? (id?.id ?? null) : id;
-  if (!budgetId) return;
-  try { window.open(`/orcamentos/${budgetId}/print`, '_blank'); } catch (e) {}
+    const budgetId = typeof id === 'object' ? (id?.id ?? null) : id;
+    if (!budgetId) return;
+    try { window.open(`/orcamentos/${budgetId}/print`, '_blank'); } catch (e) { }
 }
 function handleUltimoApprove(id) {
-  const budgetId = typeof id === 'object' ? (id?.id ?? null) : id;
-  if (!budgetId) return;
-  try {
-    window.axios.put(`/orcamentos/${budgetId}/approve`).then(() => {
-      try {
-        const i = (ultimosLocal.value || []).findIndex(x => String(x.id) === String(budgetId));
-        if (i >= 0) {
-          ultimosLocal.value[i].aprovado = true;
-          approveSuccessInfo.value = { numero: ultimosLocal.value[i]?.numero || null };
-        }
-      } catch (e) {}
-      approveSuccessId.value = budgetId;
-      approveSuccessModal.value = true;
-    }).catch(() => {});
-  } catch (e) {}
+    const budgetId = typeof id === 'object' ? (id?.id ?? null) : id;
+    if (!budgetId) return;
+    try {
+        window.axios.put(`/orcamentos/${budgetId}/approve`).then(() => {
+            try {
+                const i = (ultimosLocal.value || []).findIndex(x => String(x.id) === String(budgetId));
+                if (i >= 0) {
+                    ultimosLocal.value[i].aprovado = true;
+                    approveSuccessInfo.value = { numero: ultimosLocal.value[i]?.numero || null };
+                }
+            } catch (e) { }
+            approveSuccessId.value = budgetId;
+            approveSuccessModal.value = true;
+        }).catch(() => { });
+    } catch (e) { }
 }
 function viewApprovedBudget() {
-  const id = approveSuccessId.value;
-  if (id) handleConsultEdit(id);
-  approveSuccessModal.value = false;
+    const id = approveSuccessId.value;
+    if (id) handleConsultEdit(id);
+    approveSuccessModal.value = false;
 }
 function printApprovedBudget() {
-  const id = approveSuccessId.value;
-  if (id) handleConsultPrint(id);
-  approveSuccessModal.value = false;
+    const id = approveSuccessId.value;
+    if (id) handleConsultPrint(id);
+    approveSuccessModal.value = false;
 }
 function handleConsultDownload(id) {
-  const budgetId = typeof id === 'object' ? (id?.id ?? null) : id;
-  if (!budgetId) return;
-  try {
-    window.axios.get(`/orcamentos/${budgetId}`).then((res) => {
-      const o = res?.data?.orcamento || {};
-      const itens = Array.isArray(res?.data?.itens) ? res.data.itens : [];
-      const p = pacientesLocal.value.find(px => String(px.id) === String(o.paciente_id)) || {};
-      const orc = {
-        ...o,
-        paciente_nome: p?.nome || '',
-        paciente_cpf: p?.cpf || '',
-      };
-      const itensNomes = itens.map(it => ({
-        ...it,
-        procedimento_nome: procedimentoNome(it.procedimento_id) || '-',
-      }));
-      downloadOrcamento.value = orc;
-      downloadItens.value = itensNomes;
-      nextTick(() => {
-        const rootEl = pdfContainer.value;
-        const el = rootEl && rootEl.querySelector ? (rootEl.querySelector('.paper') || rootEl) : rootEl;
-        const filename = 'orcamento-' + (o?.numero || o?.id || budgetId) + '.pdf';
-        const opt = {
-          margin:       10,
-          filename,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        try {
-          setTimeout(() => {
-            html2pdf().set(opt).from(el).save().then(() => {
-              downloadOrcamento.value = {};
-              downloadItens.value = [];
+    const budgetId = typeof id === 'object' ? (id?.id ?? null) : id;
+    if (!budgetId) return;
+    try {
+        window.axios.get(`/orcamentos/${budgetId}`).then((res) => {
+            const o = res?.data?.orcamento || {};
+            const itens = Array.isArray(res?.data?.itens) ? res.data.itens : [];
+            const p = pacientesLocal.value.find(px => String(px.id) === String(o.paciente_id)) || {};
+            const orc = {
+                ...o,
+                paciente_nome: p?.nome || '',
+                paciente_cpf: p?.cpf || '',
+            };
+            const itensNomes = itens.map(it => ({
+                ...it,
+                procedimento_nome: procedimentoNome(it.procedimento_id) || '-',
+            }));
+            downloadOrcamento.value = orc;
+            downloadItens.value = itensNomes;
+            nextTick(() => {
+                const rootEl = pdfContainer.value;
+                const el = rootEl && rootEl.querySelector ? (rootEl.querySelector('.paper') || rootEl) : rootEl;
+                const filename = 'orcamento-' + (o?.numero || o?.id || budgetId) + '.pdf';
+                const opt = {
+                    margin: 10,
+                    filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                try {
+                    setTimeout(() => {
+                        html2pdf().set(opt).from(el).save().then(() => {
+                            downloadOrcamento.value = {};
+                            downloadItens.value = [];
+                        });
+                    }, 50);
+                } catch (e) { }
             });
-          }, 50);
-        } catch (e) {}
-      });
-    }).catch(() => {});
-    } catch (e) {}
+        }).catch(() => { });
+    } catch (e) { }
 }
 function carregarOrcamento(id) {
     if (!id) return;
@@ -698,50 +711,56 @@ function carregarOrcamento(id) {
 </script>
 <style scoped>
 .session-row td {
-  background: #f8fbff;
-  font-size: 12px;
-  color: #6c757d;
-  padding: 6px 12px 6px 20px;
-  border-top: 1px dashed #e9ecef;
-  position: relative;
+    background: #f8fbff;
+    font-size: 12px;
+    color: #6c757d;
+    padding: 6px 12px 6px 20px;
+    border-top: 1px dashed #e9ecef;
+    position: relative;
 }
+
 .session-row td:hover {
-  background: #f0f7ff;
+    background: #f0f7ff;
 }
+
 .session-row td::before {
-  content: "";
-  position: absolute;
-  left: 10px;
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  background: #cfe2ff;
-  border-radius: 2px;
+    content: "";
+    position: absolute;
+    left: 10px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: #cfe2ff;
+    border-radius: 2px;
 }
+
 .session-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
+
 .session-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #0d6efd;
-  box-shadow: 0 0 0 3px #e7f1ff inset, 0 0 0 2px #e7f1ff;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #0d6efd;
+    box-shadow: 0 0 0 3px #e7f1ff inset, 0 0 0 2px #e7f1ff;
 }
+
 .session-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #e7f1ff;
-  color: #0d6efd;
-  font-weight: 500;
-  font-size: 11px;
-  margin-right: 8px;
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e7f1ff;
+    color: #0d6efd;
+    font-weight: 500;
+    font-size: 11px;
+    margin-right: 8px;
 }
+
 .session-text {
-  color: #6c757d;
-  font-size: 12px;
+    color: #6c757d;
+    font-size: 12px;
 }
 </style>
