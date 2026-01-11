@@ -396,8 +396,29 @@ public function searchPaid(Request $request)
     'request' => request()->all()
 ]);
 
+    $opsTotal = DB::table('orcamento_procedimentos as op')
+        ->select('op.orcamento_id', DB::raw('COALESCE(SUM(op.quantidade),0) AS total_ops'))
+        ->whereNull('op.deleted_at')
+        ->groupBy('op.orcamento_id');
+
+    $agnsTotal = DB::table('agendamentos as a')
+        ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
+        ->select('a.orcamento_id', DB::raw('COUNT(*) AS total_agnds'))
+        ->whereNull('a.deleted_at')
+        ->where(function ($qq) {
+            $qq->whereNull('s.id')
+               ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
+        })
+        ->groupBy('a.orcamento_id');
+
     $query = DB::table('orcamentos as o')
         ->leftJoin('pacientes as p', 'p.id', '=', 'o.paciente_id')
+        ->leftJoinSub($opsTotal, 'ops', function ($join) {
+            $join->on('ops.orcamento_id', '=', 'o.id');
+        })
+        ->leftJoinSub($agnsTotal, 'ags', function ($join) {
+            $join->on('ags.orcamento_id', '=', 'o.id');
+        })
         ->select(
             'o.id',
             'o.numero',
@@ -419,24 +440,7 @@ public function searchPaid(Request $request)
                ->where('pg.confirmado', true)
                ->select(DB::raw(1));
         })
-
-        /**
-         * 🔴 REGRA PRINCIPAL (ROBUSTA)
-         * Total de procedimentos > total de agendamentos NÃO cancelados
-         */
-        ->whereRaw("
-            (SELECT COALESCE(SUM(op.quantidade),0)
-             FROM orcamento_procedimentos AS op
-             WHERE op.orcamento_id = o.id
-               AND op.deleted_at IS NULL)
-            >
-            (SELECT COUNT(*)
-             FROM agendamentos AS a
-             LEFT JOIN status_agendamento AS s ON s.id = a.status_id
-             WHERE a.orcamento_id = o.id
-               AND a.deleted_at IS NULL
-               AND (s.id IS NULL OR LOWER(s.descricao) NOT LIKE '%cancel%'))
-        ");
+        ->whereRaw('COALESCE(ops.total_ops, 0) > COALESCE(ags.total_agnds, 0)');
 
     // filtro por paciente
     if (!empty($pacienteId)) {
@@ -447,21 +451,29 @@ public function searchPaid(Request $request)
     if (!empty($procId)) {
         $pid = (int) $procId;
 
-        $query->whereRaw("
-            (SELECT COALESCE(SUM(op.quantidade),0)
-             FROM orcamento_procedimentos AS op
-             WHERE op.orcamento_id = o.id
-               AND op.procedimento_id = ?
-               AND op.deleted_at IS NULL)
-            >
-            (SELECT COUNT(*)
-             FROM agendamentos AS a
-             LEFT JOIN status_agendamento AS s ON s.id = a.status_id
-             WHERE a.orcamento_id = o.id
-               AND a.procedimento_id = ?
-               AND a.deleted_at IS NULL
-               AND (s.id IS NULL OR LOWER(s.descricao) NOT LIKE '%cancel%'))
-        ", [$pid, $pid]);
+        $opsProc = DB::table('orcamento_procedimentos as op')
+            ->select('op.orcamento_id', 'op.procedimento_id', DB::raw('COALESCE(SUM(op.quantidade),0) AS total_ops_proc'))
+            ->whereNull('op.deleted_at')
+            ->groupBy('op.orcamento_id', 'op.procedimento_id');
+
+        $agnsProc = DB::table('agendamentos as a')
+            ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
+            ->select('a.orcamento_id', 'a.procedimento_id', DB::raw('COUNT(*) AS total_agnds_proc'))
+            ->whereNull('a.deleted_at')
+            ->where(function ($qq) {
+                $qq->whereNull('s.id')
+                   ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
+            })
+            ->groupBy('a.orcamento_id', 'a.procedimento_id');
+
+        $query
+            ->leftJoinSub($opsProc, 'ops_p', function ($join) use ($pid) {
+                $join->on('ops_p.orcamento_id', '=', 'o.id')->where('ops_p.procedimento_id', '=', $pid);
+            })
+            ->leftJoinSub($agnsProc, 'ags_p', function ($join) use ($pid) {
+                $join->on('ags_p.orcamento_id', '=', 'o.id')->where('ags_p.procedimento_id', '=', $pid);
+            })
+            ->whereRaw('COALESCE(ops_p.total_ops_proc, 0) > COALESCE(ags_p.total_agnds_proc, 0)');
     }
 
     // busca textual
@@ -473,12 +485,27 @@ public function searchPaid(Request $request)
         });
     }
 
-    return response()->json([
-        'orcamentos' => $query
-            ->orderByDesc('o.updated_at')
-            ->limit(100)
-            ->get(),
-    ]);
+    try {
+        return response()->json([
+            'orcamentos' => $query
+                ->orderByDesc('o.updated_at')
+                ->limit(100)
+                ->get(),
+        ]);
+    } catch (\Throwable $e) {
+        try {
+            Log::error('searchPaid error', [
+                'message' => $e->getMessage(),
+                'sql' => $query->toSql(),
+                'bindings' => $query->getBindings(),
+            ]);
+        } catch (\Throwable $_) {}
+        return response()->json([
+            'errors' => [
+                'search' => ['Falha ao pesquisar orçamentos pagos'],
+            ],
+        ], 500);
+    }
 }
 
 
