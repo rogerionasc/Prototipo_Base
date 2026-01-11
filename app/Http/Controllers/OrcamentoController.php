@@ -175,7 +175,7 @@ class OrcamentoController extends Controller
     }
 
 
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         // dd($id);
         $o = DB::table('orcamentos as o')
@@ -383,51 +383,126 @@ class OrcamentoController extends Controller
             'orcamentos' => $results,
         ]);
     }
-    public function searchPaid(Request $request)
-    {
-        // dd($request->all());
-        $q = trim((string) $request->get('q', ''));
-        $pacienteId = $request->get('paciente_id');
-        $query = DB::table('orcamentos as o')
-            ->leftJoin('pacientes as p', 'p.id', '=', 'o.paciente_id')
-            ->select(
-                'o.id',
-                'o.numero',
-                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
-                'o.paciente_id',
-                'o.profissional_saude_id',
-                'o.valor_total',
-                DB::raw("COALESCE(p.nome,'') AS paciente"),
-                DB::raw("COALESCE(p.cpf,'') AS cpf"),
-            )
-            ->selectSub(function ($q2) {
-                $q2->from('pagamentos as pg')
-                   ->whereColumn('pg.orcamento_id', 'o.id')
-                   ->where('pg.confirmado', true)
-                   ->select(DB::raw("DATE_FORMAT(MAX(pg.data_pagamento), '%d-%m-%Y')"));
-            }, 'data_pagamento')
-            ->where('o.aprovado', true)
-            ->whereExists(function ($q3) {
-                $q3->from('pagamentos as pg')
-                   ->whereColumn('pg.orcamento_id', 'o.id')
-                   ->where('pg.confirmado', true)
-                   ->select(DB::raw('1'));
-            });
-        if (!empty($pacienteId)) {
-            $query->where('o.paciente_id', $pacienteId);
-        }
-        if ($q !== '') {
-            $query->where(function ($qb) use ($q) {
-                $qb->where('o.numero', 'like', '%' . $q . '%')
-                   ->orWhere('p.nome', 'like', '%' . $q . '%')
-                   ->orWhere('p.cpf', 'like', '%' . $q . '%');
-            });
-        }
-        $results = $query->orderByDesc('o.updated_at')->limit(100)->get();
-        return response()->json([
-            'orcamentos' => $results,
-        ]);
+public function searchPaid(Request $request)
+{
+    $q = trim((string) $request->get('q', ''));
+    $pacienteId = $request->get('paciente_id');
+    $procId = $request->get('procedimento_id');
+
+    $query = DB::table('orcamentos as o')
+        ->leftJoin('pacientes as p', 'p.id', '=', 'o.paciente_id')
+        ->select(
+            'o.id',
+            'o.numero',
+            DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
+            'o.paciente_id',
+            'o.profissional_saude_id',
+            'o.valor_total',
+            DB::raw("COALESCE(p.nome,'') AS paciente"),
+            DB::raw("COALESCE(p.cpf,'') AS cpf")
+        )
+
+        // data do pagamento confirmado
+        ->selectSub(function ($q2) {
+            $q2->from('pagamentos as pg')
+               ->whereColumn('pg.orcamento_id', 'o.id')
+               ->where('pg.confirmado', true)
+               ->select(DB::raw("DATE_FORMAT(MAX(pg.data_pagamento), '%d-%m-%Y')"));
+        }, 'data_pagamento')
+
+        // total de procedimentos do orçamento
+        ->selectSub(function ($q3) {
+            $q3->from('orcamento_procedimentos as op')
+               ->whereColumn('op.orcamento_id', 'o.id')
+               ->whereNull('op.deleted_at')
+               ->select(DB::raw('COALESCE(SUM(op.quantidade),0)'));
+        }, 'procedimentos_total')
+
+        // total de agendamentos ativos do orçamento
+        ->selectSub(function ($q4) {
+            $q4->from('agendamentos as a')
+               ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
+               ->whereColumn('a.orcamento_id', 'o.id')
+               ->whereNull('a.deleted_at')
+               ->where(function ($qq) {
+                   $qq->whereNull('s.id')
+                      ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
+               })
+               ->select(DB::raw('COUNT(*)'));
+        }, 'agendamentos_ativos_total')
+
+        // aprovado
+        ->where('o.aprovado', true)
+
+        // pagamento confirmado
+        ->whereExists(function ($q5) {
+            $q5->from('pagamentos as pg')
+               ->whereColumn('pg.orcamento_id', 'o.id')
+               ->where('pg.confirmado', true)
+               ->select(DB::raw(1));
+        })
+
+        /**
+         * 🔴 REGRA PRINCIPAL
+         * Só retorna se ainda existir procedimento NÃO totalmente agendado
+         */
+        ->havingRaw('procedimentos_total > agendamentos_ativos_total');
+
+    // filtro por paciente
+    if (!empty($pacienteId)) {
+        $query->where('o.paciente_id', $pacienteId);
     }
+
+    // filtro por procedimento específico
+    if (!empty($procId)) {
+        $pid = (int) $procId;
+
+        // quantidade do procedimento no orçamento
+        $query->selectSub(function ($sub) use ($pid) {
+            $sub->from('orcamento_procedimentos as op')
+                ->whereColumn('op.orcamento_id', 'o.id')
+                ->where('op.procedimento_id', $pid)
+                ->whereNull('op.deleted_at')
+                ->select(DB::raw('COALESCE(SUM(op.quantidade),0)'));
+        }, 'proc_qtd_total');
+
+        // quantidade de agendamentos ativos desse procedimento
+        $query->selectSub(function ($sub) use ($pid) {
+            $sub->from('agendamentos as a')
+                ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
+                ->whereColumn('a.orcamento_id', 'o.id')
+                ->where('a.procedimento_id', $pid)
+                ->whereNull('a.deleted_at')
+                ->where(function ($qq) {
+                    $qq->whereNull('s.id')
+                       ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
+                })
+                ->select(DB::raw('COUNT(*)'));
+        }, 'proc_agendados_ativos_count')
+
+        // regra específica do procedimento
+        ->havingRaw('proc_qtd_total > proc_agendados_ativos_count');
+    }
+
+    // busca textual
+    if ($q !== '') {
+        $query->where(function ($qb) use ($q) {
+            $qb->where('o.numero', 'like', "%{$q}%")
+               ->orWhere('p.nome', 'like', "%{$q}%")
+               ->orWhere('p.cpf', 'like', "%{$q}%");
+        });
+    }
+
+    $results = $query
+        ->orderByDesc('o.updated_at')
+        ->limit(100)
+        ->get();
+
+    return response()->json([
+        'orcamentos' => $results,
+    ]);
+}
+
     public function print(string $id)
     {
         $o = DB::table('orcamentos as o')
