@@ -394,7 +394,7 @@ public function searchPaid(Request $request)
         ->select(
             'o.id',
             'o.numero',
-            DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
+            'o.data_emissao',
             'o.paciente_id',
             'o.profissional_saude_id',
             'o.valor_total',
@@ -407,7 +407,7 @@ public function searchPaid(Request $request)
             $q2->from('pagamentos as pg')
                ->whereColumn('pg.orcamento_id', 'o.id')
                ->where('pg.confirmado', true)
-               ->select(DB::raw("DATE_FORMAT(MAX(pg.data_pagamento), '%d-%m-%Y')"));
+               ->select(DB::raw("MAX(pg.data_pagamento)"));
         }, 'data_pagamento')
 
         // total de procedimentos do orçamento
@@ -446,7 +446,7 @@ public function searchPaid(Request $request)
          * 🔴 REGRA PRINCIPAL
          * Só retorna se ainda existir procedimento NÃO totalmente agendado
          */
-        ->havingRaw('procedimentos_total > agendamentos_ativos_total');
+        ->whereRaw("(SELECT COALESCE(SUM(op.quantidade),0) FROM orcamento_procedimentos AS op WHERE op.orcamento_id = o.id AND op.deleted_at IS NULL) > (SELECT COUNT(*) FROM agendamentos AS a LEFT JOIN status_agendamento AS s ON s.id = a.status_id WHERE a.orcamento_id = o.id AND a.deleted_at IS NULL AND (s.id IS NULL OR LOWER(s.descricao) NOT LIKE '%cancel%'))");
 
     // filtro por paciente
     if (!empty($pacienteId)) {
@@ -481,7 +481,7 @@ public function searchPaid(Request $request)
         }, 'proc_agendados_ativos_count')
 
         // regra específica do procedimento
-        ->havingRaw('proc_qtd_total > proc_agendados_ativos_count');
+        ->whereRaw("(SELECT COALESCE(SUM(op.quantidade),0) FROM orcamento_procedimentos AS op WHERE op.orcamento_id = o.id AND op.procedimento_id = ? AND op.deleted_at IS NULL) > (SELECT COUNT(*) FROM agendamentos AS a LEFT JOIN status_agendamento AS s ON s.id = a.status_id WHERE a.orcamento_id = o.id AND a.procedimento_id = ? AND a.deleted_at IS NULL AND (s.id IS NULL OR LOWER(s.descricao) NOT LIKE '%cancel%'))", [$pid, $pid]);
     }
 
     // busca textual
@@ -497,6 +497,18 @@ public function searchPaid(Request $request)
         ->orderByDesc('o.updated_at')
         ->limit(100)
         ->get();
+
+    try {
+        $results = $results->map(function ($r) {
+            try {
+                $r->data_emissao = $r->data_emissao ? Carbon::parse($r->data_emissao)->format('d-m-Y') : null;
+            } catch (\Throwable $e) { }
+            try {
+                $r->data_pagamento = $r->data_pagamento ? Carbon::parse($r->data_pagamento)->format('d-m-Y') : null;
+            } catch (\Throwable $e) { }
+            return $r;
+        });
+    } catch (\Throwable $e) { }
 
     return response()->json([
         'orcamentos' => $results,
