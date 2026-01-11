@@ -425,24 +425,17 @@ public function searchPaid(Request $request)
          * Total de procedimentos > total de agendamentos NÃO cancelados
          */
         ->whereRaw("
-            (
-                SELECT COALESCE(SUM(op.quantidade),0)
-                FROM orcamento_procedimentos op
-                WHERE op.orcamento_id = o.id
-                  AND op.deleted_at IS NULL
-            ) >
-            (
-                SELECT COUNT(*)
-                FROM agendamentos a
-                WHERE a.orcamento_id = o.id
-                  AND a.deleted_at IS NULL
-                  AND NOT EXISTS (
-                      SELECT 1
-                      FROM status_agendamento s
-                      WHERE s.id = a.status_id
-                        AND LOWER(COALESCE(s.descricao,'')) LIKE '%cancel%'
-                  )
-            )
+            (SELECT COALESCE(SUM(op.quantidade),0)
+             FROM orcamento_procedimentos AS op
+             WHERE op.orcamento_id = o.id
+               AND op.deleted_at IS NULL)
+            >
+            (SELECT COUNT(*)
+             FROM agendamentos AS a
+             LEFT JOIN status_agendamento AS s ON s.id = a.status_id
+             WHERE a.orcamento_id = o.id
+               AND a.deleted_at IS NULL
+               AND (s.id IS NULL OR LOWER(s.descricao) NOT LIKE '%cancel%'))
         ");
 
     // filtro por paciente
@@ -455,26 +448,19 @@ public function searchPaid(Request $request)
         $pid = (int) $procId;
 
         $query->whereRaw("
-            (
-                SELECT COALESCE(SUM(op.quantidade),0)
-                FROM orcamento_procedimentos op
-                WHERE op.orcamento_id = o.id
-                  AND op.procedimento_id = ?
-                  AND op.deleted_at IS NULL
-            ) >
-            (
-                SELECT COUNT(*)
-                FROM agendamentos a
-                WHERE a.orcamento_id = o.id
-                  AND a.procedimento_id = ?
-                  AND a.deleted_at IS NULL
-                  AND NOT EXISTS (
-                      SELECT 1
-                      FROM status_agendamento s
-                      WHERE s.id = a.status_id
-                        AND LOWER(COALESCE(s.descricao,'')) LIKE '%cancel%'
-                  )
-            )
+            (SELECT COALESCE(SUM(op.quantidade),0)
+             FROM orcamento_procedimentos AS op
+             WHERE op.orcamento_id = o.id
+               AND op.procedimento_id = ?
+               AND op.deleted_at IS NULL)
+            >
+            (SELECT COUNT(*)
+             FROM agendamentos AS a
+             LEFT JOIN status_agendamento AS s ON s.id = a.status_id
+             WHERE a.orcamento_id = o.id
+               AND a.procedimento_id = ?
+               AND a.deleted_at IS NULL
+               AND (s.id IS NULL OR LOWER(s.descricao) NOT LIKE '%cancel%'))
         ", [$pid, $pid]);
     }
 
