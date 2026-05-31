@@ -16,9 +16,18 @@
 
   <script setup>
   import { computed, ref, watch, onMounted } from 'vue'
-  import { usePage } from '@inertiajs/vue3'
+  import { usePage, router } from '@inertiajs/vue3'
 
   const page = usePage()
+
+  const shown = ref(new Set())
+
+  // Limpa o conjunto de mensagens exibidas ao iniciar qualquer requisição
+  // Isso permite que a mesma mensagem de sucesso (ex: "Operação realizada")
+  // seja exibida novamente se o usuário clicar no botão várias vezes.
+  router.on('start', () => {
+    shown.value = new Set()
+  })
 
   const currentMessage = ref(null)
   const currentType = ref('info')
@@ -62,7 +71,6 @@
       `alert-${type.value}`
     ]
   })
-  const shown = ref(new Set())
 
   const triggerShow = () => {
     visible.value = true

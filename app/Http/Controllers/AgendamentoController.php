@@ -18,7 +18,7 @@ class AgendamentoController extends Controller
     public function index()
     {
         $profissionais = ProfissionalSaude::select('id','nome')->orderBy('nome')->get();
-        $procedimentos = Procedimento::select('id','nome','valor')->orderBy('nome')->get();
+        $procedimentos = Procedimento::select('id','nome','valor','eh_tratamento','quantidade_sessoes')->orderBy('nome')->get();
         $status = StatusAgendamento::select('id','descricao')->orderBy('descricao')->get();
         $weekday = Carbon::now()->dayOfWeek;
         $agendasHoje = DB::table('agenda_medica as a')
@@ -178,12 +178,15 @@ class AgendamentoController extends Controller
 
         if (!empty($data['orcamento_id'])) {
             $qtyRow = DB::table('orcamento_procedimentos as op')
+                ->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id')
                 ->where('op.orcamento_id', (int)$data['orcamento_id'])
                 ->where('op.procedimento_id', (int)$data['procedimento_id'])
                 ->whereNull('op.deleted_at')
-                ->select('op.quantidade')
+                ->select('op.quantidade', 'pr.eh_tratamento', 'pr.quantidade_sessoes')
                 ->first();
-            $allowedQty = max(1, (int)($qtyRow->quantidade ?? 1));
+            $baseQty = max(1, (int)($qtyRow->quantidade ?? 1));
+            $mult = ((bool)($qtyRow->eh_tratamento ?? false)) ? max(1, (int)($qtyRow->quantidade_sessoes ?? 0)) : 1;
+            $allowedQty = $baseQty * $mult;
             $scheduledCount = DB::table('agendamentos as a')
                 ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
                 ->whereNull('a.deleted_at')
@@ -203,12 +206,33 @@ class AgendamentoController extends Controller
             }
         }
 
+        $sessaoId = null;
+        $procMeta = Procedimento::select('id','eh_tratamento','quantidade_sessoes')->find((int)$data['procedimento_id']);
+        if ($procMeta && (bool)$procMeta->eh_tratamento) {
+            $lastNum = DB::table('sessoes_tratamento')
+                ->where('paciente_id', (int)$data['paciente_id'])
+                ->where('procedimento_id', (int)$data['procedimento_id'])
+                ->max('numero_sessao');
+            $nextNum = (int)($lastNum ?? 0) + 1;
+            $sessaoId = DB::table('sessoes_tratamento')->insertGetId([
+                'procedimento_id' => (int)$data['procedimento_id'],
+                'paciente_id' => (int)$data['paciente_id'],
+                'numero_sessao' => $nextNum,
+                'data_prevista' => $dt->toDateString(),
+                'realizada' => false,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+                'deleted_at' => null,
+            ]);
+        }
+
         $ag = Agendamento::create([
             'agenda_medica_id' => $agenda->id,
             'data' => $dt->toDateString(),
             'hora' => $hora,
             'paciente_id' => (int)$data['paciente_id'],
             'procedimento_id' => (int)$data['procedimento_id'],
+            'sessao_tratamento_id' => $sessaoId,
             'orcamento_id' => $data['orcamento_id'] ?? null,
             'status_id' => $data['status_id'] ?? null,
             'agendamento_origem_id' => null,
@@ -226,6 +250,7 @@ class AgendamentoController extends Controller
     {
         $limit = (int)($request->query('limit', 20));
         $rows = DB::table('agendamentos as a')
+            ->leftJoin('sessoes_tratamento as st', 'st.id', '=', 'a.sessao_tratamento_id')
             ->leftJoin('pacientes as p', 'p.id', '=', 'a.paciente_id')
             ->leftJoin('procedimentos as pr', 'pr.id', '=', 'a.procedimento_id')
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
@@ -235,6 +260,9 @@ class AgendamentoController extends Controller
                 'a.hora',
                 'a.paciente_id',
                 'a.procedimento_id',
+                'a.sessao_tratamento_id',
+                DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
+                DB::raw('COALESCE(pr.quantidade_sessoes, NULL) AS sessao_total'),
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE(pr.nome,'') AS procedimento"),
                 DB::raw("COALESCE(s.descricao,'') AS status"),
@@ -275,12 +303,15 @@ class AgendamentoController extends Controller
                 : (int)$agendamento->procedimento_id;
             if ($procCheckId) {
                 $qtyRow = DB::table('orcamento_procedimentos as op')
+                    ->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id')
                     ->where('op.orcamento_id', (int)$agendamento->orcamento_id)
                     ->where('op.procedimento_id', $procCheckId)
                     ->whereNull('op.deleted_at')
-                    ->select('op.quantidade')
+                    ->select('op.quantidade', 'pr.eh_tratamento', 'pr.quantidade_sessoes')
                     ->first();
-                $allowedQty = max(1, (int)($qtyRow->quantidade ?? 1));
+                $baseQty = max(1, (int)($qtyRow->quantidade ?? 1));
+                $mult = ((bool)($qtyRow->eh_tratamento ?? false)) ? max(1, (int)($qtyRow->quantidade_sessoes ?? 0)) : 1;
+                $allowedQty = $baseQty * $mult;
                 $scheduledCount = DB::table('agendamentos as a')
                     ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
                     ->whereNull('a.deleted_at')

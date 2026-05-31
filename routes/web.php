@@ -89,6 +89,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::delete("/caixas/{id}", [CaixaController::class, "destroy"])->name('caixas.destroy');
 
         // Movimentações de Caixa routes
+        Route::get("/movimentacoes-caixa/pendentes", [MovimentacaoCaixaController::class, "pendentes"])->name('movimentacoes_caixa.pendentes');
         Route::get("/movimentacoes-caixa", [MovimentacaoCaixaController::class, "index"])->name('movimentacoes_caixa.index');
         Route::post("/movimentacoes-caixa", [MovimentacaoCaixaController::class, "store"])->name('movimentacoes_caixa.store');
         Route::get("/movimentacoes-caixa/{id}", [MovimentacaoCaixaController::class, "show"])->whereNumber('id')->name('movimentacoes_caixa.show');

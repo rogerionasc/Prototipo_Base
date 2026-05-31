@@ -526,7 +526,11 @@ const props = defineProps({
 const caixasLocal = toRef(props, "caixas");
 const ultimosLocal = toRef(props, "ultimos");
 const movsLocal = toRef(props, "movs");
-const pagamentosLocal = toRef(props, "pagamentosPendentes");
+const pagamentosLocal = ref([...(props.pagamentosPendentes || [])]);
+
+watch(() => props.pagamentosPendentes, (nv) => {
+  pagamentosLocal.value = [...(nv || [])];
+}, { deep: true });
 const ultimosPagamentosLocal = toRef(props, "ultimosPagamentos");
 const ultimosPagamentosFiltered = computed(() => {
   const cid = openForm.caixa_id;
@@ -603,7 +607,7 @@ const caixaIndMsg = computed(() => {
   const cx = selectedCaixa.value;
   if (!openForm.caixa_id) return "Selecione um caixa.";
   if (!cx) return "Caixa não encontrado.";
-  if (!currentMovId.value) return "Caixa sem movimentação aberta hoje.";
+  if (!currentMovId.value) return "Caixa sem movimentação aberta.";
   if (!cx.ativo) return "Caixa inativo.";
   if (cx.bloquear_receber) return "Caixa bloqueado para receber.";
   return "Caixa indisponível.";
@@ -716,47 +720,36 @@ const payCols = [
 ];
 
 const currentDateText = computed(() => {
-  const id = currentMovId.value;
-  if (id) {
-    const f = (ultimosLocal.value || []).find((u) => String(u.id) === String(id));
-    return f?.data_movimento || todayDMY();
-  }
+  const aberta = selectedCaixa.value?.movimentacao_aberta;
+  if (aberta) return aberta.data_movimento;
   return todayDMY();
 });
 
 const currentTimeText = computed(() => {
-  const id = currentMovId.value;
-  if (id) {
-    const f = (ultimosLocal.value || []).find((u) => String(u.id) === String(id));
-    return f?.hora_abertura || "—";
-  }
+  const aberta = selectedCaixa.value?.movimentacao_aberta;
+  if (aberta) return aberta.hora_abertura;
   return "—";
 });
 
 const currentMovNumber = computed(() => {
-  const m = currentMov.value;
-  return m?.numero || "—";
+  const aberta = selectedCaixa.value?.movimentacao_aberta;
+  return aberta?.numero || "—";
 });
 
 function recomputeCurrentMov() {
   currentMovId.value = null;
   hasMovHoje.value = false;
-  const d = todayDMY();
-  const cid = openForm.caixa_id;
-  if (!cid || !d) return;
-  const foundOpen = (ultimosLocal.value || []).find(
-    (u) =>
-      String(u.caixa_id) === String(cid) &&
-      String(u.data_movimento) === String(d) &&
-      !u.fechado_em
-  );
-  if (foundOpen) {
+  const cx = selectedCaixa.value;
+  if (!cx) return;
+
+  const aberta = cx.movimentacao_aberta;
+  if (aberta) {
     hasMovHoje.value = true;
-    currentMovId.value = foundOpen.id;
+    currentMovId.value = aberta.id;
   }
 }
 
-watch([() => openForm.caixa_id, ultimosLocal], () => {
+watch([() => openForm.caixa_id, caixasLocal], () => {
   recomputeCurrentMov();
 });
 
@@ -865,7 +858,7 @@ function fecharCaixa() {
   closeForm.put(`/movimentacoes-caixa/${currentMovId.value}`, {
     onSuccess: async () => {
       await new Promise((resolve) => {
-        router.reload({ only: ["ultimos","movs","ultimosPagamentos"], onFinish: () => resolve() });
+        router.reload({ only: ["caixas","ultimos","movs","ultimosPagamentos"], onFinish: () => resolve() });
       });
       closeForm.reset();
       recomputeCurrentMov();
@@ -880,7 +873,7 @@ function reabrirMov(id) {
   const f = useForm({});
   f.put(`/movimentacoes-caixa/${id}/reopen`, {
     onSuccess: () => {
-      router.reload({ only: ["ultimos","movs","ultimosPagamentos"] });
+      router.reload({ only: ["caixas","ultimos","movs","ultimosPagamentos"] });
     },
   });
 }
@@ -896,7 +889,7 @@ function confirmarPagamento(id, forma = null) {
   f.put(`/pagamentos/${id}/confirm`, {
     onSuccess: async () => {
       await new Promise((resolve) => {
-        router.reload({ only: ["ultimos","movs","pagamentosPendentes","ultimosPagamentos"], onFinish: () => resolve() });
+        router.reload({ only: ["caixas","ultimos","movs","pagamentosPendentes","ultimosPagamentos"], onFinish: () => resolve() });
       });
       recomputeCurrentMov();
     },
@@ -945,12 +938,17 @@ let pendTimer = null;
 function startPendentesPolling() {
   if (pendTimer) clearInterval(pendTimer);
   pendTimer = setInterval(async () => {
-    if (openForm.caixa_id && currentMovId.value) {
-      await new Promise((resolve) => {
-        router.reload({ only: ["pagamentosPendentes","ultimosPagamentos"], preserveScroll: true, preserveState: true, onFinish: () => resolve() });
-      });
+    // Polling focado apenas na tabela de pagamentos pendentes via AXIOS
+    // Isso evita reloads do Inertia que podem atrapalhar outras tabelas
+    try {
+      const response = await axios.get('/movimentacoes-caixa/pendentes');
+      if (response.data && response.data.pagamentosPendentes) {
+        pagamentosLocal.value = response.data.pagamentosPendentes;
+      }
+    } catch (e) {
+      console.error("Erro ao buscar pagamentos pendentes:", e);
     }
-  }, 3000);
+  }, 5000); // 5 segundos para não sobrecarregar
   pendentesPolling.value = true;
 }
 function stopPendentesPolling() {
@@ -960,7 +958,7 @@ function stopPendentesPolling() {
 onMounted(() => {
   if (typeof document !== "undefined") {
     const onVis = () => {
-      if (document.hidden || !hasPixPendente.value || !showReceberModal.value) {
+      if (document.hidden) {
         stopPendentesPolling();
       } else {
         startPendentesPolling();
@@ -968,16 +966,19 @@ onMounted(() => {
     };
     document.addEventListener("visibilitychange", onVis);
     visibilityCleanup = () => document.removeEventListener("visibilitychange", onVis);
+
+    // Inicia o polling global ao entrar na tela de movimentação
+    startPendentesPolling();
   }
 });
-watch(() => openForm.caixa_id, () => {
-  stopPendentesPolling();
-});
-watch(showReceberModal, (nv) => {
-  if (nv && hasPixPendente.value && (!('document' in globalThis) || !document.hidden)) {
-    startPendentesPolling();
-  } else {
-    stopPendentesPolling();
+watch([() => openForm.caixa_id], ([newCaixa]) => {
+  // O polling agora é global, mas podemos forçar uma atualização imediata ao trocar de caixa
+  if (newCaixa) {
+    router.reload({
+      only: ["pagamentosPendentes", "ultimosPagamentos", "movs", "caixas", "ultimos"],
+      preserveScroll: true,
+      preserveState: true
+    });
   }
 });
 let visibilityCleanup = null;
@@ -1134,7 +1135,7 @@ function confirmarAbertura() {
     onSuccess: async () => {
       showSaldoModal.value = false;
       await new Promise((resolve) => {
-        router.reload({ only: ["ultimos","movs","ultimosPagamentos"], onFinish: () => resolve() });
+        router.reload({ only: ["caixas","ultimos","movs","ultimosPagamentos"], onFinish: () => resolve() });
       });
       saldoInicial.value = "";
       recomputeCurrentMov();

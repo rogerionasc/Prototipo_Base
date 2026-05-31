@@ -167,11 +167,10 @@ class PagamentoController extends Controller
                 return response()->json(['error' => 'Caixa indisponível'], 422);
             }
             $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
-                ->whereDate('data_movimento', Carbon::today()->format('Y-m-d'))
                 ->whereNull('fechado_em')
                 ->first();
             if (!$mov) {
-                return response()->json(['error' => 'Sem movimentação aberta'], 422);
+                return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
             }
             DB::transaction(function () use ($pag, $mov) {
                 $pag->update([
@@ -219,11 +218,10 @@ class PagamentoController extends Controller
                             return response()->json(['error' => 'Caixa indisponível'], 422);
                         }
                         $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
-                            ->whereDate('data_movimento', Carbon::today()->format('Y-m-d'))
                             ->whereNull('fechado_em')
                             ->first();
                         if (!$mov) {
-                            return response()->json(['error' => 'Sem movimentação aberta'], 422);
+                            return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
                         }
                         DB::transaction(function () use ($pag, $mov) {
                             $pag->update([
@@ -289,11 +287,10 @@ class PagamentoController extends Controller
             return response()->json(['error' => 'Caixa indisponível'], 422);
         }
         $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
-            ->whereDate('data_movimento', Carbon::today()->format('Y-m-d'))
             ->whereNull('fechado_em')
             ->first();
         if (!$mov) {
-            return response()->json(['error' => 'Sem movimentação aberta'], 422);
+            return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
         }
         DB::transaction(function () use ($pag, $mov) {
             $pag->update([
@@ -357,11 +354,10 @@ class PagamentoController extends Controller
             return response()->json(['error' => 'Caixa indisponível'], 422);
         }
         $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
-            ->whereDate('data_movimento', Carbon::today()->format('Y-m-d'))
             ->whereNull('fechado_em')
             ->first();
         if (!$mov) {
-            return response()->json(['error' => 'Sem movimentação aberta'], 422);
+            return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
         }
         DB::transaction(function () use ($pag, $mov) {
             $pag->update([
@@ -454,11 +450,10 @@ class PagamentoController extends Controller
             return response()->json(['error' => 'Caixa indisponível'], 422);
         }
         $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
-            ->whereDate('data_movimento', Carbon::today()->format('Y-m-d'))
             ->whereNull('fechado_em')
             ->first();
         if (!$mov) {
-            return response()->json(['error' => 'Sem movimentação aberta'], 422);
+            return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
         }
         DB::transaction(function () use ($pag, $mov) {
             $pag->update([
@@ -492,19 +487,14 @@ class PagamentoController extends Controller
         // Verificar disponibilidade do caixa
         $caixa = Caixa::select('id','ativo','bloquear_receber')->findOrFail((int)$data['caixa_id']);
         if (!$caixa->ativo || $caixa->bloquear_receber) {
-            return back()->withErrors([
-                'caixa' => 'Caixa indisponível para receber',
-            ], 422);
+            return back()->with('error', 'Caixa indisponível para receber');
         }
-        // Verificar movimentação aberta no dia para o caixa
+        // Verificar movimentação aberta para o caixa
         $mov = MovimentacaoCaixa::where('caixa_id', (int)$data['caixa_id'])
-            ->whereDate('data_movimento', Carbon::today()->format('Y-m-d'))
             ->whereNull('fechado_em')
             ->first();
         if (!$mov) {
-            return back()->withErrors([
-                'caixa' => 'Caixa sem movimentação aberta hoje',
-            ], 422);
+            return back()->with('error', 'Caixa sem movimentação aberta');
         }
         DB::transaction(function () use ($pag, $data, $mov) {
             // Atualizar movimentação aberta do dia para o caixa
@@ -535,9 +525,7 @@ class PagamentoController extends Controller
         ]);
         $pag = Pagamento::findOrFail($id);
         if ($pag->confirmado) {
-            return back()->withErrors([
-                'pagamento' => 'Pagamento já confirmado, não é possível recusar.',
-            ], 422);
+            return back()->with('error', 'Pagamento já confirmado, não é possível recusar.');
         }
         if ($pag->status === 'recusado') {
             return back()->with('success', 'Pagamento já recusado');
@@ -588,9 +576,7 @@ class PagamentoController extends Controller
     {
         $pag = Pagamento::findOrFail($id);
         if ($pag->confirmado) {
-            return back()->withErrors([
-                'pagamento' => 'Pagamento confirmado não pode ser alterado.',
-            ], 422);
+            return back()->with('error', 'Pagamento confirmado não pode ser alterado.');
         }
         if ($pag->status !== 'recusado') {
             return back()->with('success', 'Pagamento não está recusado');

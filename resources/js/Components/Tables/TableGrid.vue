@@ -295,24 +295,26 @@ function initGrid() {
                 } else {
                     idCol = props.columns[0];
                 }
-                const rowData = filteredData.value.find(r => {
-                    if (!idCol) return false;
-                    return String(r[idCol]) === String(firstCell) || String(r.id) === String(firstCell);
+                const rowData = (props.data || []).find(r => {
+                    const matchId = r.id && String(r.id) === String(firstCell);
+                    const matchCol = idCol && String(r[idCol]) === String(firstCell);
+                    return matchId || matchCol;
                 }) || {};
-                const rowId = rowData?.id ?? firstCell;
+                const rowId = rowData?.id || firstCell;
+                const rowDataStr = JSON.stringify(rowData).replace(/'/g, "&#39;");
                 const ac = props.actionsConfig || { delete: true, edit: true, show: true, diary: false };
                 const al = props.actionsLabels || {};
                 const bt = props.actionsButtonText || {};
                 const ai = props.actionsIcons || {};
                 const buttons = [
-                    ac.delete ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.delete ?? 'Excluir'}"><i class="${ai.delete ?? 'ri-delete-bin-5-fill'} align-bottom"></i>${bt.delete ? `<span class="d-none d-sm-inline ms-1">${bt.delete}</span>` : ''}</button>` : ``,
-                    ac.edit ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.edit ?? 'Editar'}"><i class="ri-pencil-fill align-bottom"></i>${bt.edit ? `<span class="d-none d-sm-inline ms-1">${bt.edit}</span>` : ''}</button>` : ``,
-                    ac.show ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.show ?? 'Visualizar'}"><i class="ri-eye-fill align-bottom"></i>${bt.show ? `<span class="d-none d-sm-inline ms-1">${bt.show}</span>` : ''}</button>` : ``,
-                    ac.restore ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="restore" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.restore ?? 'Reabrir'}"><i class="ri-refresh-line align-bottom"></i>${bt.restore ? `<span class="d-none d-sm-inline ms-1">${bt.restore}</span>` : ''}</button>` : ``,
-                    ac.print ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.print ?? 'Imprimir'}"><i class="ri-printer-fill align-bottom"></i>${bt.print ? `<span class="d-none d-sm-inline ms-1">${bt.print}</span>` : ''}</button>` : ``,
-                    ac.download ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.download ?? 'Baixar'}"><i class="ri-download-line align-bottom"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
-                    ac.receive ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.receive ?? 'Receber'}"><i class="ri-money-dollar-box-line align-bottom"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
-                    (props.showDiaryButton && ac.diary) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${JSON.stringify(rowData)}' title="${al.diary ?? 'Agenda'}"><i class="ri-calendar-2-line align-bottom"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``
+                    ac.delete ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${rowDataStr}' title="${al.delete ?? 'Excluir'}"><i class="${ai.delete ?? 'ri-delete-bin-5-fill'} align-bottom"></i>${bt.delete ? `<span class="d-none d-sm-inline ms-1">${bt.delete}</span>` : ''}</button>` : ``,
+                    ac.edit ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${rowDataStr}' title="${al.edit ?? 'Editar'}"><i class="ri-pencil-fill align-bottom"></i>${bt.edit ? `<span class="d-none d-sm-inline ms-1">${bt.edit}</span>` : ''}</button>` : ``,
+                    ac.show ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${rowDataStr}' title="${al.show ?? 'Visualizar'}"><i class="ri-eye-fill align-bottom"></i>${bt.show ? `<span class="d-none d-sm-inline ms-1">${bt.show}</span>` : ''}</button>` : ``,
+                    ac.restore && rowData.fechado_em ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="restore" data-id="${rowId}" data-row='${rowDataStr}' title="${al.restore ?? 'Reabrir'}"><i class="ri-refresh-line align-bottom"></i>${bt.restore ? `<span class="d-none d-sm-inline ms-1">${bt.restore}</span>` : ''}</button>` : ``,
+                    ac.print ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${rowDataStr}' title="${al.print ?? 'Imprimir'}"><i class="ri-printer-fill align-bottom"></i>${bt.print ? `<span class="d-none d-sm-inline ms-1">${bt.print}</span>` : ''}</button>` : ``,
+                    ac.download ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${rowDataStr}' title="${al.download ?? 'Baixar'}"><i class="ri-download-line align-bottom"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
+                    ac.receive ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${rowDataStr}' title="${al.receive ?? 'Receber'}"><i class="ri-money-dollar-box-line align-bottom"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
+                    (props.showDiaryButton && ac.diary) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${rowDataStr}' title="${al.diary ?? 'Agenda'}"><i class="ri-calendar-2-line align-bottom"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``
                 ].join('');
                 return html(`<div class="d-flex gap-2">${buttons}</div>`);
             }

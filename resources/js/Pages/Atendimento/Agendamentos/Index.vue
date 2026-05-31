@@ -81,6 +81,7 @@ export default {
         valor_cobrado: "",
         observacoes: ""
       },
+      sessoesCriacao: [],
       termoBuscaPaciente: "",
       mostrarSugestoesPaciente: false,
       orcamentosPagos: [],
@@ -399,39 +400,43 @@ export default {
     "agendamentoForm.profissional_saude_id"() {
       try { this.verificarAgendaProfissionalParaDia(); } catch (e) {}
     },
+    "agendamentoForm.procedimento_id"(nv) {
+      try {
+        const p = (this.procedimentosLocal || []).find(x => String(x.id) === String(nv));
+        const isTrat = !!p?.eh_tratamento;
+        const total = isTrat ? Math.max(0, Number(p?.quantidade_sessoes || 0)) : 0;
+        if (isTrat && total > 0) {
+          const baseData = this.agendamentoForm?.data || "";
+          const baseHora = this.agendamentoForm?.hora || "";
+          this.sessoesCriacao = Array.from({ length: total }).map((_, i) => ({
+            data: i === 0 ? baseData : "",
+            hora: i === 0 ? baseHora : ""
+          }));
+        } else {
+          this.sessoesCriacao = [];
+        }
+      } catch (e) {}
+    },
+    "agendamentoForm.data"(nv) {
+      try {
+        if (Array.isArray(this.sessoesCriacao) && this.sessoesCriacao.length > 0) {
+          if (!this.sessoesCriacao[0].data) this.sessoesCriacao[0].data = nv || "";
+        }
+      } catch (e) {}
+    },
+    "agendamentoForm.hora"(nv) {
+      try {
+        if (Array.isArray(this.sessoesCriacao) && this.sessoesCriacao.length > 0) {
+          if (!this.sessoesCriacao[0].hora) this.sessoesCriacao[0].hora = nv || "";
+        }
+      } catch (e) {}
+    },
   },
   methods: {
     onMoreLinkClick(arg) {
-      try {
-        let ds = null;
-        try {
-          const cell = arg?.dayEl?.closest?.("[data-date]") || arg?.dayEl;
-          const attr = cell?.getAttribute?.("data-date");
-          if (attr) ds = String(attr).slice(0, 10);
-        } catch (_) {}
-        if (!ds && arg?.date) {
-          ds = moment.utc(arg.date).format("YYYY-MM-DD");
-        }
-        if (!ds) return false;
-        this.dataEventosDiaModal = ds;
-        const api = this.$refs.fullCalendar?.getApi?.();
-        const events = api?.getEvents?.() || [];
-        const dayStart = moment(ds, "YYYY-MM-DD", true).startOf("day");
-        const dayEnd = moment(ds, "YYYY-MM-DD", true).endOf("day");
-        const dayEvents = events.filter(ev => {
-          const s = ev?.start ? moment(ev.start) : null;
-          if (!s || !s.isValid()) return false;
-          const e = ev?.end ? moment(ev.end) : s;
-          return s.isSameOrBefore(dayEnd) && e.isSameOrAfter(dayStart);
-        });
-        this.eventosDiaModal = dayEvents;
-        this.atribuirMedicoAEventosDia(ds).then(() => {
-          this.modalEventosDiaVisivel = true;
-        }).catch(() => {
-          this.modalEventosDiaVisivel = true;
-        });
-        this.fecharPopoversCalendario();
-      } catch (e) {}
+      const ds = this.obterDataDoMaisLink(arg);
+      if (!ds) return false;
+      this.abrirModalEventosDoDia(ds, arg?.jsEvent);
       return false;
     },
     async atribuirMedicoAEventosDia(ds) {
@@ -758,6 +763,11 @@ export default {
      * Modal open for edit event
      */
     async editarEvento(info) {
+      if (this.eCliqueNoTituloDoEvento(info?.jsEvent)) {
+        const ds = this.obterDataDoEvento(info?.event);
+        this.abrirModalEventosDoDia(ds, info?.jsEvent);
+        return;
+      }
       this.eventoSelecionado = info.event;
       const start = this.eventoSelecionado.start ? moment(this.eventoSelecionado.start) : null;
       const ds = start && start.isValid() ? start.format("YYYY-MM-DD") : "";
@@ -837,6 +847,44 @@ export default {
       try { if (window.resumeChoicesObserver) window.resumeChoicesObserver(); } catch (_) {}
       this.modalAgendarVisivel = true;
       try { this.selecionarOrcamentoCriacaoPorProcedimentoEdicao(); } catch (_) {}
+    },
+    eCliqueNoTituloDoEvento(jsEvent) {
+      const t = jsEvent?.target ?? null;
+      const el = t && t.closest ? t.closest(".fc-event-title, .fc-event-title-container") : null;
+      return !!el;
+    },
+    obterDataDoEvento(ev) {
+      const m = ev?.start ? moment(ev.start) : null;
+      return m && m.isValid() ? m.format("YYYY-MM-DD") : moment().format("YYYY-MM-DD");
+    },
+    obterDataDoMaisLink(arg) {
+      const cell = arg?.dayEl?.closest?.("[data-date]") || arg?.dayEl || null;
+      const attr = cell?.getAttribute?.("data-date") || null;
+      if (attr) return String(attr).slice(0, 10);
+      if (arg?.date) return moment.utc(arg.date).format("YYYY-MM-DD");
+      return null;
+    },
+    abrirModalEventosDoDia(ds, jsEvent) {
+      if (jsEvent?.preventDefault) jsEvent.preventDefault();
+      if (jsEvent?.stopPropagation) jsEvent.stopPropagation();
+      this.dataEventosDiaModal = ds;
+      const api = this.$refs.fullCalendar?.getApi?.();
+      const events = api?.getEvents?.() || [];
+      const ini = moment(ds, "YYYY-MM-DD", true).startOf("day");
+      const fim = moment(ds, "YYYY-MM-DD", true).endOf("day");
+      this.eventosDiaModal = events.filter(ev => {
+        const s = ev?.start ? moment(ev.start) : null;
+        if (!s || !s.isValid()) return false;
+        const e = ev?.end ? moment(ev.end) : s;
+        return s.isSameOrBefore(fim) && e.isSameOrAfter(ini);
+      });
+      this.atribuirMedicoAEventosDia(ds).then(() => {
+        this.modalEventosDiaVisivel = true;
+      }).catch(() => {
+        this.modalEventosDiaVisivel = true;
+      });
+      this.fecharPopoversCalendario();
+      setTimeout(() => this.fecharPopoversCalendario(), 0);
     },
 
     fecharPopoversCalendario() {
@@ -1470,40 +1518,52 @@ export default {
       }
     },
     async salvarAgendamento() {
-      const payload = {
+      const basePayload = {
         paciente_id: this.agendamentoForm.paciente_id,
         profissional_saude_id: this.agendamentoForm.profissional_saude_id,
         procedimento_id: this.agendamentoForm.procedimento_id,
         orcamento_id: this.orcamentoSelecionadoId || null,
-        data: this.agendamentoForm.data,
-        hora: this.agendamentoForm.hora,
         status_id: this.agendamentoForm.status_id,
         valor_cobrado: this.agendamentoForm.valor_cobrado ? Number(String(this.agendamentoForm.valor_cobrado).replace(/[^\d.,-]/g, '').replace(',', '.')) : null,
         observacoes: this.agendamentoForm.observacoes,
       };
       this.processandoCriacao = true;
       try {
-        const resp = await window.axios.post("/agendamentos", payload);
-        const ag = resp?.data?.agendamento;
-        if (ag) {
-          const procNome = (this.procedimentosLocal.find(pr => String(pr.id) === String(ag.procedimento_id))?.nome || 'Procedimento');
-          const pacNome = (this.pacientesLocal.find(p => String(p.id) === String(ag.paciente_id))?.nome || 'Paciente');
-          const title = `${pacNome} • ${procNome}`;
-          const calendarApi = this.$refs.fullCalendar.getApi();
-          calendarApi.addEvent({
-            id: ag.id,
-            title,
-            start: `${ag.data}T${ag.hora}:00`,
-            allDay: false,
-            className: "bg-success-subtle",
-            classNames: ["bg-success-subtle"],
-            extendedProps: { paciente_id: ag.paciente_id, procedimento_id: ag.procedimento_id, procedimento_nome: procNome, observacoes: this.agendamentoForm.observacoes || "", orcamento_id: payload.orcamento_id || null }
-          });
-          try { calendarApi.gotoDate(ag.data); } catch (e) {}
+        let sessions = [];
+        const pSel = (this.procedimentosLocal || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id));
+        const isTrat = !!pSel?.eh_tratamento;
+        if (isTrat && Array.isArray(this.sessoesCriacao) && this.sessoesCriacao.length > 0) {
+          sessions = this.sessoesCriacao.filter(s => (s.data && s.hora));
+        }
+        if (!sessions.length) {
+          sessions = [{ data: this.agendamentoForm.data, hora: this.agendamentoForm.hora }];
+        }
+        let createdCount = 0;
+        for (const s of sessions) {
+          const payload = { ...basePayload, data: s.data, hora: s.hora };
+          const resp = await window.axios.post("/agendamentos", payload);
+          const ag = resp?.data?.agendamento;
+          if (ag) {
+            createdCount++;
+            const procNome = (this.procedimentosLocal.find(pr => String(pr.id) === String(ag.procedimento_id))?.nome || 'Procedimento');
+            const pacNome = (this.pacientesLocal.find(p => String(p.id) === String(ag.paciente_id))?.nome || 'Paciente');
+            const title = `${pacNome} • ${procNome}`;
+            const calendarApi = this.$refs.fullCalendar.getApi();
+            calendarApi.addEvent({
+              id: ag.id,
+              title,
+              start: `${ag.data}T${ag.hora}:00`,
+              allDay: false,
+              className: "bg-success-subtle",
+              classNames: ["bg-success-subtle"],
+              extendedProps: { paciente_id: ag.paciente_id, procedimento_id: ag.procedimento_id, procedimento_nome: procNome, observacoes: this.agendamentoForm.observacoes || "", orcamento_id: basePayload.orcamento_id || null }
+            });
+            try { calendarApi.gotoDate(ag.data); } catch (e) {}
+          }
         }
         try {
           const fp = (this.$page?.props?.flash ?? {});
-          this.$page.props.flash = { ...fp, success: "Agendamento criado" };
+          this.$page.props.flash = { ...fp, success: createdCount > 1 ? "Agendamentos criados" : "Agendamento criado" };
         } catch (_) {}
         this.modalAgendarVisivel = false;
         this.agendamentoForm = { paciente_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
@@ -1512,6 +1572,7 @@ export default {
         this.itensOrcamentoSelecionado = [];
         this.itensOrcamentoPorProcedimento = {};
         this.procedimentosFiltrados = [...(this.procedimentosLocal || [])];
+        this.sessoesCriacao = [];
         await this.buscarUltimosAgendamentos();
       } catch (e) {
         const msg = e?.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(' • ') : 'Falha ao agendar';
@@ -1585,7 +1646,7 @@ export default {
             title,
             start,
             classNames: [cls],
-            extendedProps: { paciente_id: r.paciente_id, procedimento_id: r.procedimento_id, procedimento_nome: r.procedimento || "", status: r.status || "", observacoes: r.observacoes || "", createdEm: r.criado_em || "" }
+            extendedProps: { paciente_id: r.paciente_id, procedimento_id: r.procedimento_id, procedimento_nome: r.procedimento || "", status: r.status || "", observacoes: r.observacoes || "", createdEm: r.criado_em || "", sessao_numero: r.sessao_numero ?? null, sessao_total: r.sessao_total ?? null }
           };
         });
         this.eventosAtuais = events;
@@ -1628,7 +1689,14 @@ export default {
     obterNomeProcedimentoEvento(event) {
       try {
         const ep = event?.extendedProps || {};
-        if (ep?.procedimento_nome) return ep.procedimento_nome;
+        if (ep?.procedimento_nome) {
+          const n = ep?.sessao_numero != null ? Number(ep.sessao_numero) : null;
+          const t = ep?.sessao_total != null ? Number(ep.sessao_total) : null;
+          if (n != null && t != null && t > 0) {
+            return `${ep.procedimento_nome} ${n}/${t}`;
+          }
+          return ep.procedimento_nome;
+        }
         const t = String(event?.title || "");
         if (t.includes("•")) {
           const parts = t.split("•");
@@ -1815,6 +1883,31 @@ export default {
           <label class="form-label">Observações</label>
           <textarea v-model="agendamentoForm.observacoes" class="form-control" rows="3" maxlength="500" placeholder="Anotações gerais"></textarea>
         </div>
+        <template v-if="sessoesCriacao && sessoesCriacao.length">
+          <div class="col-12">
+            <div class="d-flex align-items-center gap-2">
+              <i class="ri-calendar-line text-primary"></i>
+              <span class="fw-medium">Sessões do tratamento</span>
+              <span class="text-muted">({{ sessoesCriacao.length }} sessões)</span>
+           </div>
+          </div>
+          <div class="col-12">
+            <template v-for="(s, idx) in sessoesCriacao" :key="'sess-row-'+idx">
+              <div v-if="idx > 0" class="session-item">
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-6">
+                    <label class="form-label"><span class="session-badge">Sessão {{ idx+1 }}/{{ sessoesCriacao.length }}</span> Data</label>
+                    <flatPickr v-model="s.data" class="form-control" :config="opcoesFlatpickrData" placeholder="Selecione a data" />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Hora</label>
+                    <flatPickr v-model="s.hora" class="form-control" :config="opcoesFlatpickrHora" placeholder="Selecione a hora" />
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
       </div>
     </Modal>
 
@@ -1936,8 +2029,31 @@ export default {
 .fc .fc-timegrid-col.fc-day-today,
 .fc .fc-timegrid-col.fc-day-today .fc-timegrid-col-frame,
 .fc .fc-list-day.fc-day-today,
-.fc .fc-list-day-cushion.fc-day-today { background-color: transparent !important; }
+ .fc .fc-list-day-cushion.fc-day-today { background-color: transparent !important; }
+
 .fc-popover { display: none !important; }
+
+.session-item {
+  background-color: rgba(9, 152, 133, 0.1) !important;
+  border: 1px solid rgba(9, 152, 133, 0.15);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.session-item .form-label {
+  font-size: 12px;
+  color: #6c757d;
+}
+.session-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(9, 152, 133, 0.12);
+  color: #099885;
+  font-weight: 500;
+  font-size: 11px;
+  margin-right: 8px;
+}
 </style>
 <style scoped>
 /* Botões da toolbar do FullCalendar com cor primária do template */

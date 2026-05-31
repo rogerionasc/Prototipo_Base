@@ -14,6 +14,20 @@ class MovimentacaoCaixaController extends Controller
     public function index()
     {
         $caixas = Caixa::select('id','descricao','tipo','ativo','bloquear_receber','bloquear_pagar')->orderBy('descricao')->get();
+
+        // Adicionar informação de movimentação aberta para cada caixa
+        foreach ($caixas as $caixa) {
+             $caixa->movimentacao_aberta = MovimentacaoCaixa::where('caixa_id', $caixa->id)
+                 ->whereNull('fechado_em')
+                 ->select(
+                     'id',
+                     'numero',
+                     DB::raw("DATE_FORMAT(data_movimento, '%d-%m-%Y') AS data_movimento"),
+                     DB::raw("DATE_FORMAT(created_at, '%H:%i') AS hora_abertura")
+                 )
+                 ->first();
+         }
+
         $ultimos = DB::table('movimentacoes_caixa as m')
             ->leftJoin('caixas as c', 'c.id', '=', 'm.caixa_id')
             ->select(
@@ -56,27 +70,7 @@ class MovimentacaoCaixaController extends Controller
             ->orderByDesc('m.updated_at')
             ->limit(100)
             ->get();
-        $pagamentosPendentes = DB::table('pagamentos as p')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'p.orcamento_id')
-            ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
-            ->select(
-                'p.id',
-                'p.orcamento_id',
-                'p.caixa_id',
-                'p.valor',
-                'p.forma_pagamento',
-                'p.confirmado',
-                'p.status',
-                DB::raw("COALESCE(pa.nome,'') AS paciente"),
-                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y %H:%i') AS data_orcamento")
-            )
-            ->where('p.confirmado', false)
-            ->where('p.status', 'pendente')
-            ->whereNull('o.deleted_at')
-            ->where('o.aprovado', true)
-            ->orderByDesc('p.created_at')
-            ->limit(100)
-            ->get();
+        $pagamentosPendentes = $this->getPagamentosPendentes();
         $ultimosPagamentos = DB::table('pagamentos as p')
             ->leftJoin('orcamentos as o', 'o.id', '=', 'p.orcamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
@@ -126,28 +120,55 @@ class MovimentacaoCaixaController extends Controller
         ]);
     }
 
+    private function getPagamentosPendentes()
+    {
+        return DB::table('pagamentos as p')
+            ->leftJoin('orcamentos as o', 'o.id', '=', 'p.orcamento_id')
+            ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
+            ->select(
+                'p.id',
+                'p.orcamento_id',
+                'p.caixa_id',
+                'p.valor',
+                'p.forma_pagamento',
+                'p.confirmado',
+                'p.status',
+                DB::raw("COALESCE(pa.nome,'') AS paciente"),
+                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y %H:%i') AS data_orcamento")
+            )
+            ->where('p.confirmado', false)
+            ->where('p.status', 'pendente')
+            ->whereNull('o.deleted_at')
+            ->where('o.aprovado', true)
+            ->orderByDesc('p.created_at')
+            ->get();
+    }
+
+    public function pendentes()
+    {
+        return response()->json([
+            'pagamentosPendentes' => $this->getPagamentosPendentes()
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
             'caixa_id' => ['required','integer','exists:caixas,id'],
             'saldo_caixa' => ['nullable','numeric','min:0'],
         ]);
-        $dateYmd = Carbon::today()->format('Y-m-d');
         $existsAberto = MovimentacaoCaixa::where('caixa_id', $data['caixa_id'])
-            ->whereDate('data_movimento', $dateYmd)
             ->whereNull('fechado_em')
             ->exists();
         if ($existsAberto) {
-            return back()->withErrors([
-                'caixa_id' => 'Já existe movimentação aberta hoje para este caixa',
-            ]);
+            return back()->with('error', 'Já existe uma movimentação aberta para este caixa. Feche-a antes de abrir uma nova.');
         }
         $numero = 'MOV-' . $data['caixa_id'] . '-' . Carbon::today()->format('Ymd') . '-' . now()->format('His');
         $saldoInicial = (float)($data['saldo_caixa'] ?? 0);
         MovimentacaoCaixa::create([
             'caixa_id' => (int)$data['caixa_id'],
             'numero' => $numero,
-            'data_movimento' => $dateYmd,
+            'data_movimento' => Carbon::today()->format('Y-m-d'),
             'total_entradas' => 0,
             'total_saidas' => 0,
             'saldo_caixa' => $saldoInicial,
@@ -188,21 +209,24 @@ class MovimentacaoCaixaController extends Controller
 
     public function reopen(string $id)
     {
-        $mov = MovimentacaoCaixa::findOrFail($id);
+        // Aceitar tanto o ID quanto o Número da movimentação
+        $mov = MovimentacaoCaixa::where('id', $id)->orWhere('numero', $id)->firstOrFail();
+
+        // Verificar se já existe uma movimentação aberta para este caixa (exceto a própria)
         $existsAberto = MovimentacaoCaixa::where('caixa_id', $mov->caixa_id)
-            ->whereDate('data_movimento', $mov->data_movimento)
             ->whereNull('fechado_em')
             ->where('id', '!=', $mov->id)
             ->exists();
+
         if ($existsAberto) {
-            return back()->withErrors([
-                'reopen' => 'Já existe movimentação aberta para este caixa nesta data',
-            ]);
+            return back()->with('error', 'Já existe uma movimentação aberta para este caixa. Feche-a antes de reabrir outra.');
         }
+
         $mov->update([
             'fechado_em' => null,
         ]);
-        return back()->with('success', 'Movimentação reaberta');
+
+        return back()->with('success', 'Movimentação reaberta com sucesso');
     }
 
     public function destroy(string $id)

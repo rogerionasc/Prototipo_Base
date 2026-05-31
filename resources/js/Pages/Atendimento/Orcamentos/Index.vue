@@ -711,16 +711,12 @@ function carregarOrcamento(id) {
 </script>
 <style scoped>
 .session-row td {
-    background: #f8fbff;
+    background: #ffffff;
     font-size: 12px;
     color: #6c757d;
     padding: 6px 12px 6px 20px;
-    border-top: 1px dashed #e9ecef;
+    border-top: 1px dashed rgba(9, 152, 133, 0.2);
     position: relative;
-}
-
-.session-row td:hover {
-    background: #f0f7ff;
 }
 
 .session-row td::before {
@@ -730,7 +726,7 @@ function carregarOrcamento(id) {
     top: 6px;
     bottom: 6px;
     width: 2px;
-    background: #cfe2ff;
+    background: rgba(9, 152, 133, 0.25);
     border-radius: 2px;
 }
 
@@ -744,16 +740,16 @@ function carregarOrcamento(id) {
     width: 8px;
     height: 8px;
     border-radius: 999px;
-    background: #0d6efd;
-    box-shadow: 0 0 0 3px #e7f1ff inset, 0 0 0 2px #e7f1ff;
+    background: #099885;
+    box-shadow: 0 0 0 3px rgba(9, 152, 133, 0.12) inset, 0 0 0 2px rgba(9, 152, 133, 0.12);
 }
 
 .session-badge {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 999px;
-    background: #e7f1ff;
-    color: #0d6efd;
+    background: rgba(9, 152, 133, 0.12);
+    color: #099885;
     font-weight: 500;
     font-size: 11px;
     margin-right: 8px;

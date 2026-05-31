@@ -18,6 +18,7 @@ class Agendamento extends Model
         'hora',
         'paciente_id',
         'procedimento_id',
+        'sessao_tratamento_id',
         'orcamento_id',
         'status_id',
         'agendamento_origem_id',
