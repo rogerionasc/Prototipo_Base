@@ -16,12 +16,12 @@ class Procedimento extends Model
         'nome',
         'descricao',
         'categoria_id',
+        'especialidade_id',
         'eh_tratamento',
         'quantidade_sessoes',
         'valor',
         'comissao_percentual',
         'ativo',
-        'valor',
     ];
 
     public function agendamentos()
@@ -32,5 +32,10 @@ class Procedimento extends Model
     public function categoria()
     {
         return $this->belongsTo(CategoriaProcedimento::class, 'categoria_id');
+    }
+
+    public function especialidade()
+    {
+        return $this->belongsTo(Especialidade::class, 'especialidade_id');
     }
 }

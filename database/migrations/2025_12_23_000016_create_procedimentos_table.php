@@ -13,6 +13,7 @@ return new class extends Migration
             $table->string('nome', 120);
             $table->string('descricao', 120)->nullable();
             $table->foreignId('categoria_id')->nullable()->constrained('categorias_procedimento')->nullOnDelete();
+            $table->foreignId('especialidade_id')->nullable()->constrained('especialidades')->nullOnDelete();
             $table->boolean('eh_tratamento')->default(false);
             $table->unsignedInteger('quantidade_sessoes')->nullable();
             $table->decimal('valor', 10, 2)->nullable();

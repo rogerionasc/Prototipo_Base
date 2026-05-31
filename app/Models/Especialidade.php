@@ -29,4 +29,9 @@ class Especialidade extends Model
     {
         return $this->hasMany(Atendimento::class, 'especialidade_id');
     }
+
+    public function procedimentos()
+    {
+        return $this->hasMany(Procedimento::class, 'especialidade_id');
+    }
 }

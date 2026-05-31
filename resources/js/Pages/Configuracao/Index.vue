@@ -27,7 +27,7 @@
           <template #title>
             <i class="ri-first-aid-kit-line d-block fs-3xl mb-1"></i>Especialidades
           </template>
-          <Especialidade :especialidades="props.especialidades" />
+          <Especialidade :especialidades="props.especialidades" :procedimentos="props.procedimentos" />
         </BTab>
         <BTab>
           <template #title>

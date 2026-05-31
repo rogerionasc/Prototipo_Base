@@ -28,8 +28,22 @@
             <button type="button" class="btn btn-primary w-100" :disabled="formCreate.processing" @click="saveEspecialidade">Adicionar</button>
           </BCol>
         </BRow>
-        <BRow class="mt-3">
-          <BCol>
+        <BRow class="mt-3 g-3">
+          <BCol md="12">
+            <label for="espProcedimentos" class="form-label">Procedimentos Realizados</label>
+            <Multiselect
+              v-model="formCreate.procedimentos_ids"
+              :options="procedimentosOptions"
+              mode="tags"
+              placeholder="Selecione os procedimentos"
+              :searchable="true"
+              :create-option="false"
+              class="form-control-multiselect"
+            />
+          </BCol>
+        </BRow>
+        <BRow class="mt-3 g-3">
+          <BCol md="12">
             <label for="espDescricao" class="form-label">Descrição</label>
             <textarea v-model="formCreate.descricao" id="espDescricao" class="form-control" rows="2" placeholder="Descrição opcional"></textarea>
           </BCol>
@@ -62,7 +76,21 @@
             <input v-model="formEdit.codigo" type="text" id="espEditCodigo" class="form-control" maxlength="20" />
           </BCol>
         </BRow>
-        <BRow class="g-3 mt-0">
+        <BRow class="g-3 mt-1">
+          <BCol md="12">
+            <label class="form-label">Procedimentos Realizados</label>
+            <Multiselect
+              v-model="formEdit.procedimentos_ids"
+              :options="procedimentosOptions"
+              mode="tags"
+              placeholder="Selecione os procedimentos"
+              :searchable="true"
+              :create-option="false"
+              class="form-control-multiselect"
+            />
+          </BCol>
+        </BRow>
+        <BRow class="g-3 mt-1">
           <BCol md="8">
             <label for="espEditDescricao" class="form-label">Descrição</label>
             <textarea v-model="formEdit.descricao" id="espEditDescricao" class="form-control" rows="3"></textarea>
@@ -92,22 +120,35 @@ import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import { ref, watch, computed } from "vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
+import Multiselect from "@vueform/multiselect";
+// import "@vueform/multiselect/themes/default.css";
+
 const props = defineProps({
   especialidades: { type: Array, default: () => [] },
+  procedimentos: { type: Array, default: () => [] },
 });
 const especialidadesLocal = ref([...(props.especialidades || [])]);
 watch(() => props.especialidades, (v) => { especialidadesLocal.value = [...(v || [])]; });
+
+const procedimentosOptions = computed(() => {
+  return (props.procedimentos || []).map(p => ({
+    value: p.id,
+    label: p.nome
+  }));
+});
+
 const columns = [
   { id: "id", name: "ID" },
   { id: "nome", name: "Nome" },
   { id: "codigo", name: "Código" },
-  { id: "descricao", name: "Descrição" },
+  { id: "procedimentos_count", name: "Procedimentos" },
 ];
 const tableData = computed(() => {
   return (especialidadesLocal.value || []).map(e => ({
     id: e.id,
     nome: e.nome,
     codigo: e.codigo || '-',
+    procedimentos_count: (e.procedimentos || []).length + ' procedimento(s)',
     descricao: e.descricao || '-',
     status: e.ativo ? 'ativo' : 'inativo',
   }));
@@ -117,6 +158,7 @@ const formCreate = useForm({
   codigo: "",
   descricao: "",
   ativo: true,
+  procedimentos_ids: [],
 });
 function saveEspecialidade() {
   formCreate.post("/especialidades", {
@@ -133,6 +175,7 @@ const formEdit = useForm({
   codigo: "",
   descricao: "",
   ativo: true,
+  procedimentos_ids: [],
 });
 const editModal = ref(false);
 function startEdit(e) {
@@ -141,6 +184,7 @@ function startEdit(e) {
   formEdit.codigo = e.codigo || "";
   formEdit.descricao = e.descricao || "";
   formEdit.ativo = !!e.ativo;
+  formEdit.procedimentos_ids = (e.procedimentos || []).map(p => p.id);
   editModal.value = true;
 }
 function startEditById(id) {
@@ -159,23 +203,16 @@ function updateEspecialidade() {
   formEdit.put(`/especialidades/${editingId.value}`, {
     preserveScroll: true,
     onSuccess: () => {
-      const idx = (especialidadesLocal.value || []).findIndex(x => String(x.id) === String(editingId.value));
-      if (idx !== -1) {
-        especialidadesLocal.value[idx] = {
-          ...especialidadesLocal.value[idx],
-          nome: formEdit.nome || '',
-          codigo: formEdit.codigo || '',
-          descricao: formEdit.descricao || '',
-          ativo: !!formEdit.ativo,
-        };
-      }
       cancelEdit();
       router.reload({ only: ['especialidades'] });
     },
   });
 }
 function openModalShow(id) {
-  alert('Especialidade: ' + JSON.stringify(id));
+  const e = (especialidadesLocal.value || []).find(x => String(x.id) === String(id));
+  if (!e) return;
+  const procs = (e.procedimentos || []).map(p => p.nome).join(', ') || 'Nenhum';
+  alert('Especialidade: ' + e.nome + '\nProcedimentos: ' + procs);
 }
 const deleteModal = ref(false);
 const especialidadeToDelete = ref({});

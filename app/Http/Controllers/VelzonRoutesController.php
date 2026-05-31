@@ -29,7 +29,7 @@ class VelzonRoutesController extends Controller
         $tipos = TipoSanguineo::select('id','descricao')->orderBy('descricao')->get();
         $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
         $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
-        $especialidades = Especialidade::select('id','nome','codigo','descricao','ativo')->orderBy('nome')->get();
+        $especialidades = Especialidade::with('procedimentos:id,nome,especialidade_id')->select('id','nome','codigo','descricao','ativo')->orderBy('nome')->get();
         $categoriasProcedimento = CategoriaProcedimento::select('id','nome')->orderBy('nome')->get();
         $procedimentos = Procedimento::select('id','nome','descricao','categoria_id','eh_tratamento','quantidade_sessoes','valor','comissao_percentual','ativo')->orderBy('nome')->get();
         return Inertia::render('Configuracao/Index', [
