@@ -31,15 +31,19 @@
         <BRow class="mt-3 g-3">
           <BCol md="12">
             <label for="espProcedimentos" class="form-label">Procedimentos Realizados</label>
-            <Multiselect
-              v-model="formCreate.procedimentos_ids"
-              :options="procedimentosOptions"
-              mode="tags"
-              placeholder="Selecione os procedimentos"
-              :searchable="true"
-              :create-option="false"
-              class="form-control-multiselect"
-            />
+            <select
+              multiple
+              data-choices
+              data-choices-removeItem
+              class="form-control"
+              id="espProcedimentos"
+              ref="createProcedimentosSelect"
+            >
+              <option value="">Selecione os procedimentos</option>
+              <option v-for="p in procedimentosOptions" :key="p.value" :value="p.value">
+                {{ p.label }}
+              </option>
+            </select>
           </BCol>
         </BRow>
         <BRow class="mt-3 g-3">
@@ -79,15 +83,19 @@
         <BRow class="g-3 mt-1">
           <BCol md="12">
             <label class="form-label">Procedimentos Realizados</label>
-            <Multiselect
-              v-model="formEdit.procedimentos_ids"
-              :options="procedimentosOptions"
-              mode="tags"
-              placeholder="Selecione os procedimentos"
-              :searchable="true"
-              :create-option="false"
-              class="form-control-multiselect"
-            />
+            <select
+              multiple
+              data-choices
+              data-choices-removeItem
+              class="form-control"
+              id="espEditProcedimentos"
+              ref="editProcedimentosSelect"
+            >
+              <option value="">Selecione os procedimentos</option>
+              <option v-for="p in procedimentosOptions" :key="p.value" :value="p.value">
+                {{ p.label }}
+              </option>
+            </select>
           </BCol>
         </BRow>
         <BRow class="g-3 mt-1">
@@ -118,10 +126,8 @@
 import { useForm, router } from "@inertiajs/vue3";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, nextTick, onMounted } from "vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
-import Multiselect from "@vueform/multiselect";
-// import "@vueform/multiselect/themes/default.css";
 
 const props = defineProps({
   especialidades: { type: Array, default: () => [] },
@@ -130,12 +136,41 @@ const props = defineProps({
 const especialidadesLocal = ref([...(props.especialidades || [])]);
 watch(() => props.especialidades, (v) => { especialidadesLocal.value = [...(v || [])]; });
 
+const createProcedimentosSelect = ref(null);
+const editProcedimentosSelect = ref(null);
+
 const procedimentosOptions = computed(() => {
   return (props.procedimentos || []).map(p => ({
     value: p.id,
     label: p.nome
   }));
 });
+
+onMounted(() => {
+  if (window.initChoices) window.initChoices();
+});
+
+function getSelectedValues(el) {
+  if (!el) return [];
+  const inst = el._choicesInstance || el.choices;
+  if (inst && typeof inst.getValue === 'function') {
+    return inst.getValue(true);
+  }
+  return Array.from(el.selectedOptions).map(o => o.value);
+}
+
+function setChoiceValues(el, values) {
+  if (!el) return;
+  nextTick(() => {
+    const inst = el._choicesInstance || el.choices;
+    if (inst && typeof inst.setChoiceByValue === 'function') {
+      inst.removeActiveItems();
+      if (Array.isArray(values) && values.length > 0) {
+        inst.setChoiceByValue(values.map(String));
+      }
+    }
+  });
+}
 
 const columns = [
   { id: "id", name: "ID" },
@@ -161,10 +196,12 @@ const formCreate = useForm({
   procedimentos_ids: [],
 });
 function saveEspecialidade() {
+  formCreate.procedimentos_ids = getSelectedValues(createProcedimentosSelect.value);
   formCreate.post("/especialidades", {
     preserveScroll: true,
     onSuccess: () => {
       formCreate.reset();
+      setChoiceValues(createProcedimentosSelect.value, []);
       router.reload({ only: ['especialidades'] });
     },
   });
@@ -184,8 +221,14 @@ function startEdit(e) {
   formEdit.codigo = e.codigo || "";
   formEdit.descricao = e.descricao || "";
   formEdit.ativo = !!e.ativo;
-  formEdit.procedimentos_ids = (e.procedimentos || []).map(p => p.id);
+  const pIds = (e.procedimentos || []).map(p => p.id);
+  formEdit.procedimentos_ids = pIds;
+
   editModal.value = true;
+  nextTick(() => {
+    if (window.initChoices) window.initChoices();
+    setChoiceValues(editProcedimentosSelect.value, pIds);
+  });
 }
 function startEditById(id) {
   const e = (especialidadesLocal.value || []).find(x => String(x.id) === String(id));
@@ -196,10 +239,12 @@ function cancelEdit() {
   editingId.value = null;
   formEdit.clearErrors();
   formEdit.reset();
+  setChoiceValues(editProcedimentosSelect.value, []);
   editModal.value = false;
 }
 function updateEspecialidade() {
   if (!editingId.value) return;
+  formEdit.procedimentos_ids = getSelectedValues(editProcedimentosSelect.value);
   formEdit.put(`/especialidades/${editingId.value}`, {
     preserveScroll: true,
     onSuccess: () => {
@@ -237,3 +282,5 @@ function confirmDelete() {
   });
 }
 </script>
+<style scoped>
+</style>
