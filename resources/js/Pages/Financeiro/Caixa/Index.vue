@@ -1,7 +1,7 @@
 <template>
   <Layout>
     <Head title="Cadastro de Caixa" />
-    <PageHeader title="Cadastro de Caixa" pageTitle="Financeiro" />
+    <PageHeader title="Cadastro de Caixa" pageTitle="Caixa" />
     <TableGrid
       :columns="columns"
       :data="caixas"

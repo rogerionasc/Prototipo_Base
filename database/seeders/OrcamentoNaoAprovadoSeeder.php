@@ -16,22 +16,19 @@ class OrcamentoNaoAprovadoSeeder extends Seeder
     public function run(): void
     {
         $pacientes = Paciente::pluck('id')->all();
-        $profissionais = ProfissionalSaude::pluck('id')->all();
         $procedimentos = Procedimento::where('ativo', true)->pluck('id', 'nome')->toArray();
-        if (!$pacientes || !$profissionais || !$procedimentos) {
+        if (!$pacientes || !$procedimentos) {
             return;
         }
         $hoje = Carbon::today();
         for ($i = 0; $i < 5; $i++) {
             $numero = 'ORC-' . $hoje->format('Ymd') . '-' . Str::upper(Str::random(6));
             $pacienteId = $pacientes[array_rand($pacientes)];
-            $profId = $profissionais[array_rand($profissionais)];
             $orcamento = Orcamento::firstOrCreate(
                 ['numero' => $numero],
                 [
                     'data_emissao' => $hoje->toDateString(),
                     'validade' => $hoje->copy()->addDays(30)->toDateString(),
-                    'profissional_saude_id' => $profId,
                     'convenio_id' => null,
                     'paciente_id' => $pacienteId,
                     'valor_bruto' => 0,

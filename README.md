@@ -207,8 +207,6 @@ Usuário padrão:
     
 </table>
 
-# Estrutura do Banco de dados
-
 ## 💾 Modelo do Banco de Dados
 
 ```mermaid
@@ -336,6 +334,7 @@ erDiagram
 		VARCHAR nome  ""  
 		VARCHAR descricao  ""  
 		INT categoria_id FK ""  
+		INT especialidade_id FK ""  
 		BOOLEAN eh_tratamento  ""  
 		INT quantidade_sessoes  ""  
 		DECIMAL valor  ""  
@@ -521,6 +520,7 @@ erDiagram
 		TIME hora  ""  
 		INT paciente_id FK ""  
 		INT procedimento_id FK ""  
+		INT orcamento_id FK ""  
 		INT sessao_tratamento_id FK ""  
 		INT status_id FK ""  
 		INT agendamento_origem_id FK ""  
@@ -604,7 +604,6 @@ erDiagram
 		VARCHAR numero  ""  
 		DATE data_emissao  ""  
 		DATE validade  ""  
-		INT profissional_saude_id FK ""  
 		INT convenio_id FK ""  
 		INT paciente_id FK ""  
 		DECIMAL valor_bruto  ""  
@@ -651,6 +650,7 @@ erDiagram
 	PACIENTES||--o{PACIENTE_RESPONSAVEL:"possui"
 	RESPONSAVEIS||--o{PACIENTE_RESPONSAVEL:"vincula"
 	CATEGORIAS_PROCEDIMENTO||--o{PROCEDIMENTOS:"classifica"
+	ESPECIALIDADES||--o{PROCEDIMENTOS:"classifica"
 	CONVENIO||--o{PROCEDIMENTO_CONVENIO:"possui"
 	PROCEDIMENTOS||--o{PROCEDIMENTO_CONVENIO:"vincula"
 	PROCEDIMENTOS||--o{SESSOES_TRATAMENTO:"gera"
@@ -661,6 +661,7 @@ erDiagram
 	PACIENTES||--o{AGENDAMENTOS:"agenda"
 	PROCEDIMENTOS||--o{AGENDAMENTOS:"refere"
 	STATUS_AGENDAMENTO||--o{AGENDAMENTOS:"status"
+	ORCAMENTOS||--o{AGENDAMENTOS:"vincula"
 	AGENDAMENTOS||--||ATENDIMENTOS:"gera"
 	PRONTUARIOS||--o{ATENDIMENTOS:"registra"
 	PROFISSIONAIS_SAUDE||--o{ATENDIMENTOS:"realiza"
@@ -676,7 +677,6 @@ erDiagram
 	PRONTUARIOS||--o{SOLICITACAO_EXAMES:"possui"
 	PROFISSIONAIS_SAUDE||--o{SOLICITACAO_EXAMES:"solicita"
 	PACIENTES||--o{ORCAMENTOS:"solicita"
-	PROFISSIONAIS_SAUDE||--o{ORCAMENTOS:"elabora"
 	CONVENIO||--o{ORCAMENTOS:"aplica"
 	ORCAMENTOS||--o{ORCAMENTO_PROCEDIMENTOS:"possui"
 	PROCEDIMENTOS||--o{ORCAMENTO_PROCEDIMENTOS:"compoe"

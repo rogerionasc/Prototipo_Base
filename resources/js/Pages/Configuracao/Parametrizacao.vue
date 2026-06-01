@@ -15,7 +15,6 @@
                             <BCardTitle><i class="ri-user-heart-line text-primary me-2"></i>Estado Civil</BCardTitle>
                         </BCardHeader>
                         <BCardBody>
-                            <p class="text-muted mb-3">Opções usadas no cadastro.</p>
                             <div class="d-flex justify-content-end align-items-center mb-3">
                                 <span class="badge bg-primary-subtle text-primary">Total: {{ estadosCivisLocal?.length
                                     || 0 }}</span>
@@ -101,7 +100,6 @@
                             <BCardTitle><i class="ri-team-line text-primary me-2"></i>Parentesco</BCardTitle>
                         </BCardHeader>
                         <BCardBody>
-                            <p class="text-muted mb-3">Opções usadas no cadastro.</p>
                             <div class="d-flex justify-content-end align-items-center mb-3">
                                 <span class="badge bg-primary-subtle text-primary">Total: {{ parentescosLocal?.length ||
                                     0 }}</span>
@@ -187,7 +185,6 @@
                             <BCardTitle><i class="ri-heart-pulse-line text-primary me-2"></i>Tipo Sanguíneo</BCardTitle>
                         </BCardHeader>
                         <BCardBody>
-                            <p class="text-muted mb-3">Opções usadas no cadastro.</p>
                             <div class="d-flex justify-content-end align-items-center mb-3">
                                 <span class="badge bg-primary-subtle text-primary">Total: {{
                                     tiposSanguineosLocal?.length || 0 }}</span>
@@ -273,7 +270,6 @@
                             </BCardTitle>
                         </BCardHeader>
                         <BCardBody>
-                            <p class="text-muted mb-3">Opções usadas no cadastro.</p>
                             <div class="d-flex justify-content-end align-items-center mb-3">
                                 <span class="badge bg-primary-subtle text-primary">Total: {{ canaisAvisoLocal?.length ||
                                     0 }}</span>
@@ -357,7 +353,6 @@
                             </BCardTitle>
                         </BCardHeader>
                         <BCardBody>
-                            <p class="text-muted mb-3">Opções usadas no cadastro.</p>
                             <div class="d-flex justify-content-end align-items-center mb-3">
                                 <span class="badge bg-primary-subtle text-primary">Total: {{ categoriasLocal?.length ||
                                     0 }}</span>

@@ -4,6 +4,21 @@ import '@vueform/slider/themes/default.css';
 import '../scss/mermaid.min.css';
 import 'animate.css';
 
+try {
+    if (!window.__ignoreExtensionMessageChannelClosed) {
+        window.__ignoreExtensionMessageChannelClosed = true;
+        window.addEventListener('unhandledrejection', (event) => {
+            try {
+                const r = event?.reason;
+                const s = typeof r === 'string' ? r : String(r?.message || r || '');
+                if (s && (s.includes('A listener indicated an asynchronous response by returning true') || s.includes('message channel closed'))) {
+                    if (event && event.preventDefault) event.preventDefault();
+                }
+            } catch (e) {}
+        });
+    }
+} catch (e) {}
+
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';

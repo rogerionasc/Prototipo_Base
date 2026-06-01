@@ -1,7 +1,7 @@
 <template>
   <Layout>
     <Head title="Movimentação de Caixa" />
-    <PageHeader title="Movimentação de Caixa" pageTitle="Financeiro" />
+    <PageHeader title="Movimentação de Caixa" pageTitle="Caixa" />
 
     <div class="card mb-4 border-0 shadow-sm">
       <div class="card-body">

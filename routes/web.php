@@ -124,9 +124,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
         // Agenda Médica routes
         Route::post("/agenda-medica", [AgendaMedicaController::class, "store"])->name('agenda_medica.store');
+        Route::get("/agendamentos/profissionais-por-procedimento", [AgendamentoController::class, "profissionaisPorProcedimento"])->name('agendamentos.profissionais_por_procedimento');
         Route::get("/agendamentos", [AgendamentoController::class, "index"])->name('agendamentos.index');
+        Route::get("/agendamentos/{id}", [AgendamentoController::class, "show"])->whereNumber('id')->name('agendamentos.show');
         Route::post("/agendamentos", [AgendamentoController::class, "store"])->name('agendamentos.store');
         Route::put("/agendamentos/{id}", [AgendamentoController::class, "update"])->whereNumber('id')->name('agendamentos.update');
+        Route::put("/agendamentos/{id}/reschedule-session", [AgendamentoController::class, "rescheduleSession"])->whereNumber('id')->name('agendamentos.reschedule_session');
         Route::get("/agendamentos/latest", [AgendamentoController::class, "latest"])->name('agendamentos.latest');
         Route::get("/agendas-medicas/by-date", [AgendamentoController::class, "agendasByDate"])->name('agendas_medicas.by_date');
         Route::get("/agendas-medicas/counts-by-weekday", [AgendamentoController::class, "countsByWeekday"])->name('agendas_medicas.counts_by_weekday');

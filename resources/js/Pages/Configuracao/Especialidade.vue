@@ -39,7 +39,6 @@
               id="espProcedimentos"
               ref="createProcedimentosSelect"
             >
-              <option value="">Selecione os procedimentos</option>
               <option v-for="p in procedimentosOptions" :key="p.value" :value="p.value">
                 {{ p.label }}
               </option>
@@ -91,7 +90,6 @@
               id="espEditProcedimentos"
               ref="editProcedimentosSelect"
             >
-              <option value="">Selecione os procedimentos</option>
               <option v-for="p in procedimentosOptions" :key="p.value" :value="p.value">
                 {{ p.label }}
               </option>
@@ -196,7 +194,8 @@ const formCreate = useForm({
   procedimentos_ids: [],
 });
 function saveEspecialidade() {
-  formCreate.procedimentos_ids = getSelectedValues(createProcedimentosSelect.value);
+  formCreate.procedimentos_ids = (getSelectedValues(createProcedimentosSelect.value) || [])
+    .filter(v => v != null && String(v).trim() !== "");
   formCreate.post("/especialidades", {
     preserveScroll: true,
     onSuccess: () => {
@@ -244,7 +243,8 @@ function cancelEdit() {
 }
 function updateEspecialidade() {
   if (!editingId.value) return;
-  formEdit.procedimentos_ids = getSelectedValues(editProcedimentosSelect.value);
+  formEdit.procedimentos_ids = (getSelectedValues(editProcedimentosSelect.value) || [])
+    .filter(v => v != null && String(v).trim() !== "");
   formEdit.put(`/especialidades/${editingId.value}`, {
     preserveScroll: true,
     onSuccess: () => {

@@ -32,14 +32,26 @@ export default {
                     ]
                 },
                 {
-                    icon: "ri-money-dollar-box-line",
+                    icon: "ri-line-chart-line",
                     title: this.$t("t-finance"),
                     type: "link",
                     target: "#financeiro",
                     children: [
-                        { href: "/movimentacoes-caixa", label: this.$t("t-till") },
-                        { href: "/cadastro-caixa", label: this.$t("t-register") },
-                        { href: "/pagamentos-recusados", label: this.$t("t-refused") }
+                        { href: "#", label: "Contas a Pagar" },
+                        { href: "#", label: "Contas a Receber" },
+                        { href: "#", label: "Fluxo de Caixa" },
+                        { href: "#", label: "Devoluções" }
+                    ]
+                },
+                {
+                    icon: "ri-money-dollar-box-line",
+                    title: this.$t("t-till"),
+                    type: "link",
+                    target: "#caixa",
+                    children: [
+                        { href: "/movimentacoes-caixa", label: "Abertura" },
+                        { href: "/cadastro-caixa", label: "Cadastro" },
+                        { href: "/pagamentos-recusados", label: "Pagamentos Recusados" }
                     ]
                 },
                 {

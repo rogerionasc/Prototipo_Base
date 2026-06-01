@@ -1,7 +1,7 @@
 <template>
   <Layout>
     <Head title="Pagamentos Recusados" />
-    <PageHeader title="Pagamentos Recusados" pageTitle="Financeiro" />
+    <PageHeader title="Pagamentos Recusados" pageTitle="Caixa" />
     <TableGrid
       :columns="recusadosCols"
       :data="recusados"

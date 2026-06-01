@@ -16,7 +16,6 @@ class Orcamento extends Model
         'numero',
         'data_emissao',
         'validade',
-        'profissional_saude_id',
         'convenio_id',
         'paciente_id',
         'valor_bruto',
@@ -41,11 +40,6 @@ class Orcamento extends Model
     public function paciente()
     {
         return $this->belongsTo(Paciente::class, 'paciente_id');
-    }
-
-    public function profissionalSaude()
-    {
-        return $this->belongsTo(ProfissionalSaude::class, 'profissional_saude_id');
     }
 
     public function convenio()

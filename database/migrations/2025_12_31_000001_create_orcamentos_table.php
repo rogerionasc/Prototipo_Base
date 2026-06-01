@@ -13,7 +13,6 @@ return new class extends Migration
             $table->string('numero', 30)->unique();
             $table->datetime('data_emissao')->nullable();
             $table->datetime('validade')->nullable();
-            $table->foreignId('profissional_saude_id')->constrained('profissionais_saude');
             $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();
             $table->foreignId('paciente_id')->constrained('pacientes');
             $table->decimal('valor_bruto', 10, 2)->default(0);

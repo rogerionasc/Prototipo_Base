@@ -29,6 +29,8 @@ const props = defineProps({
     actionsLabels: { type: Object, default: () => ({ delete: 'Excluir', edit: 'Editar', show: 'Visualizar', diary: 'Agenda', print: 'Imprimir', download: 'Baixar', restore: 'Reabrir', receive: 'Receber' }) },
     actionsButtonText: { type: Object, default: () => ({}) },
     actionsIcons: { type: Object, default: () => ({}) },
+    actionsLoading: { type: Object, default: () => ({}) },
+    disableActions: { type: Boolean, default: false },
     compactSpacing: { type: Boolean, default: false },
 });
 
@@ -306,15 +308,38 @@ function initGrid() {
                 const al = props.actionsLabels || {};
                 const bt = props.actionsButtonText || {};
                 const ai = props.actionsIcons || {};
+                const disabledAll = !!props.disableActions;
+                const loadingMap = props.actionsLoading || {};
+                const rowLoading = (loadingMap && (loadingMap[String(rowId)] ?? loadingMap[rowId])) ?? null;
+                const isLoadingAction = (actionName) => {
+                    try {
+                        if (!rowLoading) return false;
+                        if (typeof rowLoading === 'boolean') return !!rowLoading;
+                        if (typeof rowLoading === 'string') return String(rowLoading) === String(actionName);
+                        if (Array.isArray(rowLoading)) return rowLoading.map(String).includes(String(actionName));
+                        if (typeof rowLoading === 'object') return !!rowLoading[actionName];
+                        return false;
+                    } catch (_) {
+                        return false;
+                    }
+                };
+                const can = (v) => {
+                    try {
+                        if (typeof v === 'function') return !!v(rowData);
+                        return !!v;
+                    } catch (_) {
+                        return false;
+                    }
+                };
                 const buttons = [
-                    ac.delete ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${rowDataStr}' title="${al.delete ?? 'Excluir'}"><i class="${ai.delete ?? 'ri-delete-bin-5-fill'} align-bottom"></i>${bt.delete ? `<span class="d-none d-sm-inline ms-1">${bt.delete}</span>` : ''}</button>` : ``,
-                    ac.edit ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${rowDataStr}' title="${al.edit ?? 'Editar'}"><i class="ri-pencil-fill align-bottom"></i>${bt.edit ? `<span class="d-none d-sm-inline ms-1">${bt.edit}</span>` : ''}</button>` : ``,
-                    ac.show ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${rowDataStr}' title="${al.show ?? 'Visualizar'}"><i class="ri-eye-fill align-bottom"></i>${bt.show ? `<span class="d-none d-sm-inline ms-1">${bt.show}</span>` : ''}</button>` : ``,
-                    ac.restore && rowData.fechado_em ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="restore" data-id="${rowId}" data-row='${rowDataStr}' title="${al.restore ?? 'Reabrir'}"><i class="ri-refresh-line align-bottom"></i>${bt.restore ? `<span class="d-none d-sm-inline ms-1">${bt.restore}</span>` : ''}</button>` : ``,
-                    ac.print ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${rowDataStr}' title="${al.print ?? 'Imprimir'}"><i class="ri-printer-fill align-bottom"></i>${bt.print ? `<span class="d-none d-sm-inline ms-1">${bt.print}</span>` : ''}</button>` : ``,
-                    ac.download ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${rowDataStr}' title="${al.download ?? 'Baixar'}"><i class="ri-download-line align-bottom"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
-                    ac.receive ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${rowDataStr}' title="${al.receive ?? 'Receber'}"><i class="ri-money-dollar-box-line align-bottom"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
-                    (props.showDiaryButton && ac.diary) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${rowDataStr}' title="${al.diary ?? 'Agenda'}"><i class="ri-calendar-2-line align-bottom"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``
+                    can(ac.delete) ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('delete') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('delete')) ? 'disabled' : ''} title="${al.delete ?? 'Excluir'}">${isLoadingAction('delete') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.delete ?? 'ri-delete-bin-5-fill'} align-bottom"></i>${bt.delete ? `<span class="d-none d-sm-inline ms-1">${bt.delete}</span>` : ''}</button>` : ``,
+                    can(ac.edit) ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('edit') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('edit')) ? 'disabled' : ''} title="${al.edit ?? 'Editar'}">${isLoadingAction('edit') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.edit ?? 'ri-pencil-fill'} align-bottom"></i>${bt.edit ? `<span class="d-none d-sm-inline ms-1">${bt.edit}</span>` : ''}</button>` : ``,
+                    can(ac.show) ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('show') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('show')) ? 'disabled' : ''} title="${al.show ?? 'Visualizar'}">${isLoadingAction('show') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.show ?? 'ri-eye-fill'} align-bottom"></i>${bt.show ? `<span class="d-none d-sm-inline ms-1">${bt.show}</span>` : ''}</button>` : ``,
+                    (can(ac.restore) && rowData.fechado_em) ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="restore" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('restore') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('restore')) ? 'disabled' : ''} title="${al.restore ?? 'Reabrir'}">${isLoadingAction('restore') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.restore ?? 'ri-refresh-line'} align-bottom"></i>${bt.restore ? `<span class="d-none d-sm-inline ms-1">${bt.restore}</span>` : ''}</button>` : ``,
+                    can(ac.print) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('print') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('print')) ? 'disabled' : ''} title="${al.print ?? 'Imprimir'}">${isLoadingAction('print') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.print ?? 'ri-printer-fill'} align-bottom"></i>${bt.print ? `<span class="d-none d-sm-inline ms-1">${bt.print}</span>` : ''}</button>` : ``,
+                    can(ac.download) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('download') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('download')) ? 'disabled' : ''} title="${al.download ?? 'Baixar'}">${isLoadingAction('download') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.download ?? 'ri-download-line'} align-bottom"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
+                    can(ac.receive) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('receive') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('receive')) ? 'disabled' : ''} title="${al.receive ?? 'Receber'}">${isLoadingAction('receive') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.receive ?? 'ri-money-dollar-box-line'} align-bottom"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
+                    (props.showDiaryButton && can(ac.diary)) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('diary') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('diary')) ? 'disabled' : ''} title="${al.diary ?? 'Agenda'}">${isLoadingAction('diary') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.diary ?? 'ri-calendar-2-line'} align-bottom"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``
                 ].join('');
                 return html(`<div class="d-flex gap-2">${buttons}</div>`);
             }
@@ -362,6 +387,7 @@ function initGrid() {
     clickListener = (e) => {
         const target = e.target.closest('[data-action]');
         if (!target) return;
+        if (target.getAttribute('data-loading') === 'true' || target.hasAttribute('disabled')) return;
         const action = target.getAttribute('data-action');
         const id = target.getAttribute('data-id');
         let rowObj = {};
@@ -402,6 +428,12 @@ watch(filteredData, () => {
 watch(() => props.data, () => {
     nextTick(initGrid);
 }, { deep: true });
+watch(() => props.actionsLoading, () => {
+    nextTick(initGrid);
+}, { deep: true });
+watch(() => props.disableActions, () => {
+    nextTick(initGrid);
+});
 
 // Remove listeners ao desmontar o componente
 onBeforeUnmount(() => {

@@ -20,7 +20,6 @@ class OrcamentoController extends Controller
     public function index()
     {
         $pacientes = Paciente::select('id', 'nome', 'cpf', 'email', 'celular')->orderBy('nome')->get();
-        $profissionais = ProfissionalSaude::select('id', 'nome', 'crm', 'celular', 'email')->orderBy('nome')->get();
         $convenios = Convenio::select('id', 'descricao')->orderBy('descricao')->get();
         $procedimentos = Procedimento::select('id', 'nome', 'valor', 'categoria_id', 'eh_tratamento', 'quantidade_sessoes')->orderBy('nome')->get();
         $procConvenio = DB::table('procedimento_convenio')
@@ -50,7 +49,6 @@ class OrcamentoController extends Controller
 
         return Inertia::render('Atendimento/Orcamentos/Index', [
             'pacientes' => $pacientes,
-            'profissionais' => $profissionais,
             'convenios' => $convenios,
             'procedimentos' => $procedimentos,
             'procedimentoConvenio' => $procConvenio,
@@ -62,7 +60,6 @@ class OrcamentoController extends Controller
     {
         $data = $request->validate([
             'paciente_id' => ['required', 'integer', 'exists:pacientes,id'],
-            'profissional_saude_id' => ['required', 'integer', 'exists:profissionais_saude,id'],
             'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
             'data_emissao' => ['nullable', 'date_format:d-m-Y'],
             'validade' => ['nullable', 'date_format:d-m-Y'],
@@ -124,7 +121,6 @@ class OrcamentoController extends Controller
             'data_emissao' => $deYmd,
             'validade' => $vaYmd,
             'paciente_id' => $data['paciente_id'],
-            'profissional_saude_id' => $data['profissional_saude_id'],
             'convenio_id' => $convenioId,
             'valor_bruto' => $valorBruto,
             'desconto' => $desconto,
@@ -156,7 +152,6 @@ class OrcamentoController extends Controller
                 'o.valor_total',
                 'o.aprovado',
                 'o.paciente_id',
-                'o.profissional_saude_id',
                 DB::raw("COALESCE(pa.nome,'') AS paciente")
             )
             ->selectSub(function ($q) {
@@ -187,7 +182,6 @@ class OrcamentoController extends Controller
                 DB::raw("DATE_FORMAT(o.validade, '%d-%m-%Y') AS validade"),
                 'o.paciente_id',
                 DB::raw("COALESCE(p.nome,'') AS paciente_nome"),
-                'o.profissional_saude_id',
                 'o.convenio_id',
                 'o.valor_bruto',
                 'o.desconto',
@@ -267,7 +261,6 @@ class OrcamentoController extends Controller
         }
         $data = $request->validate([
             'paciente_id' => ['required', 'integer', 'exists:pacientes,id'],
-            'profissional_saude_id' => ['required', 'integer', 'exists:profissionais_saude,id'],
             'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
             'data_emissao' => ['nullable', 'date_format:d-m-Y'],
             'validade' => ['nullable', 'date_format:d-m-Y'],
@@ -329,7 +322,6 @@ class OrcamentoController extends Controller
                 'data_emissao' => $deYmd,
                 'validade' => $vaYmd,
                 'paciente_id' => $data['paciente_id'],
-                'profissional_saude_id' => $data['profissional_saude_id'],
                 'convenio_id' => $data['convenio_id'] ?? null,
                 'valor_bruto' => $valorBruto,
                 'desconto' => $desconto,
@@ -396,7 +388,6 @@ public function searchPaid(Request $request)
             'o.numero',
             DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
             'o.paciente_id',
-            'o.profissional_saude_id',
             'o.valor_total',
             DB::raw("COALESCE(p.nome,'') AS paciente"),
             DB::raw("COALESCE(p.cpf,'') AS cpf")
@@ -513,7 +504,6 @@ public function searchPaid(Request $request)
                 DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_emissao"),
                 DB::raw("DATE_FORMAT(o.validade, '%d-%m-%Y') AS validade"),
                 'o.paciente_id',
-                'o.profissional_saude_id',
                 'o.convenio_id',
                 'o.valor_bruto',
                 'o.desconto',

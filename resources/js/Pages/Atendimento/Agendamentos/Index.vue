@@ -68,6 +68,12 @@ export default {
       edit: {},
       pacientesLocal: [],
       profissionaisLocal: [],
+      profissionaisFiltradosCriacao: [],
+      profissionaisFiltradosEdicao: [],
+      ultimoProcedimentoIdCriacao: null,
+      ultimoProcedimentoIdEdicao: null,
+      ultimoProcedimentoAtCriacao: 0,
+      ultimoProcedimentoAtEdicao: 0,
       procedimentosLocal: [],
       procedimentosFiltrados: [],
       opcoesStatus: [],
@@ -84,6 +90,7 @@ export default {
       sessoesCriacao: [],
       termoBuscaPaciente: "",
       mostrarSugestoesPaciente: false,
+      usarOrcamentoPagoCriacao: false,
       orcamentosPagos: [],
       carregandoOrcamentosPagos: false,
       termoBuscaOrcamento: "",
@@ -102,6 +109,7 @@ export default {
         altFormat: "d M, Y",
         dateFormat: "Y-m-d",
         locale: "pt",
+        minDate: "today",
       },
       opcoesFlatpickrHora: {
         enableTime: true,
@@ -116,6 +124,10 @@ export default {
       modalEventosDiaVisivel: false,
       eventosDiaModal: [],
       dataEventosDiaModal: null,
+      chaveTabelaEventosDia: 0,
+      acoesLoadingEventosDia: {},
+      bloquearAcoesModalEventosDia: false,
+      valorCobradoAutoCriacaoProcId: null,
       paletaMedicos: [
         { bg: "bg-success-subtle", text: "text-success" },
         { bg: "bg-info-subtle", text: "text-info" },
@@ -131,8 +143,6 @@ export default {
       mapaDiasSemanaSelecionados: {},
       mapaAgendasSemana: {},
       processandoEdicao: false,
-      chaveProcedimentoCriacao: 0,
-      chaveProfissionalCriacao: 0,
       editAgendamentoForm: {
         id: null,
         paciente_id: null,
@@ -192,6 +202,18 @@ export default {
         return "Agendamentos do dia";
       }
     },
+    tituloModalEditarAgendamento() {
+      try {
+        if (!this.podeReagendarSessaoTratamento()) return "Editar Agendamento";
+        const n = this.eventoSelecionado?.extendedProps?.sessao_numero ?? null;
+        const t = this.eventoSelecionado?.extendedProps?.sessao_total ?? null;
+        if (n != null && t != null) return `Reagendar Sessão ${n}/${t}`;
+        if (n != null) return `Reagendar Sessão ${n}`;
+        return "Reagendar Sessão";
+      } catch (e) {
+        return "Editar Agendamento";
+      }
+    },
     pacientesSugestoesCriacao() {
       try {
         const base = this.listaPacientesCriacao || [];
@@ -235,14 +257,11 @@ export default {
     },
     listaProfissionaisCriacao() {
       try {
-        if (this.orcamentoSelecionado && this.orcamentoSelecionado.profissional_saude_id != null) {
-          const d = (this.profissionaisLocal || []).find(x => String(x.id) === String(this.orcamentoSelecionado.profissional_saude_id));
-          if (d) return [d];
-          return [{ id: this.orcamentoSelecionado.profissional_saude_id, nome: "Profissional" }];
-        }
-        return this.profissionaisLocal || [];
+        const pid = this.agendamentoForm?.procedimento_id;
+        if (!pid) return [];
+        return Array.isArray(this.profissionaisFiltradosCriacao) ? this.profissionaisFiltradosCriacao : [];
       } catch (e) {
-        return this.profissionaisLocal || [];
+        return [];
       }
     },
     listaPacientesEdicao() {
@@ -260,19 +279,11 @@ export default {
     },
     listaProfissionaisEdicao() {
       try {
-        if (this.orcamentoSelecionadoEdicao) {
-          const id = this.orcamentoSelecionadoEdicao.profissional_saude_id != null
-            ? this.orcamentoSelecionadoEdicao.profissional_saude_id
-            : this.editAgendamentoForm?.profissional_saude_id ?? null;
-          if (id != null) {
-            const d = (this.profissionaisLocal || []).find(x => String(x.id) === String(id));
-            if (d) return [d];
-            return [{ id, nome: "Profissional" }];
-          }
-        }
-        return this.profissionaisLocal || [];
+        const pid = this.editAgendamentoForm?.procedimento_id;
+        if (!pid) return [];
+        return Array.isArray(this.profissionaisFiltradosEdicao) ? this.profissionaisFiltradosEdicao : [];
       } catch (e) {
-        return this.profissionaisLocal || [];
+        return [];
       }
     },
   },
@@ -286,6 +297,15 @@ export default {
           className: eventEl.getAttribute("data-class"),
         };
       },
+    });
+    window.addEventListener("unhandledrejection", (event) => {
+      try {
+        const r = event?.reason;
+        const s = typeof r === "string" ? r : String(r?.message || r || "");
+        if (s && (s.includes("A listener indicated an asynchronous response by returning true") || s.includes("message channel closed"))) {
+          if (event && event.preventDefault) event.preventDefault();
+        }
+      } catch (e) {}
     });
     try {
       moment.locale("pt-br");
@@ -303,18 +323,24 @@ export default {
       }
       this.buscarMapaDiasSemanaSelecionados();
       this.buscarUltimosAgendamentos();
-      window.addEventListener("unhandledrejection", (event) => {
-        try {
-          const r = event?.reason;
-          const s = typeof r === "string" ? r : String(r?.message || r || "");
-          if (s && (s.includes("A listener indicated an asynchronous response by returning true") || s.includes("message channel closed"))) {
-            if (event && event.preventDefault) event.preventDefault();
-          }
-        } catch (e) {}
-      });
     } catch (e) {}
   },
   watch: {
+    usarOrcamentoPagoCriacao(nv) {
+      if (nv) {
+        try { this.buscarOrcamentosPorPaciente(); } catch (_) {}
+        return;
+      }
+      try { this.termoBuscaOrcamento = ""; } catch (_) {}
+      try { this.mostrarSugestoesOrcamento = false; } catch (_) {}
+      try { this.orcamentosPagos = []; } catch (_) {}
+      try { this.orcamentoSelecionado = null; } catch (_) {}
+      try { this.orcamentoSelecionadoId = null; } catch (_) {}
+      try { this.itensOrcamentoSelecionado = []; } catch (_) {}
+      try { this.itensOrcamentoPorProcedimento = {}; } catch (_) {}
+      try { this.procedimentosFiltrados = [...(this.procedimentosLocal || [])]; } catch (_) {}
+      try { this.valorCobradoAutoCriacaoProcId = null; } catch (_) {}
+    },
     orcamentoSelecionadoId(nv) {
       const v = nv != null ? String(nv) : "";
       if (v) {
@@ -343,6 +369,11 @@ export default {
     },
     termoBuscaOrcamento(nv) {
       try {
+        if (!this.usarOrcamentoPagoCriacao) {
+          this.mostrarSugestoesOrcamento = false;
+          this.orcamentosPagos = [];
+          return;
+        }
         if (this.ignorarMudancaTermoOrcamento) {
           this.mostrarSugestoesOrcamento = false;
           this.ignorarMudancaTermoOrcamento = false;
@@ -400,8 +431,13 @@ export default {
     "agendamentoForm.profissional_saude_id"() {
       try { this.verificarAgendaProfissionalParaDia(); } catch (e) {}
     },
-    "agendamentoForm.procedimento_id"(nv) {
+    "agendamentoForm.procedimento_id"(nv, ov) {
       try {
+        const a = nv != null ? String(nv) : "";
+        const b = ov != null ? String(ov) : "";
+        if (a !== b) {
+          try { this.aoAlterarProcedimento(); } catch (_) {}
+        }
         const p = (this.procedimentosLocal || []).find(x => String(x.id) === String(nv));
         const isTrat = !!p?.eh_tratamento;
         const total = isTrat ? Math.max(0, Number(p?.quantidade_sessoes || 0)) : 0;
@@ -507,9 +543,12 @@ export default {
       }
     },
     async cancelarAgendamentoPorId(row) {
+      const id = row?.id ?? null;
+      if (!id) return;
+      const key = String(id);
+      if (this.acoesLoadingEventosDia?.[key]?.delete) return;
       try {
-        const id = row?.id ?? null;
-        if (!id) return;
+        this.acoesLoadingEventosDia = { ...(this.acoesLoadingEventosDia || {}), [key]: { ...(this.acoesLoadingEventosDia?.[key] || {}), delete: true } };
         await window.axios.put(`/agendamentos/${id}/cancel`, { observacoes: null });
         const api = this.$refs.fullCalendar?.getApi?.();
         const ev = api?.getEventById?.(id);
@@ -524,7 +563,121 @@ export default {
           return e;
         });
         await this.buscarUltimosAgendamentos();
-      } catch (e) {}
+        await this.atualizarTabelaEventosDiaModal();
+      } catch (e) {
+      } finally {
+        try {
+          const map = { ...(this.acoesLoadingEventosDia || {}) };
+          if (map[key]) {
+            const rowMap = { ...(map[key] || {}) };
+            delete rowMap.delete;
+            if (Object.keys(rowMap).length) map[key] = rowMap;
+            else delete map[key];
+          }
+          this.acoesLoadingEventosDia = map;
+        } catch (_) {}
+      }
+    },
+    async abrirReagendarSessaoDaLista(id) {
+      const key = id != null ? String(id) : null;
+      if (!key) return;
+      if (this.acoesLoadingEventosDia?.[key]?.edit) return;
+      try {
+        this.bloquearAcoesModalEventosDia = true;
+        this.acoesLoadingEventosDia = { ...(this.acoesLoadingEventosDia || {}), [key]: { ...(this.acoesLoadingEventosDia?.[key] || {}), edit: true } };
+        const api = this.$refs.fullCalendar?.getApi?.();
+        const ev = api?.getEventById?.(id);
+        if (!ev) return;
+
+        const st = String(ev?.extendedProps?.status || "").toLowerCase();
+        const n = ev?.extendedProps?.sessao_numero ?? null;
+        if (!st.includes("cancel") || n == null) {
+          try {
+            const fp = (this.$page?.props?.flash ?? {});
+            this.$page.props.flash = { ...fp, warning: "Reagendamento disponível apenas para sessões de tratamento canceladas." };
+          } catch (_) {}
+          return;
+        }
+
+        this.eventoSelecionado = ev;
+        let ds = "";
+        let hs = "";
+        try {
+          const start = ev?.start ? moment(ev.start) : null;
+          ds = start && start.isValid() ? start.format("YYYY-MM-DD") : "";
+          hs = start && start.isValid() ? start.format("HH:mm") : "";
+        } catch (_) {}
+
+        let ag = null;
+        try {
+          const resp = await window.axios.get(`/agendamentos/${id}`);
+          ag = resp?.data?.agendamento ?? null;
+        } catch (_) {}
+
+        this.editAgendamentoForm.id = (ag?.id ?? ev?.id ?? id);
+        this.editAgendamentoForm.data = String(ag?.data || ds || "");
+        this.editAgendamentoForm.hora = String(ag?.hora || hs || "").slice(0, 5);
+        this.editAgendamentoForm.observacoes = String(ag?.observacoes || ev?.extendedProps?.observacoes || "");
+        this.editAgendamentoForm.status_id = null;
+        this.editAgendamentoForm.paciente_id = ag?.paciente_id ?? ev?.extendedProps?.paciente_id ?? null;
+        this.editAgendamentoForm.procedimento_id = ag?.procedimento_id ?? ev?.extendedProps?.procedimento_id ?? null;
+        this.editAgendamentoForm.valor_cobrado = (ag?.valor_cobrado != null && ag?.valor_cobrado !== "")
+          ? String(ag.valor_cobrado)
+          : (this.editAgendamentoForm.valor_cobrado || "");
+
+        this.orcamentoSelecionadoEdicaoId = ag?.orcamento_id ?? ev?.extendedProps?.orcamento_id ?? null;
+        this.procedimentoIdOriginalEdicao = this.editAgendamentoForm.procedimento_id || null;
+
+        this.nomePacienteEdicao = "";
+        try {
+          const nome = String(ag?.paciente_nome || "").trim();
+          if (nome) {
+            this.nomePacienteEdicao = nome;
+            this.termoBuscaPacienteEdicao = nome;
+          } else {
+            const pid = this.editAgendamentoForm.paciente_id;
+            const p = (this.pacientesLocal || []).find(x => String(x.id) === String(pid));
+            this.nomePacienteEdicao = p ? String(p.nome || "") : "";
+            this.termoBuscaPacienteEdicao = this.nomePacienteEdicao;
+          }
+        } catch (_) {}
+
+        try {
+          const procNome = String(ag?.procedimento_nome || "").trim();
+          if (procNome && typeof ev.setExtendedProp === "function") {
+            ev.setExtendedProp("procedimento_nome", procNome);
+          }
+          const sessN = ag?.sessao_numero ?? ev?.extendedProps?.sessao_numero ?? null;
+          const sessT = ag?.sessao_total ?? ev?.extendedProps?.sessao_total ?? null;
+          if (sessN != null && typeof ev.setExtendedProp === "function") ev.setExtendedProp("sessao_numero", sessN);
+          if (sessT != null && typeof ev.setExtendedProp === "function") ev.setExtendedProp("sessao_total", sessT);
+        } catch (_) {}
+
+        try {
+          const pid = this.editAgendamentoForm.procedimento_id;
+          const proc = (this.procedimentosLocal || []).find(p => String(p.id) === String(pid));
+          this.procedimentosFiltradosEdicao = proc ? [{ ...proc, nome: proc.nome }] : [...(this.procedimentosLocal || [])];
+        } catch (_) {}
+
+        this.editAgendamentoForm.profissional_saude_id = null;
+        await this.inferirProfissionalDaAgenda(this.editAgendamentoForm.data, this.editAgendamentoForm.hora);
+        try { await this.aoAlterarProcedimentoEdicao(); } catch (_) {}
+
+        this.modalEditarVisivel = true;
+      } catch (e) {
+      } finally {
+        this.bloquearAcoesModalEventosDia = false;
+        try {
+          const map = { ...(this.acoesLoadingEventosDia || {}) };
+          if (map[key]) {
+            const rowMap = { ...(map[key] || {}) };
+            delete rowMap.edit;
+            if (Object.keys(rowMap).length) map[key] = rowMap;
+            else delete map[key];
+          }
+          this.acoesLoadingEventosDia = map;
+        } catch (_) {}
+      }
     },
     onBlurSugestoesPaciente() {
       setTimeout(() => { this.mostrarSugestoesPaciente = false; }, 150);
@@ -534,7 +687,9 @@ export default {
       this.agendamentoForm.paciente_id = id;
       this.termoBuscaPaciente = String(p?.nome || "");
       this.mostrarSugestoesPaciente = false;
-      this.buscarOrcamentosPorPaciente();
+      if (this.usarOrcamentoPagoCriacao) {
+        this.buscarOrcamentosPorPaciente();
+      }
     },
     onBlurSugestoesPacienteEdicao() {
       setTimeout(() => { this.mostrarSugestoesPacienteEdicao = false; }, 150);
@@ -569,6 +724,10 @@ export default {
       return null;
     },
     async buscarOrcamentosPorPaciente() {
+      if (!this.usarOrcamentoPagoCriacao) {
+        this.orcamentosPagos = [];
+        return;
+      }
       const pid = this.agendamentoForm.paciente_id;
       if (!pid) {
         this.orcamentosPagos = [];
@@ -580,12 +739,8 @@ export default {
         const arr = Array.isArray(resp?.data?.orcamentos) ? resp.data.orcamentos : [];
         const paid = arr.filter(o => !!o.pago);
         this.orcamentosPagos = paid;
-        if (paid.length > 0) {
-          if (!this.orcamentoSelecionadoId) {
-            this.orcamentoSelecionadoId = paid[0].id;
-            this.aoSelecionarOrcamento(paid[0]);
-          }
-        } else {
+        const keepId = this.orcamentoSelecionadoId != null && paid.some(o => String(o.id) === String(this.orcamentoSelecionadoId));
+        if (!keepId) {
           this.orcamentoSelecionadoId = null;
           this.orcamentoSelecionado = null;
         }
@@ -712,10 +867,18 @@ export default {
     cliqueNaData(info) {
       try {
         const ds = info && info.dateStr ? info.dateStr : moment(info?.date).format("YYYY-MM-DD");
+        if (moment(ds, "YYYY-MM-DD", true).isValid() && moment(ds, "YYYY-MM-DD", true).isBefore(moment(), "day")) {
+          try {
+            const fp = (this.$page?.props?.flash ?? {});
+            this.$page.props.flash = { ...fp, warning: "Não é permitido agendar em data passada." };
+          } catch (_) {}
+          return;
+        }
         this.agendamentoForm.data = ds;
         this.buscarAgendasPorData(ds);
       } catch (e) {}
       this.editandoNoModalDeCriacao = false;
+      this.usarOrcamentoPagoCriacao = false;
       this.orcamentoSelecionado = null;
       this.orcamentoSelecionadoId = null;
       this.termoBuscaOrcamento = "";
@@ -733,6 +896,7 @@ export default {
       this.agendamentoForm = { paciente_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
       this.termoBuscaPaciente = "";
       this.mostrarSugestoesPaciente = false;
+      this.usarOrcamentoPagoCriacao = false;
       this.orcamentoSelecionado = null;
       this.orcamentoSelecionadoId = null;
       this.termoBuscaOrcamento = "";
@@ -741,8 +905,6 @@ export default {
       this.procedimentosFiltrados = [...(this.procedimentosLocal || [])];
       try { const el1 = this.$refs.selProfissionalCriacao; if (el1) window.destroyChoiceEl(el1); } catch (_) {}
       try { const el2 = this.$refs.selProcedimentoCriacao; if (el2) window.destroyChoiceEl(el2); } catch (_) {}
-      this.chaveProfissionalCriacao++;
-      this.chaveProcedimentoCriacao++;
       this.modalAgendarVisivel = true;
       this.$nextTick(() => {
         try { const elInit1 = this.$refs.selProfissionalCriacao; if (elInit1) window.initChoiceEl(elInit1); } catch (_) {}
@@ -819,7 +981,6 @@ export default {
       } else {
         this.procedimentosFiltradosEdicao = [];
       }
-      this.chaveProcedimentoEdicao++;
       this.fecharPopoversCalendario();
       this.editandoNoModalDeCriacao = true;
       this.buscarOrcamentosPorPacienteEdicao();
@@ -835,16 +996,15 @@ export default {
       this.termoBuscaPaciente = this.termoBuscaPacienteEdicao;
       this.procedimentosFiltrados = [...this.procedimentosFiltradosEdicao];
       this.orcamentosPagos = [...(this.orcamentosPagosEdicao || [])];
-      try { const el1 = this.$refs.selProfissionalCriacao; if (el1) window.destroyChoiceEl(el1); } catch (_) {}
-      try { const el2 = this.$refs.selProcedimentoCriacao; if (el2) window.destroyChoiceEl(el2); } catch (_) {}
-      this.chaveProfissionalCriacao++;
-      this.chaveProcedimentoCriacao++;
+
       await this.$nextTick();
-      try { const elInit1 = this.$refs.selProfissionalCriacao; if (elInit1) window.initChoiceEl(elInit1); } catch (_) {}
-      try { const elInit2 = this.$refs.selProcedimentoCriacao; if (elInit2) window.initChoiceEl(elInit2); } catch (_) {}
-      try { const elSync1 = this.$refs.selProfissionalCriacao; if (elSync1) window.syncChoiceValue(elSync1, String(this.agendamentoForm.profissional_saude_id ?? '')); } catch (_) {}
-      try { const elSync2 = this.$refs.selProcedimentoCriacao; if (elSync2) window.syncChoiceValue(elSync2, String(this.agendamentoForm.procedimento_id ?? '')); } catch (_) {}
-      try { if (window.resumeChoicesObserver) window.resumeChoicesObserver(); } catch (_) {}
+      try {
+        const el1 = this.$refs.selProfissionalCriacao;
+        const el2 = this.$refs.selProcedimentoCriacao;
+        if (el1) { window.destroyChoiceEl(el1); window.initChoiceEl(el1); }
+        if (el2) { window.destroyChoiceEl(el2); window.initChoiceEl(el2); }
+      } catch (e) {}
+
       this.modalAgendarVisivel = true;
       try { this.selecionarOrcamentoCriacaoPorProcedimentoEdicao(); } catch (_) {}
     },
@@ -879,12 +1039,41 @@ export default {
         return s.isSameOrBefore(fim) && e.isSameOrAfter(ini);
       });
       this.atribuirMedicoAEventosDia(ds).then(() => {
+        this.chaveTabelaEventosDia += 1;
         this.modalEventosDiaVisivel = true;
       }).catch(() => {
+        this.chaveTabelaEventosDia += 1;
         this.modalEventosDiaVisivel = true;
       });
       this.fecharPopoversCalendario();
       setTimeout(() => this.fecharPopoversCalendario(), 0);
+    },
+
+    async atualizarTabelaEventosDiaModal() {
+      try {
+        if (!this.modalEventosDiaVisivel) return;
+        const ds = this.dataEventosDiaModal;
+        if (!ds) return;
+        const api = this.$refs.fullCalendar?.getApi?.();
+        if (!api) return;
+
+        const filtrar = () => {
+          const events = api?.getEvents?.() || [];
+          const ini = moment(ds, "YYYY-MM-DD", true).startOf("day");
+          const fim = moment(ds, "YYYY-MM-DD", true).endOf("day");
+          return (events || []).filter(ev => {
+            const s = ev?.start ? moment(ev.start) : null;
+            if (!s || !s.isValid()) return false;
+            const e = ev?.end ? moment(ev.end) : s;
+            return s.isSameOrBefore(fim) && e.isSameOrAfter(ini);
+          });
+        };
+
+        this.eventosDiaModal = filtrar();
+        await this.atribuirMedicoAEventosDia(ds);
+        this.eventosDiaModal = filtrar();
+        this.chaveTabelaEventosDia += 1;
+      } catch (e) {}
     },
 
     fecharPopoversCalendario() {
@@ -956,7 +1145,6 @@ export default {
       }
     },
     async aoSelecionarOrcamentoEdicao(o) {
-      try { if (window.pauseChoicesObserver) window.pauseChoicesObserver(); } catch (_) {}
       this.orcamentoSelecionadoEdicao = { ...o };
       this.orcamentoSelecionadoEdicaoId = o.id || null;
       this.ignorarMudancaTermoOrcamentoEdicao = true;
@@ -964,8 +1152,7 @@ export default {
       this.mostrarSugestoesOrcamentoEdicao = false;
       this.carregandoItensOrcamentoEdicao = true;
       this.editAgendamentoForm.paciente_id = o.paciente_id || this.editAgendamentoForm.paciente_id;
-      this.editAgendamentoForm.profissional_saude_id = o.profissional_saude_id != null ? Number(o.profissional_saude_id) : this.editAgendamentoForm.profissional_saude_id;
-      try { const el1 = this.$refs.selProfissionalEdicao; if (el1) window.destroyChoiceEl(el1); } catch (_) {}
+
       try {
         const pacNome = String(o?.paciente || "").trim();
         if (pacNome) {
@@ -981,16 +1168,12 @@ export default {
       try {
         const res = await window.axios.get(`/orcamentos/${o.id}`);
         const itens = Array.isArray(res?.data?.itens) ? res.data.itens : [];
-        try { this.orcamentoSelecionadoEdicao = { ...(this.orcamentoSelecionadoEdicao || {}), ...(res?.data?.orcamento || {}) }; } catch (_) {}
-        try {
-          const profId = res?.data?.orcamento?.profissional_saude_id ?? null;
-          if (profId != null) this.editAgendamentoForm.profissional_saude_id = Number(profId);
-        } catch (_) {}
         const ids = new Set(itens.map(it => it.procedimento_id));
         const filtered = (this.procedimentosLocal || []).filter(p => ids.has(p.id));
         const byProc = {};
         (itens || []).forEach(it => { byProc[String(it.procedimento_id)] = { valor_unitario: it.valor_unitario, valor_total: it.valor_total, quantidade: it.quantidade }; });
         this.itensOrcamentoPorProcedimentoEdicao = byProc;
+
         const scheduledProcId = this.procedimentoIdOriginalEdicao;
         let filteredList = filtered;
         if (scheduledProcId != null) {
@@ -1000,6 +1183,12 @@ export default {
           }
         }
         this.itensOrcamentoSelecionadoEdicao = [...itens];
+
+        const scheduledIdStr = this.procedimentoIdOriginalEdicao != null ? String(this.procedimentoIdOriginalEdicao) : null;
+        this.procedimentosFiltradosEdicao = (filteredList || []).map(p => {
+          return (scheduledIdStr != null && String(p.id) === scheduledIdStr) ? { ...p, nome: `${p.nome} (agendado)` } : p;
+        });
+
         let nextProcId = this.editAgendamentoForm.procedimento_id;
         const scheduledInBudget = scheduledProcId != null && ids.has(Number(scheduledProcId));
         if (scheduledInBudget) {
@@ -1009,43 +1198,90 @@ export default {
           nextProcId = first ? first.procedimento_id : null;
         }
         this.editAgendamentoForm.procedimento_id = nextProcId;
+
         const pid = this.editAgendamentoForm.procedimento_id;
         if (pid && this.itensOrcamentoPorProcedimentoEdicao[String(pid)]) {
           const item = this.itensOrcamentoPorProcedimentoEdicao[String(pid)];
           const v = item?.valor_unitario ?? item?.valor_total ?? null;
           this.editAgendamentoForm.valor_cobrado = v != null ? String(Number(v).toFixed(2)) : "";
-        } else {
-          this.editAgendamentoForm.valor_cobrado = "";
         }
-        const scheduledId = this.procedimentoIdOriginalEdicao != null ? String(this.procedimentoIdOriginalEdicao) : null;
-        const labeled = (filteredList || []).map(p => {
-          const isScheduled = scheduledId != null && String(p.id) === scheduledId;
-          return isScheduled ? { ...p, nome: `${p.nome} (agendado)` } : p;
-        });
-        this.procedimentosFiltradosEdicao = labeled;
-        try { const el2 = this.$refs.selProcedimentoEdicao; if (el2) window.destroyChoiceEl(el2); } catch (_) {}
-        this.renderProcedimentoEdicao = false;
-        this.chaveProcedimentoEdicao++;
+
         await this.$nextTick();
-        this.renderProcedimentoEdicao = true;
-        await this.$nextTick();
-        try { const elInit1 = this.$refs.selProfissionalEdicao; if (elInit1) window.initChoiceEl(elInit1); } catch (_) {}
-        try { const elInit2 = this.$refs.selProcedimentoEdicao; if (elInit2) window.initChoiceEl(elInit2); } catch (_) {}
-        try { const elSync1 = this.$refs.selProfissionalEdicao; if (elSync1) window.syncChoiceValue(elSync1, String(this.editAgendamentoForm.profissional_saude_id ?? '')); } catch (_) {}
-        try { const elSync2 = this.$refs.selProcedimentoEdicao; if (elSync2) window.syncChoiceValue(elSync2, String(this.editAgendamentoForm.procedimento_id ?? '')); } catch (_) {}
-        this.mostrarDropdownOrcamentoEdicao = false;
-        try { if (window.resumeChoicesObserver) window.resumeChoicesObserver(); } catch (_) {}
+
+        // Reinicializa os selects com os novos dados filtrados
+        try {
+          const el1 = this.$refs.selProfissionalEdicao;
+          const el2 = this.$refs.selProcedimentoEdicao;
+          if (el1) { window.destroyChoiceEl(el1); window.initChoiceEl(el1); }
+          if (el2) { window.destroyChoiceEl(el2); window.initChoiceEl(el2); }
+        } catch (e) {}
+
       } catch (e) {
         this.procedimentosFiltradosEdicao = [];
         this.itensOrcamentoSelecionadoEdicao = [];
         this.itensOrcamentoPorProcedimentoEdicao = {};
       } finally {
         this.carregandoItensOrcamentoEdicao = false;
-        try { if (window.resumeChoicesObserver) window.resumeChoicesObserver(); } catch (_) {}
       }
     },
-    aoAlterarProcedimentoEdicao() {
+    async aoAlterarProcedimentoEdicao() {
       const pid = this.editAgendamentoForm.procedimento_id;
+      const pidStr = pid != null ? String(pid) : "";
+      const now = Date.now();
+      if (pidStr && this.ultimoProcedimentoIdEdicao != null && String(this.ultimoProcedimentoIdEdicao) === pidStr && (now - (this.ultimoProcedimentoAtEdicao || 0)) < 300) {
+        return;
+      }
+      this.ultimoProcedimentoIdEdicao = pidStr || null;
+      this.ultimoProcedimentoAtEdicao = now;
+
+      // Se houver procedimento selecionado, buscar profissionais por especialidade no back
+      if (pid) {
+        try {
+          const resp = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
+            params: { procedimento_id: pid }
+          });
+          const list = resp?.data?.profissionais;
+          this.profissionaisFiltradosEdicao = Array.isArray(list) ? list : [];
+        } catch (e) {
+          this.profissionaisFiltradosEdicao = [];
+        }
+      } else {
+        this.profissionaisFiltradosEdicao = [];
+      }
+
+      if (pid && (!this.profissionaisFiltradosEdicao || this.profissionaisFiltradosEdicao.length === 0)) {
+        try {
+          const proc = (this.procedimentosLocal || []).find(p => String(p.id) === String(pid));
+          const espId = proc?.especialidade_id;
+          if (espId) {
+            this.profissionaisFiltradosEdicao = (this.profissionaisLocal || []).filter(prof => {
+              return (prof.especialidades || []).some(e => String(e.id) === String(espId));
+            });
+          }
+        } catch (_) {}
+      }
+
+      try {
+        const currentId = this.editAgendamentoForm.profissional_saude_id;
+        const list = Array.isArray(this.profissionaisFiltradosEdicao) ? this.profissionaisFiltradosEdicao : [];
+        const ok = currentId != null && list.some(p => String(p.id) === String(currentId));
+        if (!ok) {
+          this.editAgendamentoForm.profissional_saude_id = (list.length === 1) ? (list[0]?.id ?? null) : null;
+        }
+      } catch (_) {}
+
+      // Forçar atualização do select de profissional quando o procedimento mudar na edição
+      this.$nextTick(async () => {
+        try {
+          const el1 = this.$refs.selProfissionalEdicao;
+          if (el1) {
+            window.destroyChoiceEl(el1);
+            await this.$nextTick();
+            window.initChoiceEl(el1);
+          }
+        } catch (e) {}
+      });
+
       if (this.orcamentoSelecionadoEdicao && pid && this.itensOrcamentoPorProcedimentoEdicao && this.itensOrcamentoPorProcedimentoEdicao[String(pid)]) {
         const item = this.itensOrcamentoPorProcedimentoEdicao[String(pid)];
         const v = item?.valor_unitario ?? item?.valor_total ?? null;
@@ -1122,6 +1358,7 @@ export default {
           this.$page.props.flash = { ...fp, success: "Agendamento atualizado" };
         } catch (_) {}
         this.modalEditarVisivel = false;
+        await this.atualizarTabelaEventosDiaModal();
       } catch (e) {
         const msg = e?.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(' • ') : 'Falha ao atualizar';
         try {
@@ -1146,6 +1383,7 @@ export default {
           ev.setProp("classNames", ["bg-danger-subtle"]);
         }
         await this.buscarUltimosAgendamentos();
+        await this.atualizarTabelaEventosDiaModal();
         try {
           const fp = (this.$page?.props?.flash ?? {});
           this.$page.props.flash = { ...fp, success: "Agendamento cancelado" };
@@ -1158,6 +1396,52 @@ export default {
           const fp = (this.$page?.props?.flash ?? {});
           this.$page.props.flash = { ...fp, error: "Falha ao cancelar" };
         } catch (_) {}
+      }
+    },
+
+    podeReagendarSessaoTratamento() {
+      try {
+        const st = String(this.eventoSelecionado?.extendedProps?.status || "").toLowerCase();
+        const n = this.eventoSelecionado?.extendedProps?.sessao_numero ?? null;
+        return st.includes("cancel") && n != null;
+      } catch (e) {
+        return false;
+      }
+    },
+    async reagendarSessaoTratamento() {
+      if (!this.editAgendamentoForm?.id) return;
+      if (!this.podeReagendarSessaoTratamento()) return;
+      const payload = {
+        profissional_saude_id: this.editAgendamentoForm.profissional_saude_id,
+        data: this.editAgendamentoForm.data,
+        hora: this.editAgendamentoForm.hora,
+      };
+      this.processandoEdicao = true;
+      try {
+        const resp = await window.axios.put(`/agendamentos/${this.editAgendamentoForm.id}/reschedule-session`, payload);
+        const ag = resp?.data?.agendamento;
+        const api = this.$refs.fullCalendar?.getApi?.();
+        const ev = api?.getEventById?.(this.editAgendamentoForm.id);
+        if (ev && ag?.data && ag?.hora) {
+          ev.setStart(`${ag.data}T${String(ag.hora).slice(0, 5)}:00`);
+          ev.setExtendedProp("status", "");
+          ev.setProp("classNames", ["bg-primary-subtle"]);
+        }
+        await this.buscarUltimosAgendamentos();
+        await this.atualizarTabelaEventosDiaModal();
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, success: "Sessão reagendada" };
+        } catch (_) {}
+        this.modalEditarVisivel = false;
+      } catch (e) {
+        const msg = e?.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(' • ') : 'Falha ao reagendar';
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, error: String(msg || "Falha ao reagendar") };
+        } catch (_) {}
+      } finally {
+        this.processandoEdicao = false;
       }
     },
 
@@ -1434,14 +1718,10 @@ export default {
     async aoSelecionarOrcamento(o) {
       this.orcamentoSelecionado = { ...o };
       this.orcamentoSelecionadoId = o.id || null;
+      this.valorCobradoAutoCriacaoProcId = null;
 
       this.agendamentoForm.paciente_id =
         o.paciente_id || this.agendamentoForm.paciente_id;
-
-      this.agendamentoForm.profissional_saude_id =
-        o.profissional_saude_id || this.agendamentoForm.profissional_saude_id;
-      try { const el1 = this.$refs.selProfissionalCriacao; if (el1) window.destroyChoiceEl(el1); } catch (e) {}
-      this.chaveProfissionalCriacao++;
 
       try {
         const pacNome = String(o?.paciente || "").trim();
@@ -1453,9 +1733,6 @@ export default {
         }
         this.mostrarSugestoesPaciente = false;
       } catch (_) {}
-
-      // ❌ REMOVIDO (CAUSAVA O BUG)
-      // this.orcamentosPagos = [];
 
       try {
         const res = await window.axios.get(`/orcamentos/${o.id}`);
@@ -1487,48 +1764,121 @@ export default {
           chosenProcId = first ? first.procedimento_id : null;
         }
         this.agendamentoForm.procedimento_id = chosenProcId;
-        try { const el2 = this.$refs.selProcedimentoCriacao; if (el2) window.destroyChoiceEl(el2); } catch (e) {}
-        this.chaveProcedimentoCriacao++;
+
         const pid = this.agendamentoForm.procedimento_id;
         if (pid && this.itensOrcamentoPorProcedimento[String(pid)]) {
           const item = this.itensOrcamentoPorProcedimento[String(pid)];
           const v = item?.valor_unitario ?? item?.valor_total ?? null;
           this.agendamentoForm.valor_cobrado = v != null ? String(Number(v).toFixed(2)) : this.agendamentoForm.valor_cobrado;
         }
+
         await this.$nextTick();
-        try { const elInit1 = this.$refs.selProfissionalCriacao; if (elInit1) window.initChoiceEl(elInit1); } catch (e) {}
-        try { const elInit2 = this.$refs.selProcedimentoCriacao; if (elInit2) window.initChoiceEl(elInit2); } catch (e) {}
-        try { const el1 = this.$refs.selProfissionalCriacao; if (el1) window.syncChoiceValue(el1, String(this.agendamentoForm.profissional_saude_id ?? '')); } catch (e) {}
-        try { const el2 = this.$refs.selProcedimentoCriacao; if (el2) window.syncChoiceValue(el2, String(this.agendamentoForm.procedimento_id ?? '')); } catch (e) {}
+
+        // Reinicializa os selects com os novos dados filtrados
+        try {
+          const el1 = this.$refs.selProfissionalCriacao;
+          const el2 = this.$refs.selProcedimentoCriacao;
+          if (el1) { window.destroyChoiceEl(el1); window.initChoiceEl(el1); }
+          if (el2) { window.destroyChoiceEl(el2); window.initChoiceEl(el2); }
+        } catch (e) {}
+
       } catch {
         this.itensOrcamentoSelecionado = [];
         this.itensOrcamentoPorProcedimento = {};
         this.procedimentosFiltrados = [...(this.procedimentosLocal || [])];
       }
-      try { if (window.resumeChoicesObserver) window.resumeChoicesObserver(); } catch (_) {}
     },
-    aoAlterarProcedimento() {
+    async aoAlterarProcedimento() {
       const pid = this.agendamentoForm.procedimento_id;
+      const pidStr = pid != null ? String(pid) : "";
+      const now = Date.now();
+      if (pidStr && this.ultimoProcedimentoIdCriacao != null && String(this.ultimoProcedimentoIdCriacao) === pidStr && (now - (this.ultimoProcedimentoAtCriacao || 0)) < 300) {
+        return;
+      }
+      this.ultimoProcedimentoIdCriacao = pidStr || null;
+      this.ultimoProcedimentoAtCriacao = now;
+
+      // Se houver procedimento selecionado, buscar profissionais por especialidade no back
+      if (pid) {
+        try {
+          const resp = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
+            params: { procedimento_id: pid }
+          });
+          const list = resp?.data?.profissionais;
+          this.profissionaisFiltradosCriacao = Array.isArray(list) ? list : [];
+        } catch (e) {
+          this.profissionaisFiltradosCriacao = [];
+        }
+      } else {
+        this.profissionaisFiltradosCriacao = [];
+      }
+
+      if (pid && (!this.profissionaisFiltradosCriacao || this.profissionaisFiltradosCriacao.length === 0)) {
+        try {
+          const proc = (this.procedimentosLocal || []).find(p => String(p.id) === String(pid));
+          const espId = proc?.especialidade_id;
+          if (espId) {
+            this.profissionaisFiltradosCriacao = (this.profissionaisLocal || []).filter(prof => {
+              return (prof.especialidades || []).some(e => String(e.id) === String(espId));
+            });
+          }
+        } catch (_) {}
+      }
+
+      try {
+        const currentId = this.agendamentoForm.profissional_saude_id;
+        const list = Array.isArray(this.profissionaisFiltradosCriacao) ? this.profissionaisFiltradosCriacao : [];
+        const ok = currentId != null && list.some(p => String(p.id) === String(currentId));
+        if (!ok) {
+          this.agendamentoForm.profissional_saude_id = (list.length === 1) ? (list[0]?.id ?? null) : null;
+        }
+      } catch (_) {}
+
+      // Forçar atualização do select de profissional quando o procedimento mudar
+      this.$nextTick(async () => {
+        try {
+          const el1 = this.$refs.selProfissionalCriacao;
+          if (el1) {
+            window.destroyChoiceEl(el1);
+            await this.$nextTick();
+            window.initChoiceEl(el1);
+          }
+        } catch (e) {}
+      });
+
       if (this.orcamentoSelecionado && pid && this.itensOrcamentoPorProcedimento && this.itensOrcamentoPorProcedimento[String(pid)]) {
         const item = this.itensOrcamentoPorProcedimento[String(pid)];
         const v = item?.valor_unitario ?? item?.valor_total ?? null;
         this.agendamentoForm.valor_cobrado = v != null ? String(Number(v).toFixed(2)) : "";
       } else {
-        // mantém valor atual quando não há orçamento
+        try {
+          const proc = pid ? (this.procedimentosLocal || []).find(p => String(p.id) === String(pid)) : null;
+          const v = proc?.valor ?? null;
+          const deveAutopreencher = (this.agendamentoForm.valor_cobrado == null || String(this.agendamentoForm.valor_cobrado).trim() === "")
+            || (this.valorCobradoAutoCriacaoProcId != null);
+          if (v != null && deveAutopreencher) {
+            this.agendamentoForm.valor_cobrado = String(Number(v).toFixed(2));
+            this.valorCobradoAutoCriacaoProcId = pid != null ? String(pid) : null;
+          }
+        } catch (_) {}
       }
     },
+    aoDigitarValorCobradoCriacao() {
+      try { this.valorCobradoAutoCriacaoProcId = null; } catch (_) {}
+    },
     async salvarAgendamento() {
-      const basePayload = {
+      let basePayload = {
         paciente_id: this.agendamentoForm.paciente_id,
         profissional_saude_id: this.agendamentoForm.profissional_saude_id,
         procedimento_id: this.agendamentoForm.procedimento_id,
-        orcamento_id: this.orcamentoSelecionadoId || null,
+        orcamento_id: this.usarOrcamentoPagoCriacao ? (this.orcamentoSelecionadoId || null) : null,
         status_id: this.agendamentoForm.status_id,
         valor_cobrado: this.agendamentoForm.valor_cobrado ? Number(String(this.agendamentoForm.valor_cobrado).replace(/[^\d.,-]/g, '').replace(',', '.')) : null,
         observacoes: this.agendamentoForm.observacoes,
       };
       this.processandoCriacao = true;
       try {
+        let orcamentoGeradoId = this.usarOrcamentoPagoCriacao ? (this.orcamentoSelecionadoId || null) : null;
         let sessions = [];
         const pSel = (this.procedimentosLocal || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id));
         const isTrat = !!pSel?.eh_tratamento;
@@ -1540,11 +1890,15 @@ export default {
         }
         let createdCount = 0;
         for (const s of sessions) {
-          const payload = { ...basePayload, data: s.data, hora: s.hora };
+          const payload = { ...basePayload, orcamento_id: orcamentoGeradoId, data: s.data, hora: s.hora };
           const resp = await window.axios.post("/agendamentos", payload);
           const ag = resp?.data?.agendamento;
           if (ag) {
             createdCount++;
+            if (!orcamentoGeradoId && ag?.orcamento_id) {
+              orcamentoGeradoId = ag.orcamento_id;
+              basePayload = { ...basePayload, orcamento_id: orcamentoGeradoId };
+            }
             const procNome = (this.procedimentosLocal.find(pr => String(pr.id) === String(ag.procedimento_id))?.nome || 'Procedimento');
             const pacNome = (this.pacientesLocal.find(p => String(p.id) === String(ag.paciente_id))?.nome || 'Paciente');
             const title = `${pacNome} • ${procNome}`;
@@ -1556,7 +1910,7 @@ export default {
               allDay: false,
               className: "bg-success-subtle",
               classNames: ["bg-success-subtle"],
-              extendedProps: { paciente_id: ag.paciente_id, procedimento_id: ag.procedimento_id, procedimento_nome: procNome, observacoes: this.agendamentoForm.observacoes || "", orcamento_id: basePayload.orcamento_id || null }
+              extendedProps: { paciente_id: ag.paciente_id, procedimento_id: ag.procedimento_id, procedimento_nome: procNome, observacoes: this.agendamentoForm.observacoes || "", orcamento_id: ag.orcamento_id || basePayload.orcamento_id || null }
             });
             try { calendarApi.gotoDate(ag.data); } catch (e) {}
           }
@@ -1567,6 +1921,7 @@ export default {
         } catch (_) {}
         this.modalAgendarVisivel = false;
         this.agendamentoForm = { paciente_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
+        this.valorCobradoAutoCriacaoProcId = null;
         this.orcamentoSelecionado = null;
         this.orcamentoSelecionadoId = null;
         this.itensOrcamentoSelecionado = [];
@@ -1574,6 +1929,7 @@ export default {
         this.procedimentosFiltrados = [...(this.procedimentosLocal || [])];
         this.sessoesCriacao = [];
         await this.buscarUltimosAgendamentos();
+        await this.atualizarTabelaEventosDiaModal();
       } catch (e) {
         const msg = e?.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(' • ') : 'Falha ao agendar';
         try {
@@ -1814,7 +2170,14 @@ export default {
     <Modal :modelValue="modalAgendarVisivel" :title="editandoNoModalDeCriacao ? 'Editar Agendamento' : 'Novo Agendamento'" :nameButton="editandoNoModalDeCriacao ? 'Salvar' : 'Agendar'" :processing="editandoNoModalDeCriacao ? processandoEdicao : processandoCriacao" size="lg"
            @update:modelValue="modalAgendarVisivel = $event" @save="salvarAgendarOuEditar">
       <div class="row g-3">
-        <div class="col-md-6">
+        <div class="col-md-12">
+          <div class="form-check mb-0">
+            <input id="chkOrcamentoPagoCriacao" class="form-check-input" type="checkbox" v-model="usarOrcamentoPagoCriacao" />
+            <label class="form-check-label" for="chkOrcamentoPagoCriacao">Orçamento Pago</label>
+          </div>
+        </div>
+
+        <div :class="usarOrcamentoPagoCriacao ? 'col-md-6' : 'col-md-12'">
           <label class="form-label">Paciente</label>
           <SuggestInput
             v-model="termoBuscaPaciente"
@@ -1831,8 +2194,9 @@ export default {
             @select="selecionarSugestaoPaciente"
           />
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Orçamento Pago</label>
+
+        <div v-if="usarOrcamentoPagoCriacao" class="col-md-6">
+          <label class="form-label">Orçamento</label>
           <SuggestInput
             v-model="termoBuscaOrcamento"
             :suggestions="orcamentosPagos"
@@ -1846,17 +2210,18 @@ export default {
             @blur="onBlurSugestoesOrcamento"
             @select="selecionarSugestaoOrcamento"
           />
-          <!-- <div class="text-muted small mt-1" v-if="orcamentoSelecionado">Selecionado: {{ orcamentoSelecionado.numero }}</div> -->
         </div>
         <div class="col-md-6">
           <label class="form-label">Profissional</label>
-          <select :key="chaveProfissionalCriacao" ref="selProfissionalCriacao" v-model="agendamentoForm.profissional_saude_id" data-choices class="form-select" :disabled="!!orcamentoSelecionado">
+          <select ref="selProfissionalCriacao" v-model="agendamentoForm.profissional_saude_id" class="form-select">
+            <option :value="null">Selecione</option>
             <option v-for="d in listaProfissionaisCriacao" :key="d.id" :value="d.id">{{ d.nome }}</option>
           </select>
         </div>
         <div class="col-md-6">
           <label class="form-label">Procedimento</label>
-          <select :key="chaveProcedimentoCriacao" ref="selProcedimentoCriacao" v-model="agendamentoForm.procedimento_id" data-choices class="form-select" @change="aoAlterarProcedimento">
+          <select ref="selProcedimentoCriacao" v-model="agendamentoForm.procedimento_id" class="form-select" @change="aoAlterarProcedimento">
+            <option :value="null">Selecione</option>
             <option v-for="p in procedimentosFiltrados" :key="p.id" :value="p.id">{{ p.nome }}</option>
           </select>
         </div>
@@ -1877,7 +2242,7 @@ export default {
         </div>
         <div class="col-md-6">
           <label class="form-label">Valor Cobrado</label>
-          <input v-model="agendamentoForm.valor_cobrado" type="text" class="form-control" placeholder="0,00" :disabled="!!orcamentoSelecionado" />
+          <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao" type="text" class="form-control" placeholder="0,00" :disabled="!!orcamentoSelecionado" />
         </div>
         <div class="col-md-12">
           <label class="form-label">Observações</label>
@@ -1921,9 +2286,11 @@ export default {
            :title="tituloModalEventosDia"
            :nameButton="'Fechar'"
            :processing="false"
+           :disableClose="bloquearAcoesModalEventosDia"
            size="lg"
            @update:modelValue="modalEventosDiaVisivel = $event">
       <TableGrid
+        :key="chaveTabelaEventosDia"
         :columns="[{ id: 'id', name: 'ID' }, { id: 'paciente', name: 'Paciente' }, { id: 'procedimento', name: 'Procedimento' }, { id: 'medico', name: 'Médico' }, { id: 'hora', name: 'Hora' }, { id: 'status', name: 'Status' }]"
         :data="eventosDiaGrid()"
         :tableTitle="'Lista de agendamentos'"
@@ -1933,25 +2300,28 @@ export default {
         :showStatus="false"
         :showActions="true"
         :compactSpacing="true"
-        :actionsConfig="{ delete: true, edit: false, show: false, diary: false, print: false, download: false }"
-        :actionsLabels="{ delete: 'Cancelar' }"
-        :actionsButtonText="{ delete: 'Cancelar' }"
+        :disableActions="bloquearAcoesModalEventosDia"
+        :actionsLoading="acoesLoadingEventosDia"
+        :actionsConfig="{ delete: (row) => !String(row?.status || '').toLowerCase().includes('cancel'), edit: (row) => String(row?.status || '').toLowerCase().includes('cancel'), show: false, diary: false, print: false, download: false }"
+        :actionsLabels="{ delete: 'Cancelar', edit: 'Reagendar' }"
+        :actionsButtonText="{ delete: 'Cancelar', edit: 'Reagendar' }"
         :actionsIcons="{ delete: 'ri-close-line' }"
         @delete="cancelarAgendamentoPorId"
+        @edit="abrirReagendarSessaoDaLista"
       />
     </Modal>
 
-    <Modal :modelValue="modalEditarVisivel" title="Editar Agendamento" nameButton="Salvar" :processing="processandoEdicao" size="lg"
-           @update:modelValue="modalEditarVisivel = $event" @save="salvarEdicaoAgendamento">
+    <Modal :modelValue="modalEditarVisivel" :title="tituloModalEditarAgendamento" :nameButton="podeReagendarSessaoTratamento() ? 'Reagendar' : 'Salvar'" :processing="processandoEdicao" size="lg"
+           @update:modelValue="modalEditarVisivel = $event" @save="podeReagendarSessaoTratamento() ? reagendarSessaoTratamento() : salvarEdicaoAgendamento()">
       <div :key="chaveRenderizacaoModalEvento" class="row g-3">
-        <div class="col-md-6">
+        <div :class="podeReagendarSessaoTratamento() ? 'col-md-12' : 'col-md-6'">
           <label class="form-label">Paciente</label>
           <SuggestInput
             v-model="termoBuscaPacienteEdicao"
             :suggestions="pacientesSugestoesEdicao"
             :loading="false"
             :show="mostrarSugestoesPacienteEdicao"
-            :disabled="!!orcamentoSelecionadoEdicao"
+            :disabled="podeReagendarSessaoTratamento() || !!orcamentoSelecionadoEdicao"
             placeholder="Buscar paciente por nome ou CPF"
             keyPrefix="sug-pac-edit"
             primaryTextProp="nome"
@@ -1961,7 +2331,7 @@ export default {
             @select="selecionarSugestaoPacienteEdicao"
           />
         </div>
-        <div class="col-md-6">
+        <div v-if="!podeReagendarSessaoTratamento()" class="col-md-6">
           <label class="form-label">Orçamento Pago</label>
           <SuggestInput
             v-model="termoBuscaOrcamentoEdicao"
@@ -1980,13 +2350,15 @@ export default {
         </div>
         <div class="col-md-6">
           <label class="form-label">Profissional</label>
-          <select :key="orcamentoSelecionadoEdicao ? orcamentoSelecionadoEdicao.id : 'none'" ref="selProfissionalEdicao" v-model="editAgendamentoForm.profissional_saude_id" data-choices class="form-select" :disabled="!!orcamentoSelecionadoEdicao">
+          <select ref="selProfissionalEdicao" v-model="editAgendamentoForm.profissional_saude_id" class="form-select" :disabled="!!orcamentoSelecionadoEdicao">
+            <option :value="null">Selecione</option>
             <option v-for="d in listaProfissionaisEdicao" :key="d.id" :value="d.id">{{ d.nome }}</option>
           </select>
         </div>
         <div class="col-md-6">
           <label class="form-label">Procedimento</label>
-          <select v-if="renderProcedimentoEdicao" :key="chaveProcedimentoEdicao" ref="selProcedimentoEdicao" v-model="editAgendamentoForm.procedimento_id" data-choices class="form-select" @change="aoAlterarProcedimentoEdicao" :disabled="carregandoItensOrcamentoEdicao">
+          <select v-if="renderProcedimentoEdicao" ref="selProcedimentoEdicao" v-model="editAgendamentoForm.procedimento_id" class="form-select" @change="aoAlterarProcedimentoEdicao" :disabled="podeReagendarSessaoTratamento() || carregandoItensOrcamentoEdicao">
+            <option :value="null">Selecione</option>
             <option v-for="p in procedimentosFiltradosEdicao" :key="p.id" :value="p.id">{{ p.nome }}</option>
           </select>
         </div>
@@ -2000,14 +2372,14 @@ export default {
         </div>
         <div class="col-md-4">
           <label class="form-label">Status</label>
-          <select v-model="editAgendamentoForm.status_id" class="form-select">
+          <select v-model="editAgendamentoForm.status_id" class="form-select" :disabled="podeReagendarSessaoTratamento()">
             <option :value="null">Selecione</option>
             <option v-for="s in opcoesStatus" :key="s.id" :value="s.id">{{ s.descricao }}</option>
           </select>
         </div>
         <div class="col-md-6">
           <label class="form-label">Valor Cobrado</label>
-          <input v-model="editAgendamentoForm.valor_cobrado" type="text" class="form-control" placeholder="0,00" :disabled="!!orcamentoSelecionadoEdicao" />
+          <input v-model="editAgendamentoForm.valor_cobrado" type="text" class="form-control" placeholder="0,00" :disabled="podeReagendarSessaoTratamento() || !!orcamentoSelecionadoEdicao" />
         </div>
         <div class="col-md-12">
           <label class="form-label">Observações</label>
@@ -2015,7 +2387,7 @@ export default {
         </div>
       </div>
       <template #extraFooterLeft>
-        <button type="button" class="btn btn-outline-danger" @click="cancelarAgendamento">Cancelar agendamento</button>
+        <button v-if="!podeReagendarSessaoTratamento()" type="button" class="btn btn-outline-danger" @click="cancelarAgendamento">Cancelar agendamento</button>
       </template>
     </Modal>
   </Layout>

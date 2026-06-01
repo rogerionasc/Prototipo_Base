@@ -3,7 +3,7 @@
     <div>
       <div v-show="modelValue" class="modal-backdrop" :style="{ zIndex: backdropZIndex }"></div>
       <div id="myModal" class="modal zoomIn" :class="[showClass]" tabindex="9999"
-          aria-labelledby="myModalLabel" aria-hidden="true"
+          aria-labelledby="myModalLabel" role="dialog" :aria-modal="modelValue ? 'true' : 'false'" :aria-hidden="modelValue ? 'false' : 'true'"
           :style="{ display: modelValue ? 'block' : 'none', zIndex: zIndex }">
 
           <!-- Conteúdo principal do modal -->
@@ -12,7 +12,7 @@
               <div class="modal-header">
                 <h5 class="modal-title" id="myModalLabel">{{ title }}</h5>
                 <!-- Botão para fechar o modal -->
-                <button type="button" class="btn-close" @click="$emit('update:modelValue', false)"></button>
+                <button type="button" class="btn-close" :disabled="props.processing || props.disableClose" @click="$emit('update:modelValue', false)"></button>
               </div>
               <!-- Inserir uma linha aqui -->
               <hr class="text-muted">
@@ -25,8 +25,8 @@
                   <slot name="extraFooterLeft"></slot>
                 </div>
                 <div class="d-flex">
-                  <button type="button" class="btn btn-light" @click="$emit('update:modelValue', false)">Cancelar</button>
-                  <button type="button" class="btn btn-success ms-2" :disabled="props.processing" @click="$emit('save')">
+                  <button type="button" class="btn btn-light" :disabled="props.processing || props.disableClose" @click="$emit('update:modelValue', false)">Cancelar</button>
+                  <button type="button" class="btn btn-success ms-2" :disabled="props.processing || props.disableClose" @click="$emit('save')">
                     <span v-if="props.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                     {{ nameButton }}
                   </button>
@@ -64,6 +64,10 @@ const props = defineProps({
         default: 'lg'
     },
     processing: {
+        type: Boolean,
+        default: false
+    },
+    disableClose: {
         type: Boolean,
         default: false
     },

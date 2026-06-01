@@ -18,19 +18,19 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Profissional</label>
-                                <select data-choices v-model="form.profissional_saude_id" class="form-select"
-                                    :disabled="locked" ref="selProfissional">
-                                    <option :value="null">Selecione</option>
-                                    <option v-for="d in profissionaisLocal" :key="d.id" :value="d.id">{{ d.nome }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
                                 <label class="form-label">Convênio</label>
                                 <select data-choices v-model="form.convenio_id" class="form-select" ref="selConvenio"
                                     :disabled="locked">
                                     <option v-for="c in conveniosLocal" :key="c.id" :value="c.id">{{ c.descricao }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Procedimentos</label>
+                                <select v-model="selectedProcId" class="form-select" data-choices :disabled="locked"
+                                    @change="onSelectProcedure">
+                                    <option :value="null">Buscar procedimento</option>
+                                    <option v-for="p in procedimentosLocal" :key="p.id" :value="p.id">{{ p.nome }}
                                     </option>
                                 </select>
                             </div>
@@ -44,22 +44,11 @@
                                 <flatPickr v-model="form.validade" class="form-control" :config="flatpickrOptions"
                                     :disabled="locked" placeholder="Selecione a data" />
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <label class="form-label">Desconto (R$)</label>
                                 <input :value="formatCurrency(form.desconto)" type="text" class="form-control"
                                     :disabled="locked" @input="onCurrencyInputForm($event, 'desconto')" />
                             </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Procedimentos</label>
-                                <select v-model="selectedProcId" class="form-select" data-choices :disabled="locked"
-                                    @change="onSelectProcedure">
-                                    <option :value="null">Buscar procedimento</option>
-                                    <option v-for="p in procedimentosLocal" :key="p.id" :value="p.id">{{ p.nome }}
-                                    </option>
-                                </select>
-                            </div>
-
 
                             <div class="col-md-3 d-flex align-items-end">
                                 <div class="form-check">
@@ -248,12 +237,10 @@ import { html } from "gridjs";
 import OrcamentoPrint from "@/Pages/Atendimento/Orcamentos/OrcamentoPrint.vue";
 
 const selPaciente = ref(null);
-const selProfissional = ref(null);
 const selConvenio = ref(null);
 
 const props = defineProps({
     pacientes: { type: Array, default: () => [] },
-    profissionais: { type: Array, default: () => [] },
     convenios: { type: Array, default: () => [] },
     procedimentos: { type: Array, default: () => [] },
     procedimentoConvenio: { type: Array, default: () => [] },
@@ -261,7 +248,6 @@ const props = defineProps({
 });
 
 const pacientesLocal = ref([...(props.pacientes || [])]);
-const profissionaisLocal = ref([...(props.profissionais || [])]);
 const conveniosLocal = ref([...(props.convenios || [])]);
 const procedimentosLocal = ref([...(props.procedimentos || [])]);
 const procConvLocal = ref([...(props.procedimentoConvenio || [])]);
@@ -274,7 +260,6 @@ const approveSuccessInfo = ref({ numero: null });
 const approveSuccessId = ref(null);
 
 watch(() => props.pacientes, v => pacientesLocal.value = [...(v || [])]);
-watch(() => props.profissionais, v => profissionaisLocal.value = [...(v || [])]);
 watch(() => props.convenios, v => conveniosLocal.value = [...(v || [])]);
 watch(() => props.procedimentos, v => procedimentosLocal.value = [...(v || [])]);
 watch(() => props.procedimentoConvenio, v => procConvLocal.value = [...(v || [])]);
@@ -282,7 +267,6 @@ watch(() => props.ultimos, v => ultimosLocal.value = [...(v || [])]);
 
 const form = useForm({
     paciente_id: null,
-    profissional_saude_id: null,
     convenio_id: null,
     data_emissao: formatDMY(new Date()),
     validade: formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000)),
@@ -490,7 +474,6 @@ async function save() {
                     form.reset();
                     form.clearErrors();
                     form.paciente_id = null;
-                    form.profissional_saude_id = null;
                     form.convenio_id = null;
                     form.data_emissao = formatDMY(new Date());
                     form.validade = formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000));
@@ -511,7 +494,6 @@ async function save() {
                     form.reset();
                     form.clearErrors();
                     form.paciente_id = null;
-                    form.profissional_saude_id = null;
                     form.convenio_id = null;
                     form.data_emissao = formatDMY(new Date());
                     form.validade = formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000));
@@ -679,7 +661,6 @@ function carregarOrcamento(id) {
             isEditing.value = true;
             orcamentoEditId.value = o.id;
             form.paciente_id = o.paciente_id ?? null;
-            form.profissional_saude_id = o.profissional_saude_id ?? null;
             form.convenio_id = o.convenio_id ?? null;
             form.data_emissao = o.data_emissao || formatDMY(new Date());
             form.validade = o.validade || formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000));
@@ -699,7 +680,6 @@ function carregarOrcamento(id) {
                     const toStr = (v) => (v !== null && v !== undefined) ? String(v) : '';
                     if (window.syncChoiceValue) {
                         if (selPaciente?.value) window.syncChoiceValue(selPaciente.value, toStr(form.paciente_id));
-                        if (selProfissional?.value) window.syncChoiceValue(selProfissional.value, toStr(form.profissional_saude_id));
                         if (selConvenio?.value) window.syncChoiceValue(selConvenio.value, toStr(form.convenio_id));
                     }
                 } catch (e) { }
