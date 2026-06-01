@@ -11,7 +11,8 @@ return new class extends Migration
         if (!Schema::hasTable('movimentacoes_caixa')) {
             Schema::create('movimentacoes_caixa', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('caixa_id')->constrained('caixas')->cascadeOnDelete();
+                $table->foreignId('caixa_id')->constrained('caixas');
+                $table->foreignId('aberto_por_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->string('numero', 50)->unique();
                 $table->datetime('data_movimento');
                 $table->decimal('total_entradas', 12, 2)->default(0);
@@ -24,6 +25,8 @@ return new class extends Migration
                 $table->decimal('saldo_movimento', 12, 2)->default(0);
                 $table->decimal('valor_diferenca', 12, 2)->default(0);
                 $table->datetime('fechado_em')->nullable();
+                $table->foreignId('fechado_por_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('reaberto_por_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->text('observacoes_fechamento')->nullable();
                 $table->timestamps();
             });
@@ -35,4 +38,3 @@ return new class extends Migration
         Schema::dropIfExists('movimentacoes_caixa');
     }
 };
-

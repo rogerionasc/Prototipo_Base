@@ -158,10 +158,33 @@ window.autoSyncChoices = autoSyncChoices;
 function syncChoiceValue(el, value) {
     try {
         if (!el) return;
-        const v = value != null ? String(value) : '';
+        const isMultiple = el.hasAttribute('multiple');
         const inst = el._choicesInstance || el.choices;
-        el.value = v;
-        if (inst && typeof inst.setChoiceByValue === 'function') inst.setChoiceByValue(v);
+        if (isMultiple) {
+            let vals = [];
+            if (Array.isArray(value)) {
+                vals = value.map(v => String(v)).filter(Boolean);
+            } else {
+                const s = value != null ? String(value) : '';
+                if (s.includes(',')) {
+                    vals = s.split(',').map(x => String(x).trim()).filter(Boolean);
+                } else {
+                    vals = Array.from(el.selectedOptions || []).map(o => String(o.value)).filter(Boolean);
+                }
+            }
+            if (inst && typeof inst.removeActiveItems === 'function') {
+                try { inst.removeActiveItems(); } catch (_) {}
+            }
+            if (inst && typeof inst.setChoiceByValue === 'function') {
+                inst.setChoiceByValue(vals);
+            } else {
+                Array.from(el.options || []).forEach(opt => { opt.selected = vals.includes(String(opt.value)); });
+            }
+        } else {
+            const v = value != null ? String(value) : '';
+            el.value = v;
+            if (inst && typeof inst.setChoiceByValue === 'function') inst.setChoiceByValue(v);
+        }
         el.dispatchEvent(new Event('change', { bubbles: true }));
     } catch (e) {
         console.error('Choices sync error:', e);

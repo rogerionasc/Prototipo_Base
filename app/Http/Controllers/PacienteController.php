@@ -58,18 +58,17 @@ class PacienteController extends Controller
               ->join('convenios as cv', 'cv.id', '=', 'pc.convenio_id')
               ->whereColumn('pc.paciente_id', 'pacientes.id')
               ->where('pc.ativo', 1)
-              ->orderByDesc('pc.id')
-              ->limit(1)
-              ->select('cv.descricao');
+              ->whereNull('pc.deleted_at')
+              ->whereNull('cv.deleted_at')
+              ->select(DB::raw("GROUP_CONCAT(DISTINCT cv.descricao ORDER BY cv.descricao SEPARATOR ', ')"));
         }, 'convenio')
         ->selectSub(function ($q) {
             $q->from('paciente_convenio as pc')
               ->whereColumn('pc.paciente_id', 'pacientes.id')
               ->where('pc.ativo', 1)
-              ->orderByDesc('pc.id')
-              ->limit(1)
-              ->select('pc.convenio_id');
-        }, 'convenio_id')
+              ->whereNull('pc.deleted_at')
+              ->select(DB::raw("GROUP_CONCAT(DISTINCT pc.convenio_id ORDER BY pc.convenio_id SEPARATOR ',')"));
+        }, 'convenio_ids')
         ->selectSub(function ($q) {
             $q->from('paciente_responsavel as pr')
               ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
@@ -197,6 +196,8 @@ class PacienteController extends Controller
             'tipo_sanguineo_id' => ['nullable', 'integer', 'exists:tipo_sanguineo,id'],
             'observacoes' => ['nullable', 'string'],
             'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
+            'convenio_ids' => ['nullable', 'array'],
+            'convenio_ids.*' => ['integer', 'exists:convenios,id'],
         ], [
             'cpf.unique' => 'O CPF informado já está cadastrado.',
             'cpf.required' => 'O campo CPF é obrigatório.',
@@ -206,6 +207,8 @@ class PacienteController extends Controller
             'canal_aviso_id.exists' => 'Selecione um canal de aviso válido.',
             'tipo_sanguineo_id.exists' => 'Selecione um tipo sanguíneo válido.',
             'convenio_id.exists' => 'Selecione um convênio válido.',
+            'convenio_ids.array' => 'Selecione convênios válidos.',
+            'convenio_ids.*.exists' => 'Selecione convênios válidos.',
         ]);
 
         // dd($data);
@@ -270,15 +273,36 @@ class PacienteController extends Controller
             }
         }
 
-        if (!empty($data['convenio_id'])) {
+        $convenioIds = [];
+        if (array_key_exists('convenio_ids', $data) && is_array($data['convenio_ids'])) {
+            $convenioIds = array_values(array_unique(array_filter(array_map('intval', $data['convenio_ids']))));
+        } elseif (!empty($data['convenio_id'])) {
+            $convenioIds = [(int)$data['convenio_id']];
+        }
+        if (array_key_exists('convenio_ids', $data) || array_key_exists('convenio_id', $data)) {
+            $now = now();
             DB::table('paciente_convenio')
                 ->where('paciente_id', $paciente->id)
-                ->update(['ativo' => false]);
-            DB::table('paciente_convenio')
-                ->updateOrInsert(
-                    ['paciente_id' => $paciente->id, 'convenio_id' => $data['convenio_id']],
-                    ['ativo' => true]
-                );
+                ->update(['ativo' => false, 'updated_at' => $now]);
+            foreach ($convenioIds as $cid) {
+                $updated = DB::table('paciente_convenio')
+                    ->where('paciente_id', $paciente->id)
+                    ->where('convenio_id', $cid)
+                    ->update(['ativo' => true, 'deleted_at' => null, 'updated_at' => $now]);
+                if (!$updated) {
+                    DB::table('paciente_convenio')->insert([
+                        'paciente_id' => $paciente->id,
+                        'convenio_id' => $cid,
+                        'numero_carteira' => null,
+                        'plano' => null,
+                        'validade' => null,
+                        'ativo' => true,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                        'deleted_at' => null,
+                    ]);
+                }
+            }
         }
 
         return back()->with('success', 'Paciente salvo com sucesso');
@@ -331,6 +355,8 @@ class PacienteController extends Controller
             'tipo_sanguineo_id' => ['nullable', 'integer', 'exists:tipo_sanguineo,id'],
             'observacoes' => ['nullable', 'string'],
             'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
+            'convenio_ids' => ['nullable', 'array'],
+            'convenio_ids.*' => ['integer', 'exists:convenios,id'],
         ], [
             'cpf.unique' => 'O CPF informado já está cadastrado.',
             'cpf.required' => 'O campo CPF é obrigatório.',
@@ -340,6 +366,8 @@ class PacienteController extends Controller
             'canal_aviso_id.exists' => 'Selecione um canal de aviso válido.',
             'tipo_sanguineo_id.exists' => 'Selecione um tipo sanguíneo válido.',
             'convenio_id.exists' => 'Selecione um convênio válido.',
+            'convenio_ids.array' => 'Selecione convênios válidos.',
+            'convenio_ids.*.exists' => 'Selecione convênios válidos.',
         ]);
 
         $responsavelData = $request->validate([
@@ -438,20 +466,35 @@ class PacienteController extends Controller
             // Mantém o vínculo na tabela pivô para futura restauração.
         }
 
-        if (array_key_exists('convenio_id', $data)) {
-            if (!empty($data['convenio_id'])) {
-                DB::table('paciente_convenio')
+        if (array_key_exists('convenio_ids', $data) || array_key_exists('convenio_id', $data)) {
+            $convenioIds = [];
+            if (array_key_exists('convenio_ids', $data) && is_array($data['convenio_ids'])) {
+                $convenioIds = array_values(array_unique(array_filter(array_map('intval', $data['convenio_ids']))));
+            } elseif (!empty($data['convenio_id'])) {
+                $convenioIds = [(int)$data['convenio_id']];
+            }
+            $now = now();
+            DB::table('paciente_convenio')
+                ->where('paciente_id', $paciente->id)
+                ->update(['ativo' => false, 'updated_at' => $now]);
+            foreach ($convenioIds as $cid) {
+                $updated = DB::table('paciente_convenio')
                     ->where('paciente_id', $paciente->id)
-                    ->update(['ativo' => false]);
-                DB::table('paciente_convenio')
-                    ->updateOrInsert(
-                        ['paciente_id' => $paciente->id, 'convenio_id' => $data['convenio_id']],
-                        ['ativo' => true]
-                    );
-            } else {
-                DB::table('paciente_convenio')
-                    ->where('paciente_id', $paciente->id)
-                    ->update(['ativo' => false]);
+                    ->where('convenio_id', $cid)
+                    ->update(['ativo' => true, 'deleted_at' => null, 'updated_at' => $now]);
+                if (!$updated) {
+                    DB::table('paciente_convenio')->insert([
+                        'paciente_id' => $paciente->id,
+                        'convenio_id' => $cid,
+                        'numero_carteira' => null,
+                        'plano' => null,
+                        'validade' => null,
+                        'ativo' => true,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                        'deleted_at' => null,
+                    ]);
+                }
             }
         }
 
@@ -480,6 +523,31 @@ class PacienteController extends Controller
         }
         Paciente::whereIn('id', $ids)->delete();
         return back()->with('success', 'Pacientes excluídos com sucesso');
+    }
+
+    public function convenios(string $id)
+    {
+        $pid = (int)$id;
+
+        $convenios = DB::table('paciente_convenio as pc')
+            ->join('convenios as c', 'c.id', '=', 'pc.convenio_id')
+            ->select(
+                'c.id',
+                'c.descricao',
+                'pc.numero_carteira',
+                'pc.plano',
+                DB::raw("DATE_FORMAT(pc.validade, '%d-%m-%Y') AS validade")
+            )
+            ->where('pc.paciente_id', $pid)
+            ->where('pc.ativo', 1)
+            ->whereNull('pc.deleted_at')
+            ->whereNull('c.deleted_at')
+            ->orderBy('c.descricao')
+            ->get();
+
+        return response()->json([
+            'convenios' => $convenios,
+        ]);
     }
 
     private function isValidCpf(string $cpf): bool

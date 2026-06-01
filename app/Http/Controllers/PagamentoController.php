@@ -585,6 +585,8 @@ class PagamentoController extends Controller
             'status' => 'pendente',
             'confirmado' => false,
             'data_pagamento' => null,
+            'recusa_justificativa' => null,
+            'recusado_por' => null,
         ]);
         return back()->with('success', 'Recusa cancelada. Pagamento retornou para pendentes');
     }

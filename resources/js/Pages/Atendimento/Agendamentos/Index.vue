@@ -79,6 +79,7 @@ export default {
       opcoesStatus: [],
       agendamentoForm: {
         paciente_id: null,
+        convenio_id: null,
         profissional_saude_id: null,
         procedimento_id: null,
         data: "",
@@ -87,6 +88,8 @@ export default {
         valor_cobrado: "",
         observacoes: ""
       },
+      conveniosPacienteCriacao: [],
+      carregandoConveniosPacienteCriacao: false,
       sessoesCriacao: [],
       termoBuscaPaciente: "",
       mostrarSugestoesPaciente: false,
@@ -328,6 +331,9 @@ export default {
   watch: {
     usarOrcamentoPagoCriacao(nv) {
       if (nv) {
+        try { this.agendamentoForm.convenio_id = null; } catch (_) {}
+        try { this.conveniosPacienteCriacao = []; } catch (_) {}
+        try { const el0 = this.$refs.selConvenioCriacao; if (el0) window.destroyChoiceEl(el0); } catch (_) {}
         try { this.buscarOrcamentosPorPaciente(); } catch (_) {}
         return;
       }
@@ -340,6 +346,14 @@ export default {
       try { this.itensOrcamentoPorProcedimento = {}; } catch (_) {}
       try { this.procedimentosFiltrados = [...(this.procedimentosLocal || [])]; } catch (_) {}
       try { this.valorCobradoAutoCriacaoProcId = null; } catch (_) {}
+      try { this.carregarConveniosPacienteCriacao(); } catch (_) {}
+      this.$nextTick(() => {
+        try { const el0 = this.$refs.selConvenioCriacao; if (el0) window.initChoiceEl(el0); } catch (_) {}
+      });
+    },
+    "agendamentoForm.paciente_id"(nv) {
+      if (this.usarOrcamentoPagoCriacao) return;
+      try { this.carregarConveniosPacienteCriacao(); } catch (_) {}
     },
     orcamentoSelecionadoId(nv) {
       const v = nv != null ? String(nv) : "";
@@ -529,6 +543,12 @@ export default {
           }
           const st = String(ev?.extendedProps?.status || "").trim();
           const medNome = String(ev?.extendedProps?.profissional_nome || "").trim();
+          const pgConf = !!ev?.extendedProps?.pagamento_confirmado;
+          const pgStRaw = String(ev?.extendedProps?.pagamento_status || "").trim().toLowerCase();
+          const pgSt = pgConf ? "Confirmado"
+            : (pgStRaw === "pendente" ? "Pendente"
+            : (pgStRaw === "recusado" ? "Recusado"
+            : (pgStRaw ? pgStRaw : "—")));
           return {
             id: ev?.id,
             paciente: pacNome || "Paciente",
@@ -536,6 +556,7 @@ export default {
             hora: this.formatHora24(ev?.start) || "--:--",
             status: st || "Agendado",
             medico: medNome || "Profissional",
+            pagamento: pgSt,
           };
         });
       } catch (e) {
@@ -689,6 +710,42 @@ export default {
       this.mostrarSugestoesPaciente = false;
       if (this.usarOrcamentoPagoCriacao) {
         this.buscarOrcamentosPorPaciente();
+      }
+    },
+    async carregarConveniosPacienteCriacao() {
+      if (this.usarOrcamentoPagoCriacao) {
+        this.conveniosPacienteCriacao = [];
+        this.agendamentoForm.convenio_id = null;
+        return;
+      }
+      const pid = this.agendamentoForm.paciente_id;
+      if (!pid) {
+        this.conveniosPacienteCriacao = [];
+        this.agendamentoForm.convenio_id = null;
+        return;
+      }
+      this.carregandoConveniosPacienteCriacao = true;
+      try {
+        const resp = await window.axios.get(`/pacientes/${pid}/convenios`);
+        const arr = Array.isArray(resp?.data?.convenios) ? resp.data.convenios : [];
+        this.conveniosPacienteCriacao = arr;
+        const cid = this.agendamentoForm.convenio_id;
+        if (cid && !arr.some((c) => String(c.id) === String(cid))) {
+          this.agendamentoForm.convenio_id = null;
+        }
+      } catch (e) {
+        this.conveniosPacienteCriacao = [];
+        this.agendamentoForm.convenio_id = null;
+      } finally {
+        this.carregandoConveniosPacienteCriacao = false;
+        await this.$nextTick();
+        try {
+          const el0 = this.$refs.selConvenioCriacao;
+          if (el0) {
+            window.destroyChoiceEl(el0);
+            window.initChoiceEl(el0);
+          }
+        } catch (_) {}
       }
     },
     onBlurSugestoesPacienteEdicao() {
@@ -884,16 +941,22 @@ export default {
       this.termoBuscaOrcamento = "";
       this.mostrarSugestoesOrcamento = false;
       this.orcamentosPagos = [];
+      try { const el0 = this.$refs.selConvenioCriacao; if (el0) window.destroyChoiceEl(el0); } catch (_) {}
       try { const el1 = this.$refs.selProfissionalCriacao; if (el1) window.destroyChoiceEl(el1); } catch (_) {}
       try { const el2 = this.$refs.selProcedimentoCriacao; if (el2) window.destroyChoiceEl(el2); } catch (_) {}
       this.chaveProfissionalCriacao++;
       this.chaveProcedimentoCriacao++;
       try { if (window.resumeChoicesObserver) window.resumeChoicesObserver(); } catch (_) {}
       this.modalAgendarVisivel = true;
+      this.$nextTick(() => {
+        try { const elInit0 = this.$refs.selConvenioCriacao; if (elInit0) window.initChoiceEl(elInit0); } catch (_) {}
+        try { const elInit1 = this.$refs.selProfissionalCriacao; if (elInit1) window.initChoiceEl(elInit1); } catch (_) {}
+        try { const elInit2 = this.$refs.selProcedimentoCriacao; if (elInit2) window.initChoiceEl(elInit2); } catch (_) {}
+      });
     },
     abrirNovoAgendamento() {
       this.editandoNoModalDeCriacao = false;
-      this.agendamentoForm = { paciente_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
+      this.agendamentoForm = { paciente_id: null, convenio_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
       this.termoBuscaPaciente = "";
       this.mostrarSugestoesPaciente = false;
       this.usarOrcamentoPagoCriacao = false;
@@ -902,11 +965,14 @@ export default {
       this.termoBuscaOrcamento = "";
       this.mostrarSugestoesOrcamento = false;
       this.orcamentosPagos = [];
+      this.conveniosPacienteCriacao = [];
       this.procedimentosFiltrados = [...(this.procedimentosLocal || [])];
+      try { const el0 = this.$refs.selConvenioCriacao; if (el0) window.destroyChoiceEl(el0); } catch (_) {}
       try { const el1 = this.$refs.selProfissionalCriacao; if (el1) window.destroyChoiceEl(el1); } catch (_) {}
       try { const el2 = this.$refs.selProcedimentoCriacao; if (el2) window.destroyChoiceEl(el2); } catch (_) {}
       this.modalAgendarVisivel = true;
       this.$nextTick(() => {
+        try { const elInit0 = this.$refs.selConvenioCriacao; if (elInit0) window.initChoiceEl(elInit0); } catch (_) {}
         try { const elInit1 = this.$refs.selProfissionalCriacao; if (elInit1) window.initChoiceEl(elInit1); } catch (_) {}
         try { const elInit2 = this.$refs.selProcedimentoCriacao; if (elInit2) window.initChoiceEl(elInit2); } catch (_) {}
       });
@@ -1872,7 +1938,8 @@ export default {
         profissional_saude_id: this.agendamentoForm.profissional_saude_id,
         procedimento_id: this.agendamentoForm.procedimento_id,
         orcamento_id: this.usarOrcamentoPagoCriacao ? (this.orcamentoSelecionadoId || null) : null,
-        status_id: this.agendamentoForm.status_id,
+        convenio_id: !this.usarOrcamentoPagoCriacao && this.agendamentoForm.convenio_id ? Number(this.agendamentoForm.convenio_id) : null,
+        status_id: null,
         valor_cobrado: this.agendamentoForm.valor_cobrado ? Number(String(this.agendamentoForm.valor_cobrado).replace(/[^\d.,-]/g, '').replace(',', '.')) : null,
         observacoes: this.agendamentoForm.observacoes,
       };
@@ -2002,7 +2069,19 @@ export default {
             title,
             start,
             classNames: [cls],
-            extendedProps: { paciente_id: r.paciente_id, procedimento_id: r.procedimento_id, procedimento_nome: r.procedimento || "", status: r.status || "", observacoes: r.observacoes || "", createdEm: r.criado_em || "", sessao_numero: r.sessao_numero ?? null, sessao_total: r.sessao_total ?? null }
+            extendedProps: {
+              paciente_id: r.paciente_id,
+              procedimento_id: r.procedimento_id,
+              orcamento_id: r.orcamento_id ?? null,
+              procedimento_nome: r.procedimento || "",
+              status: r.status || "",
+              pagamento_status: r.pagamento_status || "",
+              pagamento_confirmado: !!r.pagamento_confirmado,
+              observacoes: r.observacoes || "",
+              createdEm: r.criado_em || "",
+              sessao_numero: r.sessao_numero ?? null,
+              sessao_total: r.sessao_total ?? null
+            }
           };
         });
         this.eventosAtuais = events;
@@ -2069,7 +2148,7 @@ export default {
 
 <template>
   <Layout>
-    <PageHeader title="Agendamento" pageTitle="Apps" />
+    <PageHeader title="Agendamento" pageTitle="Recepção" />
 
     <BRow>
       <BCol cols="12">
@@ -2211,6 +2290,17 @@ export default {
             @select="selecionarSugestaoOrcamento"
           />
         </div>
+
+        <div v-if="!usarOrcamentoPagoCriacao" class="col-md-12">
+          <label class="form-label">Convênio</label>
+          <select ref="selConvenioCriacao" v-model="agendamentoForm.convenio_id" class="form-select" :disabled="!agendamentoForm.paciente_id || carregandoConveniosPacienteCriacao">
+            <option :value="null">Particular</option>
+            <option v-for="c in conveniosPacienteCriacao" :key="c.id" :value="c.id">{{ c.descricao }}</option>
+          </select>
+          <div v-if="agendamentoForm.paciente_id && !carregandoConveniosPacienteCriacao && (!conveniosPacienteCriacao || conveniosPacienteCriacao.length === 0)" class="text-muted small mt-1">
+            Paciente sem convênio ativo
+          </div>
+        </div>
         <div class="col-md-6">
           <label class="form-label">Profissional</label>
           <select ref="selProfissionalCriacao" v-model="agendamentoForm.profissional_saude_id" class="form-select">
@@ -2234,13 +2324,6 @@ export default {
           <flatPickr v-model="agendamentoForm.hora" class="form-control" :config="opcoesFlatpickrHora" placeholder="Selecione a hora" />
         </div>
         <div class="col-md-4">
-          <label class="form-label">Status</label>
-          <select v-model="agendamentoForm.status_id" class="form-select">
-            <option :value="null">Selecione</option>
-            <option v-for="s in opcoesStatus" :key="s.id" :value="s.id">{{ s.descricao }}</option>
-          </select>
-        </div>
-        <div class="col-md-6">
           <label class="form-label">Valor Cobrado</label>
           <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao" type="text" class="form-control" placeholder="0,00" :disabled="!!orcamentoSelecionado" />
         </div>
@@ -2287,11 +2370,11 @@ export default {
            :nameButton="'Fechar'"
            :processing="false"
            :disableClose="bloquearAcoesModalEventosDia"
-           size="lg"
+           size="xl"
            @update:modelValue="modalEventosDiaVisivel = $event">
       <TableGrid
         :key="chaveTabelaEventosDia"
-        :columns="[{ id: 'id', name: 'ID' }, { id: 'paciente', name: 'Paciente' }, { id: 'procedimento', name: 'Procedimento' }, { id: 'medico', name: 'Médico' }, { id: 'hora', name: 'Hora' }, { id: 'status', name: 'Status' }]"
+        :columns="[{ id: 'id', name: 'ID' }, { id: 'paciente', name: 'Paciente' }, { id: 'procedimento', name: 'Procedimento' }, { id: 'medico', name: 'Médico' }, { id: 'hora', name: 'Hora' }, { id: 'status', name: 'Status' }, { id: 'pagamento', name: 'Pagamento' }]"
         :data="eventosDiaGrid()"
         :tableTitle="'Lista de agendamentos'"
         :search="true"

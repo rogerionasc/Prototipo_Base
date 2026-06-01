@@ -20,12 +20,15 @@ class Pagamento extends Model
         'data_pagamento',
         'confirmado',
         'status',
+        'recusa_justificativa',
+        'recusado_por',
     ];
 
     protected $casts = [
         'valor' => 'decimal:2',
         'confirmado' => 'boolean',
-        'data_pagamento' => 'date',
+        'data_pagamento' => 'datetime',
+        'recusado_por' => 'integer',
     ];
 
     public function orcamento()

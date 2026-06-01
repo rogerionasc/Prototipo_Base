@@ -180,9 +180,10 @@ function onSavePaciente() {
                 if (idx !== -1) {
                     const existing = pacientesLocal.value[idx];
                     const selectedConvenioDesc = (() => {
-                        const cid = f.convenio_id != null && f.convenio_id !== '' ? String(f.convenio_id) : '';
-                        const cobj = (props.convenios || []).find(cv => String(cv.id) === cid);
-                        return cobj?.descricao || existing?.convenio || '';
+                        const ids = Array.isArray(f.convenio_ids) ? f.convenio_ids.map(String).filter(Boolean) : [];
+                        if (!ids.length) return '';
+                        const descs = ids.map((cid) => (props.convenios || []).find(cv => String(cv.id) === String(cid))?.descricao).filter(Boolean);
+                        return descs.join(', ');
                     })();
                     pacientesLocal.value[idx] = {
                         ...existing,
@@ -196,7 +197,7 @@ function onSavePaciente() {
                         canal_aviso_id: f.canal_aviso_id ?? '',
                         receber_avisos: !!f.receber_avisos,
                         tem_responsavel: !!f.tem_responsavel,
-                        convenio_id: f.convenio_id ?? '',
+                        convenio_ids: Array.isArray(f.convenio_ids) ? f.convenio_ids.map(String).filter(Boolean).join(',') : '',
                         convenio: selectedConvenioDesc,
                         rg: f.rg || '',
                         naturalidade: f.naturalidade || '',
@@ -309,7 +310,7 @@ async function openModalEdit(id) {
         f.celular = p.celular || '';
         f.data_nascimento = p.data_nascimento || '';
         f.naturalidade = p.naturalidade || '';
-        f.convenio_id = p.convenio_id ?? '';
+        f.convenio_ids = String(p.convenio_ids || '').split(',').map(s => String(s || '').trim()).filter(Boolean);
         f.sexo = p.sexo || '';
         f.receber_avisos = !!p.receber_avisos;
         f.tem_responsavel = !!p.tem_responsavel;

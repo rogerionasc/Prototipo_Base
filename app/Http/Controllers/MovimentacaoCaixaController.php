@@ -22,6 +22,7 @@ class MovimentacaoCaixaController extends Controller
                  ->select(
                      'id',
                      'numero',
+                     'aberto_por_id',
                      DB::raw("DATE_FORMAT(data_movimento, '%d-%m-%Y') AS data_movimento"),
                      DB::raw("DATE_FORMAT(created_at, '%H:%i') AS hora_abertura")
                  )
@@ -33,6 +34,8 @@ class MovimentacaoCaixaController extends Controller
             ->select(
                 'm.id',
                 'm.numero',
+                'm.aberto_por_id',
+                'm.fechado_por_id',
                 DB::raw("DATE_FORMAT(m.data_movimento, '%d-%m-%Y') AS data_movimento"),
                 DB::raw("DATE_FORMAT(m.created_at, '%H:%i') AS hora_abertura"),
                 DB::raw("DATE_FORMAT(m.fechado_em, '%H:%i') AS hora_fechamento"),
@@ -53,6 +56,8 @@ class MovimentacaoCaixaController extends Controller
             ->select(
                 'm.id',
                 'm.numero',
+                'm.aberto_por_id',
+                'm.fechado_por_id',
                 DB::raw("DATE_FORMAT(m.data_movimento, '%d-%m-%Y') AS data_movimento"),
                 DB::raw("DATE_FORMAT(m.created_at, '%H:%i') AS hora_abertura"),
                 DB::raw("DATE_FORMAT(m.fechado_em, '%H:%i') AS hora_fechamento"),
@@ -134,6 +139,7 @@ class MovimentacaoCaixaController extends Controller
                 'p.confirmado',
                 'p.status',
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
+                DB::raw("COALESCE(pa.cpf,'') AS paciente_documento"),
                 DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y %H:%i') AS data_orcamento")
             )
             ->where('p.confirmado', false)
@@ -167,6 +173,7 @@ class MovimentacaoCaixaController extends Controller
         $saldoInicial = (float)($data['saldo_caixa'] ?? 0);
         MovimentacaoCaixa::create([
             'caixa_id' => (int)$data['caixa_id'],
+            'aberto_por_id' => auth()->id(),
             'numero' => $numero,
             'data_movimento' => Carbon::today()->format('Y-m-d'),
             'total_entradas' => 0,
@@ -203,6 +210,7 @@ class MovimentacaoCaixaController extends Controller
             'valor_diferenca' => $valorDif,
             'observacoes_fechamento' => $data['observacoes_fechamento'] ?? $mov->observacoes_fechamento,
             'fechado_em' => now(),
+            'fechado_por_id' => auth()->id(),
         ]);
         return back()->with('success', 'Caixa fechado com sucesso');
     }
@@ -224,6 +232,8 @@ class MovimentacaoCaixaController extends Controller
 
         $mov->update([
             'fechado_em' => null,
+            'fechado_por_id' => null,
+            'reaberto_por_id' => auth()->id(),
         ]);
 
         return back()->with('success', 'Movimentação reaberta com sucesso');
@@ -239,9 +249,15 @@ class MovimentacaoCaixaController extends Controller
     {
         $mov = DB::table('movimentacoes_caixa as m')
             ->leftJoin('caixas as c', 'c.id', '=', 'm.caixa_id')
+            ->leftJoin('users as ua', 'ua.id', '=', 'm.aberto_por_id')
+            ->leftJoin('users as uf', 'uf.id', '=', 'm.fechado_por_id')
             ->select(
                 'm.id',
                 'm.numero',
+                'm.aberto_por_id',
+                'm.fechado_por_id',
+                DB::raw("NULLIF(TRIM(CONCAT(COALESCE(ua.nome,''),' ',COALESCE(ua.sobrenome,''))), '') AS aberto_por"),
+                DB::raw("NULLIF(TRIM(CONCAT(COALESCE(uf.nome,''),' ',COALESCE(uf.sobrenome,''))), '') AS fechado_por"),
                 DB::raw("DATE_FORMAT(m.data_movimento, '%d-%m-%Y') AS data_movimento"),
                 DB::raw("DATE_FORMAT(m.created_at, '%d-%m-%Y') AS data_abertura"),
                 DB::raw("DATE_FORMAT(m.created_at, '%H:%i') AS hora_abertura"),

@@ -56,13 +56,15 @@
                             {{ form.errors.estado_civil_id }}
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <label for="convenio" class="form-label">Convênio</label>
-                        <select v-model="form.convenio_id" data-choices class="form-select" id="convenio"
-                            ref="convenioSelect">
-                            <option selected disabled value="">Selecione...</option>
+                        <select v-model="form.convenio_ids" multiple data-choices class="form-select" id="convenio"
+                            ref="convenioSelect" :class="{ 'is-invalid': (form.errors.convenio_ids || form.errors['convenio_ids.0']) }">
                             <option v-for="cv in convenios" :key="cv.id" :value="cv.id">{{ cv.descricao }}</option>
                         </select>
+                        <div class="invalid-feedback">
+                            {{ form.errors.convenio_ids || form.errors['convenio_ids.0'] }}
+                        </div>
                     </div>
                     <div class="col-md-2">
                         <label for="altura" class="form-label">Altura (m)</label>
@@ -128,14 +130,6 @@
                             {{ form.errors.canal_aviso_id }}
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <label for="receberAvisos" class="form-label">Receber Avisos</label>
-                        <div class="form-check">
-                            <input v-model="form.receber_avisos" class="form-check-input" type="checkbox"
-                                id="receberAvisos">
-                            <label class="form-check-label" for="receberAvisos">Sim</label>
-                        </div>
-                    </div>
                     <div class="col-md-6">
                         <label for="nomeMae" class="form-label">Nome da Mãe</label>
                         <input v-model="form.nome_mae" type="text" class="form-control" id="nomeMae"
@@ -146,12 +140,20 @@
                         <input v-model="form.nome_pai" type="text" class="form-control" id="nomePai"
                             placeholder="Nome do pai" maxlength="120">
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <label for="temResponsavel" class="form-label">Paciente possui responsável?</label>
                         <div class="form-check">
                             <input v-model="form.tem_responsavel" class="form-check-input" type="checkbox"
                                 id="temResponsavel">
                             <label class="form-check-label" for="temResponsavel">Sim</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="receberAvisos" class="form-label">Receber Avisos</label>
+                        <div class="form-check">
+                            <input v-model="form.receber_avisos" class="form-check-input" type="checkbox"
+                                id="receberAvisos">
+                            <label class="form-check-label" for="receberAvisos">Sim</label>
                         </div>
                     </div>
 
@@ -262,6 +264,48 @@ const tipoSanguineoSelect = ref(null);
 const canalAvisoSelect = ref(null);
 const convenioSelect = ref(null);
 const parentescoSelect = ref(null);
+const sincronizandoConvenios = ref(false);
+function normalizeIds(values) {
+    const arr = Array.isArray(values) ? values : [];
+    return arr.map(v => String(v)).map(v => v.trim()).filter(Boolean).sort();
+}
+function idsIguais(a, b) {
+    const aa = normalizeIds(a);
+    const bb = normalizeIds(b);
+    if (aa.length !== bb.length) return false;
+    for (let i = 0; i < aa.length; i++) {
+        if (aa[i] !== bb[i]) return false;
+    }
+    return true;
+}
+function getSelectedValues(el) {
+    try {
+        if (!el) return [];
+        return Array.from(el.selectedOptions || []).map(o => String(o.value)).filter(v => v !== "");
+    } catch (e) {
+        return [];
+    }
+}
+function syncMultiChoiceValue(el, values) {
+    if (sincronizandoConvenios.value) return;
+    try {
+        if (!el) return;
+        const vals = Array.isArray(values) ? values.map(v => String(v)) : [];
+        const inst = el._choicesInstance || el.choices;
+        sincronizandoConvenios.value = true;
+        if (inst && typeof inst.removeActiveItems === 'function') {
+            try { inst.removeActiveItems(); } catch (_) {}
+        }
+        if (inst && typeof inst.setChoiceByValue === 'function') {
+            inst.setChoiceByValue(vals);
+        } else {
+            Array.from(el.options || []).forEach(opt => { opt.selected = vals.includes(String(opt.value)); });
+        }
+    } catch (e) {}
+    finally {
+        sincronizandoConvenios.value = false;
+    }
+}
 const form = useForm({
     nome: "",
     cpf: "",
@@ -270,7 +314,7 @@ const form = useForm({
     data_nascimento: "",
     naturalidade: "",
     estado_civil_id: "",
-    convenio_id: "",
+    convenio_ids: [],
     altura: null,
     peso: null,
     cor_pele: "",
@@ -305,7 +349,14 @@ watch(() => form.sexo, async (v) => { await nextTick(); if (window.syncChoiceVal
 watch(() => form.estado_civil_id, async (v) => { await nextTick(); if (window.syncChoiceValue && estadoCivilSelect.value) window.syncChoiceValue(estadoCivilSelect.value, v != null ? String(v) : ""); }, { immediate: true });
 watch(() => form.tipo_sanguineo_id, async (v) => { await nextTick(); if (window.syncChoiceValue && tipoSanguineoSelect.value) window.syncChoiceValue(tipoSanguineoSelect.value, v != null ? String(v) : ""); }, { immediate: true });
 watch(() => form.canal_aviso_id, async (v) => { await nextTick(); if (window.syncChoiceValue && canalAvisoSelect.value) window.syncChoiceValue(canalAvisoSelect.value, v != null ? String(v) : ""); }, { immediate: true });
-watch(() => form.convenio_id, async (v) => { await nextTick(); if (window.syncChoiceValue && convenioSelect.value) window.syncChoiceValue(convenioSelect.value, v != null ? String(v) : ""); }, { immediate: true });
+watch(() => form.convenio_ids, async (v) => {
+    await nextTick();
+    if (!convenioSelect.value) return;
+    if (sincronizandoConvenios.value) return;
+    const domVals = getSelectedValues(convenioSelect.value);
+    if (idsIguais(domVals, v || [])) return;
+    syncMultiChoiceValue(convenioSelect.value, v || []);
+}, { immediate: true, deep: true });
 watch(() => form.responsavel_parentesco_id, async (v) => { await nextTick(); if (window.syncChoiceValue && parentescoSelect.value) window.syncChoiceValue(parentescoSelect.value, v != null ? String(v) : ""); }, { immediate: true });
 const submit = (onSuccess, hooks = {}) => {
     if (formEl.value && !formEl.value.checkValidity()) {
@@ -345,7 +396,7 @@ const syncChoices = async () => {
     if (window.syncChoiceValue && estadoCivilSelect.value) window.syncChoiceValue(estadoCivilSelect.value, form.estado_civil_id != null && form.estado_civil_id !== '' ? String(form.estado_civil_id) : "");
     if (window.syncChoiceValue && tipoSanguineoSelect.value) window.syncChoiceValue(tipoSanguineoSelect.value, form.tipo_sanguineo_id != null && form.tipo_sanguineo_id !== '' ? String(form.tipo_sanguineo_id) : "");
     if (window.syncChoiceValue && canalAvisoSelect.value) window.syncChoiceValue(canalAvisoSelect.value, form.canal_aviso_id != null && form.canal_aviso_id !== '' ? String(form.canal_aviso_id) : "");
-    if (window.syncChoiceValue && convenioSelect.value) window.syncChoiceValue(convenioSelect.value, form.convenio_id != null && form.convenio_id !== '' ? String(form.convenio_id) : "");
+    if (convenioSelect.value) syncMultiChoiceValue(convenioSelect.value, form.convenio_ids || []);
     if (window.syncChoiceValue && parentescoSelect.value) window.syncChoiceValue(parentescoSelect.value, form.responsavel_parentesco_id != null && form.responsavel_parentesco_id !== '' ? String(form.responsavel_parentesco_id) : "");
 };
 defineExpose({ submit, submitUpdate, form, syncChoices, processingRef: toRef(form, "processing") });
@@ -357,13 +408,18 @@ onMounted(async () => {
     if (estadoCivilSelect.value) estadoCivilSelect.value.addEventListener("change", (e) => { form.estado_civil_id = e?.target?.value ?? form.estado_civil_id; });
     if (tipoSanguineoSelect.value) tipoSanguineoSelect.value.addEventListener("change", (e) => { form.tipo_sanguineo_id = e?.target?.value ?? form.tipo_sanguineo_id; });
     if (canalAvisoSelect.value) canalAvisoSelect.value.addEventListener("change", (e) => { form.canal_aviso_id = e?.target?.value ?? form.canal_aviso_id; });
-    if (convenioSelect.value) convenioSelect.value.addEventListener("change", (e) => { form.convenio_id = e?.target?.value ?? form.convenio_id; });
+    if (convenioSelect.value) convenioSelect.value.addEventListener("change", () => {
+        if (sincronizandoConvenios.value) return;
+        const vals = getSelectedValues(convenioSelect.value);
+        if (idsIguais(vals, form.convenio_ids || [])) return;
+        form.convenio_ids = vals;
+    });
     if (parentescoSelect.value) parentescoSelect.value.addEventListener("change", (e) => { form.responsavel_parentesco_id = e?.target?.value ?? form.responsavel_parentesco_id; });
     if (window.syncChoiceValue && sexoSelect.value) window.syncChoiceValue(sexoSelect.value, form.sexo || "");
     if (window.syncChoiceValue && estadoCivilSelect.value) window.syncChoiceValue(estadoCivilSelect.value, form.estado_civil_id != null && form.estado_civil_id !== '' ? String(form.estado_civil_id) : "");
     if (window.syncChoiceValue && tipoSanguineoSelect.value) window.syncChoiceValue(tipoSanguineoSelect.value, form.tipo_sanguineo_id != null && form.tipo_sanguineo_id !== '' ? String(form.tipo_sanguineo_id) : "");
     if (window.syncChoiceValue && canalAvisoSelect.value) window.syncChoiceValue(canalAvisoSelect.value, form.canal_aviso_id != null && form.canal_aviso_id !== '' ? String(form.canal_aviso_id) : "");
-    if (window.syncChoiceValue && convenioSelect.value) window.syncChoiceValue(convenioSelect.value, form.convenio_id != null && form.convenio_id !== '' ? String(form.convenio_id) : "");
+    if (convenioSelect.value) syncMultiChoiceValue(convenioSelect.value, form.convenio_ids || []);
     if (window.syncChoiceValue && parentescoSelect.value) window.syncChoiceValue(parentescoSelect.value, form.responsavel_parentesco_id != null && form.responsavel_parentesco_id !== '' ? String(form.responsavel_parentesco_id) : "");
 });
 </script>

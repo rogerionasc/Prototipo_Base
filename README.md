@@ -211,7 +211,6 @@ Usuário padrão:
 
 ```mermaid
 ---
----
 config:
   look: neo
   theme: neo-dark
@@ -245,9 +244,11 @@ erDiagram
 		INT movimentacao_id FK
 		DECIMAL valor
 		VARCHAR forma_pagamento
-		DATE data_pagamento
+		DATETIME data_pagamento
 		BOOLEAN confirmado
 		VARCHAR status
+		TEXT recusa_justificativa
+		INT recusado_por FK
 		DATETIME created_at
 		DATETIME updated_at
 	}
@@ -255,8 +256,9 @@ erDiagram
 	MOVIMENTACOES_CAIXA {
 		INT id PK
 		INT caixa_id FK
+		INT aberto_por_id FK
 		VARCHAR numero
-		DATE data_movimento
+		DATETIME data_movimento
 		DECIMAL total_entradas
 		DECIMAL total_saidas
 		DECIMAL saldo_caixa
@@ -266,8 +268,10 @@ erDiagram
 		DECIMAL total_conferencia
 		DECIMAL saldo_movimento
 		DECIMAL valor_diferenca
-		TEXT observacoes_fechamento
 		DATETIME fechado_em
+		INT fechado_por_id FK
+		INT reaberto_por_id FK
+		TEXT observacoes_fechamento
 		DATETIME created_at
 		DATETIME updated_at
 	}
@@ -687,25 +691,12 @@ erDiagram
 	MOVIMENTACOES_CAIXA ||--o{ PAGAMENTOS : "lança"
     MOVIMENTACOES_CAIXA ||--o{ CONFERENCIAS : "possui"
 	CAIXAS ||--o{ CONFERENCIAS : "é_conferido"
+	USUARIOS||--o{PAGAMENTOS:"recusa"
+	USUARIOS||--o{MOVIMENTACOES_CAIXA:"abre"
+	USUARIOS||--o{MOVIMENTACOES_CAIXA:"fecha"
+	USUARIOS||--o{MOVIMENTACOES_CAIXA:"reabre"
                     
 ```
-
-# Atualização de Banco Existente
-
-Para bases já instaladas, aplicar as alterações diretamente no banco:
-
-```sql
-ALTER TABLE pagamentos
-  ADD COLUMN movimentacao_id BIGINT UNSIGNED NULL AFTER caixa_id;
-
-ALTER TABLE pagamentos
-  ADD CONSTRAINT pagamentos_movimentacao_id_foreign
-  FOREIGN KEY (movimentacao_id) REFERENCES movimentacoes_caixa(id) ON DELETE SET NULL;
-
-ALTER TABLE movimentacoes_caixa
-  ADD COLUMN fechado_em DATETIME NULL AFTER observacoes_fechamento;
-```
-
 
 # Licença
 

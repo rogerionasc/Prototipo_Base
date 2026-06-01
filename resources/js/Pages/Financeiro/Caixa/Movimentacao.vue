@@ -67,7 +67,7 @@
             <div class="d-flex align-items-center justify-content-between mb-2">
               <h5 class="mb-0">Pagamentos Pendentes</h5>
               <div class="search-box" style="width: 280px;">
-                <input v-model="pendentesQuery" type="text" class="form-control search" placeholder="Buscar por paciente, forma ou emissão" />
+                <input v-model="pendentesQuery" type="text" class="form-control search" placeholder="Buscar por paciente, documento ou emissão" />
                 <i class="ri-search-line search-icon"></i>
               </div>
             </div>
@@ -77,8 +77,8 @@
                 <thead>
                   <tr>
                     <th class="text-muted small">Paciente</th>
+                    <th class="text-muted small">Documento</th>
                     <th class="text-muted small text-end">Valor</th>
-                    <th class="text-muted small">Forma</th>
                     <th class="text-muted small">Emissão</th>
                     <th class="text-muted small text-end">Ações</th>
                   </tr>
@@ -86,8 +86,8 @@
                 <tbody>
                   <tr v-for="(row, idx) in pagamentosFiltered" :key="row.id">
                     <td>{{ row.paciente }}</td>
+                    <td class="text-muted">{{ row.paciente_documento || "—" }}</td>
                     <td class="text-end">{{ formatCurrency(row.valor) }}</td>
-                    <td class="text-muted">{{ row.forma_pagamento || "—" }}</td>
                     <td>{{ row.data_orcamento || "—" }}</td>
                     <td class="text-end">
                       <BDropdown
@@ -436,9 +436,22 @@
             <tbody>
               <tr><td style="width:220px;">Caixa</td><td>{{ movView.caixa || "—" }}</td></tr>
               <tr><td>Número</td><td>{{ movView.numero || "—" }}</td></tr>
-              <tr><td>Data do Movimento</td><td>{{ movView.data_movimento || "—" }}</td></tr>
-              <tr><td>Abertura</td><td>{{ movView.data_abertura || "—" }} {{ movView.hora_abertura || "" }}</td></tr>
-              <tr><td>Fechamento</td><td>{{ movView.data_fechamento || "—" }} {{ movView.hora_fechamento || "" }}</td></tr>
+              <tr>
+                <td>Abertura / Fechamento</td>
+                <td>
+                  {{ movView.data_abertura || "—" }} {{ movView.hora_abertura || "" }}
+                  <span class="mx-2">|</span>
+                  {{ movView.data_fechamento || "—" }} {{ movView.hora_fechamento || "" }}
+                </td>
+              </tr>
+              <tr>
+                <td>Aberto por / Fechado por</td>
+                <td>
+                  {{ movView.aberto_por || "—" }}
+                  <span class="mx-2">|</span>
+                  {{ movView.fechado_por || "—" }}
+                </td>
+              </tr>
               <tr><td>Status</td><td>{{ movView.fechado_em ? "Fechado" : "Aberto" }}</td></tr>
             </tbody>
           </table>

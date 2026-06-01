@@ -23,7 +23,7 @@ export default {
                 },
                 {
                     icon: "ri-calendar-check-line",
-                    title: this.$t("t-customer"),
+                    title: this.$t("t-receptionist"),
                     type: "link",
                     target: "#atendimentos",
                     children: [

@@ -13,6 +13,7 @@ class MovimentacaoCaixa extends Model
 
     protected $fillable = [
         'caixa_id',
+        'aberto_por_id',
         'numero',
         'data_movimento',
         'total_entradas',
@@ -26,6 +27,8 @@ class MovimentacaoCaixa extends Model
         'valor_diferenca',
         'observacoes_fechamento',
         'fechado_em',
+        'fechado_por_id',
+        'reaberto_por_id',
     ];
 
     protected $casts = [
@@ -40,6 +43,9 @@ class MovimentacaoCaixa extends Model
         'saldo_movimento' => 'decimal:2',
         'valor_diferenca' => 'decimal:2',
         'fechado_em' => 'datetime',
+        'aberto_por_id' => 'integer',
+        'fechado_por_id' => 'integer',
+        'reaberto_por_id' => 'integer',
     ];
 
     public function caixa()

@@ -124,6 +124,7 @@ class AgendamentoController extends Controller
             'valor_cobrado' => ['nullable','numeric','min:0'],
             'observacoes' => ['nullable','string'],
             'orcamento_id' => ['nullable','integer','exists:orcamentos,id'],
+            'convenio_id' => ['nullable','integer','exists:convenios,id'],
         ]);
 
         $dt = Carbon::createFromFormat('Y-m-d', $data['data'])->startOfDay();
@@ -161,8 +162,25 @@ class AgendamentoController extends Controller
             $procId = (int)$data['procedimento_id'];
             $pacId = (int)$data['paciente_id'];
             $valorCobrado = $data['valor_cobrado'] ?? null;
+            $convenioId = empty($orcamentoId) ? ($data['convenio_id'] ?? null) : null;
 
             if (empty($orcamentoId)) {
+                if (!empty($convenioId)) {
+                    $hasConvenio = DB::table('paciente_convenio')
+                        ->where('paciente_id', $pacId)
+                        ->where('convenio_id', (int)$convenioId)
+                        ->where('ativo', 1)
+                        ->whereNull('deleted_at')
+                        ->exists();
+                    if (!$hasConvenio) {
+                        throw new HttpResponseException(response()->json([
+                            'errors' => [
+                                'convenio_id' => ['Convênio inválido para este paciente.']
+                            ]
+                        ], 422));
+                    }
+                }
+
                 $proc = Procedimento::select('id','valor')->findOrFail($procId);
                 $valorUnit = $valorCobrado ?? ($proc->valor ?? 0);
                 $valorBruto = (float)$valorUnit;
@@ -174,7 +192,7 @@ class AgendamentoController extends Controller
                     'data_emissao' => Carbon::now()->format('Y-m-d H:i:s'),
                     'validade' => now()->addDays(30)->toDateString(),
                     'paciente_id' => $pacId,
-                    'convenio_id' => null,
+                    'convenio_id' => $convenioId,
                     'valor_bruto' => $valorBruto,
                     'desconto' => 0,
                     'valor_total' => $valorTotal,
@@ -318,11 +336,14 @@ class AgendamentoController extends Controller
                 'a.paciente_id',
                 'a.procedimento_id',
                 'a.sessao_tratamento_id',
+                'a.orcamento_id',
                 DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
                 DB::raw('COALESCE(pr.quantidade_sessoes, NULL) AS sessao_total'),
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE(pr.nome,'') AS procedimento"),
                 DB::raw("COALESCE(s.descricao,'') AS status"),
+                DB::raw("(SELECT pg.status FROM pagamentos AS pg WHERE pg.orcamento_id = a.orcamento_id ORDER BY pg.id DESC LIMIT 1) AS pagamento_status"),
+                DB::raw("(SELECT pg.confirmado FROM pagamentos AS pg WHERE pg.orcamento_id = a.orcamento_id ORDER BY pg.id DESC LIMIT 1) AS pagamento_confirmado"),
                 'a.observacoes',
                 DB::raw("DATE_FORMAT(a.created_at, '%d/%m %H:%i') AS criado_em")
             )
