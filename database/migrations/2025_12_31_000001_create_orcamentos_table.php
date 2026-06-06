@@ -21,14 +21,56 @@ return new class extends Migration
             $table->decimal('valor_avista', 10, 2)->nullable();
             $table->boolean('faturamento_previsto')->default(false);
             $table->boolean('aprovado')->default(false);
+            $table->string('status', 20)->default('ABERTO');
             $table->timestamps();
             $table->softDeletes();
         });
+
+        if (!Schema::hasTable('faturamentos')) {
+            Schema::create('faturamentos', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
+                $table->foreignId('orcamento_id')->constrained('orcamentos')->cascadeOnDelete();
+                $table->string('tipo_pagador', 20)->default('PARTICULAR');
+                $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();
+                $table->decimal('valor_total', 10, 2)->default(0);
+                $table->decimal('valor_final', 10, 2)->default(0);
+                $table->decimal('valor_cobrado', 10, 2)->default(0);
+                $table->decimal('valor_aprovado', 10, 2)->default(0);
+                $table->decimal('valor_glosado', 10, 2)->default(0);
+                $table->string('status', 30)->default('AGUARDANDO_PAGAMENTO');
+                $table->datetime('data_faturamento')->nullable();
+                $table->date('vencimento')->nullable();
+                $table->timestamps();
+
+                $table->unique('orcamento_id');
+                $table->index(['paciente_id', 'status']);
+                $table->index(['convenio_id', 'status']);
+            });
+        }
+
+        if (!Schema::hasTable('contas_receber')) {
+            Schema::create('contas_receber', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('faturamento_id')->constrained('faturamentos')->cascadeOnDelete();
+                $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
+                $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();
+                $table->decimal('valor', 10, 2)->default(0);
+                $table->date('vencimento')->nullable();
+                $table->string('status', 20)->default('ABERTO');
+                $table->timestamps();
+
+                $table->index(['paciente_id', 'status']);
+                $table->index(['faturamento_id', 'status']);
+                $table->index(['convenio_id', 'status']);
+            });
+        }
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('contas_receber');
+        Schema::dropIfExists('faturamentos');
         Schema::dropIfExists('orcamentos');
     }
 };
-

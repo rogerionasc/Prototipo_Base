@@ -16,6 +16,52 @@ use Inertia\Inertia;
 
 class PacienteController extends Controller
 {
+    private function getConveniosAtivosDoPaciente(int $pacienteId)
+    {
+        return DB::table('paciente_convenio as pc')
+            ->join('convenios as c', 'c.id', '=', 'pc.convenio_id')
+            ->select(
+                'c.id',
+                'c.descricao',
+                'pc.numero_carteira',
+                'pc.plano',
+                DB::raw("DATE_FORMAT(pc.validade, '%d-%m-%Y') AS validade")
+            )
+            ->where('pc.paciente_id', $pacienteId)
+            ->where('pc.ativo', 1)
+            ->whereNull('pc.deleted_at')
+            ->whereNull('c.deleted_at')
+            ->orderBy('c.descricao')
+            ->get();
+    }
+
+    private function pacientesSearchRows(string $q)
+    {
+        $query = DB::table('pacientes as p')
+            ->select('p.id', 'p.nome', 'p.cpf')
+            ->whereNull('p.deleted_at');
+
+        $qDigits = preg_replace('/\D/', '', $q);
+        $qId = ctype_digit($q) ? (int)$q : 0;
+
+        $query->where(function ($w) use ($q, $qDigits, $qId) {
+            if ($qId > 0) {
+                $w->orWhere('p.id', $qId);
+            }
+            $w->orWhere('p.nome', 'like', '%' . $q . '%');
+            if ($qDigits !== '') {
+                $w->orWhereRaw("REPLACE(REPLACE(p.cpf, '.', ''), '-', '') LIKE ?", ['%' . $qDigits . '%']);
+            } else {
+                $w->orWhere('p.cpf', 'like', '%' . $q . '%');
+            }
+        });
+
+        return $query
+            ->orderBy('p.nome')
+            ->limit(30)
+            ->get();
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -528,25 +574,23 @@ class PacienteController extends Controller
     public function convenios(string $id)
     {
         $pid = (int)$id;
-
-        $convenios = DB::table('paciente_convenio as pc')
-            ->join('convenios as c', 'c.id', '=', 'pc.convenio_id')
-            ->select(
-                'c.id',
-                'c.descricao',
-                'pc.numero_carteira',
-                'pc.plano',
-                DB::raw("DATE_FORMAT(pc.validade, '%d-%m-%Y') AS validade")
-            )
-            ->where('pc.paciente_id', $pid)
-            ->where('pc.ativo', 1)
-            ->whereNull('pc.deleted_at')
-            ->whereNull('c.deleted_at')
-            ->orderBy('c.descricao')
-            ->get();
+        $convenios = $this->getConveniosAtivosDoPaciente($pid);
 
         return response()->json([
             'convenios' => $convenios,
+        ]);
+    }
+
+    public function search(Request $request)
+    {
+        $q = trim((string)$request->query('q', ''));
+        if ($q === '') {
+            return response()->json(['pacientes' => []]);
+        }
+        $rows = $this->pacientesSearchRows($q);
+
+        return response()->json([
+            'pacientes' => $rows,
         ]);
     }
 

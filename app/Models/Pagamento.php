@@ -12,13 +12,12 @@ class Pagamento extends Model
     protected $table = 'pagamentos';
 
     protected $fillable = [
-        'orcamento_id',
+        'faturamento_id',
         'caixa_id',
         'movimentacao_id',
         'valor',
         'forma_pagamento',
         'data_pagamento',
-        'confirmado',
         'status',
         'recusa_justificativa',
         'recusado_por',
@@ -26,15 +25,10 @@ class Pagamento extends Model
 
     protected $casts = [
         'valor' => 'decimal:2',
-        'confirmado' => 'boolean',
         'data_pagamento' => 'datetime',
         'recusado_por' => 'integer',
+        'faturamento_id' => 'integer',
     ];
-
-    public function orcamento()
-    {
-        return $this->belongsTo(Orcamento::class, 'orcamento_id');
-    }
 
     public function caixa()
     {

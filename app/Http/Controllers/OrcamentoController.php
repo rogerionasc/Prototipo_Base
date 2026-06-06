@@ -14,12 +14,122 @@ use App\Models\Convenio;
 use App\Models\Procedimento;
 use App\Models\Pagamento;
 use App\Models\MovimentacaoCaixa;
+use Illuminate\Validation\ValidationException;
 
 class OrcamentoController extends Controller
 {
+    private function resolvePayorByConvenioId(?int $convenioId): array
+    {
+        if (empty($convenioId)) {
+            return ['tipo_pagador' => 'PARTICULAR', 'convenio_id' => null];
+        }
+        $tipo = Convenio::where('id', $convenioId)->value('tipo');
+        if (strtoupper((string)$tipo) === 'PARTICULAR') {
+            return ['tipo_pagador' => 'PARTICULAR', 'convenio_id' => null];
+        }
+        return ['tipo_pagador' => 'CONVENIO', 'convenio_id' => $convenioId];
+    }
+
+    private function validationRules(): array
+    {
+        return [
+            'paciente_id' => ['required', 'integer', 'exists:pacientes,id'],
+            'convenio_id' => ['required', 'integer', 'exists:convenios,id'],
+            'data_emissao' => ['nullable', 'date_format:d-m-Y'],
+            'validade' => ['nullable', 'date_format:d-m-Y'],
+            'desconto' => ['nullable', 'numeric', 'min:0'],
+            'faturamento_previsto' => ['nullable', 'boolean'],
+            'aprovado' => ['nullable', 'boolean'],
+            'itens' => ['required', 'array', 'min:1'],
+            'itens.*.procedimento_id' => ['required', 'integer', 'exists:procedimentos,id'],
+            'itens.*.quantidade' => ['required', 'integer', 'min:1'],
+            'itens.*.observacoes' => ['nullable', 'string'],
+        ];
+    }
+
+    private function validationMessages(): array
+    {
+        return [
+            'paciente_id.required' => 'Informe o paciente.',
+            'paciente_id.exists' => 'Selecione um paciente válido.',
+            'convenio_id.required' => 'Informe o convênio.',
+            'convenio_id.exists' => 'Selecione um convênio válido.',
+            'itens.required' => 'Selecione ao menos um procedimento.',
+            'itens.array' => 'Selecione ao menos um procedimento.',
+            'itens.min' => 'Selecione ao menos um procedimento.',
+            'itens.*.procedimento_id.required' => 'Informe o procedimento.',
+            'itens.*.procedimento_id.exists' => 'Selecione um procedimento válido.',
+            'itens.*.quantidade.required' => 'Informe a quantidade.',
+            'itens.*.quantidade.min' => 'A quantidade deve ser maior que zero.',
+        ];
+    }
+
+    private function validateOrcamentoPayload(Request $request): array
+    {
+        return $request->validate($this->validationRules(), $this->validationMessages());
+    }
+
+    private function assertPacienteConvenioAtivo(int $pacienteId, int $convenioId): void
+    {
+        $ok = DB::table('paciente_convenio as pc')
+            ->join('convenios as cv', 'cv.id', '=', 'pc.convenio_id')
+            ->where('pc.paciente_id', $pacienteId)
+            ->where('pc.convenio_id', $convenioId)
+            ->where('pc.ativo', 1)
+            ->whereNull('pc.deleted_at')
+            ->whereNull('cv.deleted_at')
+            ->exists();
+        if (!$ok) {
+            throw ValidationException::withMessages([
+                'convenio_id' => ['Selecione um convênio válido para este paciente.'],
+            ]);
+        }
+    }
+
+    private function getProcedimentoConvenioMap(int $convenioId): array
+    {
+        $map = [];
+        $rows = DB::table('procedimento_convenio')
+            ->where('convenio_id', $convenioId)
+            ->select('procedimento_id', 'valor_convenio')
+            ->get();
+        foreach ($rows as $r) {
+            $map[(string)$r->procedimento_id] = $r->valor_convenio;
+        }
+        return $map;
+    }
+
+    private function calcularItensValores(array $itens, int $convenioId): array
+    {
+        $valorBruto = 0.0;
+        $itensValores = [];
+        $mapConvenio = $this->getProcedimentoConvenioMap($convenioId);
+
+        foreach ($itens as $idx => $item) {
+            $proc = Procedimento::select('id', 'valor')->findOrFail($item['procedimento_id']);
+            $valorUnit = $proc->valor ?? 0;
+            $k = (string)$proc->id;
+            if (array_key_exists($k, $mapConvenio) && $mapConvenio[$k] !== null) {
+                $valorUnit = $mapConvenio[$k];
+            }
+            $qtd = (int)($item['quantidade'] ?? 1);
+            $vTotal = ($valorUnit ?? 0) * $qtd;
+            $valorBruto += $vTotal;
+            $itensValores[$idx] = [
+                'procedimento_id' => $proc->id,
+                'quantidade' => $qtd,
+                'valor_unitario' => $valorUnit ?? 0,
+                'valor_total' => $vTotal,
+                'observacoes' => $item['observacoes'] ?? null,
+            ];
+        }
+
+        return [$valorBruto, $itensValores];
+    }
+
     public function index()
     {
-        $pacientes = Paciente::select('id', 'nome', 'cpf', 'email', 'celular')->orderBy('nome')->get();
+        $pacientes = collect([]);
         $convenios = Convenio::select('id', 'descricao')->orderBy('descricao')->get();
         $procedimentos = Procedimento::select('id', 'nome', 'valor', 'categoria_id', 'eh_tratamento', 'quantidade_sessoes')->orderBy('nome')->get();
         $procConvenio = DB::table('procedimento_convenio')
@@ -38,10 +148,11 @@ class OrcamentoController extends Controller
             )
             ->selectSub(function ($q) {
                 $q->from('pagamentos as pg')
-                  ->whereColumn('pg.orcamento_id', 'o.id')
-                  ->where('pg.confirmado', true)
-                  ->limit(1)
-                  ->select(DB::raw('1'));
+                    ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
+                    ->whereColumn('f.orcamento_id', 'o.id')
+                    ->where('pg.status', 'CONFIRMADO')
+                    ->limit(1)
+                    ->select(DB::raw('1'));
             }, 'pago')
             ->orderByDesc('o.updated_at')
             ->limit(10)
@@ -58,52 +169,14 @@ class OrcamentoController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'paciente_id' => ['required', 'integer', 'exists:pacientes,id'],
-            'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
-            'data_emissao' => ['nullable', 'date_format:d-m-Y'],
-            'validade' => ['nullable', 'date_format:d-m-Y'],
-            'desconto' => ['nullable', 'numeric', 'min:0'],
-            'faturamento_previsto' => ['nullable', 'boolean'],
-            'aprovado' => ['nullable', 'boolean'],
-            'itens' => ['required', 'array', 'min:1'],
-            'itens.*.procedimento_id' => ['required', 'integer', 'exists:procedimentos,id'],
-            'itens.*.quantidade' => ['required', 'integer', 'min:1'],
-            'itens.*.observacoes' => ['nullable', 'string'],
-        ]);
-
-        $convenioId = $data['convenio_id'] ?? null;
-        $valorBruto = 0;
-        $itensValores = [];
-
-        $mapConvenio = [];
-        if ($convenioId) {
-            $rows = DB::table('procedimento_convenio')
-                ->where('convenio_id', $convenioId)
-                ->select('procedimento_id', 'valor_convenio')
-                ->get();
-            foreach ($rows as $r) {
-                $mapConvenio[(string)$r->procedimento_id] = $r->valor_convenio;
-            }
-        }
-
-        foreach ($data['itens'] as $idx => $item) {
-            $proc = Procedimento::select('id', 'valor')->findOrFail($item['procedimento_id']);
-            $valorUnit = $proc->valor ?? 0;
-            if ($convenioId && array_key_exists((string)$proc->id, $mapConvenio) && $mapConvenio[(string)$proc->id] !== null) {
-                $valorUnit = $mapConvenio[(string)$proc->id];
-            }
-            $qtd = (int)($item['quantidade'] ?? 1);
-            $vTotal = ($valorUnit ?? 0) * $qtd;
-            $valorBruto += $vTotal;
-            $itensValores[$idx] = [
-                'procedimento_id' => $proc->id,
-                'quantidade' => $qtd,
-                'valor_unitario' => $valorUnit ?? 0,
-                'valor_total' => $vTotal,
-                'observacoes' => $item['observacoes'] ?? null,
-            ];
-        }
+        $data = $this->validateOrcamentoPayload($request);
+        $pacienteId = (int)$data['paciente_id'];
+        $convenioId = (int)$data['convenio_id'];
+        $this->assertPacienteConvenioAtivo($pacienteId, $convenioId);
+        $payor = $this->resolvePayorByConvenioId($convenioId);
+        $isConvenioPayor = $payor['tipo_pagador'] === 'CONVENIO';
+        $faturamentoConvenioId = $payor['convenio_id'];
+        [$valorBruto, $itensValores] = $this->calcularItensValores($data['itens'], $convenioId);
 
         $desconto = (float)($data['desconto'] ?? 0);
         $valorTotal = max(0, $valorBruto - $desconto);
@@ -116,24 +189,82 @@ class OrcamentoController extends Controller
         $vaYmd = isset($data['validade'])
             ? Carbon::createFromFormat('d-m-Y', $data['validade'])->format('Y-m-d')
             : now()->addDays(30)->toDateString();
-        $orcamento = Orcamento::create([
-            'numero' => $numero,
-            'data_emissao' => $deYmd,
-            'validade' => $vaYmd,
-            'paciente_id' => $data['paciente_id'],
-            'convenio_id' => $convenioId,
-            'valor_bruto' => $valorBruto,
-            'desconto' => $desconto,
-            'valor_total' => $valorTotal,
-            'valor_avista' => null,
-            'faturamento_previsto' => (bool)($data['faturamento_previsto'] ?? false),
-            'aprovado' => (bool)($data['aprovado'] ?? false),
-        ]);
+        $isApproved = (bool)($data['aprovado'] ?? false);
+        $orcamento = null;
+        DB::transaction(function () use (&$orcamento, $numero, $deYmd, $vaYmd, $data, $convenioId, $valorBruto, $desconto, $valorTotal, $itensValores, $isApproved, $isConvenioPayor, $faturamentoConvenioId) {
+            $orcamento = Orcamento::create([
+                'numero' => $numero,
+                'data_emissao' => $deYmd,
+                'validade' => $vaYmd,
+                'paciente_id' => $data['paciente_id'],
+                'convenio_id' => $convenioId,
+                'valor_bruto' => $valorBruto,
+                'desconto' => $desconto,
+                'valor_total' => $valorTotal,
+                'valor_avista' => null,
+                'faturamento_previsto' => (bool)($data['faturamento_previsto'] ?? false),
+                'aprovado' => $isApproved,
+                'status' => $isApproved ? 'APROVADO' : 'ABERTO',
+            ]);
 
-        foreach ($itensValores as $iv) {
-            $iv['orcamento_id'] = $orcamento->id;
-            OrcamentoProcedimento::create($iv);
-        }
+            foreach ($itensValores as $iv) {
+                $iv['orcamento_id'] = $orcamento->id;
+                OrcamentoProcedimento::create($iv);
+            }
+
+            if ($isApproved) {
+                $fatId = (int)DB::table('faturamentos')->where('orcamento_id', $orcamento->id)->value('id');
+                if (!$fatId) {
+                    $fatId = (int)DB::table('faturamentos')->insertGetId([
+                        'paciente_id' => $orcamento->paciente_id,
+                        'orcamento_id' => $orcamento->id,
+                        'valor_final' => (float)($orcamento->valor_total ?? 0),
+                        'tipo_pagador' => $isConvenioPayor ? 'CONVENIO' : 'PARTICULAR',
+                        'convenio_id' => $isConvenioPayor ? $faturamentoConvenioId : null,
+                        'valor_total' => (float)($orcamento->valor_bruto ?? 0),
+                        'valor_cobrado' => (float)($orcamento->valor_total ?? 0),
+                        'valor_aprovado' => 0,
+                        'valor_glosado' => 0,
+                        'status' => $isConvenioPayor ? 'AGUARDANDO_ENVIO' : 'AGUARDANDO_PAGAMENTO',
+                        'data_faturamento' => now()->format('Y-m-d H:i:s'),
+                        'vencimento' => $isConvenioPayor ? now()->addDays(30)->toDateString() : now()->toDateString(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                if ($fatId) {
+                    $crId = (int)DB::table('contas_receber')->where('faturamento_id', $fatId)->value('id');
+                    if (!$crId) {
+                        DB::table('contas_receber')->insert([
+                            'faturamento_id' => $fatId,
+                            'paciente_id' => $orcamento->paciente_id,
+                            'convenio_id' => $isConvenioPayor ? $faturamentoConvenioId : null,
+                            'valor' => (float)($orcamento->valor_total ?? 0),
+                            'vencimento' => $isConvenioPayor ? now()->addDays(30)->toDateString() : now()->toDateString(),
+                            'status' => 'ABERTO',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+
+                if ($fatId && !$isConvenioPayor) {
+                    $exists = \App\Models\Pagamento::where('faturamento_id', $fatId)->where('status', 'PENDENTE')->exists();
+                    if (!$exists) {
+                        \App\Models\Pagamento::create([
+                            'faturamento_id' => $fatId,
+                            'caixa_id' => null,
+                            'movimentacao_id' => null,
+                            'valor' => (float)($orcamento->valor_total ?? 0),
+                            'forma_pagamento' => null,
+                            'data_pagamento' => null,
+                            'status' => 'PENDENTE',
+                        ]);
+                    }
+                }
+            }
+        });
 
         return back()->with('success', 'Orçamento criado com sucesso');
     }
@@ -155,11 +286,12 @@ class OrcamentoController extends Controller
                 DB::raw("COALESCE(pa.nome,'') AS paciente")
             )
             ->selectSub(function ($q) {
-                $q->from('pagamentos as p')
-                  ->whereColumn('p.orcamento_id', 'o.id')
-                  ->where('p.confirmado', true)
-                  ->limit(1)
-                  ->select(DB::raw('1'));
+                $q->from('pagamentos as pg')
+                    ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
+                    ->whereColumn('f.orcamento_id', 'o.id')
+                    ->where('pg.status', 'CONFIRMADO')
+                    ->limit(1)
+                    ->select(DB::raw('1'));
             }, 'pago')
             ->where('o.paciente_id', $id)
             ->orderByDesc('o.created_at')
@@ -192,10 +324,11 @@ class OrcamentoController extends Controller
             )
             ->selectSub(function ($q) {
                 $q->from('pagamentos as pg')
-                  ->whereColumn('pg.orcamento_id', 'o.id')
-                  ->where('pg.confirmado', true)
-                  ->limit(1)
-                  ->select(DB::raw('1'));
+                    ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
+                    ->whereColumn('f.orcamento_id', 'o.id')
+                    ->where('pg.status', 'CONFIRMADO')
+                    ->limit(1)
+                    ->select(DB::raw('1'));
             }, 'pago')
             ->where('o.id', $id)
             ->first();
@@ -240,9 +373,10 @@ class OrcamentoController extends Controller
     {
         $orcamento = Orcamento::findOrFail($id);
         $isApproved = !!$orcamento->aprovado;
-        $hasPaid = DB::table('pagamentos')
-            ->where('orcamento_id', $orcamento->id)
-            ->where('confirmado', true)
+        $hasPaid = DB::table('pagamentos as pg')
+            ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
+            ->where('f.orcamento_id', $orcamento->id)
+            ->where('pg.status', 'CONFIRMADO')
             ->exists();
         $isExpired = false;
         try {
@@ -259,52 +393,11 @@ class OrcamentoController extends Controller
                 ]
             ], 422);
         }
-        $data = $request->validate([
-            'paciente_id' => ['required', 'integer', 'exists:pacientes,id'],
-            'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
-            'data_emissao' => ['nullable', 'date_format:d-m-Y'],
-            'validade' => ['nullable', 'date_format:d-m-Y'],
-            'desconto' => ['nullable', 'numeric', 'min:0'],
-            'faturamento_previsto' => ['nullable', 'boolean'],
-            'aprovado' => ['nullable', 'boolean'],
-            'itens' => ['required', 'array', 'min:1'],
-            'itens.*.procedimento_id' => ['required', 'integer', 'exists:procedimentos,id'],
-            'itens.*.quantidade' => ['required', 'integer', 'min:1'],
-            'itens.*.observacoes' => ['nullable', 'string'],
-        ]);
-
-        $convenioId = $data['convenio_id'] ?? null;
-        $valorBruto = 0;
-        $itensValores = [];
-
-        $mapConvenio = [];
-        if ($convenioId) {
-            $rows = DB::table('procedimento_convenio')
-                ->where('convenio_id', $convenioId)
-                ->select('procedimento_id', 'valor_convenio')
-                ->get();
-            foreach ($rows as $r) {
-                $mapConvenio[(string)$r->procedimento_id] = $r->valor_convenio;
-            }
-        }
-
-        foreach ($data['itens'] as $idx => $item) {
-            $proc = Procedimento::select('id', 'valor')->findOrFail($item['procedimento_id']);
-            $valorUnit = $proc->valor ?? 0;
-            if ($convenioId && array_key_exists((string)$proc->id, $mapConvenio) && $mapConvenio[(string)$proc->id] !== null) {
-                $valorUnit = $mapConvenio[(string)$proc->id];
-            }
-            $qtd = (int)($item['quantidade'] ?? 1);
-            $vTotal = ($valorUnit ?? 0) * $qtd;
-            $valorBruto += $vTotal;
-            $itensValores[$idx] = [
-                'procedimento_id' => $proc->id,
-                'quantidade' => $qtd,
-                'valor_unitario' => $valorUnit ?? 0,
-                'valor_total' => $vTotal,
-                'observacoes' => $item['observacoes'] ?? null,
-            ];
-        }
+        $data = $this->validateOrcamentoPayload($request);
+        $pacienteId = (int)$data['paciente_id'];
+        $convenioId = (int)$data['convenio_id'];
+        $this->assertPacienteConvenioAtivo($pacienteId, $convenioId);
+        [$valorBruto, $itensValores] = $this->calcularItensValores($data['itens'], $convenioId);
 
         $desconto = (float)($data['desconto'] ?? 0);
         $valorTotal = max(0, $valorBruto - $desconto);
@@ -322,7 +415,7 @@ class OrcamentoController extends Controller
                 'data_emissao' => $deYmd,
                 'validade' => $vaYmd,
                 'paciente_id' => $data['paciente_id'],
-                'convenio_id' => $data['convenio_id'] ?? null,
+                'convenio_id' => $data['convenio_id'],
                 'valor_bruto' => $valorBruto,
                 'desconto' => $desconto,
                 'valor_total' => $valorTotal,
@@ -396,8 +489,9 @@ public function searchPaid(Request $request)
         // data do pagamento confirmado
         ->selectSub(function ($q2) {
             $q2->from('pagamentos as pg')
-               ->whereColumn('pg.orcamento_id', 'o.id')
-               ->where('pg.confirmado', true)
+               ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
+               ->whereColumn('f.orcamento_id', 'o.id')
+               ->where('pg.status', 'CONFIRMADO')
                ->select(DB::raw("DATE_FORMAT(MAX(pg.data_pagamento), '%d-%m-%Y')"));
         }, 'data_pagamento')
 
@@ -428,8 +522,9 @@ public function searchPaid(Request $request)
         // pagamento confirmado
         ->whereExists(function ($q5) {
             $q5->from('pagamentos as pg')
-               ->whereColumn('pg.orcamento_id', 'o.id')
-               ->where('pg.confirmado', true)
+               ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
+               ->whereColumn('f.orcamento_id', 'o.id')
+               ->where('pg.status', 'CONFIRMADO')
                ->select(DB::raw(1));
         })
 
@@ -543,21 +638,62 @@ public function searchPaid(Request $request)
         if ($orcamento->aprovado) {
             return response()->json(['success' => true, 'message' => 'Orçamento já aprovado']);
         }
-        DB::transaction(function () use ($orcamento) {
+        $payor = $this->resolvePayorByConvenioId($orcamento->convenio_id ? (int)$orcamento->convenio_id : null);
+        $isConvenioPayor = $payor['tipo_pagador'] === 'CONVENIO';
+        $faturamentoConvenioId = $payor['convenio_id'];
+        DB::transaction(function () use ($orcamento, $isConvenioPayor, $faturamentoConvenioId) {
             $orcamento->aprovado = true;
+            $orcamento->status = 'APROVADO';
             $orcamento->save();
-            // Criar pagamento pendente se não existir
-            $exists = \App\Models\Pagamento::where('orcamento_id', $orcamento->id)->exists();
-            if (!$exists) {
-                \App\Models\Pagamento::create([
+            $fatId = (int)DB::table('faturamentos')->where('orcamento_id', $orcamento->id)->value('id');
+            if (!$fatId) {
+                $fatId = (int)DB::table('faturamentos')->insertGetId([
+                    'paciente_id' => $orcamento->paciente_id,
                     'orcamento_id' => $orcamento->id,
-                    'caixa_id' => null,
-                    'valor' => (float)($orcamento->valor_total ?? 0),
-                    'forma_pagamento' => null,
-                    'data_pagamento' => null,
-                    'confirmado' => false,
-                    'status' => 'pendente',
+                    'valor_final' => (float)($orcamento->valor_total ?? 0),
+                    'tipo_pagador' => $isConvenioPayor ? 'CONVENIO' : 'PARTICULAR',
+                    'convenio_id' => $isConvenioPayor ? $faturamentoConvenioId : null,
+                    'valor_total' => (float)($orcamento->valor_bruto ?? 0),
+                    'valor_cobrado' => (float)($orcamento->valor_total ?? 0),
+                    'valor_aprovado' => 0,
+                    'valor_glosado' => 0,
+                    'status' => $isConvenioPayor ? 'AGUARDANDO_ENVIO' : 'AGUARDANDO_PAGAMENTO',
+                    'data_faturamento' => now()->format('Y-m-d H:i:s'),
+                    'vencimento' => $isConvenioPayor ? now()->addDays(30)->toDateString() : now()->toDateString(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
+            }
+
+            if ($fatId) {
+                $crId = (int)DB::table('contas_receber')->where('faturamento_id', $fatId)->value('id');
+                if (!$crId) {
+                    DB::table('contas_receber')->insert([
+                        'faturamento_id' => $fatId,
+                        'paciente_id' => $orcamento->paciente_id,
+                        'convenio_id' => $isConvenioPayor ? $faturamentoConvenioId : null,
+                        'valor' => (float)($orcamento->valor_total ?? 0),
+                        'vencimento' => $isConvenioPayor ? now()->addDays(30)->toDateString() : now()->toDateString(),
+                        'status' => 'ABERTO',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            if ($fatId && !$isConvenioPayor) {
+                $exists = \App\Models\Pagamento::where('faturamento_id', $fatId)->where('status', 'PENDENTE')->exists();
+                if (!$exists) {
+                    \App\Models\Pagamento::create([
+                        'faturamento_id' => $fatId,
+                        'caixa_id' => null,
+                        'movimentacao_id' => null,
+                        'valor' => (float)($orcamento->valor_total ?? 0),
+                        'forma_pagamento' => null,
+                        'data_pagamento' => null,
+                        'status' => 'PENDENTE',
+                    ]);
+                }
             }
         });
         return response()->json(['success' => true]);
@@ -570,8 +706,9 @@ public function searchPaid(Request $request)
             return response()->json(['success' => true, 'message' => 'Orçamento já está aguardando aprovação']);
         }
         DB::transaction(function () use ($orcamento) {
-            $pag = Pagamento::where('orcamento_id', $orcamento->id)->first();
-            if ($pag && $pag->confirmado) {
+            $fatId = (int)DB::table('faturamentos')->where('orcamento_id', $orcamento->id)->value('id');
+            $pag = $fatId ? Pagamento::where('faturamento_id', $fatId)->orderByDesc('id')->first() : null;
+            if ($pag && strtoupper((string)$pag->status) === 'CONFIRMADO') {
                 $movId = (int)($pag->movimentacao_id ?? 0);
                 $mov = $movId ? MovimentacaoCaixa::find($movId) : null;
                 if ($mov) {
@@ -589,11 +726,25 @@ public function searchPaid(Request $request)
                     'movimentacao_id' => null,
                     'forma_pagamento' => null,
                     'data_pagamento' => null,
-                    'confirmado' => false,
-                    'status' => 'pendente',
+                    'status' => 'CANCELADO',
                 ]);
             }
+            if ($fatId) {
+                DB::table('faturamentos')
+                    ->where('id', $fatId)
+                    ->update([
+                        'status' => 'CANCELADO',
+                        'updated_at' => now(),
+                    ]);
+                DB::table('contas_receber')
+                    ->where('faturamento_id', $fatId)
+                    ->update([
+                        'status' => 'CANCELADO',
+                        'updated_at' => now(),
+                    ]);
+            }
             $orcamento->aprovado = false;
+            $orcamento->status = 'ABERTO';
             $orcamento->save();
         });
         return response()->json(['success' => true]);

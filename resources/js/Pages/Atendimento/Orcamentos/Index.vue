@@ -11,28 +11,37 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">Paciente</label>
+                                <span class="text-danger ms-1">*</span>
                                 <select data-choices v-model="form.paciente_id" class="form-select" ref="selPaciente"
-                                    :disabled="locked">
-                                    <option :value="null">Selecione</option>
-                                    <option v-for="p in pacientesLocal" :key="p.id" :value="p.id">{{ p.nome }}</option>
+                                    :disabled="locked" required :class="{ 'is-invalid': !!form.errors.paciente_id }">
+                                    <option value="">Selecione</option>
                                 </select>
+                                <div v-if="form.errors.paciente_id" class="invalid-feedback d-block">{{
+                                    form.errors.paciente_id }}</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Convênio</label>
+                                <span class="text-danger ms-1">*</span>
                                 <select data-choices v-model="form.convenio_id" class="form-select" ref="selConvenio"
-                                    :disabled="locked">
-                                    <option v-for="c in conveniosLocal" :key="c.id" :value="c.id">{{ c.descricao }}
+                                    :disabled="locked || convenioLoading" required
+                                    :class="{ 'is-invalid': !!form.errors.convenio_id }">
+                                    <option :value="null">Selecione</option>
+                                    <option v-for="c in conveniosPacienteLocal" :key="c.id" :value="c.id">{{ c.descricao }}
                                     </option>
                                 </select>
+                                <div v-if="form.errors.convenio_id" class="invalid-feedback d-block">{{
+                                    form.errors.convenio_id }}</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Procedimentos</label>
+                                <span class="text-danger ms-1">*</span>
                                 <select v-model="selectedProcId" class="form-select" data-choices :disabled="locked"
-                                    @change="onSelectProcedure">
+                                    @change="onSelectProcedure" required :class="{ 'is-invalid': !!form.errors.itens }">
                                     <option :value="null">Buscar procedimento</option>
                                     <option v-for="p in procedimentosLocal" :key="p.id" :value="p.id">{{ p.nome }}
                                     </option>
                                 </select>
+                                <div v-if="form.errors.itens" class="invalid-feedback d-block">{{ form.errors.itens }}</div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Data de Emissão</label>
@@ -225,16 +234,16 @@
 import { Head, useForm } from "@inertiajs/vue3";
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, nextTick } from "vue";
 import Modal from "@/Components/Modal.vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/l10n/pt.js";
-import { nextTick } from "vue";
 import html2pdf from "html2pdf.js";
 import { html } from "gridjs";
 import OrcamentoPrint from "@/Pages/Atendimento/Orcamentos/OrcamentoPrint.vue";
+import { useChoicesRemoteSearch } from "@/Composables/useChoicesRemoteSearch";
 
 const selPaciente = ref(null);
 const selConvenio = ref(null);
@@ -249,6 +258,8 @@ const props = defineProps({
 
 const pacientesLocal = ref([...(props.pacientes || [])]);
 const conveniosLocal = ref([...(props.convenios || [])]);
+const conveniosPacienteLocal = ref([]);
+const convenioLoading = ref(false);
 const procedimentosLocal = ref([...(props.procedimentos || [])]);
 const procConvLocal = ref([...(props.procedimentoConvenio || [])]);
 const ultimosLocal = ref([...(props.ultimos || [])]);
@@ -265,8 +276,108 @@ watch(() => props.procedimentos, v => procedimentosLocal.value = [...(v || [])])
 watch(() => props.procedimentoConvenio, v => procConvLocal.value = [...(v || [])]);
 watch(() => props.ultimos, v => ultimosLocal.value = [...(v || [])]);
 
+function refreshChoices(el) {
+    try {
+        if (!el) return;
+        if (window.destroyChoiceEl) {
+            try { window.destroyChoiceEl(el); } catch (e) { }
+        } else {
+            const inst = el._choicesInstance || el.choices;
+            if (inst && typeof inst.destroy === "function") {
+                try { inst.destroy(); } catch (e) { }
+            }
+            try { delete el._choicesInstance; } catch (e) { }
+            try { el.dataset.choicesInitialized = "false"; } catch (e) { }
+        }
+        if (window.initChoiceEl) window.initChoiceEl(el);
+    } catch (e) { }
+}
+
+let convenioReqSeq = 0;
+function getChoicesWrapperFor(el) {
+    try {
+        if (!el) return null;
+        const closest = el.closest ? el.closest('.choices') : null;
+        if (closest) return closest;
+        const parent = el.parentElement;
+        if (!parent) return null;
+        const kids = Array.from(parent.children || []);
+        const idx = kids.indexOf(el);
+        if (idx >= 0) {
+            for (let i = idx + 1; i < kids.length; i += 1) {
+                if (kids[i]?.classList?.contains('choices')) return kids[i];
+            }
+            for (let i = idx - 1; i >= 0; i -= 1) {
+                if (kids[i]?.classList?.contains('choices')) return kids[i];
+            }
+        }
+        return parent.querySelector('.choices');
+    } catch (e) {
+        return null;
+    }
+}
+async function syncConvenioLoadingUI() {
+    try {
+        await nextTick();
+        const el = selConvenio.value;
+        if (!el) return;
+        const w = getChoicesWrapperFor(el);
+        if (!w) return;
+        w.classList.toggle('convenio-loading', !!convenioLoading.value);
+    } catch (e) { }
+}
+
+const pacientesChoicesRows = ref([]);
+const pacienteSelectedRow = ref(null);
+
+function findPacienteLocalById(id) {
+    const sid = String(id ?? "");
+    if (!sid) return null;
+    const inRows = (pacientesChoicesRows.value || []).find(p => String(p?.id) === sid);
+    if (inRows) return inRows;
+    const inProps = (pacientesLocal.value || []).find(p => String(p?.id) === sid);
+    return inProps || null;
+}
+
+const pacienteSearch = useChoicesRemoteSearch({
+    selectRef: selPaciente,
+    refreshChoices,
+    attachRetries: 200,
+    getSelectedValue: () => (form.paciente_id != null ? String(form.paciente_id) : ""),
+    getRows: () => pacientesChoicesRows.value,
+    fetchRows: async (q) => {
+        const query = String(q || "").trim();
+        if (!query) {
+            const keep = pacienteSelectedRow.value ? [pacienteSelectedRow.value] : [];
+            pacientesChoicesRows.value = keep;
+            return keep;
+        }
+        const resp = await window.axios.get("/pacientes/search", { params: { q: query } });
+        const rows = Array.isArray(resp?.data?.pacientes) ? resp.data.pacientes : [];
+        const sel = pacienteSelectedRow.value;
+        const withSelected = sel && !rows.some(p => String(p?.id) === String(sel?.id)) ? [sel, ...rows] : rows;
+        pacientesChoicesRows.value = withSelected;
+        return withSelected;
+    },
+    makeLabel: (p) => `${p?.nome || ""}${p?.cpf ? ` • ${p.cpf}` : ""}`,
+    placeholderLabel: "Selecione",
+    placeholderDisabled: true,
+});
+
+const convenioChoices = useChoicesRemoteSearch({
+    selectRef: selConvenio,
+    refreshChoices,
+    attachSearch: false,
+    getSelectedValue: () => (form.convenio_id != null ? String(form.convenio_id) : ""),
+    getRows: () => conveniosPacienteLocal.value,
+    fetchRows: async () => conveniosPacienteLocal.value,
+    makeLabel: (c) => `${c?.descricao || ""}`,
+    placeholderLabel: "Selecione",
+    placeholderDisabled: false,
+});
+
 const form = useForm({
-    paciente_id: null,
+    paciente_id: "",
     convenio_id: null,
     data_emissao: formatDMY(new Date()),
     validade: formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000)),
@@ -278,6 +389,7 @@ const form = useForm({
 });
 const isEditing = ref(false);
 const orcamentoEditId = ref(null);
+const keepConvenioOnPacienteChange = ref(false);
 
 function formatDMY(d) {
     const dd = String(d.getDate()).padStart(2, '0');
@@ -369,27 +481,90 @@ watch(() => [itensLocal.value, form.convenio_id], () => {
     }
 }, { deep: true });
 
+watch(() => form.convenio_id, (v) => {
+    const ok = !!String(v ?? "").trim();
+    if (ok) {
+        try { form.clearErrors('convenio_id'); } catch (e) { }
+    }
+});
+
+watch(() => (Array.isArray(itensLocal.value) ? itensLocal.value.length : 0), (n) => {
+    if (Number(n || 0) > 0) {
+        try { form.clearErrors('itens'); } catch (e) { }
+    }
+});
+
 watch(() => form.faturamento_previsto, async (v) => {
     if (v) {
-        if (!form.convenio_id) {
-            const p = (pacientesLocal.value || []).find(px => String(px.id) === String(form.paciente_id));
-            if (p && p.convenio_id) {
-                form.convenio_id = p.convenio_id;
-                await nextTick();
-                if (window.syncChoiceValue && selConvenio.value) {
-                    window.syncChoiceValue(selConvenio.value, String(form.convenio_id));
-                }
-            }
-        }
+        // não auto-seleciona convênio; lista vem do paciente selecionado
     } else {
         form.convenio_id = null;
-        await nextTick();
-        if (window.syncChoiceValue && selConvenio.value) {
-            window.syncChoiceValue(selConvenio.value, "");
-        }
+        await convenioChoices.syncChoices();
+        await syncConvenioLoadingUI();
     }
     if (!isEditing.value) {
         itensLocal.value.forEach((_, i) => recalcItem(i));
+    }
+});
+
+watch(() => form.paciente_id, async (nv, ov) => {
+    if (String(nv ?? "") === String(ov ?? "")) return;
+    if (String(nv ?? "").trim()) {
+        try { form.clearErrors('paciente_id'); } catch (e) { }
+    }
+    const reqId = ++convenioReqSeq;
+    convenioLoading.value = !!nv;
+    await syncConvenioLoadingUI();
+    if (nv) {
+        let selected = findPacienteLocalById(nv);
+        if (!selected) {
+            try {
+                const resp = await window.axios.get("/pacientes/search", { params: { q: String(nv) } });
+                const rows = Array.isArray(resp?.data?.pacientes) ? resp.data.pacientes : [];
+                selected = rows.find(p => String(p?.id) === String(nv)) || rows[0] || null;
+            } catch (e) { }
+        }
+        pacienteSelectedRow.value = selected ? { ...selected } : null;
+        pacientesChoicesRows.value = pacienteSelectedRow.value ? [pacienteSelectedRow.value] : [];
+    } else {
+        pacienteSelectedRow.value = null;
+        pacientesChoicesRows.value = [];
+    }
+    await pacienteSearch.syncChoices();
+    pacienteSearch.clearSearch();
+    const desiredConvenio = form.convenio_id;
+    if (!keepConvenioOnPacienteChange.value) {
+        form.convenio_id = null;
+    }
+    conveniosPacienteLocal.value = [];
+    await convenioChoices.syncChoices();
+    await syncConvenioLoadingUI();
+    try {
+        if (!nv) {
+            if (reqId === convenioReqSeq) convenioLoading.value = false;
+            if (reqId === convenioReqSeq) await syncConvenioLoadingUI();
+            if (reqId === convenioReqSeq) await convenioChoices.syncChoices();
+            return;
+        }
+        const resp = await window.axios.get(`/pacientes/${nv}/convenios`);
+        if (reqId !== convenioReqSeq) return;
+        const convs = Array.isArray(resp?.data?.convenios) ? resp.data.convenios : [];
+        conveniosPacienteLocal.value = convs;
+
+        if (keepConvenioOnPacienteChange.value) {
+            const ok = convs.some(c => String(c.id) === String(desiredConvenio));
+            form.convenio_id = ok ? desiredConvenio : null;
+        }
+    } catch (e) {
+        if (reqId !== convenioReqSeq) return;
+        conveniosPacienteLocal.value = [];
+        if (keepConvenioOnPacienteChange.value) form.convenio_id = null;
+    } finally {
+        if (reqId === convenioReqSeq) {
+            convenioLoading.value = false;
+            await syncConvenioLoadingUI();
+            await convenioChoices.syncChoices();
+        }
     }
 });
 
@@ -453,12 +628,31 @@ function onCurrencyInputItem(e, idx) {
 const saveProcessing = ref(false);
 async function save() {
     if (locked.value) { return; }
+    try { form.clearErrors(); } catch (e) { }
+    const hasPaciente = !!String(form.paciente_id ?? "").trim();
+    const hasConvenio = !!String(form.convenio_id ?? "").trim();
+    const hasItens = Array.isArray(itensLocal.value) && itensLocal.value.length > 0;
+    if (!hasPaciente) {
+        try { form.setError('paciente_id', 'Paciente é obrigatório.'); } catch (e) { }
+    }
+    if (!hasConvenio) {
+        try { form.setError('convenio_id', 'Convênio é obrigatório.'); } catch (e) { }
+    }
+    if (!hasItens) {
+        try { form.setError('itens', 'Selecione ao menos um procedimento.'); } catch (e) { }
+    }
+    if (!hasPaciente || !hasConvenio || !hasItens) return;
     form.itens = itensLocal.value.map(it => ({
         procedimento_id: it.procedimento_id,
         quantidade: it.quantidade,
         valor_unitario: it.valor_unitario,
         valor_total: it.valor_total,
         observacoes: it.observacoes,
+    }));
+    form.transform((d) => ({
+        ...d,
+        paciente_id: d.paciente_id ? Number(d.paciente_id) : null,
+        convenio_id: d.convenio_id ? Number(d.convenio_id) : null,
     }));
     saveProcessing.value = true;
     try {
@@ -473,7 +667,7 @@ async function save() {
                     orcamentoEditId.value = null;
                     form.reset();
                     form.clearErrors();
-                    form.paciente_id = null;
+                    form.paciente_id = "";
                     form.convenio_id = null;
                     form.data_emissao = formatDMY(new Date());
                     form.validade = formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000));
@@ -493,7 +687,7 @@ async function save() {
                     selectedProcId.value = null;
                     form.reset();
                     form.clearErrors();
-                    form.paciente_id = null;
+                    form.paciente_id = "";
                     form.convenio_id = null;
                     form.data_emissao = formatDMY(new Date());
                     form.validade = formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000));
@@ -660,8 +854,21 @@ function carregarOrcamento(id) {
             if (!o) return;
             isEditing.value = true;
             orcamentoEditId.value = o.id;
+            keepConvenioOnPacienteChange.value = true;
             form.paciente_id = o.paciente_id ?? null;
             form.convenio_id = o.convenio_id ?? null;
+            if (o.paciente_id) {
+                pacienteSelectedRow.value = {
+                    id: o.paciente_id,
+                    nome: o.paciente_nome || o.paciente || '',
+                    cpf: o.paciente_cpf || '',
+                };
+                pacientesChoicesRows.value = [pacienteSelectedRow.value];
+            } else {
+                pacienteSelectedRow.value = null;
+                pacientesChoicesRows.value = [];
+            }
+            pacienteSearch.syncChoices();
             form.data_emissao = o.data_emissao || formatDMY(new Date());
             form.validade = o.validade || formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000));
             form.desconto = Number(o.desconto || 0);
@@ -677,13 +884,14 @@ function carregarOrcamento(id) {
             }));
             setTimeout(() => {
                 try {
-                    const toStr = (v) => (v !== null && v !== undefined) ? String(v) : '';
-                    if (window.syncChoiceValue) {
-                        if (selPaciente?.value) window.syncChoiceValue(selPaciente.value, toStr(form.paciente_id));
-                        if (selConvenio?.value) window.syncChoiceValue(selConvenio.value, toStr(form.convenio_id));
-                    }
+                    pacienteSearch.syncChoices();
+                    convenioChoices.syncChoices();
+                    syncConvenioLoadingUI();
                 } catch (e) { }
             }, 0);
+            setTimeout(() => {
+                keepConvenioOnPacienteChange.value = false;
+            }, 300);
             closeConsultModal();
         }).catch(() => { });
     } catch (e) { }
@@ -738,5 +946,27 @@ function carregarOrcamento(id) {
 .session-text {
     color: #6c757d;
     font-size: 12px;
+}
+
+:deep(.choices.convenio-loading) {
+    pointer-events: none;
+}
+
+:deep(.choices.convenio-loading .choices__inner) {
+    position: relative;
+}
+
+:deep(.choices.convenio-loading .choices__inner::after) {
+    content: "Carregando...";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--vz-secondary-color, #6c757d);
+}
+
+:deep(.choices.convenio-loading .choices__list--single) {
+    opacity: 0.55;
 }
 </style>

@@ -239,13 +239,12 @@ erDiagram
 
 	PAGAMENTOS {
 		INT id PK
-		INT orcamento_id FK
+		INT faturamento_id FK
 		INT caixa_id FK
 		INT movimentacao_id FK
 		DECIMAL valor
 		VARCHAR forma_pagamento
 		DATETIME data_pagamento
-		BOOLEAN confirmado
 		VARCHAR status
 		TEXT recusa_justificativa
 		INT recusado_por FK
@@ -312,16 +311,17 @@ erDiagram
 		DATETIME updated_at  ""  
 	}
 
-	CONVENIO {
+	CONVENIOS {
 		INT id PK ""  
 		VARCHAR descricao  ""  
 		VARCHAR tipo  ""  
-		VARCHAR empresa_id  ""  
+		INT empresa_id FK  ""  
 		INT ans  ""  
 		INT dias_recebimento  ""  
 		INT dias_retorno  ""  
 		DATETIME created_at  ""  
 		DATETIME updated_at  ""  
+		DATETIME deleted_at  ""  
 	}
 
 	CATEGORIAS_PROCEDIMENTO {
@@ -606,8 +606,8 @@ erDiagram
 	ORCAMENTOS {
 		INT id PK ""  
 		VARCHAR numero  ""  
-		DATE data_emissao  ""  
-		DATE validade  ""  
+		DATETIME data_emissao  ""  
+		DATETIME validade  ""  
 		INT convenio_id FK ""  
 		INT paciente_id FK ""  
 		DECIMAL valor_bruto  ""  
@@ -616,8 +616,10 @@ erDiagram
 		DECIMAL valor_avista  ""  
 		BOOLEAN faturamento_previsto  ""  
 		BOOLEAN aprovado  ""  
+		VARCHAR status  ""  
 		DATETIME created_at  ""  
 		DATETIME updated_at  ""  
+		DATETIME deleted_at  ""  
 	}
 
 	ORCAMENTO_PROCEDIMENTOS {
@@ -627,18 +629,40 @@ erDiagram
 		INT quantidade  ""  
 		DECIMAL valor_unitario  ""  
 		DECIMAL valor_total  ""  
+		TEXT observacoes  ""  
 		DATETIME created_at  ""  
 		DATETIME updated_at  ""  
+		DATETIME deleted_at  ""  
 	}
 
 	FATURAMENTOS {
-		INT id PK ""  
-		INT pagamento_id FK ""  
-		DATE data_faturamento  ""  
-		DECIMAL valor_faturado  ""  
-		VARCHAR status  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
+		INT id PK
+		INT paciente_id FK
+		INT orcamento_id FK
+		VARCHAR tipo_pagador
+		INT convenio_id FK
+		DECIMAL valor_total
+		DECIMAL valor_final
+		DECIMAL valor_cobrado
+		DECIMAL valor_aprovado
+		DECIMAL valor_glosado
+		VARCHAR status
+		DATETIME data_faturamento
+		DATE vencimento
+		DATETIME created_at
+		DATETIME updated_at
+	}
+
+	CONTAS_RECEBER {
+		INT id PK
+		INT faturamento_id FK
+		INT paciente_id FK
+		INT convenio_id FK
+		DECIMAL valor
+		DATE vencimento
+		VARCHAR status
+		DATETIME created_at
+		DATETIME updated_at
 	}
 
 	CONTAS||--o{USUARIOS:"possui"
@@ -649,13 +673,13 @@ erDiagram
 	CANAIS_AVISO||--o{PACIENTES:"utiliza"
 	PACIENTES||--||PRONTUARIOS:"gera"
 	PACIENTES||--o{PACIENTE_CONVENIO:"possui"
-	CONVENIO||--o{PACIENTE_CONVENIO:"vincula"
+	CONVENIOS||--o{PACIENTE_CONVENIO:"vincula"
 	PARENTESCOS||--o{RESPONSAVEIS:"define"
 	PACIENTES||--o{PACIENTE_RESPONSAVEL:"possui"
 	RESPONSAVEIS||--o{PACIENTE_RESPONSAVEL:"vincula"
 	CATEGORIAS_PROCEDIMENTO||--o{PROCEDIMENTOS:"classifica"
 	ESPECIALIDADES||--o{PROCEDIMENTOS:"classifica"
-	CONVENIO||--o{PROCEDIMENTO_CONVENIO:"possui"
+	CONVENIOS||--o{PROCEDIMENTO_CONVENIO:"possui"
 	PROCEDIMENTOS||--o{PROCEDIMENTO_CONVENIO:"vincula"
 	PROCEDIMENTOS||--o{SESSOES_TRATAMENTO:"gera"
 	PACIENTES||--o{SESSOES_TRATAMENTO:"realiza"
@@ -681,11 +705,16 @@ erDiagram
 	PRONTUARIOS||--o{SOLICITACAO_EXAMES:"possui"
 	PROFISSIONAIS_SAUDE||--o{SOLICITACAO_EXAMES:"solicita"
 	PACIENTES||--o{ORCAMENTOS:"solicita"
-	CONVENIO||--o{ORCAMENTOS:"aplica"
+	CONVENIOS||--o{ORCAMENTOS:"aplica"
 	ORCAMENTOS||--o{ORCAMENTO_PROCEDIMENTOS:"possui"
 	PROCEDIMENTOS||--o{ORCAMENTO_PROCEDIMENTOS:"compoe"
-	ORCAMENTOS||--o{PAGAMENTOS:"recebe"
-	PAGAMENTOS||--||FATURAMENTOS:"origina"
+	ORCAMENTOS||--||FATURAMENTOS:"gera"
+	FATURAMENTOS||--o{PAGAMENTOS:"recebe"
+	FATURAMENTOS||--o{CONTAS_RECEBER:"cobra"
+	PACIENTES||--o{FATURAMENTOS:"gera"
+	PACIENTES||--o{CONTAS_RECEBER:"deve"
+	CONVENIOS||--o{FATURAMENTOS:"aplica"
+	CONVENIOS||--o{CONTAS_RECEBER:"cobra"
     CAIXAS ||--o{ PAGAMENTOS : "recebe"
 	CAIXAS ||--o{ MOVIMENTACOES_CAIXA : "fecha"
 	MOVIMENTACOES_CAIXA ||--o{ PAGAMENTOS : "lança"

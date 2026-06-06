@@ -215,12 +215,12 @@ export default {
         },
         tituloModalEditarAgendamento() {
             try {
-                if (!this.podeReagendarSessaoTratamento()) return "Editar Agendamento";
+                if (!this.podeReagendarAgendamentoCancelado()) return "Editar Agendamento";
                 const n = this.eventoSelecionado?.extendedProps?.sessao_numero ?? null;
                 const t = this.eventoSelecionado?.extendedProps?.sessao_total ?? null;
                 if (n != null && t != null) return `Reagendar Sessão ${n}/${t}`;
                 if (n != null) return `Reagendar Sessão ${n}`;
-                return "Reagendar Sessão";
+                return "Reagendar Agendamento";
             } catch (e) {
                 return "Editar Agendamento";
             }
@@ -553,7 +553,7 @@ export default {
                     const medNome = String(ev?.extendedProps?.profissional_nome || "").trim();
                     const pgConf = !!ev?.extendedProps?.pagamento_confirmado;
                     const pgStRaw = String(ev?.extendedProps?.pagamento_status || "").trim().toLowerCase();
-                    const pgSt = pgConf ? "Confirmado"
+                    const pgSt = pgConf ? "Pago"
                         : (pgStRaw === "pendente" ? "Pendente"
                             : (pgStRaw === "recusado" ? "Recusado"
                                 : (pgStRaw ? pgStRaw : "—")));
@@ -619,14 +619,7 @@ export default {
                 if (!ev) return;
 
                 const st = String(ev?.extendedProps?.status || "").toLowerCase();
-                const n = ev?.extendedProps?.sessao_numero ?? null;
-                if (!st.includes("cancel") || n == null) {
-                    try {
-                        const fp = (this.$page?.props?.flash ?? {});
-                        this.$page.props.flash = { ...fp, warning: "Reagendamento disponível apenas para sessões de tratamento canceladas." };
-                    } catch (_) { }
-                    return;
-                }
+                if (!st.includes("cancel")) return;
 
                 this.eventoSelecionado = ev;
                 let ds = "";
@@ -655,6 +648,7 @@ export default {
                     : (this.editAgendamentoForm.valor_cobrado || "");
 
                 this.orcamentoSelecionadoEdicaoId = ag?.orcamento_id ?? ev?.extendedProps?.orcamento_id ?? null;
+                this.orcamentoSelecionadoEdicao = null;
                 this.procedimentoIdOriginalEdicao = this.editAgendamentoForm.procedimento_id || null;
 
                 this.nomePacienteEdicao = "";
@@ -1474,17 +1468,19 @@ export default {
         },
 
         podeReagendarSessaoTratamento() {
+            try { return (this.eventoSelecionado?.extendedProps?.sessao_numero ?? null) != null; } catch (e) { return false; }
+        },
+        podeReagendarAgendamentoCancelado() {
             try {
                 const st = String(this.eventoSelecionado?.extendedProps?.status || "").toLowerCase();
-                const n = this.eventoSelecionado?.extendedProps?.sessao_numero ?? null;
-                return st.includes("cancel") && n != null;
+                return st.includes("cancel");
             } catch (e) {
                 return false;
             }
         },
         async reagendarSessaoTratamento() {
             if (!this.editAgendamentoForm?.id) return;
-            if (!this.podeReagendarSessaoTratamento()) return;
+            if (!this.podeReagendarAgendamentoCancelado()) return;
             const payload = {
                 profissional_saude_id: this.editAgendamentoForm.profissional_saude_id,
                 data: this.editAgendamentoForm.data,
@@ -1505,7 +1501,7 @@ export default {
                 await this.atualizarTabelaEventosDiaModal();
                 try {
                     const fp = (this.$page?.props?.flash ?? {});
-                    this.$page.props.flash = { ...fp, success: "Sessão reagendada" };
+                    this.$page.props.flash = { ...fp, success: "Agendamento reagendado" };
                 } catch (_) { }
                 this.modalEditarVisivel = false;
             } catch (e) {
@@ -2300,7 +2296,6 @@ export default {
                     <label class="form-label">Convênio</label>
                     <select ref="selConvenioCriacao" v-model="agendamentoForm.convenio_id" class="form-select"
                         :disabled="!agendamentoForm.paciente_id || carregandoConveniosPacienteCriacao">
-                        <option :value="null">Particular</option>
                         <option v-for="c in conveniosPacienteCriacao" :key="c.id" :value="c.id">{{ c.descricao }}
                         </option>
                     </select>
@@ -2398,20 +2393,20 @@ export default {
         </Modal>
 
         <Modal :modelValue="modalEditarVisivel" :title="tituloModalEditarAgendamento"
-            :nameButton="podeReagendarSessaoTratamento() ? 'Reagendar' : 'Salvar'" :processing="processandoEdicao"
-            size="lg" @update:modelValue="modalEditarVisivel = $event"
-            @save="podeReagendarSessaoTratamento() ? reagendarSessaoTratamento() : salvarEdicaoAgendamento()">
+            :nameButton="podeReagendarAgendamentoCancelado() ? 'Reagendar' : 'Salvar'" :processing="processandoEdicao"
+            :z-index="2000" :backdrop-z-index="1990" size="lg" @update:modelValue="modalEditarVisivel = $event"
+            @save="podeReagendarAgendamentoCancelado() ? reagendarSessaoTratamento() : salvarEdicaoAgendamento()">
             <div :key="chaveRenderizacaoModalEvento" class="row g-3">
-                <div :class="podeReagendarSessaoTratamento() ? 'col-md-12' : 'col-md-6'">
+                <div :class="podeReagendarAgendamentoCancelado() ? 'col-md-12' : 'col-md-6'">
                     <label class="form-label">Paciente</label>
                     <SuggestInput v-model="termoBuscaPacienteEdicao" :suggestions="pacientesSugestoesEdicao"
                         :loading="false" :show="mostrarSugestoesPacienteEdicao"
-                        :disabled="podeReagendarSessaoTratamento() || !!orcamentoSelecionadoEdicao"
+                        :disabled="podeReagendarAgendamentoCancelado() || !!orcamentoSelecionadoEdicao"
                         placeholder="Buscar paciente por nome ou CPF" keyPrefix="sug-pac-edit" primaryTextProp="nome"
                         secondaryTextProp="cpf" @focus="mostrarSugestoesPacienteEdicao = true"
                         @blur="onBlurSugestoesPacienteEdicao" @select="selecionarSugestaoPacienteEdicao" />
                 </div>
-                <div v-if="!podeReagendarSessaoTratamento()" class="col-md-6">
+                <div v-if="!podeReagendarAgendamentoCancelado()" class="col-md-6">
                     <label class="form-label">Orçamento Pago</label>
                     <SuggestInput v-model="termoBuscaOrcamentoEdicao" :suggestions="orcamentosPagosEdicao"
                         :loading="buscandoOrcamentosPagosEdicao" :show="mostrarSugestoesOrcamentoEdicao"
@@ -2424,7 +2419,7 @@ export default {
                 <div class="col-md-6">
                     <label class="form-label">Profissional</label>
                     <select ref="selProfissionalEdicao" v-model="editAgendamentoForm.profissional_saude_id"
-                        class="form-select" :disabled="!!orcamentoSelecionadoEdicao">
+                        class="form-select">
                         <option :value="null">Selecione</option>
                         <option v-for="d in listaProfissionaisEdicao" :key="d.id" :value="d.id">{{ d.nome }}</option>
                     </select>
@@ -2434,7 +2429,7 @@ export default {
                     <select v-if="renderProcedimentoEdicao" ref="selProcedimentoEdicao"
                         v-model="editAgendamentoForm.procedimento_id" class="form-select"
                         @change="aoAlterarProcedimentoEdicao"
-                        :disabled="podeReagendarSessaoTratamento() || carregandoItensOrcamentoEdicao">
+                        :disabled="podeReagendarAgendamentoCancelado() || carregandoItensOrcamentoEdicao">
                         <option :value="null">Selecione</option>
                         <option v-for="p in procedimentosFiltradosEdicao" :key="p.id" :value="p.id">{{ p.nome }}
                         </option>
@@ -2453,7 +2448,7 @@ export default {
                 <div class="col-md-4">
                     <label class="form-label">Status</label>
                     <select v-model="editAgendamentoForm.status_id" class="form-select"
-                        :disabled="podeReagendarSessaoTratamento()">
+                        :disabled="podeReagendarAgendamentoCancelado()">
                         <option :value="null">Selecione</option>
                         <option v-for="s in opcoesStatus" :key="s.id" :value="s.id">{{ s.descricao }}</option>
                     </select>
@@ -2462,16 +2457,16 @@ export default {
                     <label class="form-label">Valor Cobrado</label>
                     <input v-model="editAgendamentoForm.valor_cobrado" type="text" class="form-control"
                         placeholder="0,00"
-                        :disabled="podeReagendarSessaoTratamento() || !!orcamentoSelecionadoEdicao" />
+                        :disabled="podeReagendarAgendamentoCancelado() || !!orcamentoSelecionadoEdicao" />
                 </div>
                 <div class="col-md-12">
                     <label class="form-label">Observações</label>
                     <textarea v-model="editAgendamentoForm.observacoes" class="form-control" rows="3" maxlength="500"
-                        placeholder="Anotações gerais"></textarea>
+                        placeholder="Anotações gerais" :disabled="podeReagendarAgendamentoCancelado()"></textarea>
                 </div>
             </div>
             <template #extraFooterLeft>
-                <button v-if="!podeReagendarSessaoTratamento()" type="button" class="btn btn-outline-danger"
+                <button v-if="!podeReagendarAgendamentoCancelado()" type="button" class="btn btn-outline-danger"
                     @click="cancelarAgendamento">Cancelar agendamento</button>
             </template>
         </Modal>

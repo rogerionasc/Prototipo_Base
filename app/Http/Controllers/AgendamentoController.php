@@ -165,6 +165,13 @@ class AgendamentoController extends Controller
             $convenioId = empty($orcamentoId) ? ($data['convenio_id'] ?? null) : null;
 
             if (empty($orcamentoId)) {
+                if (empty($convenioId)) {
+                    throw new HttpResponseException(response()->json([
+                        'errors' => [
+                            'orcamento_id' => ['Para atendimento particular, selecione um orçamento pago.']
+                        ]
+                    ], 422));
+                }
                 if (!empty($convenioId)) {
                     $hasConvenio = DB::table('paciente_convenio')
                         ->where('paciente_id', $pacId)
@@ -199,6 +206,7 @@ class AgendamentoController extends Controller
                     'valor_avista' => null,
                     'faturamento_previsto' => false,
                     'aprovado' => true,
+                    'status' => 'APROVADO',
                 ]);
 
                 OrcamentoProcedimento::create([
@@ -210,16 +218,41 @@ class AgendamentoController extends Controller
                     'observacoes' => null,
                 ]);
 
-                Pagamento::create([
-                    'orcamento_id' => $orcamento->id,
-                    'caixa_id' => null,
-                    'movimentacao_id' => null,
-                    'valor' => (float)($orcamento->valor_total ?? 0),
-                    'forma_pagamento' => null,
-                    'data_pagamento' => null,
-                    'confirmado' => false,
-                    'status' => 'pendente',
-                ]);
+                $fatId = (int)DB::table('faturamentos')->where('orcamento_id', $orcamento->id)->value('id');
+                if (!$fatId) {
+                    $fatId = (int)DB::table('faturamentos')->insertGetId([
+                        'paciente_id' => $pacId,
+                        'orcamento_id' => $orcamento->id,
+                        'valor_final' => (float)($orcamento->valor_total ?? 0),
+                        'tipo_pagador' => 'CONVENIO',
+                        'convenio_id' => $convenioId,
+                        'valor_total' => (float)($orcamento->valor_bruto ?? 0),
+                        'valor_cobrado' => (float)($orcamento->valor_total ?? 0),
+                        'valor_aprovado' => 0,
+                        'valor_glosado' => 0,
+                        'status' => 'AGUARDANDO_ENVIO',
+                        'data_faturamento' => now()->format('Y-m-d H:i:s'),
+                        'vencimento' => now()->addDays(30)->toDateString(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                if ($fatId) {
+                    $crId = (int)DB::table('contas_receber')->where('faturamento_id', $fatId)->value('id');
+                    if (!$crId) {
+                        DB::table('contas_receber')->insert([
+                            'faturamento_id' => $fatId,
+                            'paciente_id' => $pacId,
+                            'convenio_id' => $convenioId,
+                            'valor' => (float)($orcamento->valor_total ?? 0),
+                            'vencimento' => now()->addDays(30)->toDateString(),
+                            'status' => 'ABERTO',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
 
                 $orcamentoId = $orcamento->id;
             }
@@ -234,20 +267,77 @@ class AgendamentoController extends Controller
                 ->where('op.procedimento_id', $procId)
                 ->exists();
 
-            $payOk = DB::table('pagamentos as p')
-                ->where('p.orcamento_id', (int)$orcamentoId)
-                ->where(function ($q) {
-                    $q->where('p.confirmado', true)
-                      ->orWhere(function ($qq) {
-                          $qq->where('p.confirmado', false)->where('p.status', 'pendente');
-                      });
-                })
-                ->exists();
+            $orcMeta = DB::table('orcamentos')->select('convenio_id', 'paciente_id', 'valor_total')->where('id', (int)$orcamentoId)->first();
+            $isConvenio = $orcMeta && !empty($orcMeta->convenio_id);
+
+            $payOk = true;
+            if (!$isConvenio) {
+                $payOk = DB::table('pagamentos as p')
+                    ->join('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
+                    ->where('f.orcamento_id', (int)$orcamentoId)
+                    ->where('p.status', 'CONFIRMADO')
+                    ->exists();
+            } else {
+                $fatId = (int)DB::table('faturamentos')->where('orcamento_id', (int)$orcamentoId)->value('id');
+                if (!$fatId && $orcMeta) {
+                    $fatId = (int)DB::table('faturamentos')->insertGetId([
+                        'paciente_id' => $orcMeta->paciente_id,
+                        'orcamento_id' => (int)$orcamentoId,
+                        'valor_final' => (float)($orcMeta->valor_total ?? 0),
+                        'tipo_pagador' => 'CONVENIO',
+                        'convenio_id' => $orcMeta->convenio_id,
+                        'valor_total' => (float)($orcMeta->valor_total ?? 0),
+                        'valor_cobrado' => (float)($orcMeta->valor_total ?? 0),
+                        'valor_aprovado' => 0,
+                        'valor_glosado' => 0,
+                        'status' => 'AGUARDANDO_ENVIO',
+                        'data_faturamento' => now()->format('Y-m-d H:i:s'),
+                        'vencimento' => now()->addDays(30)->toDateString(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } elseif ($fatId && $orcMeta) {
+                    $fatTipo = (string)DB::table('faturamentos')->where('id', $fatId)->value('tipo_pagador');
+                    if (strtoupper((string)$fatTipo) !== 'CONVENIO') {
+                        DB::table('faturamentos')->where('id', $fatId)->update([
+                            'tipo_pagador' => 'CONVENIO',
+                            'convenio_id' => $orcMeta->convenio_id,
+                            'status' => 'AGUARDANDO_ENVIO',
+                            'data_faturamento' => now()->format('Y-m-d H:i:s'),
+                            'vencimento' => now()->addDays(30)->toDateString(),
+                            'valor_cobrado' => (float)($orcMeta->valor_total ?? 0),
+                            'valor_final' => (float)($orcMeta->valor_total ?? 0),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+                if ($fatId) {
+                    $crId = (int)DB::table('contas_receber')->where('faturamento_id', $fatId)->value('id');
+                    if (!$crId && $orcMeta) {
+                        DB::table('contas_receber')->insert([
+                            'faturamento_id' => $fatId,
+                            'paciente_id' => $orcMeta->paciente_id,
+                            'convenio_id' => $orcMeta->convenio_id,
+                            'valor' => (float)($orcMeta->valor_total ?? 0),
+                            'vencimento' => now()->addDays(30)->toDateString(),
+                            'status' => 'ABERTO',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    } elseif ($crId && $orcMeta) {
+                        DB::table('contas_receber')->where('id', $crId)->update([
+                            'convenio_id' => $orcMeta->convenio_id,
+                            'vencimento' => now()->addDays(30)->toDateString(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
 
             if (!$orcOk || !$payOk) {
                 throw new HttpResponseException(response()->json([
                     'errors' => [
-                        'orcamento' => ['Orçamento inválido para este paciente/procedimento ou sem pagamento pendente/confirmado.']
+                        'orcamento' => ['Orçamento inválido para este paciente/procedimento ou sem pagamento confirmado.']
                     ]
                 ], 422));
             }
@@ -342,8 +432,8 @@ class AgendamentoController extends Controller
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE(pr.nome,'') AS procedimento"),
                 DB::raw("COALESCE(s.descricao,'') AS status"),
-                DB::raw("(SELECT pg.status FROM pagamentos AS pg WHERE pg.orcamento_id = a.orcamento_id ORDER BY pg.id DESC LIMIT 1) AS pagamento_status"),
-                DB::raw("(SELECT pg.confirmado FROM pagamentos AS pg WHERE pg.orcamento_id = a.orcamento_id ORDER BY pg.id DESC LIMIT 1) AS pagamento_confirmado"),
+                DB::raw("(SELECT pg.status FROM pagamentos AS pg JOIN faturamentos AS f ON f.id = pg.faturamento_id WHERE f.orcamento_id = a.orcamento_id ORDER BY pg.id DESC LIMIT 1) AS pagamento_status"),
+                DB::raw("(SELECT CASE WHEN pg.status = 'CONFIRMADO' THEN 1 ELSE 0 END FROM pagamentos AS pg JOIN faturamentos AS f ON f.id = pg.faturamento_id WHERE f.orcamento_id = a.orcamento_id ORDER BY pg.id DESC LIMIT 1) AS pagamento_confirmado"),
                 'a.observacoes',
                 DB::raw("DATE_FORMAT(a.created_at, '%d/%m %H:%i') AS criado_em")
             )
@@ -493,13 +583,6 @@ class AgendamentoController extends Controller
     public function rescheduleSession(Request $request, string $id)
     {
         $agendamento = Agendamento::findOrFail($id);
-        if (empty($agendamento->sessao_tratamento_id)) {
-            return response()->json([
-                'errors' => [
-                    'sessao' => ['Este agendamento não é uma sessão de tratamento.']
-                ]
-            ], 422);
-        }
         if (!empty($agendamento->status_id)) {
             $st = StatusAgendamento::select('id', 'descricao')->find((int)$agendamento->status_id);
             $desc = $st ? strtolower((string)$st->descricao) : '';

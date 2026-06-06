@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 
 class ProcedimentoController extends Controller
 {
-    public function store(Request $request)
+    private function rules(): array
     {
-        $data = $request->validate([
+        return [
             'nome' => ['required', 'string', 'max:255'],
             'descricao' => ['nullable', 'string'],
             'categoria_id' => ['nullable', 'integer', 'exists:categorias_procedimento,id'],
@@ -18,27 +18,26 @@ class ProcedimentoController extends Controller
             'valor' => ['nullable', 'numeric'],
             'comissao_percentual' => ['nullable', 'numeric'],
             'ativo' => ['nullable', 'boolean'],
-        ]);
+        ];
+    }
+
+    private function normalizePayload(array $data): array
+    {
         $data['eh_tratamento'] = isset($data['eh_tratamento']) ? (bool)$data['eh_tratamento'] : false;
         $data['ativo'] = isset($data['ativo']) ? (bool)$data['ativo'] : true;
+        return $data;
+    }
+
+    public function store(Request $request)
+    {
+        $data = $this->normalizePayload($request->validate($this->rules()));
         Procedimento::create($data);
         return back()->with('success', 'Procedimento cadastrado');
     }
 
     public function update(Request $request, string $id)
     {
-        $data = $request->validate([
-            'nome' => ['required', 'string', 'max:255'],
-            'descricao' => ['nullable', 'string'],
-            'categoria_id' => ['nullable', 'integer', 'exists:categorias_procedimento,id'],
-            'eh_tratamento' => ['nullable', 'boolean'],
-            'quantidade_sessoes' => ['nullable', 'integer', 'min:1'],
-            'valor' => ['nullable', 'numeric'],
-            'comissao_percentual' => ['nullable', 'numeric'],
-            'ativo' => ['nullable', 'boolean'],
-        ]);
-        $data['eh_tratamento'] = isset($data['eh_tratamento']) ? (bool)$data['eh_tratamento'] : false;
-        $data['ativo'] = isset($data['ativo']) ? (bool)$data['ativo'] : true;
+        $data = $this->normalizePayload($request->validate($this->rules()));
         $proc = Procedimento::findOrFail($id);
         $proc->update($data);
         return back()->with('success', 'Procedimento atualizado');

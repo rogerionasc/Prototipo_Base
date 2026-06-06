@@ -11,14 +11,13 @@ return new class extends Migration
         if (!Schema::hasTable('pagamentos')) {
             Schema::create('pagamentos', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('orcamento_id')->constrained('orcamentos')->cascadeOnDelete();
+                $table->foreignId('faturamento_id')->constrained('faturamentos')->cascadeOnDelete();
                 $table->foreignId('caixa_id')->nullable()->constrained('caixas')->nullOnDelete();
                 $table->foreignId('movimentacao_id')->nullable()->constrained('movimentacoes_caixa')->nullOnDelete();
                 $table->decimal('valor', 10, 2)->default(0);
                 $table->string('forma_pagamento', 50)->nullable();
                 $table->datetime('data_pagamento')->nullable();
-                $table->boolean('confirmado')->default(false);
-                $table->string('status', 30)->default('pendente');
+                $table->string('status', 30)->default('PENDENTE');
                 $table->text('recusa_justificativa')->nullable();
                 $table->foreignId('recusado_por')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamps();

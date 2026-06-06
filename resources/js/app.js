@@ -62,64 +62,55 @@ createInertiaApp({
     },
 });
 
+function getChoicesConfig(el) {
+    const isMultiple = !!el?.hasAttribute?.('multiple');
+    return {
+        searchEnabled: true,
+        searchChoices: true,
+        removeItemButton: isMultiple,
+        shouldSort: false,
+        searchFields: ['label', 'value'],
+        noResultsText: 'Nem resultado encontrado',
+        placeholder: true,
+        placeholderValue: 'Selecione',
+        fuseOptions: {
+            threshold: 0.0,
+            ignoreLocation: true,
+            minMatchCharLength: 1
+        }
+    };
+}
+
+function ensureChoicesInstance(el) {
+    try {
+        if (!el) return null;
+        if (el.dataset.choicesInitialized === 'true' || el._choicesInstance) return el._choicesInstance || el.choices || null;
+        cleanupChoicesSiblings(el);
+        const instance = new Choices(el, getChoicesConfig(el));
+        el.dataset.choicesInitialized = 'true';
+        el._choicesInstance = instance;
+        setupInvalidClassObserver(el);
+        mirrorInvalidToWrapper(el);
+        try { el.style.display = 'none'; } catch (_) {}
+        return instance;
+    } catch (e) {
+        console.error('Choices init error:', e);
+        return null;
+    }
+}
+
 function initChoices() {
     const selects = document.querySelectorAll('select[data-choices]');
     selects.forEach((el) => {
-        if (el.dataset.choicesInitialized === 'true' || el._choicesInstance) return;
-        try {
-            cleanupChoicesSiblings(el);
-            const isMultiple = el.hasAttribute('multiple');
-            const instance = new Choices(el, {
-                searchEnabled: true,
-                searchChoices: true,
-                removeItemButton: isMultiple,
-                shouldSort: false,
-                searchFields: ['label', 'value'],
-                noResultsText: 'Nem resultado encontrado',
-                placeholder: true,
-                placeholderValue: 'Selecione',
-                fuseOptions: {
-                    threshold: 0.0,
-                    ignoreLocation: true,
-                    minMatchCharLength: 1
-                }
-            });
-            el.dataset.choicesInitialized = 'true';
-            el._choicesInstance = instance;
-            try { el.style.display = 'none'; } catch (_) {}
-        } catch (e) {
-            console.error('Choices init error:', e);
-        }
+        ensureChoicesInstance(el);
     });
 }
 function initChoiceEl(el) {
     try {
         if (!el) return;
-        if (el.dataset.choicesInitialized === 'true' || el._choicesInstance) return;
-        cleanupChoicesSiblings(el);
-        el.dataset.choicesInitialized = 'true';
-        const isMultiple = el.hasAttribute('multiple');
-        const instance = new Choices(el, {
-            searchEnabled: true,
-            searchChoices: true,
-            removeItemButton: isMultiple,
-            shouldSort: false,
-            searchFields: ['label', 'value'],
-            noResultsText: 'Nem resultado encontrado',
-            placeholder: true,
-            placeholderValue: 'Selecione',
-            fuseOptions: {
-                threshold: 0.0,
-                ignoreLocation: true,
-                minMatchCharLength: 1
-            }
-        });
-        el._choicesInstance = instance;
+        ensureChoicesInstance(el);
         const v = el.value != null ? String(el.value) : '';
         syncChoiceValue(el, v);
-        setupInvalidClassObserver(el);
-        mirrorInvalidToWrapper(el);
-        try { el.style.display = 'none'; } catch (_) {}
     } catch (e) {
         console.error('Choices init error:', e);
     }
@@ -208,30 +199,9 @@ function setupChoicesObserver() {
                     targets.forEach((el) => {
                         if (el.dataset.choicesInitialized === 'true' || el._choicesInstance) return;
                         try {
-                            cleanupChoicesSiblings(el);
-                            const isMultiple = el.hasAttribute('multiple');
-                            const inst = new Choices(el, {
-                                searchEnabled: true,
-                                searchChoices: true,
-                                removeItemButton: isMultiple,
-                                shouldSort: false,
-                                searchFields: ['label', 'value'],
-                                noResultsText: 'Nem resultado encontrado',
-                                placeholder: true,
-                                placeholderValue: 'Selecione',
-                                fuseOptions: {
-                                    threshold: 0.0,
-                                    ignoreLocation: true,
-                                    minMatchCharLength: 1
-                                }
-                            });
-                            el.dataset.choicesInitialized = 'true';
-                            el._choicesInstance = inst;
+                            ensureChoicesInstance(el);
                             const v = el.value != null ? String(el.value) : '';
                             syncChoiceValue(el, v);
-                            setupInvalidClassObserver(el);
-                            mirrorInvalidToWrapper(el);
-                            try { el.style.display = 'none'; } catch (_) {}
                         } catch (e) {
                             console.error('Choices init error:', e);
                         }

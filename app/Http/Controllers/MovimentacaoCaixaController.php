@@ -77,8 +77,9 @@ class MovimentacaoCaixaController extends Controller
             ->get();
         $pagamentosPendentes = $this->getPagamentosPendentes();
         $ultimosPagamentos = DB::table('pagamentos as p')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'p.orcamento_id')
-            ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
+            ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
+            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->leftJoin('caixas as c', 'c.id', '=', 'p.caixa_id')
             ->select(
                 'p.id',
@@ -90,17 +91,19 @@ class MovimentacaoCaixaController extends Controller
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
                 DB::raw("COALESCE(c.descricao,'') AS caixa")
             )
-            ->where('p.confirmado', true)
+            ->where('p.status', 'CONFIRMADO')
+            ->where('f.tipo_pagador', 'PARTICULAR')
             ->orderByDesc('p.data_pagamento')
             ->orderByDesc('p.created_at')
             ->limit(10)
             ->get();
         $pagamentosRecusados = DB::table('pagamentos as p')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'p.orcamento_id')
-            ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
+            ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
+            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->select(
                 'p.id',
-                'p.orcamento_id',
+                'o.id as orcamento_id',
                 'p.valor',
                 'p.forma_pagamento',
                 'p.status',
@@ -109,8 +112,8 @@ class MovimentacaoCaixaController extends Controller
                 DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
                 DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_orcamento")
             )
-            ->where('p.confirmado', false)
-            ->where('p.status', 'recusado')
+            ->where('p.status', 'RECUSADO')
+            ->where('f.tipo_pagador', 'PARTICULAR')
             ->orderByDesc('p.updated_at')
             ->limit(100)
             ->get();
@@ -127,26 +130,37 @@ class MovimentacaoCaixaController extends Controller
 
     private function getPagamentosPendentes()
     {
-        return DB::table('pagamentos as p')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'p.orcamento_id')
-            ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
+        $pendIds = DB::table('pagamentos as pg')
+            ->select(DB::raw('MAX(pg.id) as id'), 'pg.faturamento_id')
+            ->where('pg.status', 'PENDENTE')
+            ->groupBy('pg.faturamento_id');
+
+        return DB::table('faturamentos as f')
+            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
+            ->leftJoin('contas_receber as cr', 'cr.faturamento_id', '=', 'f.id')
+            ->leftJoinSub($pendIds, 'pp', function ($join) {
+                $join->on('pp.faturamento_id', '=', 'f.id');
+            })
+            ->leftJoin('pagamentos as p', 'p.id', '=', 'pp.id')
             ->select(
-                'p.id',
-                'p.orcamento_id',
-                'p.caixa_id',
-                'p.valor',
-                'p.forma_pagamento',
-                'p.confirmado',
-                'p.status',
+                'f.id as faturamento_id',
+                'o.id as orcamento_id',
+                DB::raw('COALESCE(cr.valor, f.valor_final, f.valor_cobrado, f.valor_total, 0) AS valor'),
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
                 DB::raw("COALESCE(pa.cpf,'') AS paciente_documento"),
-                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y %H:%i') AS data_orcamento")
+                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y %H:%i') AS data_orcamento"),
+                'p.id as pagamento_id',
+                'p.caixa_id',
+                'p.forma_pagamento',
+                'p.status as pagamento_status'
             )
-            ->where('p.confirmado', false)
-            ->where('p.status', 'pendente')
+            ->where('f.tipo_pagador', 'PARTICULAR')
+            ->where('f.status', 'AGUARDANDO_PAGAMENTO')
             ->whereNull('o.deleted_at')
             ->where('o.aprovado', true)
-            ->orderByDesc('p.created_at')
+            ->orderByDesc('f.updated_at')
+            ->orderByDesc('f.id')
             ->get();
     }
 
@@ -284,22 +298,22 @@ class MovimentacaoCaixaController extends Controller
             abort(404);
         }
         $pagamentos = DB::table('pagamentos as p')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'p.orcamento_id')
-            ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
+            ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
+            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->select(
                 'p.id',
-                'p.orcamento_id',
+                'o.id as orcamento_id',
                 'p.caixa_id',
                 'p.valor',
                 'p.forma_pagamento',
                 DB::raw("DATE_FORMAT(p.data_pagamento, '%d-%m-%Y') AS data_pagamento"),
-                'p.confirmado',
                 'p.status',
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
                 DB::raw("(SELECT GROUP_CONCAT(DISTINCT pr.nome ORDER BY pr.nome SEPARATOR ', ')
                           FROM orcamento_procedimentos AS op
                           LEFT JOIN procedimentos AS pr ON pr.id = op.procedimento_id
-                          WHERE op.orcamento_id = p.orcamento_id
+                          WHERE op.orcamento_id = o.id
                             AND (op.deleted_at IS NULL)
                             AND (pr.deleted_at IS NULL)) AS procedimentos")
             )

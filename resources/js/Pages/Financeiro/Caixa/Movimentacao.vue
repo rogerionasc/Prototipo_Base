@@ -84,7 +84,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(row, idx) in pagamentosFiltered" :key="row.id">
+                  <tr v-for="(row, idx) in pagamentosFiltered" :key="row.faturamento_id">
                     <td>{{ row.paciente }}</td>
                     <td class="text-muted">{{ row.paciente_documento || "—" }}</td>
                     <td class="text-end">{{ formatCurrency(row.valor) }}</td>
@@ -99,16 +99,16 @@
                         :variant="isAguardandoPix(row) ? 'warning' : 'success'"
                         size="sm"
                         :split="true"
-                        @click="isAguardandoPix(row) ? (cancelProcessing[row.id] ? null : cancelarPix(row.id)) : abrirReceber(row.id)"
+                        @click="isAguardandoPix(row) ? (cancelProcessing[row.pagamento_id] ? null : cancelarPix(row.pagamento_id)) : abrirReceber(row.faturamento_id)"
                       >
                         <template #button-content>
-                          <span v-if="isAguardandoPix(row) && cancelProcessing[row.id]" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                          <span v-if="isAguardandoPix(row) && cancelProcessing[row.pagamento_id]" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                           <i :class="isAguardandoPix(row) ? 'ri-close-circle-line align-bottom me-1' : 'ri-money-dollar-box-line align-bottom me-1'"></i>{{ isAguardandoPix(row) ? 'Cancelar' : 'Receber' }}
                         </template>
-                        <BDropdownItem @click="abrirRecusar(row.id)">
+                        <BDropdownItem :disabled="!row.pagamento_id" @click="abrirRecusar(row.faturamento_id)">
                           <i class="ri-close-circle-line text-danger me-2"></i>Recusar
                         </BDropdownItem>
-                        <BDropdownItem @click="mostrarOrcamento(row.id)">
+                        <BDropdownItem @click="mostrarOrcamento(row.faturamento_id)">
                           <i class="ri-eye-fill text-info me-2"></i>Visualizar
                         </BDropdownItem>
                       </BDropdown>
@@ -505,7 +505,7 @@
                   <td>{{ row.data_pagamento || "—" }}</td>
                   <td class="text-end">{{ formatCurrency(row.valor) }}</td>
                   <td>{{ row.forma_pagamento || "—" }}</td>
-                  <td>{{ row.confirmado ? "Confirmado" : "Pendente" }}</td>
+                  <td>{{ pagamentoStatusLabel(row) }}</td>
                 </tr>
                 <tr v-if="!movPagamentosView || movPagamentosView.length === 0">
                   <td colspan="6" class="text-muted">Sem pagamentos nesta movimentação</td>
@@ -566,7 +566,7 @@ const pendentesTotal = computed(() => {
 const hasPixPendente = computed(() => {
   const cid = openForm.caixa_id;
   return (pagamentosLocal.value || []).some(r =>
-    String(r?.status || '').toLowerCase() === 'pendente' &&
+    String(r?.pagamento_status || '').toLowerCase() === 'pendente' &&
     String(r?.forma_pagamento || '').toUpperCase() === 'PIX' &&
     (!cid || String(r?.caixa_id) === String(cid))
   );
@@ -626,13 +626,13 @@ const caixaIndMsg = computed(() => {
   return "Caixa indisponível.";
 });
 const showRecusarModal = ref(false);
-const recusarId = ref(null);
+const recusarFaturamentoId = ref(null);
 const recusaJustificativa = ref("");
 const recusaError = ref("");
 const recusarInfo = computed(() => {
-  const id = recusarId.value;
+  const id = recusarFaturamentoId.value;
   if (!id) return {};
-  const r = (pagamentosLocal.value || []).find(x => String(x.id) === String(id));
+  const r = (pagamentosLocal.value || []).find(x => String(x.faturamento_id) === String(id));
   return {
     paciente: r?.paciente || "—",
     valor: formatCurrency(r?.valor || 0),
@@ -678,6 +678,17 @@ function formatCurrency(n) {
   } catch (e) {
     return `R$ ${v.toFixed(2)}`.replace(".", ",");
   }
+}
+
+function pagamentoStatusLabel(row) {
+  const raw = String(row?.status ?? row?.pagamento_status ?? '').trim();
+  const s = raw.toUpperCase();
+  if (s === 'CONFIRMADO') return 'Pago';
+  if (s === 'PENDENTE') return 'Pendente';
+  if (s === 'RECUSADO') return 'Recusado';
+  if (s === 'CANCELADO') return 'Cancelado';
+  if (raw) return raw;
+  return row?.confirmado ? 'Pago' : 'Pendente';
 }
 
 const currentMov = computed(() => {
@@ -773,21 +784,22 @@ function abrirCaixa() {
 }
 
 function abrirRecusar(id) {
-  recusarId.value = id;
+  recusarFaturamentoId.value = id;
   recusaJustificativa.value = "";
   recusaError.value = "";
   showRecusarModal.value = true;
 }
 const showReceberModal = ref(false);
+const receberFaturamentoId = ref(null);
 const receberPagamentoId = ref(null);
 const formaRecebimento = ref("PIX");
 const cancelProcessing = ref({});
 const receberProcessing = ref(false);
 const receberError = ref("");
 const receberInfo = computed(() => {
-  const id = receberPagamentoId.value;
+  const id = receberFaturamentoId.value;
   if (!id) return {};
-  const r = (pagamentosLocal.value || []).find(x => String(x.id) === String(id));
+  const r = (pagamentosLocal.value || []).find(x => String(x.faturamento_id) === String(id));
   return {
     paciente: r?.paciente || "—",
     valor: Number(r?.valor || 0),
@@ -795,13 +807,15 @@ const receberInfo = computed(() => {
   };
 });
 function abrirReceber(id) {
-  receberPagamentoId.value = id;
+  receberFaturamentoId.value = id;
+  const r = (pagamentosLocal.value || []).find(x => String(x.faturamento_id) === String(id));
+  receberPagamentoId.value = r?.pagamento_id || null;
   formaRecebimento.value = "PIX";
   receberError.value = "";
   showReceberModal.value = true;
 }
 function isAguardandoPix(row) {
-  return String(row?.status || '').toLowerCase() === 'pendente' && String(row?.forma_pagamento || '').toUpperCase() === 'PIX';
+  return String(row?.pagamento_status || '').toLowerCase() === 'pendente' && String(row?.forma_pagamento || '').toUpperCase() === 'PIX';
 }
 function cancelarPix(id) {
   if (!id) return;
@@ -820,40 +834,56 @@ function cancelarPix(id) {
   });
 }
 function prosseguirRecebimento() {
-  const id = receberPagamentoId.value;
-  if (!id) { showReceberModal.value = false; return; }
+  const fatId = receberFaturamentoId.value;
+  if (!fatId) { showReceberModal.value = false; return; }
   receberError.value = "";
-  if (formaRecebimento.value === "PIX") {
-    if (!isCaixaDisponivelReceber.value) { showCaixaModal.value = true; return; }
-    const f = useForm({ caixa_id: openForm.caixa_id });
-    f.put(`/pagamentos/${id}/prepare-pix`, {
-      onSuccess: async () => {
-        showReceberModal.value = false;
-        await new Promise((resolve) => {
-          router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
-        });
-      },
-      onError: () => {
-        showReceberModal.value = false;
-      },
-    });
-  } else {
-    confirmarPagamento(id, formaRecebimento.value);
-    showReceberModal.value = false;
-  }
+  receberProcessing.value = true;
+  const run = async () => {
+    let pid = receberPagamentoId.value;
+    if (!pid) {
+      const resp = await axios.post(`/faturamentos/${fatId}/pagamentos`);
+      pid = resp?.data?.pagamento_id || null;
+      receberPagamentoId.value = pid;
+    }
+    if (!pid) return;
+    if (formaRecebimento.value === "PIX") {
+      if (!isCaixaDisponivelReceber.value) { showCaixaModal.value = true; return; }
+      const f = useForm({ caixa_id: openForm.caixa_id });
+      f.put(`/pagamentos/${pid}/prepare-pix`, {
+        onSuccess: async () => {
+          showReceberModal.value = false;
+          await new Promise((resolve) => {
+            router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
+          });
+        },
+        onError: () => {
+          showReceberModal.value = false;
+        },
+      });
+    } else {
+      confirmarPagamento(pid, formaRecebimento.value);
+      showReceberModal.value = false;
+    }
+  };
+  run().finally(() => {
+    receberProcessing.value = false;
+  });
 }
 function confirmarRecusa() {
-  const id = recusarId.value;
-  if (!id) { showRecusarModal.value = false; return; }
+  const fatId = recusarFaturamentoId.value;
+  if (!fatId) { showRecusarModal.value = false; return; }
+  const row = (pagamentosLocal.value || []).find(r => String(r.faturamento_id) === String(fatId));
+  const pid = row?.pagamento_id || null;
+  if (!pid) { showRecusarModal.value = false; return; }
   if (!String(recusaJustificativa.value || "").trim()) {
     recusaError.value = "Informe a justificativa da recusa.";
     return;
   }
   const f = useForm({ recusa_justificativa: recusaJustificativa.value });
-  f.put(`/pagamentos/${id}/refuse`, {
+  f.put(`/pagamentos/${pid}/refuse`, {
     onSuccess: async () => {
       showRecusarModal.value = false;
-      recusarId.value = null;
+      recusarFaturamentoId.value = null;
       recusaJustificativa.value = "";
       recusaError.value = "";
       await new Promise((resolve) => {
@@ -1166,8 +1196,8 @@ const selectedPaciente = ref("");
 const selectedCpf = ref("");
 const orcLoading = ref(false);
 
-async function mostrarOrcamento(pagamentoId) {
-  const row = (pagamentosLocal.value || []).find(r => String(r.id) === String(pagamentoId));
+async function mostrarOrcamento(faturamentoId) {
+  const row = (pagamentosLocal.value || []).find(r => String(r.faturamento_id) === String(faturamentoId));
   const oid = row?.orcamento_id;
   selectedPaciente.value = row?.paciente || "";
   if (!oid) return;

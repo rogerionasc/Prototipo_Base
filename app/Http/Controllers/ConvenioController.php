@@ -9,6 +9,18 @@ use App\Models\Conta;
 
 class ConvenioController extends Controller
 {
+    private function rules(): array
+    {
+        return [
+            'descricao' => ['required', 'string', 'max:255'],
+            'tipo' => ['nullable', 'in:Convenio,Particular'],
+            'empresa_id' => ['nullable', 'integer', 'exists:contas,id'],
+            'ans' => ['nullable', 'integer'],
+            'dias_recebimento' => ['nullable', 'integer'],
+            'dias_retorno' => ['nullable', 'integer'],
+        ];
+    }
+
     public function index()
     {
         $convenios = Convenio::select('id','descricao','tipo','empresa_id','ans','dias_recebimento','dias_retorno')->get();
@@ -21,15 +33,7 @@ class ConvenioController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'descricao' => ['required','string','max:255'],
-            'tipo' => ['nullable','in:Convenio,Particular'],
-            'empresa_id' => ['nullable','integer','exists:contas,id'],
-            'ans' => ['nullable','integer'],
-            'dias_recebimento' => ['nullable','integer'],
-            'dias_retorno' => ['nullable','integer'],
-        ]);
-
+        $data = $request->validate($this->rules());
         Convenio::create($data);
 
         return back()->with('success','Convênio cadastrado');
@@ -37,15 +41,7 @@ class ConvenioController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $data = $request->validate([
-            'descricao' => ['required','string','max:255'],
-            'tipo' => ['nullable','in:Convenio,Particular'],
-            'empresa_id' => ['nullable','integer','exists:contas,id'],
-            'ans' => ['nullable','integer'],
-            'dias_recebimento' => ['nullable','integer'],
-            'dias_retorno' => ['nullable','integer'],
-        ]);
-
+        $data = $request->validate($this->rules());
         $convenio = Convenio::findOrFail($id);
         $convenio->update($data);
 

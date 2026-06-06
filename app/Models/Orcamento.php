@@ -24,6 +24,7 @@ class Orcamento extends Model
         'valor_avista',
         'faturamento_previsto',
         'aprovado',
+        'status',
     ];
 
     protected $casts = [

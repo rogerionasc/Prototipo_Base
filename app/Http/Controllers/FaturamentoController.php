@@ -1,0 +1,134 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+
+class FaturamentoController extends Controller
+{
+    public function particular()
+    {
+        $rows = DB::table('faturamentos as f')
+            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('pacientes as p', 'p.id', '=', 'f.paciente_id')
+            ->select(
+                'f.id',
+                'f.paciente_id',
+                'f.orcamento_id',
+                DB::raw("COALESCE(p.nome,'') AS paciente"),
+                DB::raw("COALESCE(p.cpf,'') AS paciente_documento"),
+                DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
+                DB::raw("DATE_FORMAT(f.data_faturamento, '%d-%m-%Y %H:%i') AS data_faturamento"),
+                DB::raw("DATE_FORMAT(f.vencimento, '%d-%m-%Y') AS vencimento"),
+                'f.valor_total',
+                'f.valor_final',
+                'f.status'
+            )
+            ->where('f.tipo_pagador', 'PARTICULAR')
+            ->whereNull('o.deleted_at')
+            ->orderByDesc('f.updated_at')
+            ->orderByDesc('f.id')
+            ->limit(500)
+            ->get();
+
+        return Inertia::render('Faturamento/Particular', [
+            'faturamentos' => $rows,
+        ]);
+    }
+
+    public function convenios()
+    {
+        $rows = DB::table('faturamentos as f')
+            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('pacientes as p', 'p.id', '=', 'f.paciente_id')
+            ->leftJoin('convenios as c', 'c.id', '=', 'f.convenio_id')
+            ->select(
+                'f.id',
+                'f.paciente_id',
+                'f.orcamento_id',
+                'f.convenio_id',
+                DB::raw("COALESCE(c.descricao,'') AS convenio"),
+                DB::raw("COALESCE(p.nome,'') AS paciente"),
+                DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
+                DB::raw("DATE_FORMAT(f.data_faturamento, '%d-%m-%Y %H:%i') AS data_faturamento"),
+                DB::raw("DATE_FORMAT(f.vencimento, '%d-%m-%Y') AS vencimento"),
+                'f.valor_cobrado',
+                'f.valor_aprovado',
+                'f.valor_glosado',
+                'f.status'
+            )
+            ->where('f.tipo_pagador', 'CONVENIO')
+            ->whereNull('o.deleted_at')
+            ->orderByDesc('f.updated_at')
+            ->orderByDesc('f.id')
+            ->limit(500)
+            ->get();
+
+        return Inertia::render('Faturamento/Convenios', [
+            'faturamentos' => $rows,
+        ]);
+    }
+
+    public function updateConvenio(Request $request, string $id)
+    {
+        $data = $request->validate([
+            'status' => ['required', 'string', 'in:AGUARDANDO_ENVIO,ENVIADO,EM_ANALISE,APROVADO,GLOSADO,RECEBIDO,CANCELADO'],
+            'valor_cobrado' => ['nullable', 'numeric', 'min:0'],
+            'valor_aprovado' => ['nullable', 'numeric', 'min:0'],
+            'valor_glosado' => ['nullable', 'numeric', 'min:0'],
+            'vencimento' => ['nullable', 'date'],
+        ]);
+
+        $fatId = (int)$id;
+        $fat = DB::table('faturamentos')->select('id', 'tipo_pagador')->where('id', $fatId)->first();
+        if (!$fat) {
+            return back()->with('error', 'Faturamento não encontrado.');
+        }
+        if (strtoupper((string)$fat->tipo_pagador) !== 'CONVENIO') {
+            return back()->with('error', 'Faturamento não é do tipo CONVÊNIO.');
+        }
+
+        $vc = array_key_exists('valor_cobrado', $data) ? (float)($data['valor_cobrado'] ?? 0) : null;
+        $va = array_key_exists('valor_aprovado', $data) ? (float)($data['valor_aprovado'] ?? 0) : null;
+        $vg = array_key_exists('valor_glosado', $data) ? (float)($data['valor_glosado'] ?? 0) : null;
+
+        if ($vg === null && $vc !== null && $va !== null) {
+            $vg = max(0, $vc - $va);
+        }
+
+        DB::transaction(function () use ($fatId, $data, $vc, $va, $vg) {
+            $upd = [
+                'status' => $data['status'],
+                'updated_at' => now(),
+            ];
+            if ($vc !== null) $upd['valor_cobrado'] = $vc;
+            if ($va !== null) $upd['valor_aprovado'] = $va;
+            if ($vg !== null) $upd['valor_glosado'] = $vg;
+            if (!empty($data['vencimento'])) $upd['vencimento'] = $data['vencimento'];
+
+            DB::table('faturamentos')->where('id', $fatId)->update($upd);
+
+            $crValor = null;
+            if ($va !== null && $va > 0) $crValor = $va;
+            elseif ($vc !== null && $vc > 0) $crValor = $vc;
+
+            if ($crValor !== null) {
+                DB::table('contas_receber')->where('faturamento_id', $fatId)->update([
+                    'valor' => (float)$crValor,
+                    'updated_at' => now(),
+                ]);
+            }
+
+            if ($data['status'] === 'RECEBIDO') {
+                DB::table('contas_receber')->where('faturamento_id', $fatId)->update([
+                    'status' => 'RECEBIDO',
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Faturamento atualizado.');
+    }
+}

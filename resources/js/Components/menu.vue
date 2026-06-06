@@ -37,10 +37,23 @@ export default {
                     type: "link",
                     target: "#financeiro",
                     children: [
+                        { href: "/contas-receber", label: "Contas a Receber" },
                         { href: "#", label: "Contas a Pagar" },
-                        { href: "#", label: "Contas a Receber" },
                         { href: "#", label: "Fluxo de Caixa" },
-                        { href: "#", label: "Devoluções" }
+                        { href: "#", label: "Relatórios" }
+                    ]
+                },
+                {
+                    icon: "ri-file-list-3-line",
+                    title: "Faturamento",
+                    type: "link",
+                    target: "#faturamento",
+                    children: [
+                        { href: "/faturamento/particular", label: "Particular" },
+                        { href: "/faturamento/convenios", label: "Convênios" },
+                        { href: "#", label: "Guias" },
+                        { href: "#", label: "Glosas" },
+                        { href: "#", label: "Relatórios" }
                     ]
                 },
                 {
@@ -51,14 +64,15 @@ export default {
                     children: [
                         { href: "/movimentacoes-caixa", label: "Abertura" },
                         { href: "/cadastro-caixa", label: "Cadastro" },
-                        { href: "/pagamentos-recusados", label: "Pagamentos Recusados" }
+                        { href: "/pagamentos-recusados", label: "Pagamentos Recusados" },
+                        { href: "#", label: "Sangria" },
                     ]
                 },
                 {
                     icon: "ri-stethoscope-line",
                     title: this.$t("t-doctor"),
                     type: "link",
-                    target: "#medicos",
+                    target: "/medicos",
                 },
                 {
                     icon: "ri-user-heart-fill",

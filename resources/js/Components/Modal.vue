@@ -142,7 +142,7 @@ onBeforeUnmount(() => {
   width: 100vw;
   height: 100vh;
   z-index: 1040;
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 .modal-content {

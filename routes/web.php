@@ -11,6 +11,8 @@ use App\Http\Controllers\OrcamentoController;
 use App\Http\Controllers\CaixaController;
 use App\Http\Controllers\MovimentacaoCaixaController;
 use App\Http\Controllers\AgendamentoController;
+use App\Http\Controllers\FaturamentoController;
+use App\Http\Controllers\ContasReceberController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +73,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
         // Pacientes routes
         Route::get("/pacientes", [PacienteController::class, "index"]);
+        Route::get("/pacientes/search", [PacienteController::class, "search"])->name('pacientes.search');
         Route::post("/pacientes", [PacienteController::class, "store"])->name('pacientes.store');
         Route::put("/pacientes/{id}", [PacienteController::class, "update"])->name('pacientes.update');
         Route::delete("/pacientes/{id}", [PacienteController::class, "destroy"])->name('pacientes.destroy');
@@ -123,6 +126,15 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/orcamentos/{id}/approve", [OrcamentoController::class, "approve"])->whereNumber('id')->name('orcamentos.approve');
         Route::put("/orcamentos/{id}/unapprove", [OrcamentoController::class, "unapprove"])->whereNumber('id')->name('orcamentos.unapprove');
 
+        // Faturamento
+        Route::get("/faturamento/particular", [FaturamentoController::class, "particular"])->name('faturamento.particular');
+        Route::get("/faturamento/convenios", [FaturamentoController::class, "convenios"])->name('faturamento.convenios');
+        Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');
+
+        // Financeiro
+        Route::get("/contas-receber", [ContasReceberController::class, "index"])->name('financeiro.contas_receber.index');
+        Route::post("/faturamentos/{id}/receber-financeiro", [ContasReceberController::class, "receiveConvenio"])->whereNumber('id')->name('financeiro.receber_convenio');
+
         // Agenda Médica routes
         Route::post("/agenda-medica", [AgendaMedicaController::class, "store"])->name('agenda_medica.store');
         Route::get("/agendamentos/profissionais-por-procedimento", [AgendamentoController::class, "profissionaisPorProcedimento"])->name('agendamentos.profissionais_por_procedimento');
@@ -138,6 +150,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/agendamentos/{id}/cancel", [AgendamentoController::class, "cancel"])->whereNumber('id')->name('agendamentos.cancel');
 
         // Pagamentos
+        Route::post("/faturamentos/{id}/pagamentos", [\App\Http\Controllers\PagamentoController::class, "startForFaturamento"])->whereNumber('id')->name('faturamentos.pagamentos.start');
         Route::put("/pagamentos/{id}/confirm", [\App\Http\Controllers\PagamentoController::class, "confirm"])->whereNumber('id')->name('pagamentos.confirm');
         Route::put("/pagamentos/{id}/refuse", [\App\Http\Controllers\PagamentoController::class, "refuse"])->whereNumber('id')->name('pagamentos.refuse');
         Route::put("/pagamentos/{id}/unrefuse", [\App\Http\Controllers\PagamentoController::class, "unrefuse"])->whereNumber('id')->name('pagamentos.unrefuse');

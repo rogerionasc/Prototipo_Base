@@ -30,23 +30,24 @@ class PagamentoController extends Controller
             'caixa_id' => ['required','integer','exists:caixas,id'],
         ]);
         $p = DB::table('pagamentos as p')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'p.orcamento_id')
-            ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
+            ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
+            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->select(
                 'p.id',
-                'p.orcamento_id',
+                'o.id as orcamento_id',
                 'p.caixa_id',
                 'p.valor',
                 'p.forma_pagamento',
-                'p.confirmado',
                 'p.status',
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
                 DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
                 DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_orcamento")
             )
-            ->where('p.confirmado', false)
-            ->where('p.status', 'pendente')
+            ->where('p.status', 'PENDENTE')
             ->where('p.forma_pagamento', 'PIX')
+            ->where('f.tipo_pagador', 'PARTICULAR')
+            ->where('f.status', 'AGUARDANDO_PAGAMENTO')
             ->where('p.caixa_id', (int)$data['caixa_id'])
             ->orderByDesc('p.created_at')
             ->first();
@@ -55,13 +56,58 @@ class PagamentoController extends Controller
         ]);
     }
 
+    public function startForFaturamento(Request $request, string $id)
+    {
+        $data = $request->validate([
+            'valor' => ['nullable', 'numeric', 'min:0'],
+        ]);
+        $fatId = (int)$id;
+        $fat = DB::table('faturamentos')
+            ->select('id', 'tipo_pagador', 'status', 'valor_final', 'valor_cobrado', 'valor_total')
+            ->where('id', $fatId)
+            ->first();
+        if (!$fat) {
+            return response()->json(['error' => 'Faturamento não encontrado'], 404);
+        }
+        $tipo = strtoupper((string)$fat->tipo_pagador);
+        if ($tipo !== 'PARTICULAR') {
+            return response()->json(['error' => 'Faturamento não é do tipo PARTICULAR'], 422);
+        }
+        if (strtoupper((string)$fat->status) !== 'AGUARDANDO_PAGAMENTO') {
+            return response()->json(['error' => 'Faturamento não está AGUARDANDO_PAGAMENTO'], 422);
+        }
+
+        $existing = Pagamento::where('faturamento_id', $fatId)
+            ->where('status', 'PENDENTE')
+            ->orderByDesc('id')
+            ->first();
+        if ($existing) {
+            return response()->json(['pagamento_id' => $existing->id]);
+        }
+
+        $valor = $data['valor'] ?? null;
+        if ($valor === null) {
+            $valor = (float)($fat->valor_final ?? $fat->valor_cobrado ?? $fat->valor_total ?? 0);
+        }
+        $pag = Pagamento::create([
+            'faturamento_id' => $fatId,
+            'caixa_id' => null,
+            'movimentacao_id' => null,
+            'valor' => (float)$valor,
+            'forma_pagamento' => null,
+            'data_pagamento' => null,
+            'status' => 'PENDENTE',
+        ]);
+        return response()->json(['pagamento_id' => $pag->id]);
+    }
+
     public function preparePix(Request $request, string $id)
     {
         $data = $request->validate([
             'caixa_id' => ['required','integer','exists:caixas,id'],
         ]);
         $pag = Pagamento::findOrFail($id);
-        if ($pag->confirmado) {
+        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
             return back()->withErrors([
                 'pagamento' => 'Pagamento já confirmado.',
             ], 422);
@@ -69,7 +115,7 @@ class PagamentoController extends Controller
         $pag->update([
             'caixa_id' => (int)$data['caixa_id'],
             'forma_pagamento' => 'PIX',
-            'status' => 'pendente',
+            'status' => 'PENDENTE',
         ]);
         return back()->with('success', 'Pagamento preparado para PIX no caixa selecionado');
     }
@@ -77,19 +123,19 @@ class PagamentoController extends Controller
     public function cancelPix(Request $request, string $id)
     {
         $pag = Pagamento::findOrFail($id);
-        if ($pag->confirmado) {
+        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
             return back()->withErrors([
                 'pagamento' => 'Pagamento já confirmado.',
             ], 422);
         }
-        if (($pag->forma_pagamento ?? '') !== 'PIX' || ($pag->status ?? '') !== 'pendente') {
+        if (strtoupper((string)($pag->forma_pagamento ?? '')) !== 'PIX' || strtoupper((string)($pag->status ?? '')) !== 'PENDENTE') {
             return back()->withErrors([
                 'pagamento' => 'Pagamento não está aguardando confirmação PIX.',
             ], 422);
         }
         $pag->update([
             'forma_pagamento' => null,
-            'status' => 'pendente',
+            'status' => 'PENDENTE',
         ]);
         return back()->with('success', 'Pagamento cancelado. Selecione outra forma de pagamento.');
     }
@@ -100,7 +146,7 @@ class PagamentoController extends Controller
             'pagamento_id' => ['required','integer','exists:pagamentos,id'],
         ]);
         $pag = Pagamento::findOrFail((int)$data['pagamento_id']);
-        if ($pag->confirmado) {
+        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
             return response()->json(['error' => 'Pagamento já confirmado'], 422);
         }
         if (($pag->forma_pagamento ?? '') !== 'PIX') {
@@ -151,7 +197,7 @@ class PagamentoController extends Controller
         $simulate = filter_var($request->input('simulate', false), FILTER_VALIDATE_BOOLEAN);
         $mpPaymentId = $request->input('mp_payment_id');
         $pag = Pagamento::findOrFail((int)$data['pagamento_id']);
-        if ($pag->confirmado) {
+        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
             return response()->json(['success' => true, 'message' => 'Pagamento já confirmado']);
         }
         if (($pag->forma_pagamento ?? '') !== 'PIX') {
@@ -176,8 +222,7 @@ class PagamentoController extends Controller
                 $pag->update([
                     'movimentacao_id' => $mov->id,
                     'data_pagamento' => Carbon::today()->format('Y-m-d'),
-                    'confirmado' => true,
-                    'status' => 'confirmado',
+                    'status' => 'CONFIRMADO',
                 ]);
                 $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
                 $totSaidas = (float)($mov->total_saidas ?? 0);
@@ -187,6 +232,7 @@ class PagamentoController extends Controller
                     'total_entradas' => $totEntradas,
                     'saldo_movimento' => $saldoMov,
                 ]);
+                $this->syncFaturamentoFromPagamento($pag);
             });
             return response()->json(['success' => true, 'simulated' => true]);
         }
@@ -227,8 +273,7 @@ class PagamentoController extends Controller
                             $pag->update([
                                 'movimentacao_id' => $mov->id,
                                 'data_pagamento' => Carbon::today()->format('Y-m-d'),
-                                'confirmado' => true,
-                                'status' => 'confirmado',
+                                'status' => 'CONFIRMADO',
                             ]);
                             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
                             $totSaidas = (float)($mov->total_saidas ?? 0);
@@ -238,6 +283,7 @@ class PagamentoController extends Controller
                                 'total_entradas' => $totEntradas,
                                 'saldo_movimento' => $saldoMov,
                             ]);
+                            $this->syncFaturamentoFromPagamento($pag);
                         });
                         try { Log::info('MP status approved by id', ['mp_payment_id' => $mpPaymentId, 'pagamento_id' => $pag->id]); } catch (\Throwable $e) {}
                         return response()->json(['success' => true]);
@@ -296,8 +342,7 @@ class PagamentoController extends Controller
             $pag->update([
                 'movimentacao_id' => $mov->id,
                 'data_pagamento' => Carbon::today()->format('Y-m-d'),
-                'confirmado' => true,
-                'status' => 'confirmado',
+                'status' => 'CONFIRMADO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
             $totSaidas = (float)($mov->total_saidas ?? 0);
@@ -307,6 +352,7 @@ class PagamentoController extends Controller
                 'total_entradas' => $totEntradas,
                 'saldo_movimento' => $saldoMov,
             ]);
+            $this->syncFaturamentoFromPagamento($pag);
         });
         return response()->json(['success' => true]);
     }
@@ -363,8 +409,7 @@ class PagamentoController extends Controller
             $pag->update([
                 'movimentacao_id' => $mov->id,
                 'data_pagamento' => Carbon::today()->format('Y-m-d'),
-                'confirmado' => true,
-                'status' => 'confirmado',
+                'status' => 'CONFIRMADO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
             $totSaidas = (float)($mov->total_saidas ?? 0);
@@ -374,6 +419,7 @@ class PagamentoController extends Controller
                 'total_entradas' => $totEntradas,
                 'saldo_movimento' => $saldoMov,
             ]);
+            $this->syncFaturamentoFromPagamento($pag);
         });
         return response()->json(['success' => true]);
     }
@@ -422,8 +468,7 @@ class PagamentoController extends Controller
         $pag = $id ? Pagamento::find($id) : null;
         if (!$pag) {
             // Fallback: localizar por valor e pendência PIX
-            $pag = Pagamento::where('confirmado', false)
-                ->where('status', 'pendente')
+            $pag = Pagamento::where('status', 'PENDENTE')
                 ->where('forma_pagamento', 'PIX')
                 ->whereRaw('CAST(valor AS DECIMAL(10,2)) = ?', [number_format($valor, 2, '.', '')])
                 ->orderByDesc('created_at')
@@ -432,7 +477,7 @@ class PagamentoController extends Controller
                 return response()->json(['error' => 'Pagamento não localizado'], 404);
             }
         }
-        if ($pag->confirmado) {
+        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
             return response()->json(['success' => true, 'message' => 'Pagamento já confirmado'], 200);
         }
         if ($pag->forma_pagamento !== 'PIX') {
@@ -459,8 +504,7 @@ class PagamentoController extends Controller
             $pag->update([
                 'movimentacao_id' => $mov->id,
                 'data_pagamento' => Carbon::today()->format('Y-m-d'),
-                'confirmado' => true,
-                'status' => 'confirmado',
+                'status' => 'CONFIRMADO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
             $totSaidas = (float)($mov->total_saidas ?? 0);
@@ -470,6 +514,7 @@ class PagamentoController extends Controller
                 'total_entradas' => $totEntradas,
                 'saldo_movimento' => $saldoMov,
             ]);
+            $this->syncFaturamentoFromPagamento($pag);
         });
         return response()->json(['success' => true]);
     }
@@ -481,7 +526,7 @@ class PagamentoController extends Controller
             'forma_pagamento' => ['nullable','string'],
         ]);
         $pag = Pagamento::findOrFail($id);
-        if ($pag->confirmado) {
+        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
             return back()->with('success', 'Pagamento já confirmado');
         }
         // Verificar disponibilidade do caixa
@@ -503,8 +548,7 @@ class PagamentoController extends Controller
                 'movimentacao_id' => $mov->id,
                 'forma_pagamento' => $data['forma_pagamento'] ?? $pag->forma_pagamento,
                 'data_pagamento' => Carbon::today()->format('Y-m-d'),
-                'confirmado' => true,
-                'status' => 'confirmado',
+                'status' => 'CONFIRMADO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
             $totSaidas = (float)($mov->total_saidas ?? 0);
@@ -514,6 +558,7 @@ class PagamentoController extends Controller
                 'total_entradas' => $totEntradas,
                 'saldo_movimento' => $saldoMov,
             ]);
+            $this->syncFaturamentoFromPagamento($pag);
         });
         return back()->with('success', 'Pagamento confirmado e lançado no caixa');
     }
@@ -524,15 +569,14 @@ class PagamentoController extends Controller
             'recusa_justificativa' => ['required','string','max:1000'],
         ]);
         $pag = Pagamento::findOrFail($id);
-        if ($pag->confirmado) {
+        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
             return back()->with('error', 'Pagamento já confirmado, não é possível recusar.');
         }
-        if ($pag->status === 'recusado') {
+        if (strtoupper((string)$pag->status) === 'RECUSADO') {
             return back()->with('success', 'Pagamento já recusado');
         }
         $pag->update([
-            'status' => 'recusado',
-            'confirmado' => false,
+            'status' => 'RECUSADO',
             'caixa_id' => $pag->caixa_id ?? null,
             'movimentacao_id' => $pag->movimentacao_id ?? null,
             'forma_pagamento' => $pag->forma_pagamento ?? null,
@@ -546,12 +590,13 @@ class PagamentoController extends Controller
     public function recusados()
     {
         $pagamentosRecusados = DB::table('pagamentos as p')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'p.orcamento_id')
-            ->leftJoin('pacientes as pa', 'pa.id', '=', 'o.paciente_id')
+            ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
+            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->leftJoin('users as u', 'u.id', '=', 'p.recusado_por')
             ->select(
                 'p.id',
-                'p.orcamento_id',
+                'o.id as orcamento_id',
                 'p.valor',
                 'p.forma_pagamento',
                 'p.status',
@@ -562,8 +607,8 @@ class PagamentoController extends Controller
                 DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_orcamento"),
                 DB::raw("COALESCE(CONCAT(u.nome, ' ', u.sobrenome),'') AS recusado_por_nome")
             )
-            ->where('p.confirmado', false)
-            ->where('p.status', 'recusado')
+            ->where('p.status', 'RECUSADO')
+            ->where('f.tipo_pagador', 'PARTICULAR')
             ->orderByDesc('p.updated_at')
             ->limit(100)
             ->get();
@@ -575,19 +620,71 @@ class PagamentoController extends Controller
     public function unrefuse(Request $request, string $id)
     {
         $pag = Pagamento::findOrFail($id);
-        if ($pag->confirmado) {
+        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
             return back()->with('error', 'Pagamento confirmado não pode ser alterado.');
         }
-        if ($pag->status !== 'recusado') {
+        if (strtoupper((string)$pag->status) !== 'RECUSADO') {
             return back()->with('success', 'Pagamento não está recusado');
         }
         $pag->update([
-            'status' => 'pendente',
-            'confirmado' => false,
+            'status' => 'PENDENTE',
             'data_pagamento' => null,
             'recusa_justificativa' => null,
             'recusado_por' => null,
         ]);
         return back()->with('success', 'Recusa cancelada. Pagamento retornou para pendentes');
+    }
+
+    private function syncFaturamentoFromPagamento(Pagamento $pag): void
+    {
+        $fatId = (int)($pag->faturamento_id ?? 0);
+        if (!$fatId) {
+            return;
+        }
+
+        $fat = DB::table('faturamentos')
+            ->select('id', 'tipo_pagador', 'status', 'valor_final', 'valor_cobrado', 'valor_aprovado')
+            ->where('id', $fatId)
+            ->first();
+        if (!$fat) {
+            return;
+        }
+        if (strtoupper((string)$fat->status) === 'CANCELADO') {
+            return;
+        }
+
+        $tipo = strtoupper((string)($fat->tipo_pagador ?? ''));
+        $valorFinal = (float)($fat->valor_final ?? 0);
+        $valorCobrado = (float)($fat->valor_cobrado ?? 0);
+        $valorAprovado = (float)($fat->valor_aprovado ?? 0);
+        $alvo = $tipo === 'CONVENIO'
+            ? (($valorAprovado > 0 ? $valorAprovado : ($valorCobrado > 0 ? $valorCobrado : $valorFinal)))
+            : $valorFinal;
+        $recebido = (float)DB::table('pagamentos')->where('faturamento_id', $fatId)->where('status', 'CONFIRMADO')->sum('valor');
+        $quitado = ($alvo > 0 && ($recebido + 0.00001) >= $alvo);
+
+        $novoStatusCR = $quitado ? 'RECEBIDO' : 'ABERTO';
+        $crStatusAtual = (string)DB::table('contas_receber')->where('faturamento_id', $fatId)->value('status');
+        if (strtoupper($crStatusAtual) !== 'CANCELADO') {
+            DB::table('contas_receber')->where('faturamento_id', $fatId)->update([
+                'status' => $novoStatusCR,
+                'updated_at' => now(),
+            ]);
+        }
+
+        if ($tipo === 'PARTICULAR') {
+            $novoStatusFat = $quitado ? 'PAGO' : 'AGUARDANDO_PAGAMENTO';
+            DB::table('faturamentos')->where('id', $fatId)->update([
+                'status' => $novoStatusFat,
+                'updated_at' => now(),
+            ]);
+        } elseif ($tipo === 'CONVENIO') {
+            if ($quitado) {
+                DB::table('faturamentos')->where('id', $fatId)->update([
+                    'status' => 'RECEBIDO',
+                    'updated_at' => now(),
+                ]);
+            }
+        }
     }
 }
