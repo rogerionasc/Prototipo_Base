@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('nome', 120);
             $table->string('cpf', 14)->nullable()->index();
+            $table->string('cns', 15)->nullable()->index();
             $table->string('rg', 11)->nullable();
             $table->string('sexo', 20)->nullable();
             $table->date('data_nascimento')->nullable();

@@ -113,6 +113,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/procedimentos", [ProcedimentoController::class, "store"])->name('procedimentos.store');
         Route::put("/procedimentos/{id}", [ProcedimentoController::class, "update"])->name('procedimentos.update');
         Route::delete("/procedimentos/{id}", [ProcedimentoController::class, "destroy"])->name('procedimentos.destroy');
+        Route::post("/tuss", [ProcedimentoController::class, "storeTuss"])->name('tuss.store');
+        Route::get("/tuss/list", [ProcedimentoController::class, "listTuss"])->name('tuss.list');
+        Route::post("/tuss/import", [ProcedimentoController::class, "importTuss"])->name('tuss.import');
+        Route::post("/tuss/import/start", [ProcedimentoController::class, "startTussImport"])->name('tuss.import.start');
+        Route::get("/tuss/import/status/{id}", [ProcedimentoController::class, "tussImportStatus"])->name('tuss.import.status');
+        Route::get("/tuss/import/complete/{id}", [ProcedimentoController::class, "completeTussImport"])->name('tuss.import.complete');
+        Route::post("/tuss/import/progress", [ProcedimentoController::class, "importTussProgress"])->name('tuss.import.progress');
+        Route::get("/tuss/template", [ProcedimentoController::class, "downloadTussTemplate"])->name('tuss.template');
 
         // Orçamentos routes
         Route::get("/orcamentos", [OrcamentoController::class, "index"])->name('orcamentos.index');

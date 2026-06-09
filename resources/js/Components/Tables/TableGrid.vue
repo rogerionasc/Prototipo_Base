@@ -16,6 +16,8 @@ import LottieComponent from "@/Components/widgets/lottie.vue";
 const props = defineProps({
     data: { type: Array, default: () => [] },
     columns: { type: Array, default: () => ["ID", "Nome", "Email", "Cargo", "Empresa", "País"] },
+    serverUrl: { type: String, default: '' },
+    serverQuery: { type: Object, default: () => ({}) },
     showStatus: { type: Boolean, default: false },
     search: { type: Boolean, default: true },
     searchPlaceholder: { type: String, default: 'Buscar...' },
@@ -59,6 +61,8 @@ let changeListener = null; // Listener para mudanças em checkboxes
 let clickListener = null; // Listener para cliques em botões de ação
 const isLoading = ref(true); // Estado de carregamento da tabela
 let gridInstance = null; // Instância do Grid.js
+const lastServerRows = ref([]);
+let lottieObserver = null;
 
 // -------------------- UTILITÁRIOS --------------------
 // Função debounce para atrasar a execução de uma função
@@ -101,30 +105,52 @@ function filterData(data, query) {
 }
 
 // Dados filtrados de acordo com a busca
-const filteredData = computed(() => filterData(props.data, debouncedQuery.value));
+const filteredData = computed(() => {
+    if (props.serverUrl) return props.data;
+    return filterData(props.data, debouncedQuery.value);
+});
+
+function buildServerUrl(offset, limitValue, searchValue) {
+    const base = String(props.serverUrl || '').trim();
+    const q = String(searchValue || '').trim();
+    const params = new URLSearchParams();
+    params.set('limit', String(limitValue ?? 10));
+    params.set('offset', String(offset ?? 0));
+    if (q) params.set('q', q);
+    const extra = props.serverQuery && typeof props.serverQuery === 'object' ? props.serverQuery : {};
+    Object.entries(extra).forEach(([k, v]) => {
+        if (v === null || typeof v === 'undefined') return;
+        const s = String(v).trim();
+        if (!s) return;
+        params.set(String(k), s);
+    });
+    return base.includes('?') ? `${base}&${params.toString()}` : `${base}?${params.toString()}`;
+}
 
 // -------------------- ANIMAÇÃO LOTTIE --------------------
 // Observa o container da animação Lottie e inicializa quando necessário
 function observeLottieContainer() {
-    const observer = new MutationObserver(() => {
-        const container = document.querySelector('.lottie-container');
-        if (container && !container.dataset.lottieInitialized) {
-            container.dataset.lottieInitialized = 'true';
+    const initAll = () => {
+        const nodes = document.querySelectorAll('.lottie-container');
+        nodes.forEach((noResult) => {
+            if (!noResult || noResult.dataset.lottieInitialized) return;
+            noResult.dataset.lottieInitialized = 'true';
             Lottie.loadAnimation({
-                container,
+                container: noResult,
                 renderer: 'svg',
                 loop: true,
                 autoplay: true,
                 animationData,
             });
-            observer.disconnect();
-        }
-    });
+        });
+    };
 
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true,
+    initAll();
+    if (lottieObserver) return;
+    lottieObserver = new MutationObserver(() => {
+        initAll();
     });
+    lottieObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 // -------------------- BADGE DE STATUS --------------------
@@ -297,7 +323,8 @@ function initGrid() {
                 } else {
                     idCol = props.columns[0];
                 }
-                const rowData = (props.data || []).find(r => {
+                const rowBase = props.serverUrl ? (lastServerRows.value || []) : (props.data || []);
+                const rowData = rowBase.find(r => {
                     const matchId = r.id && String(r.id) === String(firstCell);
                     const matchCol = idCol && String(r[idCol]) === String(firstCell);
                     return matchId || matchCol;
@@ -352,9 +379,27 @@ function initGrid() {
         return c;
     });
     // Cria a instância do Grid.js
-    const grid = new Grid({
+    const languageBase = {
+        pagination: {
+            previous: 'Anterior',
+            next: 'Próximo',
+            showing: 'Exibindo'
+        },
+        loading: () => html(''),
+    };
+
+    const localNoRecords = () => html(`
+        <div class="noresult">
+            <div class="text-center">
+                <div class="lottie-container" style="width:75px;height:75px;margin:0 auto;"></div>
+                <h5 class="mt-2">Desculpa! Nenhum registro encontrado</h5>
+                <p class="text-muted mb-0">Nós recomendamos utilizar o filtro para refinar melhor sua pesquisa.</p>
+            </div>
+        </div>
+    `);
+
+    const gridConfig = {
         columns: gridColumns,
-        data: filteredData.value,
         pagination: {
             enabled: true,
             limit: limit.value || 10,
@@ -364,22 +409,59 @@ function initGrid() {
             thead: 'table-light'
         },
         language: {
-            noRecordsFound: () => html(`
-                <div class="noresult">
-                    <div class="text-center">
-                        <div class="lottie-container" style="width:75px;height:75px;margin:0 auto;"></div>
-                        <h5 class="mt-2">Desculpa! Nenhum registro encontrado</h5>
-                        <p class="text-muted mb-0">Nós recomendamos utilizar o filtro para refinar melhor sua pesquisa.</p>
-                    </div>
-                </div>
-            `),
-            pagination: {
-                previous: 'Anterior',
-                next: 'Próximo',
-                showing: 'Exibindo'
-            }
+            ...languageBase,
+            noRecordsFound: localNoRecords,
+            error: props.serverUrl ? () => html(`<div class="py-4 text-center text-danger">Erro ao carregar os dados.</div>`) : undefined,
         }
-    });
+    };
+
+    if (props.serverUrl) {
+        gridConfig.server = {
+            url: buildServerUrl(0, limit.value || 10, debouncedQuery.value),
+            handle: async (res) => {
+                if (!res || !res.ok) {
+                    let details = '';
+                    try { details = await res.text(); } catch (_) {}
+                    isLoading.value = false;
+                    throw new Error(details || `HTTP ${res?.status || 0}`);
+                }
+                return res.json();
+            },
+            then: (resp) => {
+                const rows = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                lastServerRows.value = rows;
+                setTimeout(() => {
+                    isLoading.value = false;
+                    updateCheckboxes();
+                }, 0);
+                return rows.map((r) => gridColumns.map((c) => {
+                    const key = c?.id;
+                    if (!key) return null;
+                    if (key === 'select' || key === 'actions') return null;
+                    return r?.[key] ?? null;
+                }));
+            },
+            total: (resp) => {
+                const t = resp?.total ?? resp?.meta?.total ?? resp?.count ?? null;
+                const n = Number(t);
+                return Number.isFinite(n) ? n : 0;
+            },
+        };
+        gridConfig.pagination = {
+            enabled: true,
+            limit: limit.value || 10,
+            server: {
+                url: (prev, page, limitValue) => {
+                    isLoading.value = true;
+                    return buildServerUrl((page || 0) * (limitValue || 10), limitValue || 10, debouncedQuery.value);
+                },
+            },
+        };
+    } else {
+        gridConfig.data = filteredData.value;
+    }
+
+    const grid = new Grid(gridConfig);
     grid.render(wrapper.value);
     gridInstance = grid;
     // Listeners para checkboxes e botões de ação
@@ -414,10 +496,10 @@ function initGrid() {
     wrapper.value.addEventListener('click', clickListener);
     nextTick(() => {
         updateCheckboxes();
-        setTimeout(() => isLoading.value = false, 300);
+        if (!props.serverUrl) isLoading.value = false;
     });
-    // Exibe animação Lottie se não houver dados
-    if (filteredData.value.length === 0) {
+    // Exibe animação Lottie se não houver dados (apenas modo local)
+    if (!props.serverUrl && filteredData.value.length === 0) {
         setTimeout(observeLottieContainer, 0);
     }
 }
@@ -426,6 +508,12 @@ watch(filteredData, () => {
     nextTick(initGrid);
 }, { deep: true });
 watch(() => props.data, () => {
+    nextTick(initGrid);
+}, { deep: true });
+watch(() => props.serverUrl, () => {
+    nextTick(initGrid);
+});
+watch(() => props.serverQuery, () => {
     nextTick(initGrid);
 }, { deep: true });
 watch(() => props.actionsLoading, () => {
@@ -440,6 +528,10 @@ onBeforeUnmount(() => {
     if (wrapper.value && changeListener) {
         wrapper.value.removeEventListener('change', changeListener);
     }
+    if (lottieObserver) {
+        lottieObserver.disconnect();
+        lottieObserver = null;
+    }
 });
 
 // Inicializa a tabela ao montar o componente
@@ -448,20 +540,7 @@ onMounted(async () => {
     isLoading.value = true;
     setTimeout(() => {
         initGrid();
-        setTimeout(() => {
-            // Inicializa animação LottieCube
-            const container = document.querySelector('.lottie-animationCube');
-            if (container && !container.dataset.lottieInitialized) {
-                container.dataset.lottieInitialized = 'true';
-                Lottie.loadAnimation({
-                    container,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    animationData: animationCube,
-                });
-            }
-        }, 0);
+        setTimeout(observeLottieContainer, 0);
     }, 100);
 });
 </script>
@@ -522,9 +601,9 @@ onMounted(async () => {
                 </div>
 
                 <!-- Container da tabela -->
-                <div v-show="!isLoading && filteredData.length > 0" ref="wrapper" :class="['table-card','table-responsive', props.compactSpacing ? 'mt-2' : 'mt-3','px-3']"></div>
-                <!-- Empty state -->
-                <div v-if="!isLoading && filteredData.length === 0" class="d-flex justify-content-center align-items-center py-5">
+                <div v-show="!isLoading" ref="wrapper" :class="['table-card','table-responsive', props.compactSpacing ? 'mt-2' : 'mt-3','px-3']"></div>
+                <!-- Empty state (apenas modo local) -->
+                <div v-if="!isLoading && !props.serverUrl && filteredData.length === 0" class="d-flex justify-content-center align-items-center py-5">
                     <div class="text-center">
                         <LottieComponent :options="{ animationData, loop: true, autoplay: true }" :height="75" :width="75" />
                         <h5 class="mt-2">Desculpa! Nenhum registro encontrado</h5>
@@ -537,6 +616,10 @@ onMounted(async () => {
 </template>
 
 <style>
+.gridjs-loading {
+  display: none !important;
+}
+
 .table-responsive table {
   table-layout: auto !important;
   width: 100% !important;

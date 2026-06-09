@@ -27,6 +27,15 @@
                             placeholder="000.000.000" maxlength="11">
                     </div>
                     <div class="col-md-3">
+                        <label for="cns" class="form-label">CNS (Cartão SUS)</label>
+                        <input v-model="form.cns" v-mask="'###############'" type="text" class="form-control"
+                            :class="{ 'is-invalid': form.errors.cns }" id="cns" placeholder="000000000000000"
+                            maxlength="15">
+                        <div class="invalid-feedback">
+                            {{ form.errors.cns }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
                         <label for="sexo" class="form-label">Sexo</label>
                         <select v-model="form.sexo" data-choices class="form-select mb-0" id="sexo" ref="sexoSelect">
                             <option selected disabled value="">Selecione...</option>
@@ -309,6 +318,7 @@ function syncMultiChoiceValue(el, values) {
 const form = useForm({
     nome: "",
     cpf: "",
+    cns: "",
     rg: "",
     sexo: "",
     data_nascimento: "",

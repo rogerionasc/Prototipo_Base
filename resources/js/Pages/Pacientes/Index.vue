@@ -305,6 +305,7 @@ async function openModalEdit(id) {
         const f = pacienteFormRef.value.form;
         f.nome = p.nome || '';
         f.cpf = p.cpf || '';
+        f.cns = p.cns || '';
         f.rg = p.rg || '';
         f.email = p.email || '';
         f.celular = p.celular || '';

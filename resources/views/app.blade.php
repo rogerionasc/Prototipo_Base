@@ -10,6 +10,7 @@
     <meta name="keywords"
         content="Velzon, Inertia.js, Vue.js, Laravel, admin template, dashboard template, web application">
     <meta name="author" content="Themesbrand">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Social Media Meta Tags -->
     <meta property="og:title" content="Velzon - Inertia + Vue & Laravel Admin & Dashboard Template">
