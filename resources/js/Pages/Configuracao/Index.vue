@@ -172,39 +172,71 @@
                 :disable-close="tussImportProcessing"
                 @save="importTuss"
               >
-                <div class="d-flex justify-content-end mb-2">
-                  <a href="/tuss/template" class="btn btn-sm btn-soft-primary">
+                <div class="d-flex align-items-start justify-content-between gap-2 pb-2 mb-3 border-bottom">
+                  <div class="text-muted small d-flex align-items-center gap-2">
+                    <i class="ri-information-line"></i>
+                    <span>Os campos <span class="text-danger">*</span> são obrigatórios.</span>
+                  </div>
+                  <a href="/tuss/template" class="btn btn-sm btn-soft-primary text-nowrap" :class="{ 'pe-none opacity-50': tussImportProcessing }" :aria-disabled="tussImportProcessing ? 'true' : 'false'">
                     <i class="ri-download-2-line me-1"></i>
                     Baixar modelo CSV
                   </a>
                 </div>
-                <div class="mb-3">
-                  <label class="form-label">Tabela suportada <span class="text-danger">*</span></label>
-                  <select v-model="tussImportForm.tabela_forcada" required data-choices class="form-select" :class="{ 'is-invalid': !!tussImportForm.errors.tabela_forcada }">
-                    <option value="">Selecione</option>
-                    <option v-for="t in allowedTabelas" :key="t" :value="t">{{ t }}</option>
-                  </select>
-                  <div class="invalid-feedback">{{ tussImportForm.errors.tabela_forcada }}</div>
-                  <div class="form-text">Obrigatório. Será aplicado em todas as linhas importadas.</div>
-                </div>
-                <div class="mb-3">
-                  <label for="tussCsv" class="form-label">Arquivo CSV</label>
-                  <input
-                    id="tussCsv"
-                    type="file"
-                    accept=".csv,text/csv"
-                    class="form-control"
-                    :class="{ 'is-invalid': !!tussImportForm.errors.file }"
-                    @change="onTussFileChange"
-                  />
-                  <div v-if="tussImportForm.errors.file && tussImportUiStatus !== 'error'" class="invalid-feedback">{{ tussImportForm.errors.file }}</div>
-                </div>
-                <div v-if="tussImportProgressVisible" class="mb-2">
-                  <div v-if="tussImportProcessing" class="small fw-semibold mb-1">
-                    {{ tussImportUiMessage || 'Validando arquivo' }}
-                    <span class="tuss-validating-dots" aria-hidden="true">
-                      <span>.</span><span>.</span><span>.</span>
-                    </span>
+                <BRow class="g-3">
+                  <BCol md="6">
+                    <label class="form-label d-flex align-items-center gap-2">
+                      <i class="ri-layout-grid-line text-primary"></i>
+                      <span>Tabela suportada <span class="text-danger">*</span></span>
+                    </label>
+                    <select
+                      v-model="tussImportForm.tabela_forcada"
+                      required
+                      data-choices
+                      class="form-select"
+                      :class="{ 'is-invalid': !!tussImportForm.errors.tabela_forcada }"
+                      :disabled="tussImportProcessing"
+                    >
+                      <option value="">Selecione</option>
+                      <option v-for="t in allowedTabelas" :key="t" :value="t">{{ t }}</option>
+                    </select>
+                    <div class="invalid-feedback">{{ tussImportForm.errors.tabela_forcada }}</div>
+                    <div class="form-text">Obrigatório. Será aplicado em todas as linhas importadas.</div>
+                  </BCol>
+                  <BCol md="6">
+                    <label for="tussCsv" class="form-label d-flex align-items-center gap-2">
+                      <i class="ri-file-upload-line text-primary"></i>
+                      <span>Arquivo CSV <span class="text-danger">*</span></span>
+                    </label>
+                    <input
+                      id="tussCsv"
+                      type="file"
+                      accept=".csv,text/csv"
+                      class="form-control"
+                      :class="{ 'is-invalid': !!tussImportForm.errors.file }"
+                      :disabled="tussImportProcessing"
+                      @change="onTussFileChange"
+                    />
+                    <div v-if="tussImportForm.errors.file && tussImportUiStatus !== 'error'" class="invalid-feedback">{{ tussImportForm.errors.file }}</div>
+                    <div class="form-text">Aceita .csv (separador ; ou ,). Tamanho máximo: 20MB.</div>
+                    <div v-if="tussImportForm.file" class="small text-muted mt-1 d-flex align-items-center justify-content-between gap-2">
+                      <div class="text-truncate">
+                        Selecionado: <span class="fw-semibold">{{ tussImportForm.file.name }}</span>
+                      </div>
+                      <div class="text-nowrap">{{ formatBytes(tussImportForm.file.size) }}</div>
+                    </div>
+                  </BCol>
+                </BRow>
+                <div v-if="tussImportProgressVisible" class="mt-3 p-3 border rounded" :class="tussImportUiStatus === 'error' ? 'bg-danger-subtle border-danger' : 'bg-light-subtle'">
+                  <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                    <div class="small fw-semibold d-flex align-items-center gap-2">
+                      <i v-if="tussImportUiStatus === 'error'" class="ri-close-circle-line text-danger"></i>
+                      <i v-else class="ri-loader-4-line text-primary"></i>
+                      <span>{{ tussImportUiMessage || (tussImportUiStatus === 'error' ? 'Falha ao validar arquivo' : 'Validando arquivo') }}</span>
+                      <span v-if="tussImportProcessing" class="tuss-validating-dots" aria-hidden="true">
+                        <span>.</span><span>.</span><span>.</span>
+                      </span>
+                    </div>
+                    <div class="text-muted small text-nowrap">{{ tussImportPercent }}%</div>
                   </div>
                   <div class="progress progress-sm">
                     <div
@@ -217,8 +249,7 @@
                       aria-valuemax="100"
                     ></div>
                   </div>
-                  <div v-if="tussImportProcessing" class="text-muted small mt-1">{{ tussImportPercent }}%</div>
-                  <div v-if="tussImportUiStatus === 'error' && tussImportUiMessage" class="invalid-feedback d-block mt-1">{{ tussImportUiMessage }}</div>
+                  <div v-if="tussImportUiStatus === 'error' && tussImportUiMessage" class="small text-danger mt-2 mb-0">{{ tussImportUiMessage }}</div>
                 </div>
               </Modal>
             </BCardBody>
@@ -335,6 +366,15 @@ function formatCurrencyBR(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return v ?? '';
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+function formatBytes(bytes) {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const idx = Math.min(Math.floor(Math.log(n) / Math.log(1024)), units.length - 1);
+  const value = n / Math.pow(1024, idx);
+  const digits = idx === 0 ? 0 : 1;
+  return `${value.toFixed(digits)} ${units[idx]}`;
 }
 function parseDecimalBR(v) {
   const s = String(v ?? '').trim();

@@ -602,14 +602,6 @@ onMounted(async () => {
 
                 <!-- Container da tabela -->
                 <div v-show="!isLoading" ref="wrapper" :class="['table-card','table-responsive', props.compactSpacing ? 'mt-2' : 'mt-3','px-3']"></div>
-                <!-- Empty state (apenas modo local) -->
-                <div v-if="!isLoading && !props.serverUrl && filteredData.length === 0" class="d-flex justify-content-center align-items-center py-5">
-                    <div class="text-center">
-                        <LottieComponent :options="{ animationData, loop: true, autoplay: true }" :height="75" :width="75" />
-                        <h5 class="mt-2">Desculpa! Nenhum registro encontrado</h5>
-                        <p class="text-muted mb-0">Nós recomendamos utilizar o filtro para refinar melhor sua pesquisa.</p>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
