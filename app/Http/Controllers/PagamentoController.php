@@ -156,6 +156,15 @@ class PagamentoController extends Controller
         if (!$token) {
             return response()->json(['error' => 'Token do Mercado Pago não configurado'], 422);
         }
+        $payer = DB::table('faturamentos as f')
+            ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
+            ->select('pa.id as paciente_id', 'pa.email')
+            ->where('f.id', (int)($pag->faturamento_id ?? 0))
+            ->first();
+        $payerEmail = trim((string)($payer->email ?? ''));
+        if ($payerEmail === '' || !filter_var($payerEmail, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['error' => 'Paciente sem e-mail válido cadastrado'], 422);
+        }
         $valor = (float)($pag->valor ?? 0);
         $url = 'https://api.mercadopago.com/v1/payments';
         $baseUrl = env('MP_WEBHOOK_URL');
@@ -167,7 +176,7 @@ class PagamentoController extends Controller
             'payment_method_id' => 'pix',
             'external_reference' => 'pag:' . $pag->id,
             'payer' => [
-                'email' => 'pix@example.com',
+                'email' => $payerEmail,
             ],
         ];
         if ($notificationUrl) {
