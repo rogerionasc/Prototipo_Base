@@ -7,14 +7,16 @@
       :data="convenios"
       :tableTitle="'Todos os Convênios'"
       :showStatus="false"
+      :showCheckbox="false"
+      :showImage="false"
       :searchPlaceholder="'Buscar convênio'"
       @add="openModalAdd"
       @delete="openModalDelete"
       @edit="openModalEdit"
       @show="openModalShow"
     />
-    <Modal v-model="showModal" :title="modalTitle" size="lg" :name-button="saveButtonText" :processing="saveProcessing" @save="onSaveConvenio">
-      <ConvenioForm ref="convenioFormRef" :contas="contas" />
+    <Modal v-model="showModal" :title="modalTitle" size="xl" :name-button="saveButtonText" :processing="saveProcessing" @save="onSaveConvenio">
+      <ConvenioForm ref="convenioFormRef" :contas="contas" :tussTabelas="tussTabelas" />
     </Modal>
     <ModalDelete
       v-model="deleteModal"
@@ -36,13 +38,15 @@ import { Head, useForm, router } from '@inertiajs/vue3';
 import ConvenioForm from "./Create.vue";
 import { ref, nextTick, computed, watchEffect } from "vue";
 
- const { convenios, contas } = defineProps({
+ const { convenios, contas, tussTabelas } = defineProps({
    convenios: { type: Array, default: () => [] },
    contas: { type: Array, default: () => [] },
+   tussTabelas: { type: Array, default: () => [] },
  });
 
  const columns = [
    { id: "id", name: "ID" },
+   { id: "logo_path", name: "Logo", sort: false, showImage: true, attributes: { style: "width: 72px;" } },
    { id: "descricao", name: "Descrição" },
    { id: "tipo", name: "Tipo" },
    { id: "ans", name: "ANS" },
@@ -62,6 +66,11 @@ const saveButtonText = computed(() => isEditing.value ? 'Atualizar' : 'Salvar');
  function openModalAdd() {
    isEditing.value = false;
    modalTitle.value = 'Adicionar Convênio';
+   if (convenioFormRef.value?.form) {
+     convenioFormRef.value.form.tipo = 'Convenio';
+   }
+   convenioFormRef.value?.setExistingLogoPath?.('');
+   convenioFormRef.value?.setSelectedTussRows?.([]);
    showModal.value = true;
  }
 async function onSaveConvenio() {
@@ -71,7 +80,7 @@ async function onSaveConvenio() {
       showModal.value = false;
       isEditing.value = false;
       editingId.value = null;
-      router.reload({ only: ['convenios'] });
+      router.reload({ only: ['convenios'], preserveScroll: true, preserveState: false });
     }, {
       onStart: () => { saveProcessing.value = true; },
       onFinish: () => { saveProcessing.value = false; },
@@ -79,7 +88,7 @@ async function onSaveConvenio() {
   } else {
     convenioFormRef.value?.submit(() => {
       showModal.value = false;
-      router.reload({ only: ['convenios'] });
+      router.reload({ only: ['convenios'], preserveScroll: true, preserveState: false });
     }, {
       onStart: () => { saveProcessing.value = true; },
       onFinish: () => { saveProcessing.value = false; },
@@ -116,12 +125,37 @@ async function onSaveConvenio() {
    await nextTick();
    if (convenioFormRef.value?.form) {
      convenioFormRef.value.form.descricao = c.descricao || '';
-     convenioFormRef.value.form.tipo = c.tipo || '';
+     convenioFormRef.value.form.tuss_tabela = '';
+     convenioFormRef.value.form.tipo = c.tipo || 'Convenio';
      convenioFormRef.value.form.empresa_id = c.empresa_id || '';
      convenioFormRef.value.form.ans = c.ans ?? null;
      convenioFormRef.value.form.dias_recebimento = c.dias_recebimento ?? null;
      convenioFormRef.value.form.dias_retorno = c.dias_retorno ?? null;
+     convenioFormRef.value?.setExistingLogoPath?.(c.logo_path || '');
    }
+
+  if (convenioFormRef.value?.setSelectedTussRows) {
+    try {
+      const rows = [];
+      let page = 1;
+      let totalPages = 1;
+      while (page <= totalPages) {
+        const resp = await window.axios.get(`/convenios/${c.id}/tuss-procedimentos`, { params: { page, per_page: 100 } });
+        const payload = resp?.data || {};
+        const meta = payload?.meta || {};
+        const data = Array.isArray(payload?.data) ? payload.data : [];
+        rows.push(...data);
+        totalPages = Number(meta.total_pages || 1);
+        page += 1;
+      }
+      convenioFormRef.value.setSelectedTussRows(rows);
+      if (convenioFormRef.value?.form) {
+        convenioFormRef.value.form.tuss_tabela = rows?.[0]?.tabela || '';
+      }
+    } catch (_) {
+      convenioFormRef.value.setSelectedTussRows([]);
+    }
+  }
  }
  function openModalShow(id) { }
  </script>

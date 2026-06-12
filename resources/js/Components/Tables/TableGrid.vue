@@ -22,8 +22,13 @@ const props = defineProps({
     search: { type: Boolean, default: true },
     searchPlaceholder: { type: String, default: 'Buscar...' },
     showCheckbox: { type: Boolean, default: true },
+    showMultiDelete: { type: Boolean, default: true },
     showAddButton: { type: Boolean, default: true },
+    addButtonText: { type: String, default: 'Adicionar' },
+    addButtonIconClass: { type: String, default: 'ri-add-fill' },
+    addButtonDisabled: { type: Boolean, default: false },
     showActions: { type: Boolean, default: true },
+    showImage: { type: Boolean, default: false },
     showPerPagination: { type: Boolean, default: true },
     tableTitle: { type: String, default: 'Listas ...' },
     showDiaryButton: { type: Boolean, default: false },
@@ -48,7 +53,8 @@ const emit = defineEmits([
     'print',
     'download',
     'restore',
-    'receive'
+    'receive',
+    'selectionChange'
 ]);
 
 // -------------------- REFS E VARIÁVEIS REATIVAS --------------------
@@ -63,6 +69,23 @@ const isLoading = ref(true); // Estado de carregamento da tabela
 let gridInstance = null; // Instância do Grid.js
 const lastServerRows = ref([]);
 let lottieObserver = null;
+let tableObserver = null;
+let tableObserverTimer = null;
+
+function observeTableSelectionPersistence() {
+    if (!wrapper.value) return;
+    if (tableObserver) {
+        try { tableObserver.disconnect(); } catch (_) {}
+        tableObserver = null;
+    }
+    tableObserver = new MutationObserver(() => {
+        if (tableObserverTimer) clearTimeout(tableObserverTimer);
+        tableObserverTimer = setTimeout(() => {
+            updateCheckboxes();
+        }, 0);
+    });
+    tableObserver.observe(wrapper.value, { childList: true, subtree: true });
+}
 
 // -------------------- UTILITÁRIOS --------------------
 // Função debounce para atrasar a execução de uma função
@@ -172,6 +195,45 @@ const getStatusBadge = (cell) => {
     return html(`<span class="badge ${badgeClass}">${badgeText}</span>`);
 };
 
+function resolveImageUrl(v) {
+    const s = String(v ?? '').trim();
+    if (!s) return '';
+    if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:') || s.startsWith('/')) return s;
+    return `/storage/${s}`;
+}
+
+function buildImageCell(cell, col) {
+    const src = resolveImageUrl(cell);
+    if (!src) return html(`<span class="text-muted">—</span>`);
+    const alt = String(col?.name ?? 'Imagem');
+    return html(`<div class="d-flex align-items-center justify-content-center" style="height:40px;"><img src="${encodeURI(src)}" alt="${alt.replace(/"/g, '&quot;')}" style="height: 40px; width: 40px; object-fit: contain; display:block;" /></div>`);
+}
+
+function shouldIncludeColumn(col) {
+    if (typeof col === 'object' && col) {
+        if (col.showImage === true && props.showImage === false) return false;
+    }
+    return true;
+}
+
+function getSelectedRowIds() {
+    return [...(selectedRows.value || [])];
+}
+
+function clearSelection() {
+    selectedRows.value = [];
+    emit('selectionChange', getSelectedRowIds());
+    nextTick(updateCheckboxes);
+}
+
+function getSelectedRowObjects() {
+    const ids = new Set((selectedRows.value || []).map(x => String(x)));
+    const rows = Array.isArray(lastServerRows.value) ? lastServerRows.value : [];
+    const local = Array.isArray(props.data) ? props.data : [];
+    const pool = props.serverUrl ? rows : local;
+    return pool.filter(r => ids.has(String(r?.id)));
+}
+
 // -------------------- CHECKBOXES --------------------
 // Atualiza o estado dos checkboxes de seleção
 function updateCheckboxes() {
@@ -208,6 +270,7 @@ function handleCheckboxChange(e) {
             });
             selectedRows.value = [];
         }
+        emit('selectionChange', getSelectedRowIds());
     } else if (target.hasAttribute('data-row-id')) {
         const rowId = target.getAttribute('data-row-id');
         if (target.checked) {
@@ -222,6 +285,7 @@ function handleCheckboxChange(e) {
         if (checkAll) {
             checkAll.checked = totalCheckboxes > 0 && totalCheckboxes === selectedCheckboxes;
         }
+        emit('selectionChange', getSelectedRowIds());
     }
 }
 
@@ -235,24 +299,35 @@ function initGrid() {
     if (clickListener) {
         wrapper.value.removeEventListener('click', clickListener);
     }
+    if (tableObserver) {
+        try { tableObserver.disconnect(); } catch (_) {}
+        tableObserver = null;
+    }
+    if (tableObserverTimer) {
+        clearTimeout(tableObserverTimer);
+        tableObserverTimer = null;
+    }
     if (gridInstance) {
         gridInstance.destroy();
         gridInstance = null;
     }
     isLoading.value = true;
     let gridColumns;
+    const visibleBaseColumns = (props.columns || []).filter(shouldIncludeColumn);
     // Monta as colunas da tabela, incluindo checkbox se necessário
     if (props.showCheckbox) {
         gridColumns = [
             {
                 id: 'select',
-                name: html(`<input type="checkbox" class="form-check-input" data-check-all="true" />`),
+                name: html(`<div class="d-flex justify-content-center" style="width:44px;"><input type="checkbox" class="form-check-input" data-check-all="true" /></div>`),
+                width: '44px',
+                attributes: () => ({ style: 'width:44px;min-width:44px;max-width:44px;padding-left:.5rem;padding-right:.5rem;' }),
                 formatter: (cell, row) => {
                     const rowId = row.cells[1].data;
-                    return html(`<input type="checkbox" class="form-check-input" data-row-id="${rowId}" ${selectedRows.value.includes(rowId) ? 'checked' : ''} />`);
+                    return html(`<div class="d-flex justify-content-center" style="width:44px;"><input type="checkbox" class="form-check-input" data-row-id="${rowId}" ${selectedRows.value.includes(rowId) ? 'checked' : ''} /></div>`);
                 }
             },
-            ...props.columns.map((col, idx) => {
+            ...visibleBaseColumns.map((col, idx) => {
                 if (typeof col === 'object') {
                     const computedId = col.id
                         ? String(col.id)
@@ -263,6 +338,7 @@ function initGrid() {
                         sort: typeof col.sort === 'boolean' ? col.sort : true
                     };
                     if (typeof col.formatter === 'function') out.formatter = col.formatter;
+                    else if (col.showImage === true) out.formatter = (cell) => buildImageCell(cell, col);
                     if (col.attributes) out.attributes = col.attributes;
                     return out;
                 } else {
@@ -275,7 +351,7 @@ function initGrid() {
             })
         ];
     } else {
-        gridColumns = props.columns.map((col, idx) => {
+        gridColumns = visibleBaseColumns.map((col, idx) => {
             if (typeof col === 'object') {
                 const computedId = col.id
                     ? String(col.id)
@@ -286,6 +362,7 @@ function initGrid() {
                     sort: typeof col.sort === 'boolean' ? col.sort : true
                 };
                 if (typeof col.formatter === 'function') out.formatter = col.formatter;
+                else if (col.showImage === true) out.formatter = (cell) => buildImageCell(cell, col);
                 if (col.attributes) out.attributes = col.attributes;
                 return out;
             } else {
@@ -318,10 +395,10 @@ function initGrid() {
                 const idIndex = props.showCheckbox ? 1 : 0;
                 const firstCell = row.cells[idIndex]?.data;
                 let idCol;
-                if (props.columns[0] && typeof props.columns[0] === 'object') {
-                    idCol = props.columns[0].id || props.columns[0].name;
+                if (visibleBaseColumns[0] && typeof visibleBaseColumns[0] === 'object') {
+                    idCol = visibleBaseColumns[0].id || visibleBaseColumns[0].name;
                 } else {
-                    idCol = props.columns[0];
+                    idCol = visibleBaseColumns[0];
                 }
                 const rowBase = props.serverUrl ? (lastServerRows.value || []) : (props.data || []);
                 const rowData = rowBase.find(r => {
@@ -405,7 +482,7 @@ function initGrid() {
             limit: limit.value || 10,
         },
         className: {
-            table: 'table table-hover mb-0',
+            table: 'table table-hover mb-0 align-middle',
             thead: 'table-light'
         },
         language: {
@@ -498,11 +575,14 @@ function initGrid() {
         updateCheckboxes();
         if (!props.serverUrl) isLoading.value = false;
     });
+    observeTableSelectionPersistence();
     // Exibe animação Lottie se não houver dados (apenas modo local)
     if (!props.serverUrl && filteredData.value.length === 0) {
         setTimeout(observeLottieContainer, 0);
     }
 }
+
+defineExpose({ getSelectedRowIds, getSelectedRowObjects, clearSelection });
 
 watch(filteredData, () => {
     nextTick(initGrid);
@@ -527,6 +607,14 @@ watch(() => props.disableActions, () => {
 onBeforeUnmount(() => {
     if (wrapper.value && changeListener) {
         wrapper.value.removeEventListener('change', changeListener);
+    }
+    if (tableObserver) {
+        try { tableObserver.disconnect(); } catch (_) {}
+        tableObserver = null;
+    }
+    if (tableObserverTimer) {
+        clearTimeout(tableObserverTimer);
+        tableObserverTimer = null;
     }
     if (lottieObserver) {
         lottieObserver.disconnect();
@@ -559,7 +647,7 @@ onMounted(async () => {
                             <i class="ri-search-line search-icon"></i>
                         </div>
                         <div class="d-flex align-items-center gap-3">
-                            <button id="deleteMulti" @click="emit('modalDdeletarMultiplos', selectedRows)" v-if="selectedRows.length > 0 && props.showCheckbox"
+                            <button id="deleteMulti" @click="emit('modalDdeletarMultiplos', selectedRows)" v-if="props.showMultiDelete && selectedRows.length > 0 && props.showCheckbox"
                                 type="button"
                                 class="btn btn-danger btn-icon waves-effect waves-light"
                             >
@@ -583,8 +671,9 @@ onMounted(async () => {
                                     :searchable="false"
                                 />
                             </div>
-                            <button v-if="props.showAddButton" type="button" class="btn btn-success btn-label waves-effect waves-light" @click="emit('add')"><i
-                                    class=" ri-add-fill label-icon align-middle fs-16 me-2"></i> Adicionar</button>
+                            <button v-if="props.showAddButton" type="button" class="btn btn-success btn-label waves-effect waves-light" @click="emit('add')" :disabled="props.addButtonDisabled">
+                                <i :class="`${props.addButtonIconClass} label-icon align-middle fs-16 me-2`"></i> {{ props.addButtonText }}
+                            </button>
                         </div>
                     </div>
                 </BCardBody>
@@ -622,6 +711,7 @@ onMounted(async () => {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
+  vertical-align: middle !important;
 }
 .table td {
   padding: 0.25rem 0.5rem !important;

@@ -1,72 +1,19 @@
 <template>
-  <Layout>
-    <Head title="Faturamento Convênios" />
-    <PageHeader title="Faturamento Convênios" pageTitle="Faturamento" />
-
-    <TableGrid
-      :columns="cols"
-      :data="rows"
-      :tableTitle="'Faturamentos (Convênios)'"
-      :showCheckbox="false"
-      :search="true"
-      :showAddButton="false"
-      :showStatus="false"
-      :showActions="true"
-      :actionsConfig="{ delete: false, edit: true, show: false, diary: false, print: false, download: false, restore: false, receive: false }"
-      @edit="onEdit"
-    />
-
-    <Modal v-model="showEdit" title="Atualizar Faturamento (Convênio)" name-button="Salvar" :processing="editForm.processing" size="md" @save="salvar">
-      <div class="row g-3">
-        <div class="col-12">
-          <div class="d-flex flex-column">
-            <span class="text-muted">Convênio</span>
-            <span class="fw-semibold">{{ editInfo.convenio }}</span>
-          </div>
-        </div>
-        <div class="col-12">
-          <div class="d-flex flex-column">
-            <span class="text-muted">Paciente</span>
-            <span class="fw-semibold">{{ editInfo.paciente }}</span>
-          </div>
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Status</label>
-          <select v-model="editForm.status" class="form-select">
-            <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
-          </select>
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Vencimento</label>
-          <input v-model="editForm.vencimento" type="date" class="form-control" />
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Valor cobrado</label>
-          <input v-model="editForm.valor_cobrado" type="text" class="form-control" />
-        </div>
-        <div class="col-12">
-          <label class="form-label">Valor aprovado</label>
-          <input v-model="editForm.valor_aprovado" type="text" class="form-control" />
-        </div>
-        <div class="col-12">
-          <label class="form-label">Valor glosado</label>
-          <input v-model="editForm.valor_glosado" type="text" class="form-control" />
-        </div>
-      </div>
-    </Modal>
+    <Layout>
+        <Head title="Convenio" />
+        <PageHeader title="Convenio" pageTitle="Menu" />
+        <TableGrid :columns="columns" :data="conveniosLocal" :tableTitle="'Todos os Convenios'" :showStatus="false"
+            :searchPlaceholder="'Buscar por convenio'" @modalDdeletarMultiplos="openModalDeleteMulti"
+            @delete="openModalDelete" @edit="openModalEdit" @show="openModalShow" @add="openModalAdd" />
   </Layout>
 </template>
 
-<script setup>
+<script lang="js" setup>
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import { Head, useForm, router } from "@inertiajs/vue3";
 import { toRef, ref, computed } from "vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
-import Modal from "@/Components/Modal.vue";
 
 const props = defineProps({
   faturamentos: { type: Array, default: () => [] },
@@ -83,7 +30,7 @@ function formatCurrency(n) {
   }
 }
 
-const cols = [
+const columns = [
   { id: "id", name: "ID" },
   { id: "convenio", name: "Convênio" },
   { id: "paciente", name: "Paciente" },
@@ -176,8 +123,3 @@ function salvar() {
   });
 }
 </script>
-
-<style scoped>
-:deep(.table thead th:nth-child(1)),
-:deep(.table tbody td:nth-child(1)) { display: none; }
-</style>

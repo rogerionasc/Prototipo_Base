@@ -85,6 +85,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/convenios", [ConvenioController::class, "store"])->name('convenios.store');
         Route::put("/convenios/{id}", [ConvenioController::class, "update"])->name('convenios.update');
         Route::delete("/convenios/{id}", [ConvenioController::class, "destroy"])->name('convenios.destroy');
+        Route::get("/convenios/{id}/tuss-procedimentos", [ConvenioController::class, "tussProcedimentos"])->whereNumber('id')->name('convenios.tuss_procedimentos');
 
         // Caixas routes
         Route::get("/cadastro-caixa", [CaixaController::class, "create"])->name('caixas.create');
@@ -121,6 +122,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get("/tuss/import/complete/{id}", [ProcedimentoController::class, "completeTussImport"])->name('tuss.import.complete');
         Route::post("/tuss/import/progress", [ProcedimentoController::class, "importTussProgress"])->name('tuss.import.progress');
         Route::get("/tuss/template", [ProcedimentoController::class, "downloadTussTemplate"])->name('tuss.template');
+        Route::get("/tuss/tabelas/{tabela}/procedimentos", [ProcedimentoController::class, "tussProcedimentosByTabela"])->name('tuss.tabela.procedimentos');
 
         // Orçamentos routes
         Route::get("/orcamentos", [OrcamentoController::class, "index"])->name('orcamentos.index');

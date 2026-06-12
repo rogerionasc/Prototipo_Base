@@ -11,6 +11,8 @@ return new class extends Migration
         Schema::create('convenios', function (Blueprint $table) {
             $table->id();
             $table->string('descricao', 120);
+            $table->string('logo_path', 255)->nullable();
+            $table->string('tuss_tabela', 20)->nullable();
             $table->string('tipo', 20)->nullable();
             $table->foreignId('empresa_id')->nullable()->constrained('contas')->nullOnDelete();
             $table->unsignedInteger('ans')->nullable();

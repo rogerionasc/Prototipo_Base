@@ -473,6 +473,61 @@ class ProcedimentoController extends Controller
         ]);
     }
 
+    public function tussProcedimentosByTabela(Request $request, string $tabela)
+    {
+        $tabela = trim((string)$tabela);
+        if ($tabela === '') {
+            return response()->json(['message' => 'Tabela inválida.'], 422);
+        }
+        $exists = DB::table('tuss')->where('tabela', $tabela)->whereNull('deleted_at')->exists();
+        if (!$exists) {
+            return response()->json(['message' => 'Tabela não encontrada.'], 404);
+        }
+
+        $q = trim((string)$request->query('q', ''));
+        $limit = (int)$request->query('limit', 0);
+        $offset = (int)$request->query('offset', 0);
+        $page = (int)$request->query('page', 1);
+        $perPage = (int)$request->query('per_page', 10);
+
+        if ($limit > 0) {
+            $perPage = $limit;
+            $page = (int)floor(max(0, $offset) / max(1, $perPage)) + 1;
+        }
+        $page = max(1, $page);
+        $perPage = max(1, min(100, $perPage));
+        $offset = ($limit > 0) ? max(0, $offset) : (($page - 1) * $perPage);
+
+        $base = DB::table('tuss')->where('tabela', $tabela)->whereNull('deleted_at');
+        if ($q !== '') {
+            $base->where(function ($w) use ($q) {
+                $w->where('codigo', 'like', '%' . $q . '%')
+                    ->orWhere('descricao', 'like', '%' . $q . '%');
+            });
+        }
+
+        $total = (clone $base)->count();
+        $rows = $base
+            ->select('id', 'tabela', 'codigo', 'descricao', 'total')
+            ->orderBy('descricao')
+            ->offset($offset)
+            ->limit($perPage)
+            ->get();
+
+        return response()->json([
+            'data' => $rows,
+            'meta' => [
+                'tabela' => $tabela,
+                'q' => $q,
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => (int)$total,
+                'total_pages' => (int)ceil(((int)$total) / $perPage),
+            ],
+            'total' => (int)$total,
+        ]);
+    }
+
     public function importTuss(Request $request)
     {
         $request->validate([

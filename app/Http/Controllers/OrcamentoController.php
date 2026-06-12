@@ -104,13 +104,53 @@ class OrcamentoController extends Controller
         $valorBruto = 0.0;
         $itensValores = [];
         $mapConvenio = $this->getProcedimentoConvenioMap($convenioId);
+        $tussTabela = trim((string)Convenio::where('id', $convenioId)->value('tuss_tabela'));
+
+        $procIds = array_values(array_unique(array_map(fn($i) => (int)($i['procedimento_id'] ?? 0), $itens)));
+        $procIds = array_values(array_filter($procIds, fn($id) => $id > 0));
+        $procs = Procedimento::select('id', 'valor', 'nome')->whereIn('id', $procIds)->get()->keyBy('id');
+
+        $tussMap = [];
+        if (!$procs->isEmpty()) {
+            $names = $procs->map(fn($p) => trim((string)($p->nome ?? '')))->filter(fn($n) => $n !== '')->unique()->values()->all();
+            if (!empty($names)) {
+                $rows = DB::table('convenio_tuss as ct')
+                    ->join('tuss as t', 't.id', '=', 'ct.tuss_id')
+                    ->where('ct.convenio_id', $convenioId)
+                    ->whereNull('ct.deleted_at')
+                    ->whereNull('t.deleted_at')
+                    ->whereIn('t.descricao', $names)
+                    ->select('t.descricao', 't.total', 'ct.created_at')
+                    ->orderByDesc('ct.created_at')
+                    ->orderByDesc('t.id')
+                    ->get();
+
+                if ($rows->isEmpty() && $tussTabela !== '') {
+                    $rows = DB::table('tuss')
+                        ->where('tabela', $tussTabela)
+                        ->whereIn('descricao', $names)
+                        ->select('descricao', 'total')
+                        ->get();
+                }
+                foreach ($rows as $r) {
+                    $k = mb_strtolower(trim((string)($r->descricao ?? '')));
+                    if ($k !== '' && !array_key_exists($k, $tussMap)) $tussMap[$k] = $r->total;
+                }
+            }
+        }
 
         foreach ($itens as $idx => $item) {
-            $proc = Procedimento::select('id', 'valor')->findOrFail($item['procedimento_id']);
+            $procId = (int)($item['procedimento_id'] ?? 0);
+            $proc = $procs->get($procId) ?? Procedimento::select('id', 'valor', 'nome')->findOrFail($procId);
             $valorUnit = $proc->valor ?? 0;
             $k = (string)$proc->id;
             if (array_key_exists($k, $mapConvenio) && $mapConvenio[$k] !== null) {
                 $valorUnit = $mapConvenio[$k];
+            } elseif (!empty($tussMap) || $tussTabela !== '') {
+                $nameKey = mb_strtolower(trim((string)($proc->nome ?? '')));
+                if ($nameKey !== '' && array_key_exists($nameKey, $tussMap) && $tussMap[$nameKey] !== null) {
+                    $valorUnit = $tussMap[$nameKey];
+                }
             }
             $qtd = (int)($item['quantidade'] ?? 1);
             $vTotal = ($valorUnit ?? 0) * $qtd;
