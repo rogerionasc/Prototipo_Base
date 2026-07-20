@@ -65,16 +65,6 @@
                             {{ form.errors.estado_civil_id }}
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <label for="convenio" class="form-label">Convênio</label>
-                        <select v-model="form.convenio_ids" multiple data-choices class="form-select" id="convenio"
-                            ref="convenioSelect" :class="{ 'is-invalid': (form.errors.convenio_ids || form.errors['convenio_ids.0']) }">
-                            <option v-for="cv in convenios" :key="cv.id" :value="cv.id">{{ cv.descricao }}</option>
-                        </select>
-                        <div class="invalid-feedback">
-                            {{ form.errors.convenio_ids || form.errors['convenio_ids.0'] }}
-                        </div>
-                    </div>
                     <div class="col-md-2">
                         <label for="altura" class="form-label">Altura (m)</label>
                         <input v-model.number="form.altura" type="number" step="0.01" class="form-control" id="altura"
@@ -249,16 +239,59 @@
                     </div>
                 </div>
             </BTab>
+            <BTab title="Convênio">
+                <div class="row g-3 mt-2">
+                    <div class="col-md-12">
+                        <TableGrid
+                            :columns="convenioColumns"
+                            :data="conveniosList"
+                            :tableTitle="'Convênios do Paciente'"
+                            :showStatus="false"
+                            :searchPlaceholder="'Buscar convênio'"
+                            :showCheckbox="false"
+                            :showMultiDelete="false"
+                            :showAddButton="true"
+                            :addButtonText="'Adicionar Convênio'"
+                            :showActions="true"
+                            :actionsConfig="{ delete: true, edit: true, show: false }"
+                            :actionsLabels="{ delete: 'Remover', edit: 'Editar' }"
+                            @add="openConvenioModal"
+                            @edit="editConvenio"
+                            @delete="removeConvenio"
+                        />
+                    </div>
+                </div>
+            </BTab>
         </BTabs>
     </form>
+    <Modal v-model="showConvenioModal" :title="convenioModalTitle" :zIndex="2000" :backdropZIndex="1990" size="md" name-button="Salvar" @save="saveConvenio">
+        <div class="row g-4 mb-2">
+            <div class="col-md-12">
+                <label for="convenio" class="form-label">Selecione o Convênio <span class="text-danger">*</span></label>
+                <select v-model="selectedConvenio.convenio_id" data-choices class="form-select" id="convenio"
+                    ref="convenioSelect">
+                    <option selected disabled value="">Escolha uma opção...</option>
+                    <option v-for="cv in convenios" :key="cv.id" :value="cv.id">{{ cv.descricao }}</option>
+                </select>
+            </div>
+            <div class="col-md-12">
+                <label for="numeroCarteira" class="form-label">Número da Carteira</label>
+                <input v-model="selectedConvenio.numero_carteira" type="text" class="form-control" id="numeroCarteira"
+                    placeholder="Ex: 123456789" maxlength="30" :disabled="isParticularSelected">
+                <div class="form-text text-muted">Informe o número de identificação da carteirinha.</div>
+            </div>
+        </div>
+    </Modal>
 </template>
 <script setup>
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/l10n/pt.js";
+import TableGrid from "@/Components/Tables/TableGrid.vue";
+import Modal from "@/Components/Modal.vue";
 const flatpickrOptions = { altInput: true, altFormat: "d M, Y", dateFormat: "Y-m-d", locale: "pt" };
 import { useForm } from "@inertiajs/vue3";
-import { ref, defineExpose, onMounted, nextTick, watch, toRef } from "vue";
+import { ref, defineExpose, onMounted, nextTick, watch, toRef, computed } from "vue";
 const { estadosCivis, tiposSanguineos, canaisAviso, convenios, parentescos } = defineProps({
     estadosCivis: { type: Array, default: () => [] },
     tiposSanguineos: { type: Array, default: () => [] },
@@ -273,48 +306,36 @@ const tipoSanguineoSelect = ref(null);
 const canalAvisoSelect = ref(null);
 const convenioSelect = ref(null);
 const parentescoSelect = ref(null);
-const sincronizandoConvenios = ref(false);
-function normalizeIds(values) {
-    const arr = Array.isArray(values) ? values : [];
-    return arr.map(v => String(v)).map(v => v.trim()).filter(Boolean).sort();
-}
-function idsIguais(a, b) {
-    const aa = normalizeIds(a);
-    const bb = normalizeIds(b);
-    if (aa.length !== bb.length) return false;
-    for (let i = 0; i < aa.length; i++) {
-        if (aa[i] !== bb[i]) return false;
+const newConvenio = ref({
+    convenio_id: "",
+    numero_carteira: "",
+});
+const conveniosList = ref([]);
+const convenioColumns = [
+    { id: "id", name: "ID" },
+    { id: "descricao", name: "Convênio" },
+    { id: "numero_carteira", name: "Número da Carteira" },
+];
+const showConvenioModal = ref(false);
+const convenioModalTitle = ref('Adicionar Convênio');
+const editingConvenioId = ref(null);
+const selectedConvenio = ref({
+    convenio_id: "",
+    numero_carteira: "",
+});
+const _isSyncingConvenio = ref(false);
+
+const isParticularSelected = computed(() => {
+    if (!selectedConvenio.value.convenio_id) return false;
+    const convenio = convenios.find(c => c.id == selectedConvenio.value.convenio_id);
+    return convenio && convenio.tipo && convenio.tipo.toLowerCase() === 'particular';
+});
+
+watch(() => selectedConvenio.value.convenio_id, (newVal) => {
+    if (isParticularSelected.value) {
+        selectedConvenio.value.numero_carteira = "";
     }
-    return true;
-}
-function getSelectedValues(el) {
-    try {
-        if (!el) return [];
-        return Array.from(el.selectedOptions || []).map(o => String(o.value)).filter(v => v !== "");
-    } catch (e) {
-        return [];
-    }
-}
-function syncMultiChoiceValue(el, values) {
-    if (sincronizandoConvenios.value) return;
-    try {
-        if (!el) return;
-        const vals = Array.isArray(values) ? values.map(v => String(v)) : [];
-        const inst = el._choicesInstance || el.choices;
-        sincronizandoConvenios.value = true;
-        if (inst && typeof inst.removeActiveItems === 'function') {
-            try { inst.removeActiveItems(); } catch (_) {}
-        }
-        if (inst && typeof inst.setChoiceByValue === 'function') {
-            inst.setChoiceByValue(vals);
-        } else {
-            Array.from(el.options || []).forEach(opt => { opt.selected = vals.includes(String(opt.value)); });
-        }
-    } catch (e) {}
-    finally {
-        sincronizandoConvenios.value = false;
-    }
-}
+});
 const form = useForm({
     nome: "",
     cpf: "",
@@ -324,7 +345,6 @@ const form = useForm({
     data_nascimento: "",
     naturalidade: "",
     estado_civil_id: "",
-    convenio_ids: [],
     altura: null,
     peso: null,
     cor_pele: "",
@@ -354,25 +374,45 @@ const form = useForm({
     responsavel_celular: "",
     responsavel_telefone: "",
     responsavel_email: "",
+    convenios: [],
 });
 watch(() => form.sexo, async (v) => { await nextTick(); if (window.syncChoiceValue && sexoSelect.value) window.syncChoiceValue(sexoSelect.value, v || ""); }, { immediate: true });
 watch(() => form.estado_civil_id, async (v) => { await nextTick(); if (window.syncChoiceValue && estadoCivilSelect.value) window.syncChoiceValue(estadoCivilSelect.value, v != null ? String(v) : ""); }, { immediate: true });
 watch(() => form.tipo_sanguineo_id, async (v) => { await nextTick(); if (window.syncChoiceValue && tipoSanguineoSelect.value) window.syncChoiceValue(tipoSanguineoSelect.value, v != null ? String(v) : ""); }, { immediate: true });
 watch(() => form.canal_aviso_id, async (v) => { await nextTick(); if (window.syncChoiceValue && canalAvisoSelect.value) window.syncChoiceValue(canalAvisoSelect.value, v != null ? String(v) : ""); }, { immediate: true });
-watch(() => form.convenio_ids, async (v) => {
+watch(() => selectedConvenio.value.convenio_id, async (v) => {
+    if (_isSyncingConvenio.value) return;
     await nextTick();
-    if (!convenioSelect.value) return;
-    if (sincronizandoConvenios.value) return;
-    const domVals = getSelectedValues(convenioSelect.value);
-    if (idsIguais(domVals, v || [])) return;
-    syncMultiChoiceValue(convenioSelect.value, v || []);
-}, { immediate: true, deep: true });
+    if (window.syncChoiceValue && convenioSelect.value) {
+        _isSyncingConvenio.value = true;
+        window.syncChoiceValue(convenioSelect.value, v != null ? String(v) : "");
+        _isSyncingConvenio.value = false;
+    }
+}, { immediate: true });
 watch(() => form.responsavel_parentesco_id, async (v) => { await nextTick(); if (window.syncChoiceValue && parentescoSelect.value) window.syncChoiceValue(parentescoSelect.value, v != null ? String(v) : ""); }, { immediate: true });
+watch(showConvenioModal, async (v) => {
+    if (v) {
+        await nextTick();
+        if (window.initChoices) window.initChoices();
+        
+        // Usa setTimeout para garantir que o DOM do Choices.js esteja pronto
+        setTimeout(() => {
+            const idToSync = selectedConvenio.value.convenio_id;
+            console.log("Syncing Choices with ID:", idToSync);
+            if (window.syncChoiceValue && convenioSelect.value) {
+                _isSyncingConvenio.value = true;
+                window.syncChoiceValue(convenioSelect.value, idToSync != null && idToSync !== '' ? String(idToSync) : "");
+                _isSyncingConvenio.value = false;
+            }
+        }, 50);
+    }
+});
 const submit = (onSuccess, hooks = {}) => {
     if (formEl.value && !formEl.value.checkValidity()) {
         formEl.value.classList.add('was-validated');
         return;
     }
+    form.convenios = conveniosList.value;
     form.post("/pacientes", {
         onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
         onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
@@ -380,6 +420,8 @@ const submit = (onSuccess, hooks = {}) => {
             formEl.value?.classList.remove('was-validated');
             form.clearErrors();
             form.reset();
+            conveniosList.value = [];
+            newConvenio.value = { convenio_id: "", numero_carteira: "" };
             await nextTick();
             await syncChoices();
             if (onSuccess) onSuccess();
@@ -391,6 +433,7 @@ const submitUpdate = (id, onSuccess, hooks = {}) => {
         formEl.value.classList.add('was-validated');
         return;
     }
+    form.convenios = conveniosList.value;
     form.put(`/pacientes/${id}`, {
         onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
         onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
@@ -406,10 +449,82 @@ const syncChoices = async () => {
     if (window.syncChoiceValue && estadoCivilSelect.value) window.syncChoiceValue(estadoCivilSelect.value, form.estado_civil_id != null && form.estado_civil_id !== '' ? String(form.estado_civil_id) : "");
     if (window.syncChoiceValue && tipoSanguineoSelect.value) window.syncChoiceValue(tipoSanguineoSelect.value, form.tipo_sanguineo_id != null && form.tipo_sanguineo_id !== '' ? String(form.tipo_sanguineo_id) : "");
     if (window.syncChoiceValue && canalAvisoSelect.value) window.syncChoiceValue(canalAvisoSelect.value, form.canal_aviso_id != null && form.canal_aviso_id !== '' ? String(form.canal_aviso_id) : "");
-    if (convenioSelect.value) syncMultiChoiceValue(convenioSelect.value, form.convenio_ids || []);
+    if (window.syncChoiceValue && convenioSelect.value) window.syncChoiceValue(convenioSelect.value, selectedConvenio.value.convenio_id != null && selectedConvenio.value.convenio_id !== '' ? String(selectedConvenio.value.convenio_id) : "");
     if (window.syncChoiceValue && parentescoSelect.value) window.syncChoiceValue(parentescoSelect.value, form.responsavel_parentesco_id != null && form.responsavel_parentesco_id !== '' ? String(form.responsavel_parentesco_id) : "");
 };
-defineExpose({ submit, submitUpdate, form, syncChoices, processingRef: toRef(form, "processing") });
+const openConvenioModal = () => {
+    editingConvenioId.value = null;
+    convenioModalTitle.value = 'Adicionar Convênio';
+    selectedConvenio.value.convenio_id = "";
+    selectedConvenio.value.numero_carteira = "";
+    showConvenioModal.value = true;
+};
+const editConvenio = (id, row) => {
+    console.log("editConvenio row clicked:", row);
+    editingConvenioId.value = id;
+    convenioModalTitle.value = 'Editar Convênio';
+    
+    // Set values directly
+    selectedConvenio.value.convenio_id = row.convenio_id;
+    
+    // Set a small timeout for numero_carteira so it doesn't get cleared by the watcher if it's not particular
+    setTimeout(() => {
+        selectedConvenio.value.numero_carteira = row.numero_carteira;
+    }, 10);
+    
+    showConvenioModal.value = true;
+};
+const closeConvenioModal = () => {
+    showConvenioModal.value = false;
+};
+const saveConvenio = () => {
+    if (!selectedConvenio.value.convenio_id) {
+        alert('Selecione um convênio');
+        return;
+    }
+    const exists = conveniosList.value.some(c => c.convenio_id == selectedConvenio.value.convenio_id && c.id !== editingConvenioId.value);
+    if (exists) {
+        alert('Este convênio já foi adicionado');
+        return;
+    }
+    const convenio = convenios.find(c => c.id == selectedConvenio.value.convenio_id);
+    
+    if (editingConvenioId.value !== null) {
+        const index = conveniosList.value.findIndex(c => c.id === editingConvenioId.value);
+        if (index !== -1) {
+            conveniosList.value[index].convenio_id = selectedConvenio.value.convenio_id;
+            conveniosList.value[index].descricao = convenio ? convenio.descricao : '';
+            conveniosList.value[index].numero_carteira = selectedConvenio.value.numero_carteira;
+        }
+    } else {
+        conveniosList.value.push({
+            id: conveniosList.value.length ? Math.max(...conveniosList.value.map(c => c.id)) + 1 : 1,
+            convenio_id: selectedConvenio.value.convenio_id,
+            descricao: convenio ? convenio.descricao : '',
+            numero_carteira: selectedConvenio.value.numero_carteira,
+        });
+    }
+    closeConvenioModal();
+};
+const removeConvenio = (row) => {
+    const index = conveniosList.value.findIndex(c => c.id === row.id);
+    if (index !== -1) {
+        conveniosList.value.splice(index, 1);
+    }
+};
+const getConvenioDescricao = (convenioId) => {
+    const convenio = convenios.find(c => c.id == convenioId);
+    return convenio ? convenio.descricao : '-';
+};
+const loadConvenios = (conveniosData) => {
+    conveniosList.value = Array.isArray(conveniosData) ? conveniosData.map((c, idx) => ({
+        id: idx + 1,
+        convenio_id: c.convenio_id,
+        descricao: getConvenioDescricao(c.convenio_id),
+        numero_carteira: c.numero_carteira || '',
+    })) : [];
+};
+defineExpose({ submit, submitUpdate, form, syncChoices, processingRef: toRef(form, "processing"), loadConvenios });
 onMounted(async () => {
     await nextTick();
     if (window.initChoices) window.initChoices();
@@ -418,18 +533,13 @@ onMounted(async () => {
     if (estadoCivilSelect.value) estadoCivilSelect.value.addEventListener("change", (e) => { form.estado_civil_id = e?.target?.value ?? form.estado_civil_id; });
     if (tipoSanguineoSelect.value) tipoSanguineoSelect.value.addEventListener("change", (e) => { form.tipo_sanguineo_id = e?.target?.value ?? form.tipo_sanguineo_id; });
     if (canalAvisoSelect.value) canalAvisoSelect.value.addEventListener("change", (e) => { form.canal_aviso_id = e?.target?.value ?? form.canal_aviso_id; });
-    if (convenioSelect.value) convenioSelect.value.addEventListener("change", () => {
-        if (sincronizandoConvenios.value) return;
-        const vals = getSelectedValues(convenioSelect.value);
-        if (idsIguais(vals, form.convenio_ids || [])) return;
-        form.convenio_ids = vals;
-    });
+    if (convenioSelect.value) convenioSelect.value.addEventListener("change", (e) => { if (!_isSyncingConvenio.value) { selectedConvenio.value.convenio_id = e?.target?.value ?? selectedConvenio.value.convenio_id; } });
     if (parentescoSelect.value) parentescoSelect.value.addEventListener("change", (e) => { form.responsavel_parentesco_id = e?.target?.value ?? form.responsavel_parentesco_id; });
     if (window.syncChoiceValue && sexoSelect.value) window.syncChoiceValue(sexoSelect.value, form.sexo || "");
     if (window.syncChoiceValue && estadoCivilSelect.value) window.syncChoiceValue(estadoCivilSelect.value, form.estado_civil_id != null && form.estado_civil_id !== '' ? String(form.estado_civil_id) : "");
     if (window.syncChoiceValue && tipoSanguineoSelect.value) window.syncChoiceValue(tipoSanguineoSelect.value, form.tipo_sanguineo_id != null && form.tipo_sanguineo_id !== '' ? String(form.tipo_sanguineo_id) : "");
     if (window.syncChoiceValue && canalAvisoSelect.value) window.syncChoiceValue(canalAvisoSelect.value, form.canal_aviso_id != null && form.canal_aviso_id !== '' ? String(form.canal_aviso_id) : "");
-    if (convenioSelect.value) syncMultiChoiceValue(convenioSelect.value, form.convenio_ids || []);
+    if (window.syncChoiceValue && convenioSelect.value) { _isSyncingConvenio.value = true; window.syncChoiceValue(convenioSelect.value, selectedConvenio.value.convenio_id != null && selectedConvenio.value.convenio_id !== '' ? String(selectedConvenio.value.convenio_id) : ""); _isSyncingConvenio.value = false; }
     if (window.syncChoiceValue && parentescoSelect.value) window.syncChoiceValue(parentescoSelect.value, form.responsavel_parentesco_id != null && form.responsavel_parentesco_id !== '' ? String(form.responsavel_parentesco_id) : "");
 });
 </script>

@@ -275,6 +275,8 @@ class ProcedimentoController extends Controller
                 }
 
                 $hasProcRef = Schema::hasColumn('tuss', 'proc_ref');
+                $hasEhTratamento = Schema::hasColumn('tuss', 'eh_tratamento');
+                $hasQuantidadeSessoes = Schema::hasColumn('tuss', 'quantidade_sessoes');
                 $allowedHeaders = ['tabela', 'codigo', 'cod_tuss', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co', 'total'];
                 if ($hasProcRef) $allowedHeaders[] = 'proc_ref';
                 $headerKeys = array_values(array_filter(array_keys($headerMap), fn ($k) => $k !== ''));
@@ -410,6 +412,8 @@ class ProcedimentoController extends Controller
                         'deleted_at' => null,
                     ];
                     if ($hasProcRef) $payload['proc_ref'] = ($procRef !== null && $procRef !== '') ? $procRef : null;
+                    if ($hasEhTratamento) $payload['eh_tratamento'] = 0;
+                    if ($hasQuantidadeSessoes) $payload['quantidade_sessoes'] = null;
                     $validRows += 1;
                     $rowsToInsert[] = $payload;
 
@@ -577,6 +581,8 @@ class ProcedimentoController extends Controller
         }
 
         $hasProcRef = Schema::hasColumn('tuss', 'proc_ref');
+        $hasEhTratamento = Schema::hasColumn('tuss', 'eh_tratamento');
+        $hasQuantidadeSessoes = Schema::hasColumn('tuss', 'quantidade_sessoes');
         $allowedHeaders = ['tabela', 'codigo', 'cod_tuss', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co', 'total'];
         if ($hasProcRef) $allowedHeaders[] = 'proc_ref';
         $headerKeys = array_values(array_filter(array_keys($headerMap), fn ($k) => $k !== ''));
@@ -707,6 +713,8 @@ class ProcedimentoController extends Controller
                     'deleted_at' => null,
                 ];
                 if ($hasProcRef) $payload['proc_ref'] = ($procRef !== null && $procRef !== '') ? $procRef : null;
+                if ($hasEhTratamento) $payload['eh_tratamento'] = 0;
+                if ($hasQuantidadeSessoes) $payload['quantidade_sessoes'] = null;
                 $validRows += 1;
                 $rowsToInsert[] = $payload;
 
@@ -749,6 +757,8 @@ class ProcedimentoController extends Controller
     {
         $allowedTabelas = ['AMB1990', 'AMB1992', 'AMB1993', 'AMB1999', 'CBHPM3', 'CBHPM4', 'CBHPM5', 'TUSS'];
         $hasProcRef = Schema::hasColumn('tuss', 'proc_ref');
+        $hasEhTratamento = Schema::hasColumn('tuss', 'eh_tratamento');
+        $hasQuantidadeSessoes = Schema::hasColumn('tuss', 'quantidade_sessoes');
 
         $rules = [
             'tabela' => ['required', 'string', 'max:20'],
@@ -762,6 +772,8 @@ class ProcedimentoController extends Controller
             'co' => ['nullable', 'string', 'max:50'],
         ];
         if ($hasProcRef) $rules['proc_ref'] = ['nullable', 'string', 'max:50'];
+        if ($hasEhTratamento) $rules['eh_tratamento'] = ['nullable'];
+        if ($hasQuantidadeSessoes) $rules['quantidade_sessoes'] = ['nullable', 'integer', 'min:1', 'max:1000'];
 
         $data = $request->validate($rules, [
             'tabela.required' => 'Informe a tabela.',
@@ -782,7 +794,27 @@ class ProcedimentoController extends Controller
 
         $ch = $this->parseDecimal($data['ch'] ?? null);
         $co = $this->parseDecimal($data['co'] ?? null);
-        $total = ($ch !== null && $co !== null) ? ($ch + $co) : null;
+        $ehTratamento = $hasEhTratamento
+            ? (filter_var($data['eh_tratamento'] ?? false, FILTER_VALIDATE_BOOLEAN) ? true : false)
+            : null;
+        $quantidadeSessoes = $hasQuantidadeSessoes
+            ? (isset($data['quantidade_sessoes']) && $data['quantidade_sessoes'] !== '' ? (int)$data['quantidade_sessoes'] : null)
+            : null;
+        if ($hasEhTratamento && !$ehTratamento) {
+            $quantidadeSessoes = null;
+        }
+        if ($hasEhTratamento && $ehTratamento && $hasQuantidadeSessoes && $quantidadeSessoes === null) {
+            throw ValidationException::withMessages(['quantidade_sessoes' => ['Informe a quantidade de sessões.']]);
+        }
+
+        $hasChOrCo = ($ch !== null) || ($co !== null);
+        if (!$hasChOrCo) {
+            $total = null;
+        } elseif ($hasEhTratamento && $ehTratamento && $quantidadeSessoes !== null) {
+            $total = ((float)($ch ?? 0)) * (int)$quantidadeSessoes + (float)($co ?? 0);
+        } else {
+            $total = (float)($ch ?? 0) + (float)($co ?? 0);
+        }
 
         $payload = [
             'tabela' => $tabela,
@@ -802,9 +834,13 @@ class ProcedimentoController extends Controller
         if ($hasProcRef) {
             $payload['proc_ref'] = isset($data['proc_ref']) && trim((string)$data['proc_ref']) !== '' ? trim((string)$data['proc_ref']) : null;
         }
+        if ($hasEhTratamento) $payload['eh_tratamento'] = $ehTratamento ? 1 : 0;
+        if ($hasQuantidadeSessoes) $payload['quantidade_sessoes'] = $quantidadeSessoes;
 
         $updateCols = ['descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co', 'total', 'updated_at', 'deleted_at'];
         if ($hasProcRef) array_unshift($updateCols, 'proc_ref');
+        if ($hasEhTratamento) $updateCols[] = 'eh_tratamento';
+        if ($hasQuantidadeSessoes) $updateCols[] = 'quantidade_sessoes';
 
         DB::table('tuss')->upsert([$payload], ['tabela', 'codigo'], $updateCols);
 
@@ -842,8 +878,19 @@ class ProcedimentoController extends Controller
 
         $total = (clone $query)->count();
 
+        $select = ['id', 'tabela', 'codigo', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co', 'total'];
+        if (Schema::hasColumn('tuss', 'proc_ref')) {
+            $select[] = 'proc_ref';
+        }
+        if (Schema::hasColumn('tuss', 'eh_tratamento')) {
+            $select[] = 'eh_tratamento';
+        }
+        if (Schema::hasColumn('tuss', 'quantidade_sessoes')) {
+            $select[] = 'quantidade_sessoes';
+        }
+
         $rows = $query
-            ->select('id', 'tabela', 'codigo', 'descricao', 'ch', 'co', 'total')
+            ->select($select)
             ->orderBy('tabela')
             ->orderBy('codigo')
             ->offset($offset)

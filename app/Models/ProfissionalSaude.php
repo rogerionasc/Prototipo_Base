@@ -69,4 +69,17 @@ class ProfissionalSaude extends Model
     {
         return $this->hasMany(SolicitacaoExame::class, 'profissional_saude_id');
     }
+
+    public function convenios()
+    {
+        return $this->belongsToMany(Convenio::class, 'convenio_medico_tuss', 'profissional_saude_id', 'convenio_id')
+            ->distinct();
+    }
+
+    public function convenioTuss()
+    {
+        return $this->belongsToMany(Tuss::class, 'convenio_medico_tuss', 'profissional_saude_id', 'tuss_id')
+            ->withPivot('convenio_id')
+            ->withTimestamps();
+    }
 }

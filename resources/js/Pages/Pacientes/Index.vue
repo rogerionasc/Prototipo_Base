@@ -51,7 +51,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Nascimento</label>
-                            <div class="fw-medium">{{ selectedPaciente.data_nascimento || '-' }}</div>
+                            <div class="fw-medium">{{ formatDateTimeBR(selectedPaciente.data_nascimento) || '-' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Convênio</label>
@@ -89,8 +89,8 @@
                                 <tbody>
                                     <tr v-for="o in orcamentosPaciente" :key="o.id">
                                         <td>{{ o.numero }}</td>
-                                        <td>{{ o.data_emissao }}</td>
-                                        <td>{{ o.validade }}</td>
+                                        <td>{{ formatDateTimeBR(o.data_emissao) }}</td>
+                                        <td>{{ formatDateTimeBR(o.validade) }}</td>
                                         <td class="text-end">{{ formatCurrencyBR(o.valor_bruto) }}</td>
                                         <td class="text-end">{{ formatCurrencyBR(o.desconto) }}</td>
                                         <td class="text-end">{{ formatCurrencyBR(o.valor_total) }}</td>
@@ -169,6 +169,15 @@ function formatCurrencyBR(v) {
     return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function formatDateTimeBR(dateString) {
+    if (!dateString) return '';
+    // se for apenas YYYY-MM-DD, a conversão ajusta fuso horário. Adicionamos T00:00:00 se não tiver hora
+    const dt = dateString.includes('T') || dateString.includes(' ') ? dateString : `${dateString}T00:00:00`;
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return dateString;
+    return d.toLocaleString('pt-BR');
+}
+
 // chamar o método submit exposto pelo componente filho PacienteForm.
 function onSavePaciente() {
     if (isEditing.value && editingId.value) {
@@ -180,9 +189,9 @@ function onSavePaciente() {
                 if (idx !== -1) {
                     const existing = pacientesLocal.value[idx];
                     const selectedConvenioDesc = (() => {
-                        const ids = Array.isArray(f.convenio_ids) ? f.convenio_ids.map(String).filter(Boolean) : [];
-                        if (!ids.length) return '';
-                        const descs = ids.map((cid) => (props.convenios || []).find(cv => String(cv.id) === String(cid))?.descricao).filter(Boolean);
+                        const convs = Array.isArray(f.convenios) ? f.convenios : [];
+                        if (!convs.length) return '';
+                        const descs = convs.map((c) => (props.convenios || []).find(cv => String(cv.id) === String(c.convenio_id))?.descricao).filter(Boolean);
                         return descs.join(', ');
                     })();
                     pacientesLocal.value[idx] = {
@@ -197,7 +206,7 @@ function onSavePaciente() {
                         canal_aviso_id: f.canal_aviso_id ?? '',
                         receber_avisos: !!f.receber_avisos,
                         tem_responsavel: !!f.tem_responsavel,
-                        convenio_ids: Array.isArray(f.convenio_ids) ? f.convenio_ids.map(String).filter(Boolean).join(',') : '',
+                        convenio_ids: Array.isArray(f.convenios) ? f.convenios.map(c => c.convenio_id).join(',') : '',
                         convenio: selectedConvenioDesc,
                         rg: f.rg || '',
                         naturalidade: f.naturalidade || '',
@@ -301,6 +310,16 @@ async function openModalEdit(id) {
     modalTitle.value = 'Editar Paciente';
     showModal.value = true;
     await nextTick();
+    
+    // Load convenios with details
+    let conveniosData = [];
+    try {
+        const res = await window.axios.get(`/pacientes/${p.id}/convenios`);
+        conveniosData = res?.data?.convenios || [];
+    } catch (e) {
+        console.error('Error loading convenios:', e);
+    }
+    
     if (pacienteFormRef.value?.form) {
         const f = pacienteFormRef.value.form;
         f.nome = p.nome || '';
@@ -311,7 +330,13 @@ async function openModalEdit(id) {
         f.celular = p.celular || '';
         f.data_nascimento = p.data_nascimento || '';
         f.naturalidade = p.naturalidade || '';
-        f.convenio_ids = String(p.convenio_ids || '').split(',').map(s => String(s || '').trim()).filter(Boolean);
+        f.convenios = conveniosData.map(c => ({
+            convenio_id: c.id,
+            numero_carteira: c.numero_carteira || ''
+        }));
+        if (pacienteFormRef.value?.loadConvenios) {
+            pacienteFormRef.value.loadConvenios(f.convenios);
+        }
         f.sexo = p.sexo || '';
         f.receber_avisos = !!p.receber_avisos;
         f.tem_responsavel = !!p.tem_responsavel;

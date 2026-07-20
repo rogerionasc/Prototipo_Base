@@ -4,7 +4,7 @@
     <PageHeader title="Convênios" pageTitle="Menu" />
     <TableGrid
       :columns="columns"
-      :data="convenios"
+      :data="props.convenios"
       :tableTitle="'Todos os Convênios'"
       :showStatus="false"
       :showCheckbox="false"
@@ -15,8 +15,8 @@
       @edit="openModalEdit"
       @show="openModalShow"
     />
-    <Modal v-model="showModal" :title="modalTitle" size="xl" :name-button="saveButtonText" :processing="saveProcessing" @save="onSaveConvenio">
-      <ConvenioForm ref="convenioFormRef" :contas="contas" :tussTabelas="tussTabelas" />
+    <Modal v-model="showModal" :title="modalTitle" size="xxl" custom-width="95vw" :name-button="saveButtonText" :processing="saveProcessing" @save="onSaveConvenio">
+      <ConvenioForm ref="convenioFormRef" :contas="props.contas" :tussTabelas="props.tussTabelas" :profissionaisSaude="props.profissionaisSaude" />
     </Modal>
     <ModalDelete
       v-model="deleteModal"
@@ -38,10 +38,11 @@ import { Head, useForm, router } from '@inertiajs/vue3';
 import ConvenioForm from "./Create.vue";
 import { ref, nextTick, computed, watchEffect } from "vue";
 
- const { convenios, contas, tussTabelas } = defineProps({
+const props = defineProps({
    convenios: { type: Array, default: () => [] },
    contas: { type: Array, default: () => [] },
    tussTabelas: { type: Array, default: () => [] },
+   profissionaisSaude: { type: Array, default: () => [] },
  });
 
  const columns = [
@@ -67,32 +68,37 @@ const saveButtonText = computed(() => isEditing.value ? 'Atualizar' : 'Salvar');
    isEditing.value = false;
    modalTitle.value = 'Adicionar Convênio';
    if (convenioFormRef.value?.form) {
+     convenioFormRef.value.form.id = null;
      convenioFormRef.value.form.tipo = 'Convenio';
    }
    convenioFormRef.value?.setExistingLogoPath?.('');
    convenioFormRef.value?.setSelectedTussRows?.([]);
+   convenioFormRef.value?.setSelectedMedicos?.([]);
    showModal.value = true;
  }
 async function onSaveConvenio() {
   if (!convenioFormRef.value) return;
-  if (isEditing.value && editingId.value) {
-    convenioFormRef.value?.submitUpdate(editingId.value, () => {
-      showModal.value = false;
-      isEditing.value = false;
-      editingId.value = null;
-      router.reload({ only: ['convenios'], preserveScroll: true, preserveState: false });
-    }, {
-      onStart: () => { saveProcessing.value = true; },
-      onFinish: () => { saveProcessing.value = false; },
-    });
+  const isUp = isEditing.value;
+  const id = editingId.value;
+
+  const submitFn = isUp && id ? convenioFormRef.value.submitUpdate : convenioFormRef.value.submit;
+
+  const callback = () => {
+    showModal.value = false;
+    isEditing.value = false;
+    editingId.value = null;
+    router.reload({ only: ['convenios'], preserveScroll: true, preserveState: false });
+  };
+
+  const hooks = {
+    onStart: () => { saveProcessing.value = true; },
+    onFinish: () => { saveProcessing.value = false; },
+  };
+
+  if (isUp && id) {
+    submitFn(id, callback, hooks);
   } else {
-    convenioFormRef.value?.submit(() => {
-      showModal.value = false;
-      router.reload({ only: ['convenios'], preserveScroll: true, preserveState: false });
-    }, {
-      onStart: () => { saveProcessing.value = true; },
-      onFinish: () => { saveProcessing.value = false; },
-    });
+    submitFn(callback, hooks);
   }
 }
  const deleteModal = ref(false);
@@ -116,14 +122,13 @@ async function onSaveConvenio() {
    });
  }
  async function openModalEdit(id) {
-   const c = convenios.find(cv => String(cv.id) === String(id));
+   const c = props.convenios.find(cv => String(cv.id) === String(id));
    if (!c) return;
    isEditing.value = true;
    editingId.value = c.id;
    modalTitle.value = 'Editar Convênio';
-   showModal.value = true;
-   await nextTick();
    if (convenioFormRef.value?.form) {
+     convenioFormRef.value.form.id = c.id;
      convenioFormRef.value.form.descricao = c.descricao || '';
      convenioFormRef.value.form.tuss_tabela = '';
      convenioFormRef.value.form.tipo = c.tipo || 'Convenio';
@@ -131,8 +136,18 @@ async function onSaveConvenio() {
      convenioFormRef.value.form.ans = c.ans ?? null;
      convenioFormRef.value.form.dias_recebimento = c.dias_recebimento ?? null;
      convenioFormRef.value.form.dias_retorno = c.dias_retorno ?? null;
+     const medicosMap = (c.medicos || []).map(m => {
+      const mId = Number(m.id);
+      // c.medico_tuss is eager loaded in ConvenioController as medico_tuss or medicoTuss
+      const tList = c.medicoTuss || c.medico_tuss || [];
+      const tussIds = tList.filter(mt => Number(mt.pivot.profissional_saude_id) === mId).map(mt => mt.id);
+      return { ...m, tuss_ids: tussIds };
+    });
+     convenioFormRef.value.form.medicos = medicosMap.map(m => ({ id: m.id, tuss_ids: m.tuss_ids }));
      convenioFormRef.value?.setExistingLogoPath?.(c.logo_path || '');
+     convenioFormRef.value?.setSelectedMedicos?.(medicosMap);
    }
+   showModal.value = true;
 
   if (convenioFormRef.value?.setSelectedTussRows) {
     try {

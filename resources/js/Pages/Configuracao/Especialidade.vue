@@ -30,7 +30,7 @@
         </BRow>
         <BRow class="mt-3 g-3">
           <BCol md="12">
-            <label for="espProcedimentos" class="form-label">Procedimentos Realizados</label>
+            <label for="espProcedimentos" class="form-label">Procedimentos Particular</label>
             <select
               multiple
               data-choices
@@ -81,7 +81,7 @@
         </BRow>
         <BRow class="g-3 mt-1">
           <BCol md="12">
-            <label class="form-label">Procedimentos Realizados</label>
+            <label class="form-label">Procedimentos Particular</label>
             <select
               multiple
               data-choices
@@ -113,7 +113,7 @@
       <ModalDelete
         v-model="deleteModal"
         :title="'Excluir Especialidade'"
-        :subTitle="deleteSubTitle"
+        :sub-title="deleteSubTitle"
         :item-delete="especialidadeToDelete"
         @save="confirmDelete"
       />
@@ -124,13 +124,15 @@
 import { useForm, router } from "@inertiajs/vue3";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
-import { ref, watch, computed, nextTick, onMounted } from "vue";
+import { ref, watch, computed, nextTick } from "vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
+import Choices from "choices.js";
 
 const props = defineProps({
   especialidades: { type: Array, default: () => [] },
   procedimentos: { type: Array, default: () => [] },
 });
+
 const especialidadesLocal = ref([...(props.especialidades || [])]);
 watch(() => props.especialidades, (v) => { especialidadesLocal.value = [...(v || [])]; });
 
@@ -142,10 +144,6 @@ const procedimentosOptions = computed(() => {
     value: p.id,
     label: p.nome
   }));
-});
-
-onMounted(() => {
-  if (window.initChoices) window.initChoices();
 });
 
 function getSelectedValues(el) {
@@ -176,6 +174,7 @@ const columns = [
   { id: "codigo", name: "Código" },
   { id: "procedimentos_count", name: "Procedimentos" },
 ];
+
 const tableData = computed(() => {
   return (especialidadesLocal.value || []).map(e => ({
     id: e.id,
@@ -186,6 +185,7 @@ const tableData = computed(() => {
     status: e.ativo ? 'ativo' : 'inativo',
   }));
 });
+
 const formCreate = useForm({
   nome: "",
   codigo: "",
@@ -193,10 +193,11 @@ const formCreate = useForm({
   ativo: true,
   procedimentos_ids: [],
 });
+
 function saveEspecialidade() {
   formCreate.procedimentos_ids = (getSelectedValues(createProcedimentosSelect.value) || [])
     .filter(v => v != null && String(v).trim() !== "");
-  formCreate.post("/especialidades", {
+  formCreate.post('/especialidades', {
     preserveScroll: true,
     onSuccess: () => {
       formCreate.reset();
@@ -205,6 +206,7 @@ function saveEspecialidade() {
     },
   });
 }
+
 const editingId = ref(null);
 const formEdit = useForm({
   nome: "",
@@ -214,6 +216,7 @@ const formEdit = useForm({
   procedimentos_ids: [],
 });
 const editModal = ref(false);
+
 function startEdit(e) {
   editingId.value = e.id;
   formEdit.nome = e.nome || "";
@@ -224,16 +227,18 @@ function startEdit(e) {
   formEdit.procedimentos_ids = pIds;
 
   editModal.value = true;
-  nextTick(() => {
+  nextTick(async () => {
     if (window.initChoices) window.initChoices();
     setChoiceValues(editProcedimentosSelect.value, pIds);
   });
 }
+
 function startEditById(id) {
   const e = (especialidadesLocal.value || []).find(x => String(x.id) === String(id));
   if (!e) return;
   startEdit(e);
 }
+
 function cancelEdit() {
   editingId.value = null;
   formEdit.clearErrors();
@@ -241,6 +246,7 @@ function cancelEdit() {
   setChoiceValues(editProcedimentosSelect.value, []);
   editModal.value = false;
 }
+
 function updateEspecialidade() {
   if (!editingId.value) return;
   formEdit.procedimentos_ids = (getSelectedValues(editProcedimentosSelect.value) || [])
@@ -253,12 +259,14 @@ function updateEspecialidade() {
     },
   });
 }
+
 function openModalShow(id) {
   const e = (especialidadesLocal.value || []).find(x => String(x.id) === String(id));
   if (!e) return;
   const procs = (e.procedimentos || []).map(p => p.nome).join(', ') || 'Nenhum';
   alert('Especialidade: ' + e.nome + '\nProcedimentos: ' + procs);
 }
+
 const deleteModal = ref(false);
 const especialidadeToDelete = ref({});
 const deleteSubTitle = ref('Deseja realmente excluir');
@@ -267,6 +275,7 @@ function askDelete(e) {
   deleteSubTitle.value = e?.nome ? `Deseja realmente excluir "${e.nome}"?` : 'Deseja realmente excluir';
   deleteModal.value = true;
 }
+
 function confirmDelete() {
   const id = especialidadeToDelete.value?.id;
   if (!id) { deleteModal.value = false; return; }
@@ -278,7 +287,7 @@ function confirmDelete() {
       especialidadeToDelete.value = {};
       especialidadesLocal.value = (especialidadesLocal.value || []).filter(x => String(x.id) !== String(id));
       router.reload({ only: ['especialidades'] });
-    }
+    },
   });
 }
 </script>

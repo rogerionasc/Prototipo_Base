@@ -15,6 +15,9 @@ return new class extends Migration
             $table->time('hora');
             $table->foreignId('paciente_id')->constrained('pacientes');
             $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos')->nullOnDelete();
+            $table->foreignId('tuss_id')->nullable()->constrained('tuss')->nullOnDelete();
+            $table->foreignId('orcamento_id')->nullable()->constrained('orcamentos')->nullOnDelete();
+            $table->foreignId('sessao_tratamento_id')->nullable()->constrained('sessoes_tratamento')->nullOnDelete();
             $table->foreignId('status_id')->nullable()->constrained('status_agendamento')->nullOnDelete();
             $table->unsignedBigInteger('agendamento_origem_id')->nullable();
             $table->decimal('valor_cobrado', 10, 2)->nullable();

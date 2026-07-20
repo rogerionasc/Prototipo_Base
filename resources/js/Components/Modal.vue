@@ -1,21 +1,19 @@
 <template>
     <!-- Componente de Modal reutilizável -->
-    <div>
-      <div v-show="modelValue" class="modal-backdrop" :style="{ zIndex: backdropZIndex }"></div>
-      <div id="myModal" class="modal zoomIn" :class="[showClass]" tabindex="9999"
-          aria-labelledby="myModalLabel" role="dialog" :aria-modal="modelValue ? 'true' : 'false'" :aria-hidden="modelValue ? 'false' : 'true'"
-          :style="{ display: modelValue ? 'block' : 'none', zIndex: zIndex }">
+    <Teleport to="body">
+        <div v-show="modelValue" class="modal-backdrop" :style="{ zIndex: backdropZIndex }"></div>
+        <div id="myModal" class="modal zoomIn" :class="[showClass]" tabindex="9999"
+            aria-labelledby="myModalLabel" role="dialog" :aria-modal="modelValue ? 'true' : 'false'" :aria-hidden="modelValue ? 'false' : 'true'"
+            :style="{ display: modelValue ? 'block' : 'none', zIndex: zIndex }">
 
-          <!-- Conteúdo principal do modal -->
-          <div :class="['modal-dialog','modal-dialog-centered', size ? `modal-${size}` : null]" ref="modalDialog">
+            <!-- Conteúdo principal do modal -->
+            <div :class="['modal-dialog','modal-dialog-centered', size ? `modal-${size}` : null]" ref="modalDialog" :style="customWidth ? { maxWidth: customWidth } : {}">
             <div class="modal-content">
-              <div class="modal-header">
+              <div class="modal-header bg-light p-3">
                 <h5 class="modal-title" id="myModalLabel">{{ title }}</h5>
                 <!-- Botão para fechar o modal -->
                 <button type="button" class="btn-close" :disabled="props.processing || props.disableClose" @click="$emit('update:modelValue', false)"></button>
               </div>
-              <!-- Inserir uma linha aqui -->
-              <hr class="text-muted">
               <div class="modal-body">
                 <!-- Espaço para inserir conteúdo personalizado -->
                 <slot></slot>
@@ -35,7 +33,7 @@
             </div>
           </div>
       </div>
-    </div>
+    </Teleport>
 </template>
 
 <script setup>
@@ -63,6 +61,10 @@ const props = defineProps({
         type: String,
         default: 'lg'
     },
+    customWidth: {
+        type: String,
+        default: ''
+    },
     processing: {
         type: Boolean,
         default: false
@@ -80,6 +82,9 @@ const props = defineProps({
         default: 1040
     },
 });
+
+// Declara os eventos que o componente emite
+defineEmits(['update:modelValue', 'save']);
 
 // Classe para animação de exibição
 const showClass = ref('');

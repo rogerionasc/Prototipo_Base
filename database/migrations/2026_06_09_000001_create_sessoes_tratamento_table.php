@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('sessoes_tratamento', function (Blueprint $table) {
             $table->id();
             $table->foreignId('procedimento_id')->constrained('procedimentos');
+            $table->foreignId('tuss_id')->nullable()->constrained('tuss')->nullOnDelete();
             $table->foreignId('paciente_id')->constrained('pacientes');
             $table->unsignedInteger('numero_sessao');
             $table->date('data_prevista')->nullable();

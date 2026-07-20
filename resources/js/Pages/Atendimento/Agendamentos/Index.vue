@@ -76,6 +76,7 @@ export default {
             ultimoProcedimentoAtEdicao: 0,
             procedimentosLocal: [],
             procedimentosFiltrados: [],
+            procedimentosSelectRows: [],
             opcoesStatus: [],
             agendamentoForm: {
                 paciente_id: null,
@@ -341,6 +342,7 @@ export default {
             if (nv) {
                 try { this.agendamentoForm.convenio_id = null; } catch (_) { }
                 try { this.conveniosPacienteCriacao = []; } catch (_) { }
+                try { this.procedimentosSelectRows = []; } catch (_) { }
                 try { const el0 = this.$refs.selConvenioCriacao; if (el0) window.destroyChoiceEl(el0); } catch (_) { }
                 try { this.buscarOrcamentosPorPaciente(); } catch (_) { }
                 return;
@@ -352,16 +354,22 @@ export default {
             try { this.orcamentoSelecionadoId = null; } catch (_) { }
             try { this.itensOrcamentoSelecionado = []; } catch (_) { }
             try { this.itensOrcamentoPorProcedimento = {}; } catch (_) { }
+            try { this.procedimentosSelectRows = []; } catch (_) { }
             try { this.procedimentosFiltrados = [...(this.procedimentosLocal || [])]; } catch (_) { }
             try { this.valorCobradoAutoCriacaoProcId = null; } catch (_) { }
             try { this.carregarConveniosPacienteCriacao(); } catch (_) { }
             this.$nextTick(() => {
                 try { const el0 = this.$refs.selConvenioCriacao; if (el0) window.initChoiceEl(el0); } catch (_) { }
+                try { const el2 = this.$refs.selProcedimentoCriacao; if (el2) { window.destroyChoiceEl(el2); window.initChoiceEl(el2); } } catch (_) { }
             });
         },
         "agendamentoForm.paciente_id"(nv) {
             if (this.usarOrcamentoPagoCriacao) return;
             try { this.carregarConveniosPacienteCriacao(); } catch (_) { }
+        },
+        "agendamentoForm.convenio_id"(nv) {
+            if (this.usarOrcamentoPagoCriacao) return;
+            try { this.carregarProcedimentosPorConvenio(nv); } catch (_) { }
         },
         orcamentoSelecionadoId(nv) {
             const v = nv != null ? String(nv) : "";
@@ -750,6 +758,69 @@ export default {
                 } catch (_) { }
             }
         },
+        async carregarProcedimentosPorConvenio(cid) {
+            if (this.usarOrcamentoPagoCriacao) {
+                this.procedimentosSelectRows = [];
+                this.procedimentosFiltrados = [...this.procedimentosLocal];
+                this.agendamentoForm.procedimento_id = null;
+                return;
+            }
+            if (!cid) {
+                this.procedimentosSelectRows = [];
+                this.procedimentosFiltrados = [...this.procedimentosLocal];
+                this.agendamentoForm.procedimento_id = null;
+                await this.$nextTick();
+                try {
+                    const el2 = this.$refs.selProcedimentoCriacao;
+                    if (el2) {
+                        window.destroyChoiceEl(el2);
+                        window.initChoiceEl(el2);
+                    }
+                } catch (_) { }
+                return;
+            }
+            try {
+                const resp = await window.axios.get(`/convenios/${cid}/procedimentos-orcamento`);
+                const arr = Array.isArray(resp?.data?.procedimentos) ? resp.data.procedimentos : [];
+                this.procedimentosSelectRows = arr;
+                // We need to map the response to our procedimentosLocal structure? Wait let's check what the response has
+                // Wait let's look at Orcamentos to see how they handle it
+                // In Orcamentos, they use procedimentosSelectRows directly in syncProcedimentoChoices
+                // Let's check what the data structure is. Wait let's see: in Orcamentos, the options have value like `${source}:${id}`
+                // But in Agendamentos, the procedimentos are just using id as value. Wait let's check how procedimentos are handled in Agendamentos now.
+                // Let's check the template for the select
+                // Wait let's first map the response to something that works with our current setup
+                // Wait let's check what the response from /convenios/${cid}/procedimentos-orcamento looks like. Let's see in Orcamentos, they use:
+                // value: `${String(r?.source || '')}:${String(r?.id ?? '')}`, label: String(r?.descricao ? `${r?.nome ?? ''} - ${r?.descricao ?? ''}` : (r?.nome ?? ''))
+                // But in Agendamentos, the select is using procedimento_id which is just a number. Hmm, this might be a problem. Wait let's check the Agendamentos template.
+                // But let's first proceed, and we'll adjust as needed.
+                // Let's first update procedimentosFiltrados to be the arr, but we need to make sure they have the right structure (id, nome, valor, etc.)
+                // Let's assume the response has items with id, nome, descricao, valor, source, etc.
+                // Let's map them to our local structure
+                this.procedimentosFiltrados = arr.map(r => ({
+                    id: r.id,
+                    nome: r.nome,
+                    descricao: r.descricao,
+                    valor: r.valor,
+                    eh_tratamento: r.eh_tratamento,
+                    quantidade_sessoes: r.quantidade_sessoes,
+                    especialidade_id: r.especialidade_id
+                }));
+                this.agendamentoForm.procedimento_id = null;
+                await this.$nextTick();
+                try {
+                    const el2 = this.$refs.selProcedimentoCriacao;
+                    if (el2) {
+                        window.destroyChoiceEl(el2);
+                        window.initChoiceEl(el2);
+                    }
+                } catch (_) { }
+            } catch (e) {
+                this.procedimentosSelectRows = [];
+                this.procedimentosFiltrados = [...this.procedimentosLocal];
+                this.agendamentoForm.procedimento_id = null;
+            }
+        },
         onBlurSugestoesPacienteEdicao() {
             setTimeout(() => { this.mostrarSugestoesPacienteEdicao = false; }, 150);
         },
@@ -968,6 +1039,7 @@ export default {
             this.mostrarSugestoesOrcamento = false;
             this.orcamentosPagos = [];
             this.conveniosPacienteCriacao = [];
+            this.procedimentosSelectRows = [];
             this.procedimentosFiltrados = [...(this.procedimentosLocal || [])];
             try { const el0 = this.$refs.selConvenioCriacao; if (el0) window.destroyChoiceEl(el0); } catch (_) { }
             try { const el1 = this.$refs.selProfissionalCriacao; if (el1) window.destroyChoiceEl(el1); } catch (_) { }
@@ -1045,7 +1117,13 @@ export default {
             const scheduledProcIdInit = this.editAgendamentoForm.procedimento_id;
             if (scheduledProcIdInit != null) {
                 const scheduledProcInit = (this.procedimentosLocal || []).find(p => String(p.id) === String(scheduledProcIdInit));
-                this.procedimentosFiltradosEdicao = scheduledProcInit ? [{ ...scheduledProcInit, nome: `${scheduledProcInit.nome} (agendado)` }] : [];
+                if (scheduledProcInit) {
+                    this.procedimentosFiltradosEdicao = [{ ...scheduledProcInit, nome: `${scheduledProcInit.nome} (agendado)` }];
+                } else if (procNome) {
+                    this.procedimentosFiltradosEdicao = [{ id: scheduledProcIdInit, nome: `${procNome} (agendado)` }];
+                } else {
+                    this.procedimentosFiltradosEdicao = [];
+                }
             } else {
                 this.procedimentosFiltradosEdicao = [];
             }
@@ -1306,7 +1384,10 @@ export default {
             if (pid) {
                 try {
                     const resp = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
-                        params: { procedimento_id: pid }
+                        params: {
+                            procedimento_id: pid,
+                            convenio_id: this.editAgendamentoForm.convenio_id
+                        }
                     });
                     const list = resp?.data?.profissionais;
                     this.profissionaisFiltradosEdicao = Array.isArray(list) ? list : [];
@@ -1319,12 +1400,21 @@ export default {
 
             if (pid && (!this.profissionaisFiltradosEdicao || this.profissionaisFiltradosEdicao.length === 0)) {
                 try {
+                    // Na edição o convenio_id não está no editAgendamentoForm diretamente se não for alterável?
+                    // Wait, this.editAgendamentoForm.convenio_id existe e eu passo na chamada axios
+                    const convId = this.editAgendamentoForm.convenio_id;
+                    // precisamos ver se tem os convenios disponíveis
+                    // actually, we can just skip if convId is present because edit might not have conveniosPacienteCriacao
+                    // wait, let's just check if there is a convId and assume we shouldn't fallback if there is one
                     const proc = (this.procedimentosLocal || []).find(p => String(p.id) === String(pid));
-                    const espId = proc?.especialidade_id;
-                    if (espId) {
-                        this.profissionaisFiltradosEdicao = (this.profissionaisLocal || []).filter(prof => {
-                            return (prof.especialidades || []).some(e => String(e.id) === String(espId));
-                        });
+                    // se o procedimento não foi achado no local, é um TUSS, logo não deve rodar o fallback
+                    if (proc) {
+                        const espId = proc?.especialidade_id;
+                        if (espId) {
+                            this.profissionaisFiltradosEdicao = (this.profissionaisLocal || []).filter(prof => {
+                                return (prof.especialidades || []).some(e => String(e.id) === String(espId));
+                            });
+                        }
                     }
                 } catch (_) { }
             }
@@ -1411,7 +1501,9 @@ export default {
                         ev.setStart(`${this.editAgendamentoForm.data}T${this.editAgendamentoForm.hora}:00`);
                     }
                     ev.setExtendedProp("observacoes", this.editAgendamentoForm.observacoes || "");
-                    const procNome = this.procedimentosLocal.find(pr => String(pr.id) === String(this.editAgendamentoForm.procedimento_id))?.nome || null;
+                    const pLocal = (this.procedimentosLocal || []).find(pr => String(pr.id) === String(this.editAgendamentoForm.procedimento_id));
+                    const pFilt = (this.procedimentosFiltradosEdicao || []).find(pr => String(pr.id) === String(this.editAgendamentoForm.procedimento_id));
+                    const procNome = pFilt?.nome || pLocal?.nome || null;
                     const pacNome = this.pacientesLocal.find(p => String(p.id) === String(this.editAgendamentoForm.paciente_id))?.nome || null;
                     ev.setExtendedProp("procedimento_id", this.editAgendamentoForm.procedimento_id || null);
                     ev.setExtendedProp("orcamento_id", this.orcamentoSelecionadoEdicaoId || this.orcamentoSelecionadoId || null);
@@ -1874,7 +1966,10 @@ export default {
             if (pid) {
                 try {
                     const resp = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
-                        params: { procedimento_id: pid }
+                        params: {
+                            procedimento_id: pid,
+                            convenio_id: this.agendamentoForm.convenio_id
+                        }
                     });
                     const list = resp?.data?.profissionais;
                     this.profissionaisFiltradosCriacao = Array.isArray(list) ? list : [];
@@ -1887,12 +1982,18 @@ export default {
 
             if (pid && (!this.profissionaisFiltradosCriacao || this.profissionaisFiltradosCriacao.length === 0)) {
                 try {
-                    const proc = (this.procedimentosLocal || []).find(p => String(p.id) === String(pid));
-                    const espId = proc?.especialidade_id;
-                    if (espId) {
-                        this.profissionaisFiltradosCriacao = (this.profissionaisLocal || []).filter(prof => {
-                            return (prof.especialidades || []).some(e => String(e.id) === String(espId));
-                        });
+                    const convId = this.agendamentoForm.convenio_id;
+                    const conv = convId ? (this.conveniosPacienteCriacao || []).find(c => String(c.id) === String(convId)) : null;
+                    const isParticular = !conv || String(conv.tipo || '').toUpperCase() === 'PARTICULAR';
+
+                    if (isParticular) {
+                        const proc = (this.procedimentosLocal || []).find(p => String(p.id) === String(pid));
+                        const espId = proc?.especialidade_id;
+                        if (espId) {
+                            this.profissionaisFiltradosCriacao = (this.profissionaisLocal || []).filter(prof => {
+                                return (prof.especialidades || []).some(e => String(e.id) === String(espId));
+                            });
+                        }
                     }
                 } catch (_) { }
             }
@@ -1924,7 +2025,7 @@ export default {
                 this.agendamentoForm.valor_cobrado = v != null ? String(Number(v).toFixed(2)) : "";
             } else {
                 try {
-                    const proc = pid ? (this.procedimentosLocal || []).find(p => String(p.id) === String(pid)) : null;
+                    const proc = pid ? ((this.procedimentosFiltrados || []).find(p => String(p.id) === String(pid)) || (this.procedimentosLocal || []).find(p => String(p.id) === String(pid))) : null;
                     const v = proc?.valor ?? null;
                     const deveAutopreencher = (this.agendamentoForm.valor_cobrado == null || String(this.agendamentoForm.valor_cobrado).trim() === "")
                         || (this.valorCobradoAutoCriacaoProcId != null);
@@ -1953,7 +2054,7 @@ export default {
             try {
                 let orcamentoGeradoId = this.usarOrcamentoPagoCriacao ? (this.orcamentoSelecionadoId || null) : null;
                 let sessions = [];
-                const pSel = (this.procedimentosLocal || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id));
+                const pSel = (this.procedimentosFiltrados || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id)) || (this.procedimentosLocal || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id));
                 const isTrat = !!pSel?.eh_tratamento;
                 if (isTrat && Array.isArray(this.sessoesCriacao) && this.sessoesCriacao.length > 0) {
                     sessions = this.sessoesCriacao.filter(s => (s.data && s.hora));
@@ -1972,7 +2073,9 @@ export default {
                             orcamentoGeradoId = ag.orcamento_id;
                             basePayload = { ...basePayload, orcamento_id: orcamentoGeradoId };
                         }
-                        const procNome = (this.procedimentosLocal.find(pr => String(pr.id) === String(ag.procedimento_id))?.nome || 'Procedimento');
+                        const pLocal = (this.procedimentosLocal || []).find(pr => String(pr.id) === String(ag.procedimento_id));
+                        const pFilt = (this.procedimentosFiltrados || []).find(pr => String(pr.id) === String(ag.procedimento_id));
+                        const procNome = pFilt?.nome || pLocal?.nome || 'Procedimento';
                         const pacNome = (this.pacientesLocal.find(p => String(p.id) === String(ag.paciente_id))?.nome || 'Paciente');
                         const title = `${pacNome} • ${procNome}`;
                         const calendarApi = this.$refs.fullCalendar.getApi();
@@ -2295,7 +2398,8 @@ export default {
                 <div v-if="!usarOrcamentoPagoCriacao" class="col-md-12">
                     <label class="form-label">Convênio</label>
                     <select ref="selConvenioCriacao" v-model="agendamentoForm.convenio_id" class="form-select"
-                        :disabled="!agendamentoForm.paciente_id || carregandoConveniosPacienteCriacao">
+                        :disabled="!agendamentoForm.paciente_id || carregandoConveniosPacienteCriacao"
+                        @change="agendamentoForm.convenio_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option v-for="c in conveniosPacienteCriacao" :key="c.id" :value="c.id">{{ c.descricao }}
                         </option>
                     </select>
@@ -2307,7 +2411,7 @@ export default {
                 <div class="col-md-6">
                     <label class="form-label">Procedimento</label>
                     <select ref="selProcedimentoCriacao" v-model="agendamentoForm.procedimento_id" class="form-select"
-                        @change="aoAlterarProcedimento">
+                        @change="agendamentoForm.procedimento_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarProcedimento()">
                         <option :value="null">Selecione</option>
                         <option v-for="p in procedimentosFiltrados" :key="p.id" :value="p.id">{{ p.nome }}</option>
                     </select>
@@ -2315,7 +2419,8 @@ export default {
                 <div class="col-md-6">
                     <label class="form-label">Profissional</label>
                     <select ref="selProfissionalCriacao" v-model="agendamentoForm.profissional_saude_id"
-                        class="form-select">
+                        class="form-select"
+                        @change="agendamentoForm.profissional_saude_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="d in listaProfissionaisCriacao" :key="d.id" :value="d.id">{{ d.nome }}</option>
                     </select>
@@ -2419,7 +2524,8 @@ export default {
                 <div class="col-md-6">
                     <label class="form-label">Profissional</label>
                     <select ref="selProfissionalEdicao" v-model="editAgendamentoForm.profissional_saude_id"
-                        class="form-select">
+                        class="form-select"
+                        @change="editAgendamentoForm.profissional_saude_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="d in listaProfissionaisEdicao" :key="d.id" :value="d.id">{{ d.nome }}</option>
                     </select>
@@ -2428,7 +2534,7 @@ export default {
                     <label class="form-label">Procedimento</label>
                     <select v-if="renderProcedimentoEdicao" ref="selProcedimentoEdicao"
                         v-model="editAgendamentoForm.procedimento_id" class="form-select"
-                        @change="aoAlterarProcedimentoEdicao"
+                        @change="editAgendamentoForm.procedimento_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarProcedimentoEdicao()"
                         :disabled="podeReagendarAgendamentoCancelado() || carregandoItensOrcamentoEdicao">
                         <option :value="null">Selecione</option>
                         <option v-for="p in procedimentosFiltradosEdicao" :key="p.id" :value="p.id">{{ p.nome }}

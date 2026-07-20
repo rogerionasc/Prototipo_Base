@@ -27,4 +27,23 @@ class Convenio extends Model
     {
         return $this->belongsTo(Conta::class, 'empresa_id');
     }
+
+    public function medicos()
+    {
+        return $this->belongsToMany(ProfissionalSaude::class, 'convenio_medico_tuss', 'convenio_id', 'profissional_saude_id')
+            ->distinct();
+    }
+
+    public function tuss()
+    {
+        return $this->belongsToMany(Tuss::class, 'convenio_tuss')
+            ->withTimestamps();
+    }
+
+    public function medicoTuss()
+    {
+        return $this->belongsToMany(Tuss::class, 'convenio_medico_tuss', 'convenio_id', 'tuss_id')
+            ->withPivot('profissional_saude_id')
+            ->withTimestamps();
+    }
 }

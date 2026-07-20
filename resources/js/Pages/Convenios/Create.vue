@@ -254,18 +254,85 @@
           </div>
         </div>
       </BTab>
+      <BTab title="Médicos Conveniados">
+        <div class="mt-2">
+          <TableGrid
+            :columns="medicosGridColumns"
+            :data="selectedMedicosRows"
+            :tableTitle="'Médicos Conveniados'"
+            :search="true"
+            :searchPlaceholder="'Buscar médico'"
+            :showCheckbox="false"
+            :showActions="true"
+            :showStatus="false"
+            :showPerPagination="true"
+            :showAddButton="true"
+            :addButtonText="'Adicionar Médico'"
+            :addButtonIconClass="'ri-user-add-line'"
+            :actionsConfig="{ edit: false, show: false, delete: true, procedure: true }"
+            @add="openAddMedicoModal"
+            @procedure="editMedico"
+            @delete="removeMedico"
+          />
+        </div>
+      </BTab>
     </BTabs>
   </form>
+
+  <!-- Modal para adicionar médico -->
+  <Teleport to="body">
+    <Modal v-model="showAddMedicoModal" title="Adicionar Médico ao Convênio" :name-button="'Adicionar'" :zIndex="1060" :backdropZIndex="1055" @save="addMedicoFromModal">
+      <div>
+        <label class="form-label mb-1">Selecione o médico</label>
+        <select ref="modalMedicoSelect" class="form-select" @change="handleModalMedicoSelect">
+        </select>
+      </div>
+    </Modal>
+  </Teleport>
+
+  <!-- Modal para editar TUSS do médico -->
+  <Teleport to="body">
+    <Modal v-model="showEditMedicoTussModal" title="Procedimentos do Médico" :name-button="'Salvar'" :zIndex="1060" :backdropZIndex="1055" size="xl" @save="saveMedicoTussModal">
+      <div v-if="editingMedicoData">
+        <h6 class="mb-3">Médico: {{ editingMedicoData.nome }}</h6>
+        <div class="alert alert-info py-2 px-3 small mb-3">
+          <i class="ri-information-line me-1"></i> Apenas os procedimentos já selecionados na aba "Procedimentos (TUSS)" estão disponíveis para o médico.
+        </div>
+        <TableGrid
+          v-if="showEditMedicoTussModal"
+          ref="medicoTussGridRef"
+          :columns="[
+            { id: 'id', name: 'ID', sort: false, attributes: { style: 'display:none;' } },
+            { id: 'codigo', name: 'Código' },
+            { id: 'descricao', name: 'Descrição' }
+          ]"
+          :data="selectedTussRows"
+          :search="true"
+          :searchPlaceholder="'Buscar procedimento...'"
+          :showCheckbox="true"
+          :showMultiDelete="false"
+          :showAddButton="false"
+          :showActions="false"
+          :showPerPagination="false"
+          :compactSpacing="true"
+          :tableTitle="'Selecione os procedimentos'"
+        />
+      </div>
+    </Modal>
+  </Teleport>
 </template>
 
 <script setup>
 import { useForm } from "@inertiajs/vue3";
 import { ref, defineExpose, onMounted, nextTick, watch, toRef, computed } from "vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
+import Modal from "@/Components/Modal.vue";
+import Choices from "choices.js";
 
 const props = defineProps({
   contas: { type: Array, default: () => [] },
   tussTabelas: { type: Array, default: () => [] },
+  profissionaisSaude: { type: Array, default: () => [] },
 });
 
 const formEl = ref(null);
@@ -275,23 +342,88 @@ const empresaSelect = ref(null);
 const logoInput = ref(null);
 const existingLogoPath = ref("");
 const logoPreviewUrl = ref("");
+const modalMedicoSelect = ref(null);
 
 let tipoChoices = null;
 let tussTabelaChoices = null;
 let empresaChoices = null;
+let modalMedicoChoicesInstance = null;
 
 const allowedTabelas = computed(() => (props.tussTabelas || []).filter(t => !!t));
+const medicosOptions = computed(() => {
+  const selectedIds = new Set(selectedMedicosRows.value.map(m => Number(m.id)));
+  return (props.profissionaisSaude || [])
+    .filter((m) => !selectedIds.has(Number(m.id)))
+    .map((m) => ({
+      id: Number(m.id),
+      nome: m.nome || "",
+      crm: m.crm || "",
+      especialidades: (m.especialidades || []).map(e => ({ id: e.id, nome: e.nome })),
+    }));
+});
+
+const showAddMedicoModal = ref(false);
+const modalSelectedMedicoId = ref("");
+
+const showEditMedicoTussModal = ref(false);
+const editingMedicoData = ref(null);
+const medicoTussGridRef = ref(null);
+
+function editMedico(rowId, rowData) {
+  // If rowData is not provided, try to find it by rowId
+  const id = rowData?.id || rowId;
+  const m = selectedMedicosRows.value.find(r => Number(r.id) === Number(id));
+  if (!m) return;
+  editingMedicoData.value = { ...m };
+  showEditMedicoTussModal.value = true;
+  nextTick(() => {
+    if (medicoTussGridRef.value) {
+      const selectedIds = m.tuss_ids || [];
+      medicoTussGridRef.value.setSelectedRowIds(selectedIds);
+    }
+  });
+}
+
+function saveMedicoTussModal() {
+  if (!editingMedicoData.value) return;
+  let selectedIds = [];
+  if (medicoTussGridRef.value) {
+    selectedIds = medicoTussGridRef.value.getSelectedRowIds().map(Number).filter(n => Number.isFinite(n));
+  }
+
+  const mIndex = selectedMedicosRows.value.findIndex(r => Number(r.id) === Number(editingMedicoData.value.id));
+  if (mIndex !== -1) {
+    selectedMedicosRows.value[mIndex].tuss_ids = selectedIds;
+    form.medicos = selectedMedicosRows.value.map(m => ({
+      id: m.id,
+      tuss_ids: m.tuss_ids || []
+    }));
+  }
+
+  showEditMedicoTussModal.value = false;
+  editingMedicoData.value = null;
+}
 
 const form = useForm({
+  id: null,
   descricao: "",
   logo: null,
   tipo: "Convenio",
   tuss_tabela: "",
   tuss_ids: [],
+  medicos: [],
   empresa_id: "",
   ans: null,
   dias_recebimento: null,
   dias_retorno: null,
+});
+
+const hasLogoFile = computed(() => {
+  try {
+    return !!form.logo && typeof File !== "undefined" && form.logo instanceof File;
+  } catch (_) {
+    return !!form.logo;
+  }
 });
 
 const isTipoParticular = computed(() => String(form.tipo || '').toLowerCase() === 'particular');
@@ -314,9 +446,42 @@ const tussGridColumns = [
   { id: "total", name: "Total", formatter: (cell) => formatMoney(cell) },
 ];
 
+const medicosGridColumns = [
+  { id: "id", name: "ID", sort: false, attributes: { style: "display:none;" } },
+  { id: "nome", name: "Nome" },
+  { id: "crm", name: "CRM" },
+  {
+    id: "especialidades",
+    name: "Especialidades",
+    formatter: (cell, row) => {
+      console.log("formatter called", { cell, row });
+      // Let's check if row has _cells or if we can get the actual data row
+      const idIndex = 0; // since no checkbox, first cell is id
+      const id = row.cells?.[idIndex]?.data;
+      const dataRow = selectedMedicosRows.value.find(r => Number(r.id) === Number(id));
+      console.log("found dataRow", dataRow);
+      return (dataRow?.especialidades || []).map(e => e.nome).join(", ") || "-";
+    }
+  },
+  {
+    id: "procedimentos",
+    name: "Procedimentos TUSS",
+    formatter: (cell, row) => {
+      const idIndex = 0;
+      const id = row.cells?.[idIndex]?.data;
+      const dataRow = selectedMedicosRows.value.find(r => Number(r.id) === Number(id));
+      const count = (dataRow?.tuss_ids || []).length;
+      return count > 0 ? `${count} procedimento(s)` : 'Nenhum selecionado';
+    }
+  },
+];
+
 const selectedTussRows = ref([]);
+const selectedMedicosRows = ref([]);
 const selectedTussIds = computed(() => selectedTussRows.value.map(r => Number(r.id)).filter(n => Number.isFinite(n)));
+const selectedMedicoIds = computed(() => selectedMedicosRows.value.map(r => Number(r.id)).filter(n => Number.isFinite(n)));
 const selectedTussQuery = ref("");
+const selectedMedicosQuery = ref("");
 const filteredSelectedTussRows = computed(() => {
   const q = String(selectedTussQuery.value || "").trim().toLowerCase();
   if (q === "") return selectedTussRows.value;
@@ -325,6 +490,15 @@ const filteredSelectedTussRows = computed(() => {
     const codigo = String(r?.codigo || "").toLowerCase();
     const desc = String(r?.descricao || "").toLowerCase();
     return tabela.includes(q) || codigo.includes(q) || desc.includes(q);
+  });
+});
+const filteredSelectedMedicosRows = computed(() => {
+  const q = String(selectedMedicosQuery.value || "").trim().toLowerCase();
+  if (q === "") return selectedMedicosRows.value;
+  return selectedMedicosRows.value.filter(m => {
+    const nome = String(m?.nome || "").toLowerCase();
+    const crm = String(m?.crm || "").toLowerCase();
+    return nome.includes(q) || crm.includes(q);
   });
 });
 
@@ -359,6 +533,44 @@ function clearSelectedTuss() {
   selectedTussQuery.value = "";
   try { tussGridRef.value?.clearSelection?.(); } catch (_) {}
   tussGridSelectedIds.value = [];
+}
+
+function clearSelectedMedicos() {
+  selectedMedicosRows.value = [];
+  form.medicos = [];
+  // cleared medicos
+}
+
+function setSelectedMedicos(rows) {
+  selectedMedicosRows.value = Array.isArray(rows)
+    ? rows
+        .map((m) => ({
+          id: Number(m?.id),
+          nome: m?.nome || "",
+          crm: m?.crm || "",
+          especialidades: (m?.especialidades || []).map(e => ({ id: e.id, nome: e.nome })),
+          tuss_ids: Array.isArray(m?.tuss_ids) ? m.tuss_ids.map(Number) : []
+        }))
+        .filter((m) => Number.isFinite(m.id))
+    : [];
+  form.medicos = selectedMedicosRows.value.map(m => ({
+    id: m.id,
+    tuss_ids: m.tuss_ids || []
+  }));
+}
+
+function refreshModalChoices() {
+  // Esta função não é mais necessária pois usamos a API direta do Choices.js no openAddMedicoModal
+}
+
+function removeMedico(row) {
+  const targetId = Number(row?.id);
+  if (!Number.isFinite(targetId)) return;
+  selectedMedicosRows.value = selectedMedicosRows.value.filter((m) => Number(m.id) !== targetId);
+  form.medicos = selectedMedicosRows.value.map(m => ({
+    id: m.id,
+    tuss_ids: m.tuss_ids || []
+  }));
 }
 
 function addSelectedFromGrid() {
@@ -426,7 +638,7 @@ const getTussTabelaChoicesInstance = () => {
   return tussTabelaSelect.value?._choicesInstance || tussTabelaSelect.value?.choices || null;
 };
 const getEmpresaChoicesInstance = () => {
-  return empresaSelect.value?._choicesInstance || empresaSelect.value?.choices || null;
+    return empresaSelect.value?._choicesInstance || empresaSelect.value?.choices || null;
 };
 
 /* ======================
@@ -484,6 +696,105 @@ const onEmpresaChange = (e) => {
   form.empresa_id = e?.target?.value ?? form.empresa_id;
 };
 
+watch(showAddMedicoModal, (newVal) => {
+  if (!newVal) {
+    if (modalMedicoChoicesInstance) {
+      // Remove o listener que adicionamos no mount/open
+      if (modalMedicoSelect.value) {
+        modalMedicoSelect.value.removeEventListener('change', handleModalMedicoSelect);
+      }
+      modalMedicoChoicesInstance.clearStore();
+      modalMedicoChoicesInstance.destroy();
+      modalMedicoChoicesInstance = null;
+    }
+  }
+});
+
+function openAddMedicoModal() {
+  showAddMedicoModal.value = true;
+  modalSelectedMedicoId.value = "";
+
+  // Usamos um setTimeout para garantir que o DOM e os Computed Properties (medicosOptions)
+  // do Vue já estejam 100% atualizados com o novo array antes de criarmos o Choices
+  setTimeout(() => {
+    if (!modalMedicoSelect.value) return;
+
+    if (modalMedicoChoicesInstance) {
+      modalMedicoSelect.value.removeEventListener('change', handleModalMedicoSelect);
+      modalMedicoChoicesInstance.destroy();
+      modalMedicoChoicesInstance = null;
+    }
+
+    modalMedicoChoicesInstance = new Choices(modalMedicoSelect.value, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: '',
+      noResultsText: 'Nenhum médico encontrado',
+      noChoicesText: 'Nenhum médico disponível',
+    });
+
+    const choicesData = medicosOptions.value.map(m => ({
+      value: m.id,
+      label: m.crm ? `${m.nome} - CRM ${m.crm}` : m.nome,
+    }));
+
+    choicesData.unshift({
+      value: '',
+      label: 'Selecione um médico...',
+      selected: true,
+      disabled: true
+    });
+
+    modalMedicoChoicesInstance.setChoices(choicesData, 'value', 'label', true);
+
+    // Garante que o evento 'change' do Choices alimente a variável reativa do Vue
+    modalMedicoSelect.value.addEventListener('change', handleModalMedicoSelect, { once: false });
+  }, 50);
+}
+
+function handleModalMedicoSelect(e) {
+  modalSelectedMedicoId.value = e.detail ? e.detail.value : e.target.value;
+}
+
+// Quando a seleção do Choices muda, precisamos atualizar o valor no Vue
+onMounted(() => {
+  if (modalMedicoSelect.value) {
+    modalMedicoSelect.value.addEventListener('change', handleModalMedicoSelect);
+  }
+});
+
+function addMedicoFromModal() {
+  if (!modalSelectedMedicoId.value) return;
+
+  const id = Number(modalSelectedMedicoId.value);
+  const m = medicosOptions.value.find((o) => o.id === id);
+  if (!m) return;
+
+  selectedMedicosRows.value.push({
+    id: m.id,
+    nome: m.nome,
+    crm: m.crm,
+    especialidades: m.especialidades || []
+  });
+  form.medicos = selectedMedicosRows.value.map(m => ({
+    id: m.id,
+    tuss_ids: m.tuss_ids || []
+  }));
+
+  if (modalMedicoChoicesInstance) {
+    if (modalMedicoSelect.value) {
+      modalMedicoSelect.value.removeEventListener('change', handleModalMedicoSelect);
+    }
+    // Removemos os dados da instância antes de destruir
+    modalMedicoChoicesInstance.clearStore();
+    modalMedicoChoicesInstance.destroy();
+    modalMedicoChoicesInstance = null;
+  }
+
+  showAddMedicoModal.value = false;
+  modalSelectedMedicoId.value = "";
+}
+
 onMounted(async () => {
   await nextTick();
 
@@ -519,6 +830,7 @@ onMounted(async () => {
   if (window.syncChoiceValue && empresaSelect.value) {
     window.syncChoiceValue(empresaSelect.value, form.empresa_id ?? "");
   }
+  setSelectedMedicos(selectedMedicosRows.value);
 });
 
 const submit = (onSuccess, hooks = {}) => {
@@ -527,19 +839,58 @@ const submit = (onSuccess, hooks = {}) => {
     return;
   }
   syncTussIdsBeforeSubmit();
-  form.post("/convenios", {
-    forceFormData: true,
-    onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
-    onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
-    onSuccess: () => {
-      formEl.value?.classList.remove("was-validated");
-      if (onSuccess) onSuccess();
-      form.reset();
-      existingLogoPath.value = "";
-      clearLogoLocal();
-      clearSelectedTuss();
-    },
-  });
+  form.medicos = selectedMedicosRows.value.map(m => ({
+    id: m.id,
+    tuss_ids: m.tuss_ids || []
+  }));
+  const id = Number(form.id);
+  if (Number.isFinite(id) && id > 0) {
+    if (hasLogoFile.value) {
+      form._method = "put";
+      form.post(`/convenios/${id}`, {
+        forceFormData: true,
+        onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
+        onFinish: () => {
+          try { delete form._method; } catch (_) { form._method = null; }
+          try { hooks.onFinish?.(); } catch (_) {}
+        },
+        onSuccess: () => {
+          formEl.value?.classList.remove("was-validated");
+          if (onSuccess) onSuccess();
+          clearLogoLocal();
+          clearSelectedTuss();
+          setSelectedMedicos([]);
+        },
+      });
+    } else {
+      form.put(`/convenios/${id}`, {
+        onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
+        onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
+        onSuccess: () => {
+          formEl.value?.classList.remove("was-validated");
+          if (onSuccess) onSuccess();
+          clearLogoLocal();
+          clearSelectedTuss();
+          setSelectedMedicos([]);
+        },
+      });
+    }
+  } else {
+    form.post("/convenios", {
+      forceFormData: true,
+      onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
+      onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
+      onSuccess: () => {
+        formEl.value?.classList.remove("was-validated");
+        if (onSuccess) onSuccess();
+        form.reset();
+        existingLogoPath.value = "";
+        clearLogoLocal();
+        clearSelectedTuss();
+        setSelectedMedicos([]);
+      },
+    });
+  }
 };
 const submitUpdate = (id, onSuccess, hooks = {}) => {
   if (formEl.value && !formEl.value.checkValidity()) {
@@ -547,17 +898,47 @@ const submitUpdate = (id, onSuccess, hooks = {}) => {
     return;
   }
   syncTussIdsBeforeSubmit();
-  form.put(`/convenios/${id}`, {
-    forceFormData: true,
-    onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
-    onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
-    onSuccess: () => {
-      formEl.value?.classList.remove("was-validated");
-      if (onSuccess) onSuccess();
-      clearLogoLocal();
-      clearSelectedTuss();
-    },
-  });
+  form.medicos = selectedMedicosRows.value.map(m => ({
+    id: m.id,
+    tuss_ids: m.tuss_ids || []
+  }));
+  const cid = Number(id);
+  if (!Number.isFinite(cid) || cid <= 0) return;
+  if (hasLogoFile.value) {
+    form._method = "put";
+    form.post(`/convenios/${cid}`, {
+      forceFormData: true,
+      onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
+      onFinish: () => {
+        try { delete form._method; } catch (_) { form._method = null; }
+        try { hooks.onFinish?.(); } catch (_) {}
+      },
+      onSuccess: () => {
+        formEl.value?.classList.remove("was-validated");
+        if (onSuccess) onSuccess();
+        // Não limpa se formos voltar para a listagem para não perder os dados antes da transição da página
+        if (!id) {
+          clearLogoLocal();
+          clearSelectedTuss();
+          setSelectedMedicos([]);
+        }
+      },
+    });
+  } else {
+    form.put(`/convenios/${cid}`, {
+      onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
+      onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
+      onSuccess: () => {
+        formEl.value?.classList.remove("was-validated");
+        if (onSuccess) onSuccess();
+        if (!cid) {
+          clearLogoLocal();
+          clearSelectedTuss();
+          setSelectedMedicos([]);
+        }
+      },
+    });
+  }
 };
 
 function setSelectedTussRows(rows) {
@@ -571,7 +952,7 @@ function setSelectedTussRows(rows) {
   form.tuss_ids = selectedTussIds.value;
 }
 
-defineExpose({ form, submit, submitUpdate, processingRef: toRef(form, "processing"), setExistingLogoPath, clearLogoLocal, setSelectedTussRows });
+defineExpose({ form, submit, submitUpdate, processingRef: toRef(form, "processing"), setExistingLogoPath, clearLogoLocal, setSelectedTussRows, setSelectedMedicos });
 
 </script>
 

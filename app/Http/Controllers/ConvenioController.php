@@ -6,11 +6,24 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Convenio;
 use App\Models\Conta;
+use App\Models\ProfissionalSaude;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ConvenioController extends Controller
 {
+    private function normalizeTipo(?string $tipo): ?string
+    {
+        $t = trim((string)($tipo ?? ''));
+        if ($t === '') return null;
+        $t = strtoupper(Str::ascii($t));
+        if ($t === 'CONVENIO') return 'Convenio';
+        if ($t === 'PARTICULAR') return 'Particular';
+        return null;
+    }
+
     private function rules(): array
     {
         return [
@@ -19,7 +32,11 @@ class ConvenioController extends Controller
             'tuss_tabela' => ['nullable', 'exclude_if:tuss_tabela,', 'string', 'max:20', 'exists:tuss,tabela'],
             'tuss_ids' => ['nullable', 'array'],
             'tuss_ids.*' => ['integer', 'exists:tuss,id'],
-            'tipo' => ['nullable', 'in:Convenio,Particular'],
+            'medicos' => ['nullable', 'array'],
+            'medicos.*.id' => ['required', 'integer', 'exists:profissionais_saude,id'],
+            'medicos.*.tuss_ids' => ['nullable', 'array'],
+            'medicos.*.tuss_ids.*' => ['integer', 'exists:tuss,id'],
+            'tipo' => ['nullable', 'string', 'max:20'],
             'empresa_id' => ['nullable', 'integer', 'exists:contas,id'],
             'ans' => ['nullable', 'integer'],
             'dias_recebimento' => ['nullable', 'integer'],
@@ -29,8 +46,11 @@ class ConvenioController extends Controller
 
     public function index()
     {
-        $convenios = Convenio::select('id','descricao','logo_path','tuss_tabela','tipo','empresa_id','ans','dias_recebimento','dias_retorno')->get();
+        $convenios = Convenio::with(['medicos:id,nome,crm', 'medicos.especialidades:id,nome', 'medicoTuss:id'])
+            ->select('id','descricao','logo_path','tuss_tabela','tipo','empresa_id','ans','dias_recebimento','dias_retorno')
+            ->get();
         $contas = Conta::select('id','nome')->orderBy('nome')->get();
+        $profissionaisSaude = ProfissionalSaude::with(['especialidades:id,nome'])->select('id','nome','crm')->orderBy('nome')->get();
         $tussTabelas = DB::table('tuss')
             ->whereNotNull('tabela')
             ->where('tabela', '<>', '')
@@ -44,6 +64,7 @@ class ConvenioController extends Controller
         return Inertia::render('Convenios/Index', [
             'convenios' => $convenios,
             'contas' => $contas,
+            'profissionaisSaude' => $profissionaisSaude,
             'tussTabelas' => $tussTabelas,
         ]);
     }
@@ -52,14 +73,19 @@ class ConvenioController extends Controller
     {
         $request->merge([
             'tuss_tabela' => trim((string)$request->input('tuss_tabela', '')) !== '' ? trim((string)$request->input('tuss_tabela')) : null,
+            'tuss_ids' => $request->input('tuss_ids', []),
+            'medicos' => $request->input('medicos', []),
         ]);
         $data = $request->validate($this->rules());
-        $data['tipo'] = $data['tipo'] ?? 'Convenio';
-        $tipo = strtoupper((string)$data['tipo']);
-        $tussIds = array_values(array_unique(array_map('intval', (array)($data['tuss_ids'] ?? []))));
-        unset($data['tuss_ids']);
+        $data['tipo'] = $this->normalizeTipo($data['tipo'] ?? 'Convenio');
+        if (!$data['tipo']) {
+            return back()->withErrors(['tipo' => 'Tipo inválido.']);
+        }
+        $tussIds = array_values(array_unique(array_map('intval', (array)($request->input('tuss_ids', [])))));
+        $medicosInput = (array)($request->input('medicos', []));
+        unset($data['tuss_ids'], $data['medicos']);
 
-        if ($tipo === 'CONVENIO') {
+        if ($data['tipo'] === 'Convenio') {
             if (empty($tussIds)) {
                 return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.']);
             }
@@ -74,7 +100,7 @@ class ConvenioController extends Controller
         if ($logoFile) $data['logo_path'] = $logoFile->store('convenios', 'public');
 
         $convenio = null;
-        DB::transaction(function () use (&$convenio, $data, $tussIds) {
+        DB::transaction(function () use (&$convenio, $data, $tussIds, $medicosInput) {
             $convenio = Convenio::create($data);
             if (!empty($tussIds)) {
                 $rows = array_map(fn($tid) => [
@@ -85,6 +111,34 @@ class ConvenioController extends Controller
                 ], $tussIds);
                 DB::table('convenio_tuss')->insert($rows);
             }
+            if (!empty($medicosInput)) {
+                $medicoTussRows = [];
+                foreach ($medicosInput as $m) {
+                    $mTuss = array_values(array_unique(array_map('intval', (array)($m['tuss_ids'] ?? []))));
+                    if (empty($mTuss)) {
+                        $medicoTussRows[] = [
+                            'convenio_id' => $convenio->id,
+                            'profissional_saude_id' => $m['id'],
+                            'tuss_id' => null,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    } else {
+                        foreach ($mTuss as $tid) {
+                            $medicoTussRows[] = [
+                                'convenio_id' => $convenio->id,
+                                'profissional_saude_id' => $m['id'],
+                                'tuss_id' => $tid,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                    }
+                }
+                if (!empty($medicoTussRows)) {
+                    DB::table('convenio_medico_tuss')->insert($medicoTussRows);
+                }
+            }
         });
 
         return back()->with('success','Convênio cadastrado');
@@ -92,17 +146,23 @@ class ConvenioController extends Controller
 
     public function update(Request $request, string $id)
     {
+        // dd($request->all());
         $convenio = Convenio::findOrFail($id);
         $request->merge([
             'tuss_tabela' => trim((string)$request->input('tuss_tabela', '')) !== '' ? trim((string)$request->input('tuss_tabela')) : null,
+            'tuss_ids' => $request->input('tuss_ids', []),
+            'medicos' => $request->input('medicos', []),
         ]);
         $data = $request->validate($this->rules());
-        $data['tipo'] = $data['tipo'] ?? $convenio->tipo ?? 'Convenio';
-        $tipo = strtoupper((string)$data['tipo']);
-        $tussIds = array_values(array_unique(array_map('intval', (array)($data['tuss_ids'] ?? []))));
-        unset($data['tuss_ids']);
+        $data['tipo'] = $this->normalizeTipo($data['tipo'] ?? $convenio->tipo ?? 'Convenio');
+        if (!$data['tipo']) {
+            return back()->withErrors(['tipo' => 'Tipo inválido.']);
+        }
+        $tussIds = array_values(array_unique(array_map('intval', (array)($request->input('tuss_ids', [])))));
+        $medicosInput = (array)($request->input('medicos', []));
+        unset($data['tuss_ids'], $data['medicos']);
 
-        if ($tipo === 'CONVENIO') {
+        if ($data['tipo'] === 'Convenio') {
             if (empty($tussIds)) {
                 return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.']);
             }
@@ -121,7 +181,7 @@ class ConvenioController extends Controller
             }
             $data['logo_path'] = $logoFile->store('convenios', 'public');
         }
-        DB::transaction(function () use ($convenio, $data, $tussIds) {
+        DB::transaction(function () use ($convenio, $data, $tussIds, $medicosInput) {
             $convenio->update($data);
 
             DB::table('convenio_tuss')
@@ -136,6 +196,39 @@ class ConvenioController extends Controller
                     'updated_at' => now(),
                 ], $tussIds);
                 DB::table('convenio_tuss')->insert($rows);
+            }
+
+            DB::table('convenio_medico_tuss')
+                ->where('convenio_id', $convenio->id)
+                ->delete();
+
+            if (!empty($medicosInput)) {
+                $medicoTussRows = [];
+                foreach ($medicosInput as $m) {
+                    $mTuss = array_values(array_unique(array_map('intval', (array)($m['tuss_ids'] ?? []))));
+                    if (empty($mTuss)) {
+                        $medicoTussRows[] = [
+                            'convenio_id' => $convenio->id,
+                            'profissional_saude_id' => $m['id'],
+                            'tuss_id' => null,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    } else {
+                        foreach ($mTuss as $tid) {
+                            $medicoTussRows[] = [
+                                'convenio_id' => $convenio->id,
+                                'profissional_saude_id' => $m['id'],
+                                'tuss_id' => $tid,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                    }
+                }
+                if (!empty($medicoTussRows)) {
+                    DB::table('convenio_medico_tuss')->insert($medicoTussRows);
+                }
             }
         });
 
@@ -184,6 +277,62 @@ class ConvenioController extends Controller
                 'total_pages' => (int)ceil(((int)$total) / $perPage),
             ],
         ]);
+    }
+
+    public function procedimentosOrcamento(Request $request, int $id)
+    {
+        $convenio = Convenio::select('id', 'tipo')->findOrFail($id);
+        $tipo = strtoupper((string)($convenio->tipo ?? ''));
+        if ($tipo === 'PARTICULAR') {
+            $rows = DB::table('procedimentos as p')
+                ->whereNull('p.deleted_at')
+                ->where('p.ativo', 1)
+                ->select('p.id', 'p.nome', 'p.descricao', 'p.valor', 'p.categoria_id', 'p.eh_tratamento', 'p.quantidade_sessoes')
+                ->orderBy('p.nome')
+                ->get();
+            $out = $rows->map(fn ($p) => [
+                'source' => 'procedimento',
+                'id' => (int)($p->id ?? 0),
+                'nome' => $p->nome ?? '',
+                'descricao' => $p->descricao ?? null,
+                'valor' => $p->valor ?? 0,
+                'eh_tratamento' => (bool)($p->eh_tratamento ?? false),
+                'quantidade_sessoes' => $p->quantidade_sessoes ?? null,
+            ])->values();
+            return response()->json(['procedimentos' => $out]);
+        }
+
+        $select = ['t.id', 't.tabela', 't.codigo', 't.descricao', 't.total'];
+        if (Schema::hasColumn('tuss', 'eh_tratamento')) $select[] = 't.eh_tratamento';
+        if (Schema::hasColumn('tuss', 'quantidade_sessoes')) $select[] = 't.quantidade_sessoes';
+
+        $tussRows = DB::table('convenio_tuss as ct')
+            ->join('tuss as t', function ($j) {
+                $j->on('t.id', '=', 'ct.tuss_id')
+                  ->whereNull('t.deleted_at');
+            })
+            ->where('ct.convenio_id', (int)$convenio->id)
+            ->whereNull('ct.deleted_at')
+            ->select($select)
+            ->distinct()
+            ->get();
+
+        if ($tussRows->isEmpty()) {
+            return response()->json(['procedimentos' => []]);
+        }
+        $out = $tussRows->map(fn ($t) => [
+            'source' => 'tuss',
+            'id' => (int)($t->id ?? 0),
+            'tabela' => $t->tabela ?? '',
+            'codigo' => $t->codigo ?? '',
+            'nome' => trim((string)($t->descricao ?? '')),
+            'descricao' => (trim((string)($t->tabela ?? '')) !== '' && trim((string)($t->codigo ?? '')) !== '') ? (trim((string)$t->tabela) . ' ' . trim((string)$t->codigo)) : null,
+            'valor' => $t->total ?? 0,
+            'eh_tratamento' => (bool)($t->eh_tratamento ?? false),
+            'quantidade_sessoes' => $t->quantidade_sessoes ?? null,
+        ])->values();
+
+        return response()->json(['procedimentos' => $out]);
     }
 
     public function destroy(string $id)

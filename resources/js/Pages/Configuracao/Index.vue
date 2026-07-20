@@ -27,7 +27,7 @@
           <template #title>
             <i class="ri-first-aid-kit-line d-block fs-3xl mb-1"></i>Especialidades
           </template>
-          <Especialidade :especialidades="props.especialidades" :procedimentos="props.procedimentos" />
+          <Especialidade :especialidades="props.especialidades" :procedimentos="props.procedimentos" :tuss="props.tuss" />
         </BTab>
         <BTab>
           <template #title>
@@ -83,9 +83,11 @@
                 :searchPlaceholder="'Buscar por código, descrição ou tabela'"
                 :showCheckbox="false"
                 :showAddButton="true"
-                :showActions="false"
+                :showActions="true"
+                :actionsConfig="{ delete: false, edit: true, show: false, diary: false, print: false, download: false, restore: false, receive: false }"
                 :compactSpacing="true"
                 @add="openTussCreateModal"
+                @edit="openTussEditModal"
               />
 
               <Modal
@@ -122,6 +124,19 @@
                 <details class="mt-3">
                   <summary class="small text-primary">Campos avançados</summary>
                   <BRow class="g-3 mt-1">
+                    <BCol md="3">
+                      <label class="form-label">É tratamento?</label>
+                      <select v-model="tussCreateForm.eh_tratamento" class="form-select" :class="{ 'is-invalid': !!tussCreateForm.errors.eh_tratamento }">
+                        <option :value="false">Não</option>
+                        <option :value="true">Sim</option>
+                      </select>
+                      <div class="invalid-feedback">{{ tussCreateForm.errors.eh_tratamento }}</div>
+                    </BCol>
+                    <BCol md="3" v-if="isTussCreateTratamento">
+                      <label class="form-label">Qtd. Sessões</label>
+                      <input v-model.number="tussCreateForm.quantidade_sessoes" type="number" min="1" class="form-control" :class="{ 'is-invalid': !!tussCreateForm.errors.quantidade_sessoes }" />
+                      <div class="invalid-feedback">{{ tussCreateForm.errors.quantidade_sessoes }}</div>
+                    </BCol>
                     <BCol md="2">
                       <label class="form-label">m² Filme</label>
                       <input v-model.trim="tussCreateForm.m2_filme" type="text" class="form-control" placeholder="Ex.: 0" :class="{ 'is-invalid': !!tussCreateForm.errors.m2_filme }" />
@@ -155,6 +170,89 @@
                     <BCol md="3">
                       <label class="form-label">Total</label>
                       <input :value="tussCreateTotalDisplay" type="text" class="form-control" placeholder="Calculado automaticamente: CH + CO" disabled />
+                    </BCol>
+                    <BCol cols="12">
+                      <div class="form-text">Aceita valores com vírgula ou ponto (ex.: 10,5 ou 10.5).</div>
+                    </BCol>
+                  </BRow>
+                </details>
+              </Modal>
+
+              <Modal
+                v-model="tussEditModalOpen"
+                title="Editar registro"
+                size="xl"
+                :name-button="'Salvar alterações'"
+                :processing="tussEditForm.processing"
+                :disable-close="tussEditForm.processing"
+                @save="updateTuss"
+              >
+                <div class="text-muted small mb-3">Tabela e código não podem ser alterados.</div>
+                <BRow class="g-3">
+                  <BCol md="3">
+                    <label class="form-label">Tabela</label>
+                    <input v-model.trim="tussEditForm.tabela" type="text" class="form-control" disabled />
+                  </BCol>
+                  <BCol md="3">
+                    <label class="form-label">Código</label>
+                    <input v-model.trim="tussEditForm.codigo" type="text" class="form-control" disabled />
+                  </BCol>
+                  <BCol md="6">
+                    <label class="form-label">Descrição</label>
+                    <input v-model.trim="tussEditForm.descricao" type="text" class="form-control" placeholder="Ex.: Procedimento Exemplo" :class="{ 'is-invalid': !!tussEditForm.errors.descricao }" />
+                    <div class="invalid-feedback">{{ tussEditForm.errors.descricao }}</div>
+                  </BCol>
+                </BRow>
+
+                <details class="mt-3">
+                  <summary class="small text-primary">Campos avançados</summary>
+                  <BRow class="g-3 mt-1">
+                    <BCol md="3">
+                      <label class="form-label">É tratamento?</label>
+                      <select v-model="tussEditForm.eh_tratamento" class="form-select" :class="{ 'is-invalid': !!tussEditForm.errors.eh_tratamento }">
+                        <option :value="false">Não</option>
+                        <option :value="true">Sim</option>
+                      </select>
+                      <div class="invalid-feedback">{{ tussEditForm.errors.eh_tratamento }}</div>
+                    </BCol>
+                    <BCol md="3" v-if="isTussEditTratamento">
+                      <label class="form-label">Qtd. Sessões</label>
+                      <input v-model.number="tussEditForm.quantidade_sessoes" type="number" min="1" class="form-control" :class="{ 'is-invalid': !!tussEditForm.errors.quantidade_sessoes }" />
+                      <div class="invalid-feedback">{{ tussEditForm.errors.quantidade_sessoes }}</div>
+                    </BCol>
+                    <BCol md="2">
+                      <label class="form-label">m² Filme</label>
+                      <input v-model.trim="tussEditForm.m2_filme" type="text" class="form-control" placeholder="Ex.: 0" :class="{ 'is-invalid': !!tussEditForm.errors.m2_filme }" />
+                      <div class="invalid-feedback">{{ tussEditForm.errors.m2_filme }}</div>
+                    </BCol>
+                    <BCol md="2">
+                      <label class="form-label">Auxiliares</label>
+                      <input v-model.trim="tussEditForm.auxiliares" type="text" class="form-control" placeholder="Ex.: 0" :class="{ 'is-invalid': !!tussEditForm.errors.auxiliares }" />
+                      <div class="invalid-feedback">{{ tussEditForm.errors.auxiliares }}</div>
+                    </BCol>
+                    <BCol md="2">
+                      <label class="form-label">Incidência</label>
+                      <input v-model.trim="tussEditForm.incidencia" type="text" class="form-control" placeholder="Ex.: 0" :class="{ 'is-invalid': !!tussEditForm.errors.incidencia }" />
+                      <div class="invalid-feedback">{{ tussEditForm.errors.incidencia }}</div>
+                    </BCol>
+                    <BCol md="2">
+                      <label class="form-label">Porte</label>
+                      <input v-model.trim="tussEditForm.porte" type="text" class="form-control" placeholder="Ex.: A" :class="{ 'is-invalid': !!tussEditForm.errors.porte }" />
+                      <div class="invalid-feedback">{{ tussEditForm.errors.porte }}</div>
+                    </BCol>
+                    <BCol md="2">
+                      <label class="form-label">CH</label>
+                      <input v-model.trim="tussEditForm.ch" type="text" class="form-control" placeholder="Ex.: 100" :class="{ 'is-invalid': !!tussEditForm.errors.ch }" />
+                      <div class="invalid-feedback">{{ tussEditForm.errors.ch }}</div>
+                    </BCol>
+                    <BCol md="2">
+                      <label class="form-label">CO</label>
+                      <input v-model.trim="tussEditForm.co" type="text" class="form-control" placeholder="Ex.: 1" :class="{ 'is-invalid': !!tussEditForm.errors.co }" />
+                      <div class="invalid-feedback">{{ tussEditForm.errors.co }}</div>
+                    </BCol>
+                    <BCol md="3">
+                      <label class="form-label">Total</label>
+                      <input :value="tussEditTotalDisplay" type="text" class="form-control" placeholder="Calculado automaticamente: CH + CO" disabled />
                     </BCol>
                     <BCol cols="12">
                       <div class="form-text">Aceita valores com vírgula ou ponto (ex.: 10,5 ou 10.5).</div>
@@ -346,6 +444,7 @@ const tussImportForm = useForm({
 });
 const tussImportModalOpen = ref(false);
 const tussCreateModalOpen = ref(false);
+const tussEditModalOpen = ref(false);
 const tussImportUiStatus = ref('idle');
 const tussImportUiMessage = ref('');
 const tussImportLastPercent = ref(0);
@@ -392,6 +491,8 @@ const tussColumns = [
   { id: "tabela", name: "Tabela" },
   { id: "codigo", name: "Código" },
   { id: "descricao", name: "Descrição" },
+  { id: "eh_tratamento", name: "Tratamento?", formatter: (cell) => (cell === true || cell === 1 || cell === '1' ? 'Sim' : 'Não') },
+  { id: "quantidade_sessoes", name: "Qtd. Sessões" },
   { id: "ch", name: "CH", formatter: (cell) => formatCurrencyBR(cell) },
   { id: "co", name: "CO", formatter: (cell) => formatCurrencyBR(cell) },
   { id: "total", name: "Total", formatter: (cell) => formatCurrencyBR(cell) },
@@ -417,6 +518,8 @@ const tussCreateForm = useForm({
   porte: '',
   ch: '',
   co: '',
+  eh_tratamento: false,
+  quantidade_sessoes: null,
 });
 const tussCreateTotal = computed(() => {
   const ch = parseDecimalBR(tussCreateForm.ch);
@@ -429,12 +532,58 @@ const tussCreateTotalDisplay = computed(() => {
   if (n === null) return '';
   return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 });
+const isTussCreateTratamento = computed(() => tussCreateForm.eh_tratamento === true || tussCreateForm.eh_tratamento === 1 || tussCreateForm.eh_tratamento === '1');
+const tussEditForm = useForm({
+  tabela: '',
+  codigo: '',
+  descricao: '',
+  m2_filme: '',
+  auxiliares: '',
+  incidencia: '',
+  porte: '',
+  ch: '',
+  co: '',
+  eh_tratamento: false,
+  quantidade_sessoes: null,
+});
+const isTussEditTratamento = computed(() => tussEditForm.eh_tratamento === true || tussEditForm.eh_tratamento === 1 || tussEditForm.eh_tratamento === '1');
+const tussEditTotal = computed(() => {
+  const ch = parseDecimalBR(tussEditForm.ch);
+  const co = parseDecimalBR(tussEditForm.co);
+  if (ch === null || co === null) return null;
+  return ch + co;
+});
+const tussEditTotalDisplay = computed(() => {
+  const n = tussEditTotal.value;
+  if (n === null) return '';
+  return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+});
 function resetTussCreate() {
   tussCreateForm.reset();
   tussCreateForm.clearErrors();
 }
+function resetTussEdit() {
+  tussEditForm.reset();
+  tussEditForm.clearErrors();
+}
 function openTussCreateModal() {
   tussCreateModalOpen.value = true;
+}
+function openTussEditModal(id, row) {
+  const r = row && typeof row === 'object' ? row : {};
+  tussEditForm.clearErrors();
+  tussEditForm.tabela = String(r?.tabela ?? '').trim();
+  tussEditForm.codigo = String(r?.codigo ?? '').trim();
+  tussEditForm.descricao = String(r?.descricao ?? '').trim();
+  tussEditForm.m2_filme = String(r?.m2_filme ?? '').trim();
+  tussEditForm.auxiliares = String(r?.auxiliares ?? '').trim();
+  tussEditForm.incidencia = String(r?.incidencia ?? '').trim();
+  tussEditForm.porte = String(r?.porte ?? '').trim();
+  tussEditForm.ch = (r?.ch ?? '') === null ? '' : String(r?.ch ?? '').trim();
+  tussEditForm.co = (r?.co ?? '') === null ? '' : String(r?.co ?? '').trim();
+  tussEditForm.eh_tratamento = (r?.eh_tratamento === true || r?.eh_tratamento === 1 || r?.eh_tratamento === '1');
+  tussEditForm.quantidade_sessoes = tussEditForm.eh_tratamento ? (r?.quantidade_sessoes ?? null) : null;
+  tussEditModalOpen.value = true;
 }
 function storeTuss() {
   tussCreateForm.clearErrors();
@@ -446,16 +595,44 @@ function storeTuss() {
     tussCreateForm.setError('codigo', 'Informe o código.');
     return;
   }
+  if (!(tussCreateForm.eh_tratamento === true || tussCreateForm.eh_tratamento === 1 || tussCreateForm.eh_tratamento === '1')) {
+    tussCreateForm.quantidade_sessoes = null;
+  }
   tussCreateForm.post('/tuss', {
     preserveScroll: true,
     onSuccess: () => {
       tussCreateForm.reset();
       tussCreateModalOpen.value = false;
+      tussTableReloadNonce.value += 1;
+    },
+  });
+}
+function updateTuss() {
+  tussEditForm.clearErrors();
+  if (!String(tussEditForm.tabela || '').trim()) {
+    tussEditForm.setError('tabela', 'Informe a tabela.');
+    return;
+  }
+  if (!String(tussEditForm.codigo || '').trim()) {
+    tussEditForm.setError('codigo', 'Informe o código.');
+    return;
+  }
+  if (!(tussEditForm.eh_tratamento === true || tussEditForm.eh_tratamento === 1 || tussEditForm.eh_tratamento === '1')) {
+    tussEditForm.quantidade_sessoes = null;
+  }
+  tussEditForm.post('/tuss', {
+    preserveScroll: true,
+    onSuccess: () => {
+      tussEditModalOpen.value = false;
+      tussTableReloadNonce.value += 1;
     },
   });
 }
 watch(tussCreateModalOpen, (v, old) => {
   if (!v && old) resetTussCreate();
+});
+watch(tussEditModalOpen, (v, old) => {
+  if (!v && old) resetTussEdit();
 });
 
 function onTussFileChange(e) {

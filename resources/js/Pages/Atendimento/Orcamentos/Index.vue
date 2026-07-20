@@ -35,10 +35,10 @@
                             <div class="col-md-4">
                                 <label class="form-label">Procedimentos</label>
                                 <span class="text-danger ms-1">*</span>
-                                <select v-model="selectedProcId" class="form-select" data-choices :disabled="locked"
+                                <select ref="selProcedimento" v-model="selectedProcId" class="form-select" data-choices :disabled="locked || procedimentosSelectLoading"
                                     @change="onSelectProcedure" required :class="{ 'is-invalid': !!form.errors.itens }">
-                                    <option :value="null">Buscar procedimento</option>
-                                    <option v-for="p in procedimentosLocal" :key="p.id" :value="p.id">{{ p.nome }}
+                                    <option value="">Buscar procedimento</option>
+                                    <option v-for="p in procedimentosSelectRows" :key="`${p.source || ''}:${p.id}`" :value="`${p.source || ''}:${p.id}`">{{ p.descricao ? `${p.nome} - ${p.descricao}` : p.nome }}
                                     </option>
                                 </select>
                                 <div v-if="form.errors.itens" class="invalid-feedback d-block">{{ form.errors.itens }}</div>
@@ -79,7 +79,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width: 35%">Procedimento</th>
-                                        <th style="width: 15%">Quantidade</th>
+                                        <th style="width: 15%">Convênio</th>
                                         <th style="width: 20%">Valor Unitário</th>
                                         <th style="width: 20%">Valor Total</th>
                                         <th style="width: 10%"></th>
@@ -89,10 +89,10 @@
                                     <template v-for="(it, idx) in itensLocal" :key="`group-${idx}`">
                                         <tr>
                                             <td>
-                                                <span>{{ procedimentoNome(it.procedimento_id) }}</span>
+                                                <span>{{ procedimentoNome(it) }}</span>
                                             </td>
                                             <td>
-                                                <span>{{ it.quantidade }}</span>
+                                                <span>{{ selectedConvenioRow?.descricao || '—' }}</span>
                                             </td>
                                             <td>
                                                 <span>{{ formatCurrency(it.valor_unitario) }}</span>
@@ -105,14 +105,14 @@
                                                     :disabled="locked" @click="removeItem(idx)">Remover</button>
                                             </td>
                                         </tr>
-                                        <tr v-for="n in sessionCount(it.procedimento_id)" :key="`sess-${idx}-${n}`"
+                                        <tr v-for="n in sessionCount(it)" :key="`sess-${idx}-${n}`"
                                             class="session-row">
                                             <td colspan="4">
                                                 <div class="session-line">
                                                     <span class="session-dot"></span>
                                                     <span class="session-badge"><i
                                                             class="ri-calendar-line me-1"></i>Sessão {{ n }}/{{
-                                                        sessionCount(it.procedimento_id) }}</span>
+                                                        sessionCount(it) }}</span>
                                                     <span class="session-text">Etapa do tratamento</span>
                                                 </div>
                                             </td>
@@ -165,7 +165,7 @@
                                 class="list-group-item d-flex justify-content-between align-items-center">
                                 <span class="d-flex flex-column">
                                     <span class="fw-bold">{{ o.numero }}</span>
-                                    <span class="text-muted small">{{ o.criado_em }}</span>
+                                    <span class="text-muted small">{{ formatDateTimeBR(o.criado_em) }}</span>
                                 </span>
                                 <span class="d-flex gap-2">
                                     <button class="btn btn-sm btn-soft-info" type="button"
@@ -247,6 +247,14 @@ import { useChoicesRemoteSearch } from "@/Composables/useChoicesRemoteSearch";
 
 const selPaciente = ref(null);
 const selConvenio = ref(null);
+const selProcedimento = ref(null);
+
+function formatDateTimeBR(dateString) {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    return d.toLocaleString('pt-BR');
+}
 
 const props = defineProps({
     pacientes: { type: Array, default: () => [] },
@@ -261,6 +269,8 @@ const conveniosLocal = ref([...(props.convenios || [])]);
 const conveniosPacienteLocal = ref([]);
 const convenioLoading = ref(false);
 const procedimentosLocal = ref([...(props.procedimentos || [])]);
+const procedimentosSelectRows = ref([]);
+const procedimentosSelectLoading = ref(false);
 const procConvLocal = ref([...(props.procedimentoConvenio || [])]);
 const ultimosLocal = ref([...(props.ultimos || [])]);
 const pdfContainer = ref(null);
@@ -324,6 +334,17 @@ async function syncConvenioLoadingUI() {
         const w = getChoicesWrapperFor(el);
         if (!w) return;
         w.classList.toggle('convenio-loading', !!convenioLoading.value);
+    } catch (e) { }
+}
+
+async function syncProcedimentoLoadingUI() {
+    try {
+        await nextTick();
+        const el = selProcedimento.value;
+        if (!el) return;
+        const w = getChoicesWrapperFor(el);
+        if (!w) return;
+        w.classList.toggle('procedimento-loading', !!procedimentosSelectLoading.value);
     } catch (e) { }
 }
 
@@ -400,11 +421,118 @@ function formatDMY(d) {
 
 const flatpickrOptions = { altInput: true, altFormat: "d M, Y", dateFormat: "d-m-Y", locale: "pt" };
 const itensLocal = ref([]);
-const selectedProcId = ref(null);
+const selectedProcId = ref("");
+
+const selectedConvenioRow = computed(() => {
+    const sid = String(form.convenio_id ?? "");
+    if (!sid) return null;
+    return (conveniosPacienteLocal.value || []).find(c => String(c?.id) === sid) || null;
+});
+let procSelectReqSeq = 0;
+watch(() => form.convenio_id, async () => {
+    const cid = String(form.convenio_id ?? '').trim();
+    selectedProcId.value = "";
+    procedimentosSelectRows.value = [];
+    procedimentosSelectLoading.value = false;
+
+    if (!cid) {
+        await syncProcedimentoChoices();
+        return;
+    }
+
+    const reqId = ++procSelectReqSeq;
+    procedimentosSelectLoading.value = true;
+    await syncProcedimentoLoadingUI();
+    try {
+        const resp = await window.axios.get(`/convenios/${cid}/procedimentos-orcamento`);
+        if (reqId !== procSelectReqSeq) return;
+        const rows = Array.isArray(resp?.data?.procedimentos) ? resp.data.procedimentos : [];
+        procedimentosSelectRows.value = rows;
+    } catch (e) {
+        if (reqId !== procSelectReqSeq) return;
+        procedimentosSelectRows.value = [];
+    } finally {
+        if (reqId === procSelectReqSeq) {
+            procedimentosSelectLoading.value = false;
+            await syncProcedimentoChoices();
+            await syncProcedimentoLoadingUI();
+        }
+    }
+}, { immediate: false });
+
+watch(procedimentosSelectLoading, async () => {
+    await syncProcedimentoLoadingUI();
+});
+
+async function syncProcedimentoChoices() {
+    await nextTick();
+    const el = selProcedimento.value;
+    if (!el) return;
+    let inst = el._choicesInstance || el.choices;
+    if (!inst || typeof inst.setChoices !== 'function') {
+        try { if (window.initChoiceEl) window.initChoiceEl(el); } catch (e) { }
+        inst = el._choicesInstance || el.choices;
+    }
+    if (!inst || typeof inst.setChoices !== 'function') return;
+
+    const selectedValue = selectedProcId.value != null ? String(selectedProcId.value) : '';
+    const rows = Array.isArray(procedimentosSelectRows.value) ? procedimentosSelectRows.value : [];
+    const items = [
+        { value: "", label: "Buscar procedimento", selected: selectedValue === "", disabled: true },
+        ...rows.map((r) => ({
+            value: `${String(r?.source || '')}:${String(r?.id ?? "")}`,
+            label: String(r?.descricao ? `${r?.nome ?? ""} - ${r?.descricao ?? ""}` : (r?.nome ?? "")),
+            selected: `${String(r?.source || '')}:${String(r?.id ?? "")}` === selectedValue,
+        })),
+    ];
+    try {
+        if (typeof inst.removeActiveItems === 'function') inst.removeActiveItems();
+    } catch (e) { }
+    try {
+        if (typeof inst.clearChoices === 'function') inst.clearChoices();
+    } catch (e) { }
+    inst.setChoices(items, "value", "label", true);
+    try {
+        if (window.syncChoiceValue) window.syncChoiceValue(el, selectedValue);
+    } catch (e) { }
+    await syncProcedimentoLoadingUI();
+}
+
+function parseProcKey(key) {
+    const s = String(key ?? '').trim();
+    if (!s) return null;
+    const parts = s.split(':');
+    if (parts.length === 2) {
+        const source = String(parts[0] || '').trim();
+        const id = Number(parts[1] || 0);
+        if (!source || !Number.isFinite(id) || id <= 0) return null;
+        return { source, id };
+    }
+    const id = Number(s);
+    if (!Number.isFinite(id) || id <= 0) return null;
+    return { source: 'procedimento', id };
+}
+
+function findProcedimentoAnyByKey(key) {
+    const parsed = parseProcKey(key);
+    if (!parsed) return null;
+    const inSelect = (procedimentosSelectRows.value || []).find(x => String(x?.source) === String(parsed.source) && Number(x?.id) === Number(parsed.id));
+    if (inSelect) return inSelect;
+    if (parsed.source === 'procedimento') {
+        const inBase = (procedimentosLocal.value || []).find(x => Number(x?.id) === Number(parsed.id));
+        return inBase || null;
+    }
+    return null;
+}
 
 function addItem() {
     itensLocal.value.push({
         procedimento_id: null,
+        tuss_id: null,
+        procedimento_nome: null,
+        procedimento_desc: null,
+        eh_tratamento: false,
+        quantidade_sessoes: null,
         quantidade: 1,
         valor_unitario: 0,
         valor_total: 0,
@@ -422,54 +550,50 @@ function onSelectProcedure() {
 }
 
 function addSelectedProcedure() {
-    const pid = selectedProcId.value;
-    if (!pid) return;
-    let valorUnit = findValorProcedimento(pid);
-    const vConv = findValorConvenio(pid, form.convenio_id);
-    if (vConv !== null && vConv !== undefined) {
-        valorUnit = vConv;
-    }
+    const key = selectedProcId.value;
+    if (!key) return;
+    const row = findProcedimentoAnyByKey(key);
+    if (!row) return;
+    const source = String(row?.source || '');
+    const valorUnit = Number(row?.valor ?? 0);
     const item = {
-        procedimento_id: pid,
+        procedimento_id: source === 'procedimento' ? Number(row?.id ?? null) : null,
+        tuss_id: source === 'tuss' ? Number(row?.id ?? null) : null,
+        procedimento_nome: String(row?.nome ?? '') || null,
+        procedimento_desc: row?.descricao ?? null,
+        eh_tratamento: !!row?.eh_tratamento,
+        quantidade_sessoes: row?.quantidade_sessoes ?? null,
         quantidade: 1,
         valor_unitario: Number(valorUnit || 0),
         valor_total: Number(valorUnit || 0),
         observacoes: null,
     };
     itensLocal.value.push(item);
-    selectedProcId.value = null;
+    selectedProcId.value = "";
+    syncProcedimentoChoices();
 }
 
-function findValorConvenio(procedimentoId, convenioId) {
-    if (!procedimentoId || !convenioId) return null;
-    const row = procConvLocal.value.find(r => String(r.procedimento_id) === String(procedimentoId) && String(r.convenio_id) === String(convenioId));
-    return row ? row.valor_convenio : null;
+function procedimentoNome(item) {
+    const nome = String(item?.procedimento_nome ?? '').trim();
+    const desc = String(item?.procedimento_desc ?? '').trim();
+    if (nome) return desc ? `${nome} - ${desc}` : nome;
+    const pid = item?.procedimento_id;
+    if (pid) {
+        const p = (procedimentosLocal.value || []).find(x => String(x?.id) === String(pid));
+        if (p) return p?.descricao ? `${p.nome || ''} - ${p.descricao}`.trim() || '-' : (p.nome || '-');
+    }
+    return '-';
 }
 
-function findValorProcedimento(procedimentoId) {
-    const p = procedimentosLocal.value.find(x => String(x.id) === String(procedimentoId));
-    return p ? (p.valor ?? 0) : 0;
-}
-
-function procedimentoNome(procedimentoId) {
-    const p = procedimentosLocal.value.find(x => String(x.id) === String(procedimentoId));
-    return p ? (p.nome || '-') : '-';
-}
-
-function sessionCount(procedimentoId) {
-    const p = procedimentosLocal.value.find(x => String(x.id) === String(procedimentoId));
-    const n = Number(p?.quantidade_sessoes || 0);
-    return p?.eh_tratamento ? (n > 0 ? n : 0) : 0;
+function sessionCount(item) {
+    const n = Number(item?.quantidade_sessoes || 0);
+    return item?.eh_tratamento ? (n > 0 ? n : 0) : 0;
 }
 
 function recalcItem(idx) {
     const it = itensLocal.value[idx];
     if (!it) return;
-    let valorUnit = findValorProcedimento(it.procedimento_id);
-    const vConv = findValorConvenio(it.procedimento_id, form.convenio_id);
-    if (vConv !== null && vConv !== undefined) {
-        valorUnit = vConv;
-    }
+    const valorUnit = Number(it.valor_unitario || 0);
     it.valor_unitario = Number(valorUnit || 0);
     const qtd = Number(it.quantidade || 1);
     it.valor_total = Number((it.valor_unitario || 0) * qtd);
@@ -644,6 +768,7 @@ async function save() {
     if (!hasPaciente || !hasConvenio || !hasItens) return;
     form.itens = itensLocal.value.map(it => ({
         procedimento_id: it.procedimento_id,
+        tuss_id: it.tuss_id,
         quantidade: it.quantidade,
         valor_unitario: it.valor_unitario,
         valor_total: it.valor_total,
@@ -818,7 +943,7 @@ function handleConsultDownload(id) {
             };
             const itensNomes = itens.map(it => ({
                 ...it,
-                procedimento_nome: procedimentoNome(it.procedimento_id) || '-',
+                procedimento_nome: procedimentoNome(it) || '-',
             }));
             downloadOrcamento.value = orc;
             downloadItens.value = itensNomes;
@@ -845,55 +970,66 @@ function handleConsultDownload(id) {
         }).catch(() => { });
     } catch (e) { }
 }
-function carregarOrcamento(id) {
+async function carregarOrcamento(id) {
     if (!id) return;
     try {
-        window.axios.get(`/orcamentos/${id}?include_all=1`).then((res) => {
-            const o = res?.data?.orcamento;
-            const itens = Array.isArray(res?.data?.itens) ? res.data.itens : [];
-            if (!o) return;
-            isEditing.value = true;
-            orcamentoEditId.value = o.id;
-            keepConvenioOnPacienteChange.value = true;
-            form.paciente_id = o.paciente_id ?? null;
-            form.convenio_id = o.convenio_id ?? null;
-            if (o.paciente_id) {
-                pacienteSelectedRow.value = {
-                    id: o.paciente_id,
-                    nome: o.paciente_nome || o.paciente || '',
-                    cpf: o.paciente_cpf || '',
-                };
-                pacientesChoicesRows.value = [pacienteSelectedRow.value];
-            } else {
-                pacienteSelectedRow.value = null;
-                pacientesChoicesRows.value = [];
+        const res = await window.axios.get(`/orcamentos/${id}?include_all=1`);
+        const o = res?.data?.orcamento;
+        const itens = Array.isArray(res?.data?.itens) ? res.data.itens : [];
+        if (!o) return;
+        
+        isEditing.value = true;
+        orcamentoEditId.value = o.id;
+        keepConvenioOnPacienteChange.value = true;
+        
+        if (o.paciente_id) {
+            form.paciente_id = o.paciente_id;
+            pacienteSelectedRow.value = {
+                id: o.paciente_id,
+                nome: o.paciente_nome || o.paciente || '',
+                cpf: o.paciente_cpf || '',
+            };
+            pacientesChoicesRows.value = [pacienteSelectedRow.value];
+            await pacienteSearch.syncChoices();
+            
+            const nv = String(o.paciente_id ?? "");
+            if (nv) {
+                const resp = await window.axios.get(`/pacientes/${nv}/convenios`);
+                const convs = Array.isArray(resp?.data?.convenios) ? resp.data.convenios : [];
+                conveniosPacienteLocal.value = convs;
             }
-            pacienteSearch.syncChoices();
-            form.data_emissao = o.data_emissao || formatDMY(new Date());
-            form.validade = o.validade || formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000));
-            form.desconto = Number(o.desconto || 0);
-            form.faturamento_previsto = !!o.faturamento_previsto;
-            form.aprovado = !!o.aprovado;
-            form.pago = !!o.pago;
-            itensLocal.value = itens.map(it => ({
-                procedimento_id: it.procedimento_id,
-                quantidade: it.quantidade,
-                valor_unitario: Number(it.valor_unitario || 0),
-                valor_total: Number(it.valor_total || 0),
-                observacoes: it.observacoes || null,
-            }));
-            setTimeout(() => {
-                try {
-                    pacienteSearch.syncChoices();
-                    convenioChoices.syncChoices();
-                    syncConvenioLoadingUI();
-                } catch (e) { }
-            }, 0);
-            setTimeout(() => {
-                keepConvenioOnPacienteChange.value = false;
-            }, 300);
-            closeConsultModal();
-        }).catch(() => { });
+        } else {
+            form.paciente_id = null;
+            pacienteSelectedRow.value = null;
+            pacientesChoicesRows.value = [];
+        }
+        
+        form.convenio_id = o.convenio_id ?? null;
+        await convenioChoices.syncChoices();
+        await syncConvenioLoadingUI();
+        
+        form.data_emissao = o.data_emissao || formatDMY(new Date());
+        form.validade = o.validade || formatDMY(new Date(Date.now() + 30 * 24 * 3600 * 1000));
+        form.desconto = Number(o.desconto || 0);
+        form.faturamento_previsto = !!o.faturamento_previsto;
+        form.aprovado = !!o.aprovado;
+        form.pago = !!o.pago;
+        itensLocal.value = itens.map(it => ({
+            procedimento_id: it.procedimento_id,
+            tuss_id: it.tuss_id ?? null,
+            procedimento_nome: it.procedimento_nome || null,
+            procedimento_desc: it.procedimento_desc || null,
+            eh_tratamento: !!it.eh_tratamento,
+            quantidade_sessoes: it.quantidade_sessoes ?? null,
+            quantidade: it.quantidade,
+            valor_unitario: Number(it.valor_unitario || 0),
+            valor_total: Number(it.valor_total || 0),
+            observacoes: it.observacoes || null,
+        }));
+        setTimeout(() => {
+            keepConvenioOnPacienteChange.value = false;
+        }, 300);
+        closeConsultModal();
     } catch (e) { }
 }
 </script>
@@ -968,5 +1104,42 @@ function carregarOrcamento(id) {
 
 :deep(.choices.convenio-loading .choices__list--single) {
     opacity: 0.55;
+}
+
+:deep(.choices.procedimento-loading) {
+    pointer-events: none;
+}
+
+:deep(.choices.procedimento-loading .choices__inner) {
+    position: relative;
+}
+
+:deep(.choices.procedimento-loading .choices__inner::after) {
+    content: "Carregando...";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--vz-secondary-color, #6c757d);
+}
+
+:deep(.choices.procedimento-loading .choices__list--single) {
+    opacity: 0.55;
+}
+
+/* Estilo para texto longo no item selecionado do Choices.js */
+:deep(.choices__list--single .choices__item) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* Estilo para texto longo nas opções do dropdown */
+:deep(.choices__list--dropdown .choices__item) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 </style>

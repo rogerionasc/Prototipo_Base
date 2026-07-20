@@ -18,6 +18,7 @@ class Agendamento extends Model
         'hora',
         'paciente_id',
         'procedimento_id',
+        'tuss_id',
         'sessao_tratamento_id',
         'orcamento_id',
         'status_id',
@@ -64,5 +65,15 @@ class Agendamento extends Model
     public function orcamento()
     {
         return $this->belongsTo(Orcamento::class, 'orcamento_id');
+    }
+
+    public function tuss()
+    {
+        return $this->belongsTo(Tuss::class, 'tuss_id');
+    }
+
+    public function sessaoTratamento()
+    {
+        return $this->belongsTo(SessaoTratamento::class, 'sessao_tratamento_id');
     }
 }

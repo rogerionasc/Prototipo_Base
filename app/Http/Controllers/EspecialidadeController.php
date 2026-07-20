@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Especialidade;
 use App\Models\Procedimento;
+use App\Models\Tuss;
 use Illuminate\Http\Request;
 
 class EspecialidadeController extends Controller

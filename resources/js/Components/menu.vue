@@ -95,8 +95,11 @@ export default {
                     icon: "ri-shield-cross-line",
                     title: "Convênio",
                     type: "link",
-                    target: "/convenios",
-                    routeName: "convenios.index",
+                    target: "#convenios",
+                    children: [
+                        { href: "/convenios", label: "Cadastros" },
+                        { href: "/convenios/autorizacoes", label: "Autorizações" },
+                    ]
                 },
                 {
                     icon: "ri-layout-grid-fill",

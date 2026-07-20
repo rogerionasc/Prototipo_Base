@@ -323,10 +323,21 @@ window.syncInvalidStateForChoices = syncInvalidStateForChoices;
 function setupValidityEvents(el) {
     try {
         if (el._validityEventsBound) return;
-        const handler = () => {
+        const handler = (ev) => {
             const wrapper = el.closest('.choices') || el.parentElement;
             if (!wrapper) return;
-            if (typeof el.checkValidity === 'function' && !el.checkValidity()) {
+            const isValid = (() => {
+                try {
+                    if (typeof el.checkValidity !== 'function') return true;
+                    if (ev && ev.type === 'invalid') {
+                        return !!(el.validity ? el.validity.valid : true);
+                    }
+                    return !!el.checkValidity();
+                } catch (e) {
+                    return true;
+                }
+            })();
+            if (!isValid) {
                 wrapper.classList.add('is-invalid');
             } else {
                 wrapper.classList.remove('is-invalid');

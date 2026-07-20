@@ -54,6 +54,7 @@ const emit = defineEmits([
     'download',
     'restore',
     'receive',
+    'procedure',
     'selectionChange'
 ]);
 
@@ -226,6 +227,12 @@ function clearSelection() {
     nextTick(updateCheckboxes);
 }
 
+function setSelectedRowIds(ids) {
+    selectedRows.value = Array.isArray(ids) ? [...ids].map(String) : [];
+    emit('selectionChange', getSelectedRowIds());
+    nextTick(updateCheckboxes);
+}
+
 function getSelectedRowObjects() {
     const ids = new Set((selectedRows.value || []).map(x => String(x)));
     const rows = Array.isArray(lastServerRows.value) ? lastServerRows.value : [];
@@ -311,6 +318,33 @@ function initGrid() {
         gridInstance.destroy();
         gridInstance = null;
     }
+
+    const defaultFormatter = (cell) => {
+        if (typeof cell === 'string') {
+            if (cell.match(/^\d{2}-\d{2}-\d{4}([T ]\d{2}:\d{2}(:\d{2})?)?$/)) {
+                return cell.replace(/-/g, '/').replace('T', ' ');
+            }
+            if (cell.match(/^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/)) {
+                const isDateOnly = cell.length === 10;
+                const dt = isDateOnly ? `${cell}T00:00:00` : cell.replace(' ', 'T');
+                const d = new Date(dt);
+                if (!isNaN(d.getTime())) {
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    if (isDateOnly) {
+                        return `${day}/${month}/${year}`;
+                    } else {
+                        const hours = String(d.getHours()).padStart(2, '0');
+                        const mins = String(d.getMinutes()).padStart(2, '0');
+                        return `${day}/${month}/${year} ${hours}:${mins}`;
+                    }
+                }
+            }
+        }
+        return cell;
+    };
+
     isLoading.value = true;
     let gridColumns;
     const visibleBaseColumns = (props.columns || []).filter(shouldIncludeColumn);
@@ -339,13 +373,15 @@ function initGrid() {
                     };
                     if (typeof col.formatter === 'function') out.formatter = col.formatter;
                     else if (col.showImage === true) out.formatter = (cell) => buildImageCell(cell, col);
+                    else out.formatter = defaultFormatter;
                     if (col.attributes) out.attributes = col.attributes;
                     return out;
                 } else {
                     return {
                         id: String(col).toLowerCase(),
                         name: col,
-                        sort: true
+                        sort: true,
+                        formatter: defaultFormatter
                     };
                 }
             })
@@ -363,13 +399,15 @@ function initGrid() {
                 };
                 if (typeof col.formatter === 'function') out.formatter = col.formatter;
                 else if (col.showImage === true) out.formatter = (cell) => buildImageCell(cell, col);
+                else out.formatter = defaultFormatter;
                 if (col.attributes) out.attributes = col.attributes;
                 return out;
             } else {
                 return {
                     id: String(col).toLowerCase(),
                     name: col,
-                    sort: true
+                    sort: true,
+                    formatter: defaultFormatter
                 };
             }
         });
@@ -443,6 +481,7 @@ function initGrid() {
                     can(ac.print) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('print') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('print')) ? 'disabled' : ''} title="${al.print ?? 'Imprimir'}">${isLoadingAction('print') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.print ?? 'ri-printer-fill'} align-bottom"></i>${bt.print ? `<span class="d-none d-sm-inline ms-1">${bt.print}</span>` : ''}</button>` : ``,
                     can(ac.download) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('download') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('download')) ? 'disabled' : ''} title="${al.download ?? 'Baixar'}">${isLoadingAction('download') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.download ?? 'ri-download-line'} align-bottom"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
                     can(ac.receive) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('receive') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('receive')) ? 'disabled' : ''} title="${al.receive ?? 'Receber'}">${isLoadingAction('receive') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.receive ?? 'ri-money-dollar-box-line'} align-bottom"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
+                    can(ac.procedure) ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="procedure" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('procedure') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('procedure')) ? 'disabled' : ''} title="${al.procedure ?? 'Procedimentos'}">${isLoadingAction('procedure') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.procedure ?? 'ri-list-check'} align-bottom"></i>${bt.procedure ? `<span class="d-none d-sm-inline ms-1">${bt.procedure}</span>` : ''}</button>` : ``,
                     (props.showDiaryButton && can(ac.diary)) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('diary') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('diary')) ? 'disabled' : ''} title="${al.diary ?? 'Agenda'}">${isLoadingAction('diary') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.diary ?? 'ri-calendar-2-line'} align-bottom"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``
                 ].join('');
                 return html(`<div class="d-flex gap-2">${buttons}</div>`);
@@ -554,7 +593,7 @@ function initGrid() {
         if (action === 'delete') {
             emit('delete', rowObj);
         } else if (action === 'edit') {
-            emit('edit', rowObj?.id ?? id);
+            emit('edit', rowObj?.id ?? id, rowObj);
         } else if (action === 'show') {
             emit('show', rowObj?.id ?? id);
         } else if (action === 'diary') {
@@ -567,6 +606,8 @@ function initGrid() {
             emit('restore', rowObj?.id ?? id, rowObj);
         } else if (action === 'receive') {
             emit('receive', rowObj?.id ?? id, rowObj);
+        } else if (action === 'procedure') {
+            emit('procedure', rowObj?.id ?? id, rowObj);
         }
     };
     wrapper.value.addEventListener('change', changeListener);
@@ -582,7 +623,7 @@ function initGrid() {
     }
 }
 
-defineExpose({ getSelectedRowIds, getSelectedRowObjects, clearSelection });
+defineExpose({ getSelectedRowIds, getSelectedRowObjects, clearSelection, setSelectedRowIds });
 
 watch(filteredData, () => {
     nextTick(initGrid);

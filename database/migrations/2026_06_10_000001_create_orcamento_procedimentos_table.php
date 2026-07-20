@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('orcamento_procedimentos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('orcamento_id')->constrained('orcamentos')->cascadeOnDelete();
-            $table->foreignId('procedimento_id')->constrained('procedimentos');
+            $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos');
+            $table->foreignId('tuss_id')->nullable()->constrained('tuss')->nullOnDelete();
             $table->unsignedInteger('quantidade')->default(1);
             $table->decimal('valor_unitario', 10, 2)->default(0);
             $table->decimal('valor_total', 10, 2)->default(0);
@@ -26,4 +27,3 @@ return new class extends Migration
         Schema::dropIfExists('orcamento_procedimentos');
     }
 };
-

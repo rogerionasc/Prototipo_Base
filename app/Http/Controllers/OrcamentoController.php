@@ -15,6 +15,7 @@ use App\Models\Procedimento;
 use App\Models\Pagamento;
 use App\Models\MovimentacaoCaixa;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Schema;
 
 class OrcamentoController extends Controller
 {
@@ -41,7 +42,8 @@ class OrcamentoController extends Controller
             'faturamento_previsto' => ['nullable', 'boolean'],
             'aprovado' => ['nullable', 'boolean'],
             'itens' => ['required', 'array', 'min:1'],
-            'itens.*.procedimento_id' => ['required', 'integer', 'exists:procedimentos,id'],
+            'itens.*.procedimento_id' => ['nullable', 'integer', 'exists:procedimentos,id'],
+            'itens.*.tuss_id' => ['nullable', 'integer', 'exists:tuss,id'],
             'itens.*.quantidade' => ['required', 'integer', 'min:1'],
             'itens.*.observacoes' => ['nullable', 'string'],
         ];
@@ -57,8 +59,8 @@ class OrcamentoController extends Controller
             'itens.required' => 'Selecione ao menos um procedimento.',
             'itens.array' => 'Selecione ao menos um procedimento.',
             'itens.min' => 'Selecione ao menos um procedimento.',
-            'itens.*.procedimento_id.required' => 'Informe o procedimento.',
             'itens.*.procedimento_id.exists' => 'Selecione um procedimento válido.',
+            'itens.*.tuss_id.exists' => 'Selecione um procedimento TUSS válido.',
             'itens.*.quantidade.required' => 'Informe a quantidade.',
             'itens.*.quantidade.min' => 'A quantidade deve ser maior que zero.',
         ];
@@ -66,7 +68,34 @@ class OrcamentoController extends Controller
 
     private function validateOrcamentoPayload(Request $request): array
     {
-        return $request->validate($this->validationRules(), $this->validationMessages());
+        $data = $request->validate($this->validationRules(), $this->validationMessages());
+
+        $convenioId = (int)($data['convenio_id'] ?? 0);
+        $payor = $this->resolvePayorByConvenioId($convenioId);
+        $isConvenio = ($payor['tipo_pagador'] ?? '') === 'CONVENIO';
+
+        $itens = is_array($data['itens'] ?? null) ? $data['itens'] : [];
+        if ($isConvenio) {
+            foreach ($itens as $i => $it) {
+                $tid = (int)($it['tuss_id'] ?? 0);
+                if ($tid <= 0) {
+                    throw ValidationException::withMessages([
+                        "itens.{$i}.tuss_id" => ['Informe o procedimento TUSS.'],
+                    ]);
+                }
+            }
+        } else {
+            foreach ($itens as $i => $it) {
+                $pid = (int)($it['procedimento_id'] ?? 0);
+                if ($pid <= 0) {
+                    throw ValidationException::withMessages([
+                        "itens.{$i}.procedimento_id" => ['Informe o procedimento.'],
+                    ]);
+                }
+            }
+        }
+
+        return $data;
     }
 
     private function assertPacienteConvenioAtivo(int $pacienteId, int $convenioId): void
@@ -99,64 +128,113 @@ class OrcamentoController extends Controller
         return $map;
     }
 
+    private function getTussIdsPermitidosPorConvenio(int $convenioId): array
+    {
+        return DB::table('convenio_tuss as ct')
+            ->join('tuss as t', function ($j) {
+                $j->on('t.id', '=', 'ct.tuss_id')
+                    ->whereNull('t.deleted_at');
+            })
+            ->where('ct.convenio_id', $convenioId)
+            ->whereNull('ct.deleted_at')
+            ->select('t.id')
+            ->distinct()
+            ->pluck('id')
+            ->map(fn ($v) => (int)$v)
+            ->values()
+            ->all();
+    }
+
+    private function assertItensPermitidosPorConvenio(int $convenioId, array $itens): void
+    {
+        $payor = $this->resolvePayorByConvenioId($convenioId);
+        if (($payor['tipo_pagador'] ?? '') !== 'CONVENIO') {
+            return;
+        }
+
+        $hasTuss = DB::table('convenio_tuss')
+            ->where('convenio_id', $convenioId)
+            ->whereNull('deleted_at')
+            ->exists();
+        if (!$hasTuss) {
+            throw ValidationException::withMessages([
+                'itens' => ['Este convênio não possui procedimentos TUSS vinculados.'],
+            ]);
+        }
+
+        $requestedTussIds = array_values(array_unique(array_map(
+            fn ($i) => (int)($i['tuss_id'] ?? 0),
+            is_array($itens) ? $itens : []
+        )));
+        $requestedTussIds = array_values(array_filter($requestedTussIds, fn ($id) => $id > 0));
+        if (empty($requestedTussIds)) return;
+
+        $allowedSet = array_fill_keys($this->getTussIdsPermitidosPorConvenio($convenioId), true);
+        $invalid = array_values(array_filter($requestedTussIds, fn ($id) => !array_key_exists($id, $allowedSet)));
+        if (!$invalid) return;
+
+        $names = DB::table('tuss')
+            ->whereNull('deleted_at')
+            ->whereIn('id', array_slice($invalid, 0, 10))
+            ->selectRaw("concat(COALESCE(tabela,''),' ',COALESCE(codigo,''),' - ',COALESCE(descricao,'')) as nome")
+            ->pluck('nome')
+            ->all();
+        $names = array_map(fn ($n) => trim((string)$n) !== '' ? trim((string)$n) : '—', $names);
+        $more = count($invalid) > 10 ? (' (+' . (count($invalid) - 10) . ' outros)') : '';
+        throw ValidationException::withMessages([
+            'itens' => ['Procedimentos não atendidos por este convênio: ' . implode(', ', $names) . $more . '.'],
+        ]);
+    }
+
     private function calcularItensValores(array $itens, int $convenioId): array
     {
         $valorBruto = 0.0;
         $itensValores = [];
-        $mapConvenio = $this->getProcedimentoConvenioMap($convenioId);
-        $tussTabela = trim((string)Convenio::where('id', $convenioId)->value('tuss_tabela'));
+        $payor = $this->resolvePayorByConvenioId($convenioId);
+        $isConvenio = ($payor['tipo_pagador'] ?? '') === 'CONVENIO';
 
-        $procIds = array_values(array_unique(array_map(fn($i) => (int)($i['procedimento_id'] ?? 0), $itens)));
-        $procIds = array_values(array_filter($procIds, fn($id) => $id > 0));
-        $procs = Procedimento::select('id', 'valor', 'nome')->whereIn('id', $procIds)->get()->keyBy('id');
+        if ($isConvenio) {
+            $tussIds = array_values(array_unique(array_map(fn ($i) => (int)($i['tuss_id'] ?? 0), $itens)));
+            $tussIds = array_values(array_filter($tussIds, fn ($id) => $id > 0));
+            $tussMap = DB::table('tuss')
+                ->whereNull('deleted_at')
+                ->whereIn('id', $tussIds)
+                ->pluck('total', 'id')
+                ->all();
 
-        $tussMap = [];
-        if (!$procs->isEmpty()) {
-            $names = $procs->map(fn($p) => trim((string)($p->nome ?? '')))->filter(fn($n) => $n !== '')->unique()->values()->all();
-            if (!empty($names)) {
-                $rows = DB::table('convenio_tuss as ct')
-                    ->join('tuss as t', 't.id', '=', 'ct.tuss_id')
-                    ->where('ct.convenio_id', $convenioId)
-                    ->whereNull('ct.deleted_at')
-                    ->whereNull('t.deleted_at')
-                    ->whereIn('t.descricao', $names)
-                    ->select('t.descricao', 't.total', 'ct.created_at')
-                    ->orderByDesc('ct.created_at')
-                    ->orderByDesc('t.id')
-                    ->get();
-
-                if ($rows->isEmpty() && $tussTabela !== '') {
-                    $rows = DB::table('tuss')
-                        ->where('tabela', $tussTabela)
-                        ->whereIn('descricao', $names)
-                        ->select('descricao', 'total')
-                        ->get();
-                }
-                foreach ($rows as $r) {
-                    $k = mb_strtolower(trim((string)($r->descricao ?? '')));
-                    if ($k !== '' && !array_key_exists($k, $tussMap)) $tussMap[$k] = $r->total;
-                }
+            foreach ($itens as $idx => $item) {
+                $tid = (int)($item['tuss_id'] ?? 0);
+                $valorUnit = array_key_exists($tid, $tussMap) ? (float)($tussMap[$tid] ?? 0) : 0;
+                $qtd = (int)($item['quantidade'] ?? 1);
+                $vTotal = ($valorUnit ?? 0) * $qtd;
+                $valorBruto += $vTotal;
+                $itensValores[$idx] = [
+                    'procedimento_id' => null,
+                    'tuss_id' => $tid,
+                    'quantidade' => $qtd,
+                    'valor_unitario' => $valorUnit ?? 0,
+                    'valor_total' => $vTotal,
+                    'observacoes' => $item['observacoes'] ?? null,
+                ];
             }
+
+            return [$valorBruto, $itensValores];
         }
+
+        $procIds = array_values(array_unique(array_map(fn ($i) => (int)($i['procedimento_id'] ?? 0), $itens)));
+        $procIds = array_values(array_filter($procIds, fn ($id) => $id > 0));
+        $procs = Procedimento::select('id', 'valor')->whereIn('id', $procIds)->get()->keyBy('id');
 
         foreach ($itens as $idx => $item) {
             $procId = (int)($item['procedimento_id'] ?? 0);
-            $proc = $procs->get($procId) ?? Procedimento::select('id', 'valor', 'nome')->findOrFail($procId);
+            $proc = $procs->get($procId) ?? Procedimento::select('id', 'valor')->findOrFail($procId);
             $valorUnit = $proc->valor ?? 0;
-            $k = (string)$proc->id;
-            if (array_key_exists($k, $mapConvenio) && $mapConvenio[$k] !== null) {
-                $valorUnit = $mapConvenio[$k];
-            } elseif (!empty($tussMap) || $tussTabela !== '') {
-                $nameKey = mb_strtolower(trim((string)($proc->nome ?? '')));
-                if ($nameKey !== '' && array_key_exists($nameKey, $tussMap) && $tussMap[$nameKey] !== null) {
-                    $valorUnit = $tussMap[$nameKey];
-                }
-            }
             $qtd = (int)($item['quantidade'] ?? 1);
             $vTotal = ($valorUnit ?? 0) * $qtd;
             $valorBruto += $vTotal;
             $itensValores[$idx] = [
                 'procedimento_id' => $proc->id,
+                'tuss_id' => null,
                 'quantidade' => $qtd,
                 'valor_unitario' => $valorUnit ?? 0,
                 'valor_total' => $vTotal,
@@ -171,7 +249,10 @@ class OrcamentoController extends Controller
     {
         $pacientes = collect([]);
         $convenios = Convenio::select('id', 'descricao')->orderBy('descricao')->get();
-        $procedimentos = Procedimento::select('id', 'nome', 'valor', 'categoria_id', 'eh_tratamento', 'quantidade_sessoes')->orderBy('nome')->get();
+        $procedimentos = Procedimento::select('id', 'nome', 'descricao', 'valor', 'categoria_id', 'eh_tratamento', 'quantidade_sessoes')
+            ->where('ativo', 1)
+            ->orderBy('nome')
+            ->get();
         $procConvenio = DB::table('procedimento_convenio')
             ->select('procedimento_id', 'convenio_id', 'valor_convenio')
             ->get();
@@ -213,6 +294,7 @@ class OrcamentoController extends Controller
         $pacienteId = (int)$data['paciente_id'];
         $convenioId = (int)$data['convenio_id'];
         $this->assertPacienteConvenioAtivo($pacienteId, $convenioId);
+        $this->assertItensPermitidosPorConvenio($convenioId, (array)($data['itens'] ?? []));
         $payor = $this->resolvePayorByConvenioId($convenioId);
         $isConvenioPayor = $payor['tipo_pagador'] === 'CONVENIO';
         $faturamentoConvenioId = $payor['convenio_id'];
@@ -377,16 +459,42 @@ class OrcamentoController extends Controller
         }
         $includeAll = (bool)$request->query('include_all', false);
         $itensQuery = DB::table('orcamento_procedimentos as op')
-            ->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id')
-            ->select(
-                'op.id',
-                'op.procedimento_id',
-                'op.quantidade',
-                'op.valor_unitario',
-                'op.valor_total',
-                'op.observacoes',
-                DB::raw("COALESCE(pr.nome,'') AS procedimento_nome")
-            )
+            ->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id');
+
+        if (Schema::hasColumn('orcamento_procedimentos', 'tuss_id')) {
+            $itensQuery->leftJoin('tuss as t', 't.id', '=', 'op.tuss_id');
+        }
+
+        $select = [
+            'op.id',
+            'op.procedimento_id',
+            'op.quantidade',
+            'op.valor_unitario',
+            'op.valor_total',
+            'op.observacoes',
+        ];
+        if (Schema::hasColumn('orcamento_procedimentos', 'tuss_id')) {
+            $select[] = 'op.tuss_id';
+            $select[] = DB::raw("CASE WHEN op.tuss_id IS NOT NULL THEN concat(COALESCE(t.tabela,''),' ',COALESCE(t.codigo,'')) ELSE COALESCE(pr.nome,'') END AS procedimento_nome");
+            $select[] = DB::raw("CASE WHEN op.tuss_id IS NOT NULL THEN COALESCE(t.descricao,'') ELSE COALESCE(pr.descricao,'') END AS procedimento_desc");
+            if (Schema::hasColumn('tuss', 'eh_tratamento') && Schema::hasColumn('procedimentos', 'eh_tratamento')) {
+                $select[] = DB::raw("CASE WHEN op.tuss_id IS NOT NULL THEN COALESCE(t.eh_tratamento,0) ELSE COALESCE(pr.eh_tratamento,0) END AS eh_tratamento");
+            }
+            if (Schema::hasColumn('tuss', 'quantidade_sessoes') && Schema::hasColumn('procedimentos', 'quantidade_sessoes')) {
+                $select[] = DB::raw("CASE WHEN op.tuss_id IS NOT NULL THEN COALESCE(t.quantidade_sessoes,0) ELSE COALESCE(pr.quantidade_sessoes,0) END AS quantidade_sessoes");
+            }
+        } else {
+            $select[] = DB::raw("COALESCE(pr.nome,'') AS procedimento_nome");
+            $select[] = DB::raw("COALESCE(pr.descricao,'') AS procedimento_desc");
+            if (Schema::hasColumn('procedimentos', 'eh_tratamento')) {
+                $select[] = DB::raw("COALESCE(pr.eh_tratamento,0) AS eh_tratamento");
+            }
+            if (Schema::hasColumn('procedimentos', 'quantidade_sessoes')) {
+                $select[] = DB::raw("COALESCE(pr.quantidade_sessoes,0) AS quantidade_sessoes");
+            }
+        }
+
+        $itensQuery->select($select)
             ->where('op.orcamento_id', $id)
             ->whereNull('op.deleted_at');
         if (!$includeAll) {
@@ -437,6 +545,7 @@ class OrcamentoController extends Controller
         $pacienteId = (int)$data['paciente_id'];
         $convenioId = (int)$data['convenio_id'];
         $this->assertPacienteConvenioAtivo($pacienteId, $convenioId);
+        $this->assertItensPermitidosPorConvenio($convenioId, (array)($data['itens'] ?? []));
         [$valorBruto, $itensValores] = $this->calcularItensValores($data['itens'], $convenioId);
 
         $desconto = (float)($data['desconto'] ?? 0);
@@ -653,17 +762,29 @@ public function searchPaid(Request $request)
         if (!$o) {
             abort(404);
         }
-        $itens = DB::table('orcamento_procedimentos as op')
-            ->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id')
-            ->select(
-                'op.id',
-                'op.procedimento_id',
-                'op.quantidade',
-                'op.valor_unitario',
-                'op.valor_total',
-                'op.observacoes',
-                DB::raw("COALESCE(pr.nome,'') AS procedimento_nome")
-            )
+        $itensQuery = DB::table('orcamento_procedimentos as op')
+            ->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id');
+        if (Schema::hasColumn('orcamento_procedimentos', 'tuss_id')) {
+            $itensQuery->leftJoin('tuss as t', 't.id', '=', 'op.tuss_id');
+        }
+        $select = [
+            'op.id',
+            'op.procedimento_id',
+            'op.quantidade',
+            'op.valor_unitario',
+            'op.valor_total',
+            'op.observacoes',
+        ];
+        if (Schema::hasColumn('orcamento_procedimentos', 'tuss_id')) {
+            $select[] = 'op.tuss_id';
+            $select[] = DB::raw("CASE WHEN op.tuss_id IS NOT NULL THEN concat(COALESCE(t.tabela,''),' ',COALESCE(t.codigo,'')) ELSE COALESCE(pr.nome,'') END AS procedimento_nome");
+            $select[] = DB::raw("CASE WHEN op.tuss_id IS NOT NULL THEN COALESCE(t.descricao,'') ELSE COALESCE(pr.descricao,'') END AS procedimento_desc");
+        } else {
+            $select[] = DB::raw("COALESCE(pr.nome,'') AS procedimento_nome");
+            $select[] = DB::raw("COALESCE(pr.descricao,'') AS procedimento_desc");
+        }
+        $itens = $itensQuery
+            ->select($select)
             ->where('op.orcamento_id', $id)
             ->whereNull('op.deleted_at')
             ->get();

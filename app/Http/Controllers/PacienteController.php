@@ -23,6 +23,7 @@ class PacienteController extends Controller
             ->select(
                 'c.id',
                 'c.descricao',
+                'c.tipo',
                 'pc.numero_carteira',
                 'pc.plano',
                 DB::raw("DATE_FORMAT(pc.validade, '%d-%m-%Y') AS validade")
@@ -191,7 +192,7 @@ class PacienteController extends Controller
         $estadosCivis = EstadoCivil::select('id', 'descricao')->orderBy('descricao')->get();
         $tiposSanguineos = TipoSanguineo::select('id', 'descricao')->orderBy('descricao')->get();
         $canaisAviso = CanalAviso::select('id', 'nome')->orderBy('nome')->get();
-        $convenios = Convenio::select('id','descricao')->orderBy('descricao')->get();
+        $convenios = Convenio::select('id','descricao','tipo')->orderBy('descricao')->get();
         $parentescos = Parentesco::select('id', 'descricao')->orderBy('descricao')->get();
 
         return Inertia::render("Pacientes/Index", [
@@ -241,9 +242,9 @@ class PacienteController extends Controller
             'nome_pai' => ['nullable', 'string', 'max:255'],
             'tipo_sanguineo_id' => ['nullable', 'integer', 'exists:tipo_sanguineo,id'],
             'observacoes' => ['nullable', 'string'],
-            'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
-            'convenio_ids' => ['nullable', 'array'],
-            'convenio_ids.*' => ['integer', 'exists:convenios,id'],
+            'convenios' => ['nullable', 'array'],
+            'convenios.*.convenio_id' => ['required', 'integer', 'exists:convenios,id'],
+            'convenios.*.numero_carteira' => ['nullable', 'string', 'max:30'],
         ], [
             'cpf.unique' => 'O CPF informado já está cadastrado.',
             'cpf.required' => 'O campo CPF é obrigatório.',
@@ -252,9 +253,7 @@ class PacienteController extends Controller
             'estado_civil_id.exists' => 'Selecione um estado civil válido.',
             'canal_aviso_id.exists' => 'Selecione um canal de aviso válido.',
             'tipo_sanguineo_id.exists' => 'Selecione um tipo sanguíneo válido.',
-            'convenio_id.exists' => 'Selecione um convênio válido.',
-            'convenio_ids.array' => 'Selecione convênios válidos.',
-            'convenio_ids.*.exists' => 'Selecione convênios válidos.',
+            'convenios.*.convenio_id.exists' => 'Selecione convênios válidos.',
         ]);
 
         // dd($data);
@@ -319,27 +318,29 @@ class PacienteController extends Controller
             }
         }
 
-        $convenioIds = [];
-        if (array_key_exists('convenio_ids', $data) && is_array($data['convenio_ids'])) {
-            $convenioIds = array_values(array_unique(array_filter(array_map('intval', $data['convenio_ids']))));
-        } elseif (!empty($data['convenio_id'])) {
-            $convenioIds = [(int)$data['convenio_id']];
-        }
-        if (array_key_exists('convenio_ids', $data) || array_key_exists('convenio_id', $data)) {
+        // Save convenios
+        if (isset($data['convenios']) && is_array($data['convenios'])) {
             $now = now();
             DB::table('paciente_convenio')
                 ->where('paciente_id', $paciente->id)
                 ->update(['ativo' => false, 'updated_at' => $now]);
-            foreach ($convenioIds as $cid) {
+            
+            foreach ($data['convenios'] as $conv) {
                 $updated = DB::table('paciente_convenio')
                     ->where('paciente_id', $paciente->id)
-                    ->where('convenio_id', $cid)
-                    ->update(['ativo' => true, 'deleted_at' => null, 'updated_at' => $now]);
+                    ->where('convenio_id', $conv['convenio_id'])
+                    ->update([
+                        'ativo' => true,
+                        'numero_carteira' => $conv['numero_carteira'] ?? null,
+                        'deleted_at' => null,
+                        'updated_at' => $now
+                    ]);
+                
                 if (!$updated) {
                     DB::table('paciente_convenio')->insert([
                         'paciente_id' => $paciente->id,
-                        'convenio_id' => $cid,
-                        'numero_carteira' => null,
+                        'convenio_id' => $conv['convenio_id'],
+                        'numero_carteira' => $conv['numero_carteira'] ?? null,
                         'plano' => null,
                         'validade' => null,
                         'ativo' => true,
@@ -400,9 +401,9 @@ class PacienteController extends Controller
             'nome_pai' => ['nullable', 'string', 'max:255'],
             'tipo_sanguineo_id' => ['nullable', 'integer', 'exists:tipo_sanguineo,id'],
             'observacoes' => ['nullable', 'string'],
-            'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
-            'convenio_ids' => ['nullable', 'array'],
-            'convenio_ids.*' => ['integer', 'exists:convenios,id'],
+            'convenios' => ['nullable', 'array'],
+            'convenios.*.convenio_id' => ['required', 'integer', 'exists:convenios,id'],
+            'convenios.*.numero_carteira' => ['nullable', 'string', 'max:30'],
         ], [
             'cpf.unique' => 'O CPF informado já está cadastrado.',
             'cpf.required' => 'O campo CPF é obrigatório.',
@@ -411,9 +412,7 @@ class PacienteController extends Controller
             'estado_civil_id.exists' => 'Selecione um estado civil válido.',
             'canal_aviso_id.exists' => 'Selecione um canal de aviso válido.',
             'tipo_sanguineo_id.exists' => 'Selecione um tipo sanguíneo válido.',
-            'convenio_id.exists' => 'Selecione um convênio válido.',
-            'convenio_ids.array' => 'Selecione convênios válidos.',
-            'convenio_ids.*.exists' => 'Selecione convênios válidos.',
+            'convenios.*.convenio_id.exists' => 'Selecione convênios válidos.',
         ]);
 
         $responsavelData = $request->validate([
@@ -512,27 +511,29 @@ class PacienteController extends Controller
             // Mantém o vínculo na tabela pivô para futura restauração.
         }
 
-        if (array_key_exists('convenio_ids', $data) || array_key_exists('convenio_id', $data)) {
-            $convenioIds = [];
-            if (array_key_exists('convenio_ids', $data) && is_array($data['convenio_ids'])) {
-                $convenioIds = array_values(array_unique(array_filter(array_map('intval', $data['convenio_ids']))));
-            } elseif (!empty($data['convenio_id'])) {
-                $convenioIds = [(int)$data['convenio_id']];
-            }
+        // Save convenios
+        if (isset($data['convenios']) && is_array($data['convenios'])) {
             $now = now();
             DB::table('paciente_convenio')
                 ->where('paciente_id', $paciente->id)
                 ->update(['ativo' => false, 'updated_at' => $now]);
-            foreach ($convenioIds as $cid) {
+            
+            foreach ($data['convenios'] as $conv) {
                 $updated = DB::table('paciente_convenio')
                     ->where('paciente_id', $paciente->id)
-                    ->where('convenio_id', $cid)
-                    ->update(['ativo' => true, 'deleted_at' => null, 'updated_at' => $now]);
+                    ->where('convenio_id', $conv['convenio_id'])
+                    ->update([
+                        'ativo' => true,
+                        'numero_carteira' => $conv['numero_carteira'] ?? null,
+                        'deleted_at' => null,
+                        'updated_at' => $now
+                    ]);
+                
                 if (!$updated) {
                     DB::table('paciente_convenio')->insert([
                         'paciente_id' => $paciente->id,
-                        'convenio_id' => $cid,
-                        'numero_carteira' => null,
+                        'convenio_id' => $conv['convenio_id'],
+                        'numero_carteira' => $conv['numero_carteira'] ?? null,
                         'plano' => null,
                         'validade' => null,
                         'ativo' => true,

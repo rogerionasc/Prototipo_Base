@@ -4,6 +4,7 @@ use App\Http\Controllers\VelzonRoutesController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\ConvenioController;
+use App\Http\Controllers\AutorizacaoController;
 use App\Http\Controllers\EspecialidadeController;
 use App\Http\Controllers\ProcedimentoController;
 use App\Http\Controllers\AgendaMedicaController;
@@ -86,6 +87,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/convenios/{id}", [ConvenioController::class, "update"])->name('convenios.update');
         Route::delete("/convenios/{id}", [ConvenioController::class, "destroy"])->name('convenios.destroy');
         Route::get("/convenios/{id}/tuss-procedimentos", [ConvenioController::class, "tussProcedimentos"])->whereNumber('id')->name('convenios.tuss_procedimentos');
+        Route::get("/convenios/{id}/procedimentos-orcamento", [ConvenioController::class, "procedimentosOrcamento"])->whereNumber('id')->name('convenios.procedimentos_orcamento');
+
+        // Autorizações routes
+        Route::get("/convenios/autorizacoes", [AutorizacaoController::class, "index"])->name('autorizacoes.index');
+        Route::post("/convenios/autorizacoes", [AutorizacaoController::class, "store"])->name('autorizacoes.store');
+        Route::put("/convenios/autorizacoes/{id}", [AutorizacaoController::class, "update"])->name('autorizacoes.update');
+        Route::delete("/convenios/autorizacoes/{id}", [AutorizacaoController::class, "destroy"])->name('autorizacoes.destroy');
 
         // Caixas routes
         Route::get("/cadastro-caixa", [CaixaController::class, "create"])->name('caixas.create');

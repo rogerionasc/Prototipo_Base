@@ -11,7 +11,7 @@ return new class extends Migration
         if (!Schema::hasTable('historico_prontuario')) {
             Schema::create('historico_prontuario', function (Blueprint $table) {
                 $table->id();
-                $table->unsignedBigInteger('atendimento_id');
+                $table->foreignId('atendimento_id')->constrained('atendimentos');
                 $table->dateTime('data_registro')->nullable();
                 $table->text('descricao')->nullable();
                 $table->timestamps();
