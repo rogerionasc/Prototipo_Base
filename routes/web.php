@@ -14,6 +14,11 @@ use App\Http\Controllers\MovimentacaoCaixaController;
 use App\Http\Controllers\AgendamentoController;
 use App\Http\Controllers\FaturamentoController;
 use App\Http\Controllers\ContasReceberController;
+use App\Http\Controllers\SalaController;
+use App\Http\Controllers\GuicheController;
+use App\Http\Controllers\TotemController;
+use App\Http\Controllers\TotemOpcaoController;
+use App\Http\Controllers\PainelController;
 
 /*
 |--------------------------------------------------------------------------
@@ -211,9 +216,38 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/parametros/parentesco/{id}", [VelzonRoutesController::class, "parametros_update_parentesco"])->name('parametros.parentesco.update');
         Route::delete("/parametros/parentesco/{id}", [VelzonRoutesController::class, "parametros_destroy_parentesco"])->name('parametros.parentesco.destroy');
 
+        // Salas
+        Route::resource('clinica/salas', SalaController::class)->names('salas')->parameters(['salas' => 'sala'])->except(['create', 'show', 'edit']);
+        Route::resource('clinica/guiches', GuicheController::class)->names('guiches')->parameters(['guiches' => 'guiche'])->except(['create', 'show', 'edit']);
+        Route::resource('clinica/totens', TotemController::class)->names('totens')->parameters(['totens' => 'totem'])->except(['create', 'show', 'edit']);
+        Route::post('clinica/totens/{totem}/opcoes/sync', [TotemOpcaoController::class, 'sync'])->name('totens.opcoes.sync');
+        Route::resource('clinica/totens.opcoes', TotemOpcaoController::class)->names('totens.opcoes')->parameters(['totens' => 'totem', 'opcoes' => 'opcao'])->only(['store', 'update', 'destroy']);
+        Route::resource('clinica/paineis', PainelController::class)->names('paineis')->parameters(['paineis' => 'painel'])->except(['create', 'show', 'edit']);
+
     });
 });
 
 // PIX webhook (sem autenticação)
 Route::post('/pix/webhook', [\App\Http\Controllers\PagamentoController::class, 'pixWebhook'])->name('pix.webhook');
 Route::post('/pix/mp/webhook', [\App\Http\Controllers\PagamentoController::class, 'mpWebhook'])->name('pix.mp.webhook');
+
+// Web Apps
+Route::get('/app/totem/{totem?}', function ($totem = null) {
+    if (!$totem) {
+        $totemModel = \App\Models\Totem::with(['opcoes' => function($q) {
+            $q->where('status', true);
+        }])->where('status', true)->first();
+    } else {
+        $totemModel = \App\Models\Totem::with(['opcoes' => function($q) {
+            $q->where('status', true);
+        }])->where('status', true)->findOrFail($totem);
+    }
+    
+    return Inertia\Inertia::render('Apps/Totem', [
+        'totem' => $totemModel
+    ]);
+})->name('apps.totem');
+
+Route::get('/app/painel', function () {
+    return Inertia\Inertia::render('Apps/Painel');
+})->name('apps.painel');

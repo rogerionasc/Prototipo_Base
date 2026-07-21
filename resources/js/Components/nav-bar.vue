@@ -418,44 +418,17 @@ export default {
             </div>
 
             <div class="p-2">
-              <BRow class="g-0">
-                <BCol>
-                  <BLink class="dropdown-icon-item" href="#!">
-                    <img src="@assets/images/brands/github.png" alt="Github" />
-                    <span>GitHub</span>
+              <BRow class="g-0 justify-content-center">
+                <BCol cols="6" class="text-center">
+                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.totem')" target="_blank">
+                    <i class="ri-tablet-line text-primary" style="font-size: 32px;"></i>
+                    <span class="mt-2 fw-medium">Totem</span>
                   </BLink>
                 </BCol>
-                <BCol>
-                  <BLink class="dropdown-icon-item" href="#!">
-                    <img src="@assets/images/brands/bitbucket.png" alt="bitbucket" />
-                    <span>Bitbucket</span>
-                  </BLink>
-                </BCol>
-                <BCol>
-                  <BLink class="dropdown-icon-item" href="#!">
-                    <img src="@assets/images/brands/dribbble.png" alt="dribbble" />
-                    <span>Dribbble</span>
-                  </BLink>
-                </BCol>
-              </BRow>
-
-              <BRow class="g-0">
-                <BCol>
-                  <BLink class="dropdown-icon-item" href="#!">
-                    <img src="@assets/images/brands/dropbox.png" alt="dropbox" />
-                    <span>Dropbox</span>
-                  </BLink>
-                </BCol>
-                <BCol>
-                  <BLink class="dropdown-icon-item" href="#!">
-                    <img src="@assets/images/brands/mail_chimp.png" alt="mail_chimp" />
-                    <span>Mail Chimp</span>
-                  </BLink>
-                </BCol>
-                <BCol>
-                  <BLink class="dropdown-icon-item" href="#!">
-                    <img src="@assets/images/brands/slack.png" alt="slack" />
-                    <span>Slack</span>
+                <BCol cols="6" class="text-center">
+                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.painel')" target="_blank">
+                    <i class="ri-tv-2-line text-success" style="font-size: 32px;"></i>
+                    <span class="mt-2 fw-medium">Painel de TV</span>
                   </BLink>
                 </BCol>
               </BRow>

@@ -82,4 +82,9 @@ class ProfissionalSaude extends Model
             ->withPivot('convenio_id')
             ->withTimestamps();
     }
+
+    public function salas()
+    {
+        return $this->hasMany(Sala::class, 'profissional_saude_id');
+    }
 }

@@ -187,7 +187,7 @@ const getStatusBadge = (cell) => {
         'suspenso': { class: 'bg-secondary-subtle text-secondary', text: 'Suspenso' }
     };
 
-    const status = (cell || '').toLowerCase();
+    const status = String(cell ?? '').toLowerCase();
     const { class: badgeClass, text: badgeText } = statusMap[status] || {
         class: 'bg-light text-dark',
         text: cell || 'Desconhecido'

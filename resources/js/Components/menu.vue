@@ -75,6 +75,18 @@ export default {
                     target: "/medicos",
                 },
                 {
+                    icon: "ri-building-line",
+                    title: "Clínica",
+                    type: "link",
+                    target: "#clinica",
+                    children: [
+                        { href: "/clinica/salas", label: "Salas" },
+                        { href: "/clinica/guiches", label: "Guichês" },
+                        { href: "/clinica/totens", label: "Totens" },
+                        { href: "/clinica/paineis", label: "Painéis" },
+                    ]
+                },
+                {
                     icon: "ri-user-heart-fill",
                     title: this.$t("t-patient"),
                     type: "link",
