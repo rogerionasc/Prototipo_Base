@@ -183,23 +183,33 @@
                       <li
                         v-for="r in filteredSelectedTussRows"
                         :key="`sel-${r.id}`"
-                        class="list-group-item px-0 py-2 d-flex justify-content-between align-items-start"
+                        class="list-group-item px-2 py-2 mb-1 border rounded"
                       >
-                        <span class="d-flex flex-column me-2 flex-grow-1" style="min-width:0;">
-                          <span class="d-flex align-items-center flex-wrap gap-2">
-                            <span class="fw-bold">{{ r.codigo }}</span>
-                            <span class="badge bg-secondary-subtle text-secondary">{{ r.tabela || "—" }}</span>
-                          </span>
-                          <span class="text-muted small mt-1 text-truncate-2">{{ r.descricao }}</span>
-                        </span>
-                        <span class="d-flex align-items-start gap-2">
-                          <span v-if="r.total !== null && r.total !== undefined && String(r.total) !== ''" class="text-muted small text-nowrap mt-1">
-                            {{ formatMoney(r.total) }}
-                          </span>
-                          <button type="button" class="btn btn-sm btn-soft-danger" @click="removeTussRow(r.id)">
-                            <i class="ri-close-line"></i>
-                          </button>
-                        </span>
+                        <div class="d-flex justify-content-between align-items-start">
+                          <div class="d-flex flex-column me-2 flex-grow-1" style="min-width:0;">
+                            <span class="d-flex align-items-center flex-wrap gap-2">
+                              <span class="fw-bold">{{ r.codigo }}</span>
+                              <span class="badge bg-secondary-subtle text-secondary">{{ r.tabela || "—" }}</span>
+                              <button type="button" 
+                                class="btn btn-sm p-0 m-0 border-0 d-flex align-items-center" 
+                                :class="r.requer_autorizacao ? 'text-success' : 'text-muted opacity-50'"
+                                @click="r.requer_autorizacao = !r.requer_autorizacao"
+                                :title="r.requer_autorizacao ? 'Requer autorização prévia (clique para alterar)' : 'Não requer autorização (clique para alterar)'"
+                              >
+                                <i :class="r.requer_autorizacao ? 'ri-shield-check-fill fs-5' : 'ri-shield-line fs-5'"></i>
+                              </button>
+                            </span>
+                            <span class="text-muted small mt-1 text-truncate-2">{{ r.descricao }}</span>
+                          </div>
+                          <div class="d-flex align-items-start gap-2 flex-shrink-0">
+                            <span v-if="r.total !== null && r.total !== undefined && String(r.total) !== ''" class="text-muted small text-nowrap mt-1 fw-medium">
+                              {{ formatMoney(r.total) }}
+                            </span>
+                            <button type="button" class="btn btn-sm btn-soft-danger px-2 py-1" @click="removeTussRow(r.id)" title="Remover procedimento">
+                              <i class="ri-close-line"></i>
+                            </button>
+                          </div>
+                        </div>
                       </li>
                     </ul>
                     <div v-else class="tuss-empty text-center text-muted">
@@ -477,6 +487,10 @@ const medicosGridColumns = [
 ];
 
 const selectedTussRows = ref([]);
+watch(selectedTussRows, (rows) => {
+  form.tuss_ids = rows.map(r => ({ id: Number(r.id), requer_autorizacao: !!r.requer_autorizacao }));
+}, { deep: true });
+
 const selectedMedicosRows = ref([]);
 const selectedTussIds = computed(() => selectedTussRows.value.map(r => Number(r.id)).filter(n => Number.isFinite(n)));
 const selectedMedicoIds = computed(() => selectedMedicosRows.value.map(r => Number(r.id)).filter(n => Number.isFinite(n)));
@@ -517,22 +531,38 @@ function addTussRow(row) {
     codigo: row?.codigo ?? "",
     descricao: row?.descricao ?? "",
     total: row?.total ?? null,
+    requer_autorizacao: false,
   });
-  form.tuss_ids = selectedTussIds.value;
 }
 
 function removeTussRow(id) {
   const tid = Number(id);
   selectedTussRows.value = selectedTussRows.value.filter(r => Number(r.id) !== tid);
-  form.tuss_ids = selectedTussIds.value;
+}
+
+function addSelectedTuss() {
+  const newIds = tussGridSelectedIds.value.filter(id => !selectedTussRows.value.some(r => Number(r.id) === Number(id)));
+  if (newIds.length === 0) return;
+  const newRows = newIds.map(id => {
+    const dataRow = tussGridRef.value?.getRowData?.(id) || { id, codigo: '?', descricao: 'Desconhecido', tabela: '' };
+    return { ...dataRow, requer_autorizacao: false };
+  });
+  selectedTussRows.value.push(...newRows);
+  tussGridSelectedIds.value = [];
+  try { tussGridRef.value?.clearSelection?.(); } catch (_) {}
 }
 
 function clearSelectedTuss() {
   selectedTussRows.value = [];
-  form.tuss_ids = [];
   selectedTussQuery.value = "";
   try { tussGridRef.value?.clearSelection?.(); } catch (_) {}
   tussGridSelectedIds.value = [];
+}
+
+function removeSelectedTussRows() {
+  selectedTussRows.value = selectedTussRows.value.filter(r => !tussGridSelectedIds.value.includes(Number(r.id)));
+  tussGridSelectedIds.value = [];
+  try { tussGridRef.value?.clearSelection?.(); } catch (_) {}
 }
 
 function clearSelectedMedicos() {
@@ -587,9 +617,9 @@ function syncTussIdsBeforeSubmit() {
   }
   if (tussGridSelectedIds.value.length > 0) {
     addSelectedFromGrid();
-  } else {
-    form.tuss_ids = selectedTussIds.value;
   }
+  // Garante que o form enviará a lista completa de objetos (id + requer_autorizacao)
+  form.tuss_ids = selectedTussRows.value.map(r => ({ id: Number(r.id), requer_autorizacao: !!r.requer_autorizacao }));
 }
 
 
@@ -948,8 +978,8 @@ function setSelectedTussRows(rows) {
     codigo: r?.codigo ?? "",
     descricao: r?.descricao ?? "",
     total: r?.total ?? null,
+    requer_autorizacao: !!r?.requer_autorizacao,
   })).filter(r => Number.isFinite(r.id)) : [];
-  form.tuss_ids = selectedTussIds.value;
 }
 
 defineExpose({ form, submit, submitUpdate, processingRef: toRef(form, "processing"), setExistingLogoPath, clearLogoLocal, setSelectedTussRows, setSelectedMedicos });

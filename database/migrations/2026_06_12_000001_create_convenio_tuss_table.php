@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('convenio_id')->constrained('convenios');
             $table->foreignId('tuss_id')->constrained('tuss');
+            $table->boolean('requer_autorizacao')->default(false);
             $table->timestamps();
             $table->softDeletes();
             $table->unique(['convenio_id', 'tuss_id']);

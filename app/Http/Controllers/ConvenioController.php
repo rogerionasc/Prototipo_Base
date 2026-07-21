@@ -31,7 +31,6 @@ class ConvenioController extends Controller
             'logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'tuss_tabela' => ['nullable', 'exclude_if:tuss_tabela,', 'string', 'max:20', 'exists:tuss,tabela'],
             'tuss_ids' => ['nullable', 'array'],
-            'tuss_ids.*' => ['integer', 'exists:tuss,id'],
             'medicos' => ['nullable', 'array'],
             'medicos.*.id' => ['required', 'integer', 'exists:profissionais_saude,id'],
             'medicos.*.tuss_ids' => ['nullable', 'array'],
@@ -81,18 +80,26 @@ class ConvenioController extends Controller
         if (!$data['tipo']) {
             return back()->withErrors(['tipo' => 'Tipo inválido.']);
         }
-        $tussIds = array_values(array_unique(array_map('intval', (array)($request->input('tuss_ids', [])))));
+        $tussInput = (array)($request->input('tuss_ids', []));
+        $tussData = [];
+        foreach ($tussInput as $item) {
+            if (is_array($item) && isset($item['id'])) {
+                $tussData[(int)$item['id']] = !empty($item['requer_autorizacao']);
+            } elseif (is_numeric($item)) {
+                $tussData[(int)$item] = false;
+            }
+        }
         $medicosInput = (array)($request->input('medicos', []));
         unset($data['tuss_ids'], $data['medicos']);
 
         if ($data['tipo'] === 'Convenio') {
-            if (empty($tussIds)) {
+            if (empty($tussData)) {
                 return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.']);
             }
             $data['tuss_tabela'] = null;
         } else {
             $data['tuss_tabela'] = null;
-            $tussIds = [];
+            $tussData = [];
         }
 
         $logoFile = $request->file('logo');
@@ -100,21 +107,28 @@ class ConvenioController extends Controller
         if ($logoFile) $data['logo_path'] = $logoFile->store('convenios', 'public');
 
         $convenio = null;
-        DB::transaction(function () use (&$convenio, $data, $tussIds, $medicosInput) {
+        DB::transaction(function () use (&$convenio, $data, $tussData, $medicosInput) {
             $convenio = Convenio::create($data);
-            if (!empty($tussIds)) {
-                $rows = array_map(fn($tid) => [
-                    'convenio_id' => $convenio->id,
-                    'tuss_id' => $tid,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ], $tussIds);
+            if (!empty($tussData)) {
+                $rows = [];
+                foreach ($tussData as $tid => $reqAuth) {
+                    $rows[] = [
+                        'convenio_id' => $convenio->id,
+                        'tuss_id' => $tid,
+                        'requer_autorizacao' => $reqAuth ? 1 : 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
                 DB::table('convenio_tuss')->insert($rows);
             }
             if (!empty($medicosInput)) {
                 $medicoTussRows = [];
                 foreach ($medicosInput as $m) {
                     $mTuss = array_values(array_unique(array_map('intval', (array)($m['tuss_ids'] ?? []))));
+                    $mTuss = array_values(array_filter($mTuss, function($tid) use ($tussData) {
+                        return array_key_exists($tid, $tussData);
+                    }));
                     if (empty($mTuss)) {
                         $medicoTussRows[] = [
                             'convenio_id' => $convenio->id,
@@ -158,18 +172,26 @@ class ConvenioController extends Controller
         if (!$data['tipo']) {
             return back()->withErrors(['tipo' => 'Tipo inválido.']);
         }
-        $tussIds = array_values(array_unique(array_map('intval', (array)($request->input('tuss_ids', [])))));
+        $tussInput = (array)($request->input('tuss_ids', []));
+        $tussData = [];
+        foreach ($tussInput as $item) {
+            if (is_array($item) && isset($item['id'])) {
+                $tussData[(int)$item['id']] = !empty($item['requer_autorizacao']);
+            } elseif (is_numeric($item)) {
+                $tussData[(int)$item] = false;
+            }
+        }
         $medicosInput = (array)($request->input('medicos', []));
         unset($data['tuss_ids'], $data['medicos']);
 
         if ($data['tipo'] === 'Convenio') {
-            if (empty($tussIds)) {
+            if (empty($tussData)) {
                 return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.']);
             }
             $data['tuss_tabela'] = null;
         } else {
             $data['tuss_tabela'] = null;
-            $tussIds = [];
+            $tussData = [];
         }
 
         $logoFile = $request->file('logo');
@@ -181,20 +203,24 @@ class ConvenioController extends Controller
             }
             $data['logo_path'] = $logoFile->store('convenios', 'public');
         }
-        DB::transaction(function () use ($convenio, $data, $tussIds, $medicosInput) {
+        DB::transaction(function () use ($convenio, $data, $tussData, $medicosInput) {
             $convenio->update($data);
 
             DB::table('convenio_tuss')
                 ->where('convenio_id', $convenio->id)
                 ->delete();
 
-            if (!empty($tussIds)) {
-                $rows = array_map(fn($tid) => [
-                    'convenio_id' => $convenio->id,
-                    'tuss_id' => $tid,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ], $tussIds);
+            if (!empty($tussData)) {
+                $rows = [];
+                foreach ($tussData as $tid => $reqAuth) {
+                    $rows[] = [
+                        'convenio_id' => $convenio->id,
+                        'tuss_id' => $tid,
+                        'requer_autorizacao' => $reqAuth ? 1 : 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
                 DB::table('convenio_tuss')->insert($rows);
             }
 
@@ -206,6 +232,9 @@ class ConvenioController extends Controller
                 $medicoTussRows = [];
                 foreach ($medicosInput as $m) {
                     $mTuss = array_values(array_unique(array_map('intval', (array)($m['tuss_ids'] ?? []))));
+                    $mTuss = array_values(array_filter($mTuss, function($tid) use ($tussData) {
+                        return array_key_exists($tid, $tussData);
+                    }));
                     if (empty($mTuss)) {
                         $medicoTussRows[] = [
                             'convenio_id' => $convenio->id,
@@ -259,7 +288,7 @@ class ConvenioController extends Controller
 
         $total = (clone $base)->count();
         $rows = $base
-            ->select('t.id', 't.tabela', 't.codigo', 't.descricao', 't.total')
+            ->select('t.id', 't.tabela', 't.codigo', 't.descricao', 't.total', 'ct.requer_autorizacao')
             ->orderBy('t.descricao')
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)

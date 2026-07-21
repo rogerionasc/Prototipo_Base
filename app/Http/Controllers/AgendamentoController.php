@@ -262,13 +262,13 @@ class AgendamentoController extends Controller
                         'paciente_id' => $pacId,
                         'orcamento_id' => $orcamento->id,
                         'valor_final' => (float)($orcamento->valor_total ?? 0),
-                        'tipo_pagador' => 'CONVENIO',
+                        'tipo_pagador' => $isConvenio ? 'CONVENIO' : 'PARTICULAR',
                         'convenio_id' => $convenioId,
                         'valor_total' => (float)($orcamento->valor_bruto ?? 0),
                         'valor_cobrado' => (float)($orcamento->valor_total ?? 0),
                         'valor_aprovado' => 0,
                         'valor_glosado' => 0,
-                        'status' => 'AGUARDANDO_ENVIO',
+                        'status' => $isConvenio ? 'AGUARDANDO_ENVIO' : 'AGUARDANDO_PAGAMENTO',
                         'data_faturamento' => now()->format('Y-m-d H:i:s'),
                         'vencimento' => now()->addDays(30)->toDateString(),
                         'created_at' => now(),
@@ -311,76 +311,67 @@ class AgendamentoController extends Controller
             $orcOk = $orcOk->exists();
 
             $orcMeta = DB::table('orcamentos')->select('convenio_id', 'paciente_id', 'valor_total')->where('id', (int)$orcamentoId)->first();
-            $isConvenioFromOrcamento = $orcMeta && !empty($orcMeta->convenio_id);
-
-            $payOk = true;
-            if (!$isConvenioFromOrcamento) {
-                $payOk = DB::table('pagamentos as p')
-                    ->join('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
-                    ->where('f.orcamento_id', (int)$orcamentoId)
-                    ->where('p.status', 'CONFIRMADO')
-                    ->exists();
-            } else {
-                $fatId = (int)DB::table('faturamentos')->where('orcamento_id', (int)$orcamentoId)->value('id');
-                if (!$fatId && $orcMeta) {
-                    $fatId = (int)DB::table('faturamentos')->insertGetId([
-                        'paciente_id' => $orcMeta->paciente_id,
-                        'orcamento_id' => (int)$orcamentoId,
-                        'valor_final' => (float)($orcMeta->valor_total ?? 0),
-                        'tipo_pagador' => 'CONVENIO',
+            
+            $fatId = (int)DB::table('faturamentos')->where('orcamento_id', (int)$orcamentoId)->value('id');
+            if (!$fatId && $orcMeta) {
+                $fatId = (int)DB::table('faturamentos')->insertGetId([
+                    'paciente_id' => $orcMeta->paciente_id,
+                    'orcamento_id' => (int)$orcamentoId,
+                    'valor_final' => (float)($orcMeta->valor_total ?? 0),
+                    'tipo_pagador' => $isConvenio ? 'CONVENIO' : 'PARTICULAR',
+                    'convenio_id' => $orcMeta->convenio_id,
+                    'valor_total' => (float)($orcMeta->valor_total ?? 0),
+                    'valor_cobrado' => (float)($orcMeta->valor_total ?? 0),
+                    'valor_aprovado' => 0,
+                    'valor_glosado' => 0,
+                    'status' => $isConvenio ? 'AGUARDANDO_ENVIO' : 'AGUARDANDO_PAGAMENTO',
+                    'data_faturamento' => now()->format('Y-m-d H:i:s'),
+                    'vencimento' => now()->addDays(30)->toDateString(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } elseif ($fatId && $orcMeta) {
+                $fatTipo = (string)DB::table('faturamentos')->where('id', $fatId)->value('tipo_pagador');
+                $expectedTipo = $isConvenio ? 'CONVENIO' : 'PARTICULAR';
+                if (strtoupper((string)$fatTipo) !== $expectedTipo) {
+                    DB::table('faturamentos')->where('id', $fatId)->update([
+                        'tipo_pagador' => $expectedTipo,
                         'convenio_id' => $orcMeta->convenio_id,
-                        'valor_total' => (float)($orcMeta->valor_total ?? 0),
-                        'valor_cobrado' => (float)($orcMeta->valor_total ?? 0),
-                        'valor_aprovado' => 0,
-                        'valor_glosado' => 0,
-                        'status' => 'AGUARDANDO_ENVIO',
+                        'status' => $isConvenio ? 'AGUARDANDO_ENVIO' : 'AGUARDANDO_PAGAMENTO',
                         'data_faturamento' => now()->format('Y-m-d H:i:s'),
                         'vencimento' => now()->addDays(30)->toDateString(),
+                        'valor_cobrado' => (float)($orcMeta->valor_total ?? 0),
+                        'valor_final' => (float)($orcMeta->valor_total ?? 0),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+            if ($fatId) {
+                $crId = (int)DB::table('contas_receber')->where('faturamento_id', $fatId)->value('id');
+                if (!$crId && $orcMeta) {
+                    DB::table('contas_receber')->insert([
+                        'faturamento_id' => $fatId,
+                        'paciente_id' => $orcMeta->paciente_id,
+                        'convenio_id' => $orcMeta->convenio_id,
+                        'valor' => (float)($orcMeta->valor_total ?? 0),
+                        'vencimento' => now()->addDays(30)->toDateString(),
+                        'status' => 'ABERTO',
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
-                } elseif ($fatId && $orcMeta) {
-                    $fatTipo = (string)DB::table('faturamentos')->where('id', $fatId)->value('tipo_pagador');
-                    if (strtoupper((string)$fatTipo) !== 'CONVENIO') {
-                        DB::table('faturamentos')->where('id', $fatId)->update([
-                            'tipo_pagador' => 'CONVENIO',
-                            'convenio_id' => $orcMeta->convenio_id,
-                            'status' => 'AGUARDANDO_ENVIO',
-                            'data_faturamento' => now()->format('Y-m-d H:i:s'),
-                            'vencimento' => now()->addDays(30)->toDateString(),
-                            'valor_cobrado' => (float)($orcMeta->valor_total ?? 0),
-                            'valor_final' => (float)($orcMeta->valor_total ?? 0),
-                            'updated_at' => now(),
-                        ]);
-                    }
-                }
-                if ($fatId) {
-                    $crId = (int)DB::table('contas_receber')->where('faturamento_id', $fatId)->value('id');
-                    if (!$crId && $orcMeta) {
-                        DB::table('contas_receber')->insert([
-                            'faturamento_id' => $fatId,
-                            'paciente_id' => $orcMeta->paciente_id,
-                            'convenio_id' => $orcMeta->convenio_id,
-                            'valor' => (float)($orcMeta->valor_total ?? 0),
-                            'vencimento' => now()->addDays(30)->toDateString(),
-                            'status' => 'ABERTO',
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                    } elseif ($crId && $orcMeta) {
-                        DB::table('contas_receber')->where('id', $crId)->update([
-                            'convenio_id' => $orcMeta->convenio_id,
-                            'vencimento' => now()->addDays(30)->toDateString(),
-                            'updated_at' => now(),
-                        ]);
-                    }
+                } elseif ($crId && $orcMeta) {
+                    DB::table('contas_receber')->where('id', $crId)->update([
+                        'convenio_id' => $orcMeta->convenio_id,
+                        'vencimento' => now()->addDays(30)->toDateString(),
+                        'updated_at' => now(),
+                    ]);
                 }
             }
 
-            if (!$orcOk || !$payOk) {
+            if (!$orcOk) {
                 throw new HttpResponseException(response()->json([
                     'errors' => [
-                        'orcamento' => ['Orçamento inválido para este paciente/procedimento ou sem pagamento confirmado.']
+                        'orcamento' => ['Orçamento inválido para este paciente/procedimento.']
                     ]
                 ], 422));
             }
@@ -475,27 +466,48 @@ class AgendamentoController extends Controller
                 'observacoes' => $data['observacoes'] ?? null,
             ]);
 
-            // Create autorizacao if it's a convenio agendamento
-            if ($isConvenioFromOrcamento && $orcMeta && $orcMeta->convenio_id) {
-                $pacienteConvenio = DB::table('paciente_convenio')
-                    ->where('paciente_id', $pacId)
+            // Se for agendamento de convênio, verificar fluxo de autorização vs atendimento
+            if ($isConvenio && $orcMeta && $orcMeta->convenio_id) {
+                // Verificar se o procedimento deste convênio requer autorização
+                $convenioTuss = DB::table('convenio_tuss')
                     ->where('convenio_id', $orcMeta->convenio_id)
-                    ->where('ativo', 1)
+                    ->where('tuss_id', $procId)
                     ->whereNull('deleted_at')
                     ->first();
 
-                Autorizacao::create([
+                $requerAutorizacao = $convenioTuss && $convenioTuss->requer_autorizacao;
+
+                \Illuminate\Support\Facades\Log::info('Autorizacao Check:', [
                     'convenio_id' => $orcMeta->convenio_id,
-                    'carteira' => $pacienteConvenio->numero_carteira ?? null,
-                    'numero_autorizacao' => null,
-                    'status' => 'Pendente',
-                    'validade' => null,
-                    'data_solicitacao' => Carbon::now(),
-                    'data_resposta' => null,
-                    'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
-                    'usuario_id' => Auth::id() ?? 1,
-                    'usuario_id_validou' => null,
+                    'tuss_id' => $procId,
+                    'convenioTuss' => $convenioTuss,
+                    'requerAutorizacao' => $requerAutorizacao,
                 ]);
+
+                if ($requerAutorizacao) {
+                    $pacienteConvenio = DB::table('paciente_convenio')
+                        ->where('paciente_id', $pacId)
+                        ->where('convenio_id', $orcMeta->convenio_id)
+                        ->where('ativo', 1)
+                        ->whereNull('deleted_at')
+                        ->first();
+
+                    Autorizacao::create([
+                        'convenio_id' => $orcMeta->convenio_id,
+                        'carteira' => $pacienteConvenio->numero_carteira ?? null,
+                        'numero_autorizacao' => null,
+                        'status' => 'Pendente',
+                        'validade' => null,
+                        'data_solicitacao' => Carbon::now(),
+                        'data_resposta' => null,
+                        'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
+                        'usuario_id' => Auth::id() ?? 1,
+                        'usuario_id_validou' => null,
+                    ]);
+                } else {
+                    // TODO: Futuramente vai gerar um atendimento automático
+                    // Atendimento::create([...]);
+                }
             }
 
             return $agendamento;

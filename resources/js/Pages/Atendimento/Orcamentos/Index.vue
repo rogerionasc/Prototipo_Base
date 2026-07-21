@@ -260,7 +260,6 @@ const props = defineProps({
     pacientes: { type: Array, default: () => [] },
     convenios: { type: Array, default: () => [] },
     procedimentos: { type: Array, default: () => [] },
-    procedimentoConvenio: { type: Array, default: () => [] },
     ultimos: { type: Array, default: () => [] },
 });
 
@@ -271,7 +270,6 @@ const convenioLoading = ref(false);
 const procedimentosLocal = ref([...(props.procedimentos || [])]);
 const procedimentosSelectRows = ref([]);
 const procedimentosSelectLoading = ref(false);
-const procConvLocal = ref([...(props.procedimentoConvenio || [])]);
 const ultimosLocal = ref([...(props.ultimos || [])]);
 const pdfContainer = ref(null);
 const downloadOrcamento = ref({});
@@ -283,7 +281,6 @@ const approveSuccessId = ref(null);
 watch(() => props.pacientes, v => pacientesLocal.value = [...(v || [])]);
 watch(() => props.convenios, v => conveniosLocal.value = [...(v || [])]);
 watch(() => props.procedimentos, v => procedimentosLocal.value = [...(v || [])]);
-watch(() => props.procedimentoConvenio, v => procConvLocal.value = [...(v || [])]);
 watch(() => props.ultimos, v => ultimosLocal.value = [...(v || [])]);
 
 function refreshChoices(el) {

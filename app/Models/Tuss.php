@@ -34,6 +34,7 @@ class Tuss extends Model
     public function convenios()
     {
         return $this->belongsToMany(Convenio::class, 'convenio_tuss')
+            ->withPivot('requer_autorizacao')
             ->withTimestamps();
     }
 

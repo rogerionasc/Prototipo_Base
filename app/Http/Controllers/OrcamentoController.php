@@ -115,18 +115,6 @@ class OrcamentoController extends Controller
         }
     }
 
-    private function getProcedimentoConvenioMap(int $convenioId): array
-    {
-        $map = [];
-        $rows = DB::table('procedimento_convenio')
-            ->where('convenio_id', $convenioId)
-            ->select('procedimento_id', 'valor_convenio')
-            ->get();
-        foreach ($rows as $r) {
-            $map[(string)$r->procedimento_id] = $r->valor_convenio;
-        }
-        return $map;
-    }
 
     private function getTussIdsPermitidosPorConvenio(int $convenioId): array
     {
@@ -253,9 +241,6 @@ class OrcamentoController extends Controller
             ->where('ativo', 1)
             ->orderBy('nome')
             ->get();
-        $procConvenio = DB::table('procedimento_convenio')
-            ->select('procedimento_id', 'convenio_id', 'valor_convenio')
-            ->get();
         $ultimos = DB::table('orcamentos as o')
             ->leftJoin('pacientes as p', 'p.id', '=', 'o.paciente_id')
             ->select(
@@ -283,7 +268,6 @@ class OrcamentoController extends Controller
             'pacientes' => $pacientes,
             'convenios' => $convenios,
             'procedimentos' => $procedimentos,
-            'procedimentoConvenio' => $procConvenio,
             'ultimos' => $ultimos,
         ]);
     }
