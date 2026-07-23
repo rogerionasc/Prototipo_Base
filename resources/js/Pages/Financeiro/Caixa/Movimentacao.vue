@@ -61,260 +61,325 @@
     </div>
 
     <div class="row">
-      <div class="col-lg-8">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <h5 class="mb-0">Pagamentos Pendentes</h5>
-              <div class="search-box" style="width: 280px;">
-                <input v-model="pendentesQuery" type="text" class="form-control search" placeholder="Buscar por paciente, documento ou emissão" />
-                <i class="ri-search-line search-icon"></i>
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header pt-3 pb-0 border-0 bg-white">
+            <ul class="nav nav-tabs nav-tabs-custom nav-success border-bottom-0 mb-0" role="tablist">
+              <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#pdv-operacao" role="tab">
+                  <i class="ri-store-2-line me-1 align-bottom"></i> Operação (PDV)
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#pdv-historico" role="tab">
+                  <i class="ri-history-line me-1 align-bottom"></i> Histórico Completo
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div class="card-body p-0">
+            <div class="tab-content text-muted">
+          <!-- Aba: Operação (PDV) -->
+          <div class="tab-pane active" id="pdv-operacao" role="tabpanel">
+            <div class="row g-4 align-items-stretch p-4 border-top border-light">
+              <!-- Coluna Esquerda: Fila -->
+              <div class="col-lg-7 col-md-7 col-12">
+                <div class="d-flex flex-column h-100" style="min-height: 65vh;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                      <h5 class="mb-0 text-primary"><i class="ri-list-check me-2"></i>Pagamentos Pendentes</h5>
+                      <div class="d-flex gap-2 align-items-center">
+                        <div style="width: 130px; flex-shrink: 0;">
+                          <flatPickr v-model="pendentesData" @on-change="fetchPendentes" class="form-control w-100" :config="flatpickrOptions" placeholder="dd/mm/aaaa" />
+                        </div>
+                        <div class="search-box" style="width: 300px; flex-shrink: 0;">
+                          <input v-model="pendentesQuery" type="text" class="form-control search" placeholder="Buscar por paciente, documento ou emissão" />
+                          <i class="ri-search-line search-icon"></i>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="table-responsive flex-grow-1" style="overflow-y: auto;">
+                      <table class="table table-hover table-borderless align-middle mb-0" style="cursor: pointer;">
+                        <thead class="table-light text-muted sticky-top">
+                          <tr class="border-bottom border-light">
+                            <th scope="col" class="py-3">Nº</th>
+                            <th scope="col" class="py-3">Paciente</th>
+                            <th scope="col" class="py-3">Documento</th>
+                            <th scope="col" class="py-3">Emissão</th>
+                            <th scope="col" class="py-3 text-end">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="row in pagamentosFiltered" :key="row.faturamento_id" 
+                              @click="selectedPendente = row"
+                              :class="{'table-primary border-primary': selectedPendente?.faturamento_id === row.faturamento_id, 'border-bottom border-bottom-dashed': selectedPendente?.faturamento_id !== row.faturamento_id}">
+                            <td>{{ row.pagamento_id || "—" }}</td>
+                            <td class="fw-medium text-dark">{{ row.paciente }}</td>
+                            <td class="text-muted">{{ row.paciente_documento || "—" }}</td>
+                            <td>{{ row.data_orcamento || "—" }}</td>
+                            <td class="text-end fw-semibold text-success">{{ formatCurrency(row.valor) }}</td>
+                          </tr>
+                          <tr v-if="!pagamentosFiltered || pagamentosFiltered.length === 0">
+                            <td colspan="5" class="text-center text-muted p-5">
+                              <i class="ri-inbox-line fs-1 mb-3 d-block text-light"></i>
+                              <h5 class="fw-medium">Nenhum pagamento na fila</h5>
+                              <p class="mb-0">Todos os atendimentos foram recebidos ou a data selecionada está vazia.</p>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Coluna Direita: Painel de Controle -->
+              <div class="col-lg-5 col-md-5 col-12">
+                <!-- Se há um paciente selecionado, mostra as Ações -->
+                <div v-if="selectedPendente" class="card border border-light shadow-sm bg-white h-100 p-4 position-relative">
+                  <div class="text-end mb-2">
+                    <button type="button" class="btn-close" @click="selectedPendente = null"></button>
+                  </div>
+                  <div class="text-center">
+                    <div class="avatar-lg mx-auto mb-3">
+                      <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-24">
+                        {{ selectedPendente.paciente ? selectedPendente.paciente.charAt(0) : 'P' }}
+                      </div>
+                    </div>
+                    <h4 class="mb-1">{{ selectedPendente.paciente }}</h4>
+                    <p class="text-muted mb-4">Doc: {{ selectedPendente.paciente_documento || '—' }}</p>
+
+                    <div class="p-3 bg-light rounded mb-4">
+                      <div class="text-muted text-uppercase fw-semibold small mb-1">Total a Receber</div>
+                      <h2 class="text-success mb-0 fw-bold">{{ formatCurrency(selectedPendente.valor) }}</h2>
+                    </div>
+
+                    <div class="d-grid gap-3">
+                      <button v-if="isAguardandoPix(selectedPendente)" class="btn btn-warning btn-lg shadow-sm" type="button" 
+                              :disabled="cancelProcessing[selectedPendente.pagamento_id]"
+                              @click="cancelProcessing[selectedPendente.pagamento_id] ? null : cancelarPix(selectedPendente.pagamento_id)">
+                        <span v-if="cancelProcessing[selectedPendente.pagamento_id]" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <i class="ri-close-circle-line align-bottom me-1"></i> Cancelar PIX Pendente
+                      </button>
+                      <button v-else class="btn btn-success btn-lg shadow-sm" type="button" @click="abrirReceber(selectedPendente.faturamento_id)">
+                        <i class="ri-money-dollar-box-line align-middle me-2 fs-20"></i> RECEBER PAGAMENTO
+                      </button>
+
+                      <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-soft-info flex-grow-1" type="button" @click="mostrarOrcamento(selectedPendente.faturamento_id)">
+                          <i class="ri-eye-line align-bottom me-1"></i> Ver Orçamento
+                        </button>
+                        <button class="btn btn-soft-danger flex-grow-1" type="button" :disabled="!selectedPendente.pagamento_id" @click="abrirRecusar(selectedPendente.faturamento_id)">
+                          <i class="ri-close-line align-bottom me-1"></i> Recusar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Se NÃO há paciente selecionado, mostra Resumo Geral -->
+                <div v-else class="card border-0 shadow-sm h-100 p-4 p-xl-5 d-flex flex-column align-items-center justify-content-center">
+                    <div class="text-center mb-5 mt-4">
+                      <div class="avatar-lg mx-auto mb-4">
+                        <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-1">
+                          <i class="ri-hand-coin-fill"></i>
+                        </div>
+                      </div>
+                      <h4 class="fw-bold text-dark mb-2">Aguardando Seleção</h4>
+                      <p class="text-muted fs-15 mb-0">Selecione um paciente na fila ao lado para iniciar o recebimento.</p>
+                    </div>
+
+                    <div class="w-100 mt-auto">
+                      <h6 class="text-uppercase text-muted fw-bold mb-3 fs-11" style="letter-spacing: 0.5px;">Resumo do Caixa Atual</h6>
+                      <div class="row g-3">
+                        <div class="col-6">
+                          <div class="card bg-light border-0 shadow-none mb-0 h-100 p-3 rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                              <span class="text-muted fw-semibold fs-12 text-uppercase">Saldo Inicial</span>
+                              <div class="avatar-xs">
+                                <div class="avatar-title bg-white text-muted rounded shadow-sm"><i class="ri-wallet-3-line"></i></div>
+                              </div>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-0 fs-16">{{ formatCurrency(currentMovSummary.saldo_caixa) }}</h5>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="card bg-info-subtle border-0 shadow-none mb-0 h-100 p-3 rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                              <span class="text-info fw-semibold fs-12 text-uppercase">Saldo Atual</span>
+                              <div class="avatar-xs">
+                                <div class="avatar-title bg-white text-info rounded shadow-sm"><i class="ri-safe-2-line"></i></div>
+                              </div>
+                            </div>
+                            <h5 class="fw-bold text-info mb-0 fs-16">{{ formatCurrency(currentMovSummary.saldo_movimento) }}</h5>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="card bg-success-subtle border-0 shadow-none mb-0 h-100 p-3 rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                              <span class="text-success fw-semibold fs-12 text-uppercase">Total Entradas</span>
+                              <div class="avatar-xs">
+                                <div class="avatar-title bg-white text-success rounded shadow-sm"><i class="ri-arrow-right-up-line"></i></div>
+                              </div>
+                            </div>
+                            <h5 class="fw-bold text-success mb-0 fs-16">{{ formatCurrency(currentMovSummary.total_entradas) }}</h5>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="card bg-danger-subtle border-0 shadow-none mb-0 h-100 p-3 rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                              <span class="text-danger fw-semibold fs-12 text-uppercase">Total Saídas</span>
+                              <div class="avatar-xs">
+                                <div class="avatar-title bg-white text-danger rounded shadow-sm"><i class="ri-arrow-right-down-line"></i></div>
+                              </div>
+                            </div>
+                            <h5 class="fw-bold text-danger mb-0 fs-16">{{ formatCurrency(currentMovSummary.total_saidas) }}</h5>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                </div>
               </div>
             </div>
-            <div class="text-muted small mb-3">Itens: {{ pagamentosFiltered.length }} • Total: {{ formatCurrency(pendentesTotal) }}</div>
-            <div class="table-responsive">
-              <table class="table table-borderless align-middle table-clean mb-0">
-                <thead>
-                  <tr>
-                    <th class="text-muted small">Paciente</th>
-                    <th class="text-muted small">Documento</th>
-                    <th class="text-muted small text-end">Valor</th>
-                    <th class="text-muted small">Emissão</th>
-                    <th class="text-muted small text-end">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(row, idx) in pagamentosFiltered" :key="row.faturamento_id">
-                    <td>{{ row.paciente }}</td>
-                    <td class="text-muted">{{ row.paciente_documento || "—" }}</td>
-                    <td class="text-end">{{ formatCurrency(row.valor) }}</td>
-                    <td>{{ row.data_orcamento || "—" }}</td>
-                    <td class="text-end">
-                      <BDropdown
-                        class="position-static d-inline-block"
-                        dropstart
-                        auto-close="outside"
-                        :toggle-class="isAguardandoPix(row) ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-success'"
-                        menu-class="shadow-lg"
-                        :variant="isAguardandoPix(row) ? 'warning' : 'success'"
-                        size="sm"
-                        :split="true"
-                        @click="isAguardandoPix(row) ? (cancelProcessing[row.pagamento_id] ? null : cancelarPix(row.pagamento_id)) : abrirReceber(row.faturamento_id)"
-                      >
-                        <template #button-content>
-                          <span v-if="isAguardandoPix(row) && cancelProcessing[row.pagamento_id]" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                          <i :class="isAguardandoPix(row) ? 'ri-close-circle-line align-bottom me-1' : 'ri-money-dollar-box-line align-bottom me-1'"></i>{{ isAguardandoPix(row) ? 'Cancelar' : 'Receber' }}
-                        </template>
-                        <BDropdownItem :disabled="!row.pagamento_id" @click="abrirRecusar(row.faturamento_id)">
-                          <i class="ri-close-circle-line text-danger me-2"></i>Recusar
-                        </BDropdownItem>
-                        <BDropdownItem @click="mostrarOrcamento(row.faturamento_id)">
-                          <i class="ri-eye-fill text-info me-2"></i>Visualizar
-                        </BDropdownItem>
-                      </BDropdown>
-                    </td>
-                  </tr>
-                  <tr v-if="!pagamentosFiltered || pagamentosFiltered.length === 0">
-                    <td colspan="5" class="text-muted">Sem registros</td>
-                  </tr>
-                </tbody>
-              </table>
+          </div>
+
+          <!-- Aba: Histórico Completo -->
+          <div class="tab-pane" id="pdv-historico" role="tabpanel">
+            <div class="p-4 border-top border-light">
+                <TableGrid
+                  :columns="movCols"
+                  :data="movsByCaixa"
+                  :key="`movs-${openForm.caixa_id ?? 'all'}`"
+                  :tableTitle="'Registros de Movimentações (Histórico Completo)'"
+                  :showCheckbox="false"
+                  :search="true"
+                  :showAddButton="false"
+                  :showStatus="false"
+                  :showActions="true"
+                  :actionsConfig="{ delete: false, edit: false, show: true, diary: false, print: false, download: false, restore: true }"
+                  @restore="reabrirMov"
+                  @show="mostrarMovimentacao"
+                />
             </div>
-            <div class="mt-4"></div>
-            <TableGrid
-              :columns="movCols"
-              :data="movsByCaixa"
-              :key="`movs-${openForm.caixa_id ?? 'all'}`"
-              :tableTitle="'Registros de Movimentações'"
-              :showCheckbox="false"
-              :search="true"
-              :showAddButton="false"
-              :showStatus="false"
-              :showActions="true"
-              :actionsConfig="{ delete: false, edit: false, show: true, diary: false, print: false, download: false, restore: true }"
-              @restore="reabrirMov"
-              @show="mostrarMovimentacao"
-            />
+          </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <Modal v-model="showOrcModal" title="Detalhes do Orçamento" name-button="Fechar" :processing="orcLoading" size="xl" @save="showOrcModal=false">
+
+      <!-- Cabeçalho: Paciente + Valor -->
+      <div class="bg-primary-subtle rounded p-3 mb-4">
+        <div class="row align-items-center">
+          <div class="col">
+            <p class="text-muted fw-semibold mb-0 fs-12 text-uppercase">Paciente</p>
+            <h5 class="fw-bold mb-0 mt-1">{{ selectedPaciente || "—" }}</h5>
+            <p class="text-muted mb-0 fs-13 mt-1">CPF: {{ selectedCpf || "—" }}</p>
+          </div>
+          <div class="col-auto text-end">
+            <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 fw-semibold fs-12 d-block mb-2">
+              <i class="ri-checkbox-circle-fill me-1"></i> Aprovado
+            </span>
+            <p class="text-muted fw-semibold mb-1 fs-12">Valor Total</p>
+            <h4 class="fw-bold text-success mb-0">{{ formatCurrency(orcamentoView.valor_total || 0) }}</h4>
           </div>
         </div>
       </div>
 
-  <div class="col-lg-4">
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title mb-3">Resumo</h5>
-            <div class="row g-3 mb-2">
-              <div class="col-6">
-                <div class="p-3 bg-success-subtle rounded d-flex align-items-center justify-content-between">
-                  <div>
-                    <div class="text-muted">Entradas</div>
-                    <div class="fw-semibold">{{ formatCurrency(currentMovSummary.total_entradas) }}</div>
-                  </div>
-                  <i class="ri-arrow-up-circle-line text-success fs-24"></i>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="p-3 bg-danger-subtle rounded d-flex align-items-center justify-content-between">
-                  <div>
-                    <div class="text-muted">Saídas</div>
-                    <div class="fw-semibold">{{ formatCurrency(currentMovSummary.total_saidas) }}</div>
-                  </div>
-                  <i class="ri-arrow-down-circle-line text-danger fs-24"></i>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="p-3 bg-primary-subtle rounded d-flex align-items-center justify-content-between">
-                  <div>
-                    <div class="text-muted">Saldo Inicial</div>
-                    <div class="fw-semibold">{{ formatCurrency(currentMovSummary.saldo_caixa) }}</div>
-                  </div>
-                  <i class="ri-wallet-3-line text-primary fs-24"></i>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="p-3 bg-light rounded border d-flex align-items-center justify-content-between">
-                  <div>
-                    <div class="text-muted">Saldo Movimento</div>
-                    <div class="fw-semibold">{{ formatCurrency(currentMovSummary.saldo_movimento) }}</div>
-                  </div>
-                  <i class="ri-exchange-dollar-line text-muted fs-24"></i>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="p-3 bg-light rounded border d-flex align-items-center justify-content-between">
-                  <div>
-                    <div class="text-muted">Conferência</div>
-                    <div class="fw-semibold">{{ formatCurrency(currentMovSummary.total_conferencia) }}</div>
-                  </div>
-                  <i class="ri-check-double-line text-muted fs-24"></i>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="p-3 bg-light rounded border d-flex align-items-center justify-content-between">
-                  <div>
-                    <div class="text-muted">Diferença</div>
-                    <div class="fw-semibold" :class="difClass">{{ formatCurrency(currentDif) }}</div>
-                  </div>
-                  <i class="ri-mist-line text-muted fs-24"></i>
-                </div>
-              </div>
-            </div>
+      <!-- Linha de Metadados -->
+      <div class="row g-4 mb-4 text-start">
+        <div class="col-md-3 col-6">
+          <p class="text-muted fw-semibold mb-1 fs-12">Orçamento</p>
+          <p class="fw-semibold mb-0 text-dark">{{ orcamentoView.numero || "—" }}</p>
+        </div>
+        <div class="col-md-3 col-6">
+          <p class="text-muted fw-semibold mb-1 fs-12">Pagamento Nº</p>
+          <p class="fw-semibold mb-0 text-dark">{{ selectedFaturamento || "—" }}</p>
+        </div>
+        <div class="col-md-3 col-6">
+          <p class="text-muted fw-semibold mb-1 fs-12">Emissão</p>
+          <p class="fw-semibold mb-0 text-dark">{{ orcamentoView.data_emissao || "—" }}</p>
+        </div>
+        <div class="col-md-3 col-6">
+          <p class="text-muted fw-semibold mb-1 fs-12">Validade</p>
+          <p class="fw-semibold mb-0 text-dark">{{ orcamentoView.validade || "—" }}</p>
         </div>
       </div>
-      <div class="card mt-4">
-        <div class="card-body">
-          <h5 class="mb-3">Últimos Pagamentos</h5>
-          <div class="table-responsive">
-            <table class="table table-borderless align-middle table-clean mb-0">
-              <thead>
-                <tr>
-                  <th class="text-muted small">Paciente</th>
-                  <th class="text-muted small">Data</th>
-                  <th class="text-muted small text-end">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in ultimosElegant" :key="row.id">
-                  <td>{{ row.paciente }}</td>
-                  <td>{{ row.data_pagamento || "—" }}</td>
-                  <td class="text-end">{{ formatCurrency(row.valor) }}</td>
-                </tr>
-                <tr v-if="!ultimosElegant || ultimosElegant.length === 0">
-                  <td colspan="5" class="text-muted">Sem registros</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      </div>
-    </div>
-    <Modal v-model="showOrcModal" title="Orçamento Aprovado" name-button="Fechar" :processing="orcLoading" size="xl" @save="showOrcModal=false">
-      <div class="row g-3">
-        <div class="col-md-6">
-          <div class="d-flex flex-column">
-            <span class="text-muted">Paciente</span>
-            <span class="fw-semibold">{{ selectedPaciente || "—" }}</span>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="d-flex flex-column">
-            <span class="text-muted">Número</span>
-            <span class="fw-semibold">{{ orcamentoView.numero || "—" }}</span>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="d-flex flex-column">
-            <span class="text-muted">CPF</span>
-            <span class="fw-semibold">{{ selectedCpf || "—" }}</span>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="d-flex flex-column">
-            <span class="text-muted">Emissão</span>
-            <span class="fw-semibold">{{ orcamentoView.data_emissao || "—" }}</span>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="d-flex flex-column">
-            <span class="text-muted">Validade</span>
-            <span class="fw-semibold">{{ orcamentoView.validade || "—" }}</span>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="d-flex flex-column">
-            <span class="text-muted">Valor Total</span>
-            <span class="fw-semibold">{{ formatCurrency(orcamentoView.valor_total || 0) }}</span>
-          </div>
-        </div>
-        <div class="col-12">
-          <div class="table-responsive">
-            <table class="table align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th>Procedimento</th>
-                  <th>Quantidade</th>
-                  <th>Unitário</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="it in orcamentoItensView" :key="it.id">
-                  <td>{{ it.procedimento_nome || it.procedimento_id }}</td>
-                  <td>{{ it.quantidade }}</td>
-                  <td>{{ formatCurrency(it.valor_unitario) }}</td>
-                  <td>{{ formatCurrency(it.valor_total) }}</td>
-                </tr>
-                <tr v-if="!orcamentoItensView || orcamentoItensView.length === 0">
-                  <td colspan="4" class="text-muted">Sem itens</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+
+      <!-- Tabela de Itens -->
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th class="fw-semibold fs-12 text-uppercase text-muted">Procedimento</th>
+              <th class="fw-semibold fs-12 text-uppercase text-muted text-end">Unitário</th>
+              <th class="fw-semibold fs-12 text-uppercase text-muted text-end">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="it in orcamentoItensView" :key="it.id">
+              <td class="fw-medium">{{ it.procedimento_nome || it.procedimento_id }}</td>
+              <td class="text-end text-muted">{{ formatCurrency(it.valor_unitario) }}</td>
+              <td class="text-end fw-semibold">{{ formatCurrency(it.valor_total) }}</td>
+            </tr>
+            <tr v-if="!orcamentoItensView || orcamentoItensView.length === 0">
+              <td colspan="3" class="text-center text-muted py-5">
+                <i class="ri-inbox-line fs-28 d-block mb-2 opacity-50"></i>
+                Nenhum procedimento neste orçamento.
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </Modal>
-    <Modal v-model="showPixConfigModal" :title="'Configurar PIX'" :name-button="'Salvar'" :processing="pixConfigProcessing" size="md" @save="salvarPixConfig">
-      <div class="vstack gap-3">
+    <Modal v-model="showPixConfigModal" title="Configurar PIX" name-button="Salvar" :processing="pixConfigProcessing" size="md" @save="salvarPixConfig">
+      <div class="vstack gap-4">
+
+        <!-- Erro -->
+        <div class="invalid-feedback d-block" v-if="pixConfigError">
+          <i class="ri-error-warning-line me-1"></i> {{ pixConfigError }}
+        </div>
+
+        <!-- Grupo: Chave -->
         <div>
-          <label class="form-label">Chave PIX</label>
-          <input v-model.trim="pixConfig.chave" type="text" class="form-control" placeholder="e-mail, cpf/cnpj ou chave aleatória" />
+          <p class="text-uppercase text-muted fw-bold fs-11 mb-2 letter-spacing-1">
+            <i class="ri-key-2-line me-1 align-middle"></i> Chave de Recebimento
+          </p>
+          <label class="form-label text-muted fs-13 mb-1">Chave PIX <span class="text-danger">*</span></label>
+          <input v-model.trim="pixConfig.chave" type="text" class="form-control" placeholder="E-mail, CPF/CNPJ, celular ou chave aleatória" />
         </div>
-        <div class="row g-2">
-          <div class="col-md-6">
-            <label class="form-label">Nome do recebedor</label>
-            <input v-model.trim="pixConfig.recebedor_nome" type="text" class="form-control" placeholder="Nome Fantasia" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Cidade do recebedor</label>
-            <input v-model.trim="pixConfig.recebedor_cidade" type="text" class="form-control" placeholder="Cidade" />
-          </div>
-        </div>
+
+        <hr class="my-0 border-light" />
+
+        <!-- Grupo: Recebedor -->
         <div>
-          <label class="form-label">Descrição</label>
-          <input v-model.trim="pixConfig.descricao" type="text" class="form-control" placeholder="Descrição opcional" />
+          <p class="text-uppercase text-muted fw-bold fs-11 mb-2 letter-spacing-1">
+            <i class="ri-store-2-line me-1 align-middle"></i> Dados do Estabelecimento
+          </p>
+          <div class="row g-3">
+            <div class="col-md-7">
+              <label class="form-label text-muted fs-13 mb-1">Nome do Estabelecimento <span class="text-danger">*</span></label>
+              <input v-model.trim="pixConfig.recebedor_nome" type="text" class="form-control" placeholder="Nome exibido ao pagador" />
+            </div>
+            <div class="col-md-5">
+              <label class="form-label text-muted fs-13 mb-1">Cidade <span class="text-danger">*</span></label>
+              <input v-model.trim="pixConfig.recebedor_cidade" type="text" class="form-control" placeholder="Ex: São Paulo" />
+            </div>
+          </div>
         </div>
-        <div class="invalid-feedback d-block" v-if="pixConfigError">{{ pixConfigError }}</div>
+
+        <hr class="my-0 border-light" />
+
+        <!-- Grupo: Descrição -->
+        <div>
+          <p class="text-uppercase text-muted fw-bold fs-11 mb-2 letter-spacing-1">
+            <i class="ri-file-text-line me-1 align-middle"></i> Identificação da Cobrança
+          </p>
+          <label class="form-label text-muted fs-13 mb-1">Descrição <span class="text-muted fw-normal">(opcional)</span></label>
+          <input v-model.trim="pixConfig.descricao" type="text" class="form-control" placeholder="Ex: Consulta Médica" />
+          <p class="text-muted mt-1 mb-0 fs-12">Texto visível no comprovante do cliente.</p>
+        </div>
+
       </div>
     </Modal>
     <Modal v-model="showReceberModal" :title="'Receber Pagamento'" :name-button="'Prosseguir'" :processing="receberProcessing" size="md" @save="prosseguirRecebimento">
@@ -520,6 +585,23 @@
   </Layout>
 </template>
 
+<style scoped>
+/* Remove o efeito de card aninhado da tabela no Histórico Completo */
+#pdv-historico :deep(.card) {
+  border: none !important;
+  box-shadow: none !important;
+  margin-bottom: 0 !important;
+}
+#pdv-historico :deep(.row) {
+  margin: 0 !important;
+}
+#pdv-historico :deep(.card-body) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-bottom: 0 !important;
+}
+</style>
+
 <script setup>
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
@@ -528,6 +610,9 @@ import { ref, computed, toRef, watch, nextTick, onMounted, onUnmounted } from "v
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
 import axios from "axios";
+import flatPickr from "vue-flatpickr-component";
+import "flatpickr/dist/flatpickr.min.css";
+import "flatpickr/dist/l10n/pt.js";
 
 const props = defineProps({
   caixas: { type: Array, default: () => [] },
@@ -540,6 +625,7 @@ const caixasLocal = toRef(props, "caixas");
 const ultimosLocal = toRef(props, "ultimos");
 const movsLocal = toRef(props, "movs");
 const pagamentosLocal = ref([...(props.pagamentosPendentes || [])]);
+const selectedPendente = ref(null);
 
 watch(() => props.pagamentosPendentes, (nv) => {
   pagamentosLocal.value = [...(nv || [])];
@@ -600,7 +686,26 @@ function todayDMY() {
   return `${dd}-${mm}-${yyyy}`;
 }
 
-const flatpickrOptions = null;
+function todayYMD() {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+const pendentesData = ref(urlParams.get('data_pendentes') || todayYMD());
+
+function fetchPendentes() {
+  router.get(
+    window.location.pathname,
+    { data_pendentes: pendentesData.value },
+    { preserveState: true, replace: true, preserveScroll: true }
+  );
+}
+
+const flatpickrOptions = { altInput: true, altFormat: "d M, Y", dateFormat: "Y-m-d", locale: "pt" };
 
 const selCaixa = ref(null);
 const currentMovId = ref(null);
@@ -978,22 +1083,45 @@ async function salvarPixConfig() {
 
 const pendentesPolling = ref(false);
 let pendTimer = null;
-function startPendentesPolling() {
-  if (pendTimer) clearInterval(pendTimer);
-  pendTimer = setInterval(async () => {
-    // Polling focado apenas na tabela de pagamentos pendentes via AXIOS
-    // Isso evita reloads do Inertia que podem atrapalhar outras tabelas
-    try {
-      const response = await axios.get('/movimentacoes-caixa/pendentes');
-      if (response.data && response.data.pagamentosPendentes) {
-        pagamentosLocal.value = response.data.pagamentosPendentes;
+
+function isSelectedDateToday() {
+  return !pendentesData.value || pendentesData.value === todayYMD();
+}
+
+async function fetchPendentesNow() {
+  if (!isSelectedDateToday()) return;
+  try {
+    const response = await axios.get('/movimentacoes-caixa/pendentes');
+    if (response.data && response.data.pagamentosPendentes) {
+      pagamentosLocal.value = response.data.pagamentosPendentes;
+      
+      // Se o pagamento selecionado não estiver mais na lista (ex: foi pago via PIX), limpa a seleção para fechar o card
+      if (selectedPendente.value && selectedPendente.value.pagamento_id) {
+        const stillExists = pagamentosLocal.value.find(p => p.pagamento_id === selectedPendente.value.pagamento_id);
+        if (!stillExists) {
+          selectedPendente.value = null;
+        }
       }
-    } catch (e) {
-      console.error("Erro ao buscar pagamentos pendentes:", e);
     }
+  } catch (e) {
+    console.error("Erro ao buscar pagamentos pendentes:", e);
+  }
+}
+
+function startPendentesPolling() {
+  if (!isSelectedDateToday()) return; // Não faz polling em datas passadas
+  if (pendTimer) clearInterval(pendTimer);
+  
+  // Busca imediatamente antes de iniciar o intervalo
+  fetchPendentesNow();
+  
+  pendTimer = setInterval(() => {
+    if (!isSelectedDateToday()) { stopPendentesPolling(); return; }
+    fetchPendentesNow();
   }, 5000); // 5 segundos para não sobrecarregar
   pendentesPolling.value = true;
 }
+
 function stopPendentesPolling() {
   if (pendTimer) { clearInterval(pendTimer); pendTimer = null; }
   pendentesPolling.value = false;
@@ -1004,14 +1132,23 @@ onMounted(() => {
       if (document.hidden) {
         stopPendentesPolling();
       } else {
-        startPendentesPolling();
+        if (isSelectedDateToday()) startPendentesPolling();
       }
     };
     document.addEventListener("visibilitychange", onVis);
     visibilityCleanup = () => document.removeEventListener("visibilitychange", onVis);
 
-    // Inicia o polling global ao entrar na tela de movimentação
+    // Inicia o polling apenas se a data for hoje
+    if (isSelectedDateToday()) startPendentesPolling();
+  }
+});
+
+// Para/retoma o polling conforme a data selecionada
+watch(pendentesData, (newDate) => {
+  if (!newDate || newDate === todayYMD()) {
     startPendentesPolling();
+  } else {
+    stopPendentesPolling();
   }
 });
 watch([() => openForm.caixa_id], ([newCaixa]) => {
@@ -1160,6 +1297,8 @@ async function abrirPixWindow(pagamentoId) {
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       msgOk && msgOk.classList.remove('d-none');
       msgWarn && msgWarn.classList.add('d-none');
+      btnConfirm.disabled = true;
+      setTimeout(() => w.close());
     } catch (e) {
       msgWarn && msgWarn.classList.remove('d-none');
     }
@@ -1193,6 +1332,7 @@ const showOrcModal = ref(false);
 const orcamentoView = ref({});
 const orcamentoItensView = ref([]);
 const selectedPaciente = ref("");
+const selectedFaturamento = ref("");
 const selectedCpf = ref("");
 const orcLoading = ref(false);
 
@@ -1200,10 +1340,11 @@ async function mostrarOrcamento(faturamentoId) {
   const row = (pagamentosLocal.value || []).find(r => String(r.faturamento_id) === String(faturamentoId));
   const oid = row?.orcamento_id;
   selectedPaciente.value = row?.paciente || "";
+  selectedFaturamento.value = row?.pagamento_id || "";
   if (!oid) return;
   orcLoading.value = true;
   try {
-    const resp = await axios.get(`/orcamentos/${oid}`);
+    const resp = await axios.get(`/orcamentos/${oid}?include_all=1`);
     orcamentoView.value = resp.data?.orcamento || {};
     orcamentoItensView.value = resp.data?.itens || [];
     selectedCpf.value = orcamentoView.value?.paciente_cpf || "";

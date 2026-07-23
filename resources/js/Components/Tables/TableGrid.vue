@@ -617,10 +617,8 @@ function initGrid() {
         if (!props.serverUrl) isLoading.value = false;
     });
     observeTableSelectionPersistence();
-    // Exibe animação Lottie se não houver dados (apenas modo local)
-    if (!props.serverUrl && filteredData.value.length === 0) {
-        setTimeout(observeLottieContainer, 0);
-    }
+    // Sempre inicializa o observer para garantir que a animação seja exibida (inclusive no modo server)
+    setTimeout(observeLottieContainer, 0);
 }
 
 defineExpose({ getSelectedRowIds, getSelectedRowObjects, clearSelection, setSelectedRowIds });

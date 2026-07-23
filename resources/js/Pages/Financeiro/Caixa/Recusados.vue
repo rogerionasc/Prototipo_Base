@@ -4,7 +4,7 @@
     <PageHeader title="Pagamentos Recusados" pageTitle="Caixa" />
     <TableGrid
       :columns="recusadosCols"
-      :data="recusados"
+      :data="recusadosData"
       :tableTitle="'Pagamentos Recusados'"
       :showCheckbox="false"
       :search="true"
@@ -59,7 +59,7 @@
  const showUnrefuseModal = ref(false);
  const unrefuseId = ref(null);
  const recusadosCols = [
-   { id: "id", name: "ID" },
+   { id: "pagamento_id_str", name: "Nº Pag." },
    { id: "paciente", name: "Paciente" },
    { id: "numero_orcamento", name: "Orçamento" },
    { id: "data_orcamento", name: "Emissão" },
@@ -81,10 +81,15 @@
    }
  ];
 
+ // Pre-processa os dados adicionando pagamento_id_str como string
+ const recusadosData = computed(() =>
+   (recusados.value || []).map(r => ({ ...r, pagamento_id_str: String(r.num_pagamento ?? '') }))
+ );
+
  const unrefuseInfo = computed(() => {
    const id = unrefuseId.value;
    if (!id) return {};
-   const r = (recusados.value || []).find(x => String(x.id) === String(id));
+   const r = (recusados.value || []).find(x => String(x.num_pagamento) === String(id));
    return {
      paciente: r?.paciente || "—",
      valor: formatCurrency(r?.valor || 0),
@@ -128,7 +133,3 @@
  .table-clean tbody tr:not(:last-child) td { border-bottom: 1px solid var(--bs-border-color); }
  .table-clean td, .table-clean th { vertical-align: middle; }
   </style>
- <style scoped>
- :deep(.table thead th:nth-child(1)),
- :deep(.table tbody td:nth-child(1)) { display: none; }
- </style>

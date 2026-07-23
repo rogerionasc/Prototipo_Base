@@ -149,10 +149,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/orcamentos/{id}/approve", [OrcamentoController::class, "approve"])->whereNumber('id')->name('orcamentos.approve');
         Route::put("/orcamentos/{id}/unapprove", [OrcamentoController::class, "unapprove"])->whereNumber('id')->name('orcamentos.unapprove');
 
-        // Faturamento
-        Route::get("/faturamento/particular", [FaturamentoController::class, "particular"])->name('faturamento.particular');
-        Route::get("/faturamento/convenios", [FaturamentoController::class, "convenios"])->name('faturamento.convenios');
-        Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');
+        // Faturamento (Ocultado temporariamente)
+        // Route::get("/faturamento/particular", [FaturamentoController::class, "particular"])->name('faturamento.particular');
+        // Route::get("/faturamento/convenios", [FaturamentoController::class, "convenios"])->name('faturamento.convenios');
+        // Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');
 
         // Financeiro
         Route::get("/contas-receber", [ContasReceberController::class, "index"])->name('financeiro.contas_receber.index');

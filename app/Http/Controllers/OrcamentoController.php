@@ -260,6 +260,13 @@ class OrcamentoController extends Controller
                     ->limit(1)
                     ->select(DB::raw('1'));
             }, 'pago')
+            ->selectSub(function ($q) {
+                $q->from('convenios as c')
+                    ->whereColumn('c.id', 'o.convenio_id')
+                    ->where('c.tipo', '!=', 'PARTICULAR')
+                    ->limit(1)
+                    ->select(DB::raw('1'));
+            }, 'is_convenio')
             ->orderByDesc('o.updated_at')
             ->limit(10)
             ->get();
@@ -389,6 +396,7 @@ class OrcamentoController extends Controller
                 'o.valor_total',
                 'o.aprovado',
                 'o.paciente_id',
+                'o.convenio_id',
                 DB::raw("COALESCE(pa.nome,'') AS paciente")
             )
             ->selectSub(function ($q) {
@@ -399,6 +407,13 @@ class OrcamentoController extends Controller
                     ->limit(1)
                     ->select(DB::raw('1'));
             }, 'pago')
+            ->selectSub(function ($q) {
+                $q->from('convenios as c')
+                    ->whereColumn('c.id', 'o.convenio_id')
+                    ->where('c.tipo', '!=', 'PARTICULAR')
+                    ->limit(1)
+                    ->select(DB::raw('1'));
+            }, 'is_convenio')
             ->where('o.paciente_id', $id)
             ->orderByDesc('o.created_at')
             ->get();
@@ -584,8 +599,30 @@ class OrcamentoController extends Controller
                 'o.valor_total',
                 'o.aprovado',
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
-                DB::raw("COALESCE(p.cpf,'') AS cpf"),
-            );
+                DB::raw("COALESCE(p.cpf,'') AS cpf")
+            )
+            ->selectSub(function ($q) {
+                $q->from('pagamentos as pg')
+                    ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
+                    ->whereColumn('f.orcamento_id', 'o.id')
+                    ->limit(1)
+                    ->select('pg.id');
+            }, 'pagamento_id')
+            ->selectSub(function ($q) {
+                $q->from('pagamentos as pg')
+                    ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
+                    ->whereColumn('f.orcamento_id', 'o.id')
+                    ->where('pg.status', 'CONFIRMADO')
+                    ->limit(1)
+                    ->select(DB::raw('1'));
+            }, 'pago')
+            ->selectSub(function ($q) {
+                $q->from('convenios as c')
+                    ->whereColumn('c.id', 'o.convenio_id')
+                    ->where('c.tipo', '!=', 'PARTICULAR')
+                    ->limit(1)
+                    ->select(DB::raw('1'));
+            }, 'is_convenio');
         if (!empty($pacienteId)) {
             $query->where('o.paciente_id', $pacienteId);
         }
@@ -649,16 +686,23 @@ public function searchPaid(Request $request)
                ->select(DB::raw('COUNT(*)'));
         }, 'agendamentos_ativos_total')
 
-        // aprovado
-        ->where('o.aprovado', true)
-
-        // pagamento confirmado
-        ->whereExists(function ($q5) {
-            $q5->from('pagamentos as pg')
-               ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
-               ->whereColumn('f.orcamento_id', 'o.id')
-               ->where('pg.status', 'CONFIRMADO')
-               ->select(DB::raw(1));
+        // aprovado e pagamento confirmado, OU ser de Convênio
+        ->where(function ($queryBase) {
+            $queryBase->where(function ($qPart) {
+                $qPart->where('o.aprovado', true)
+                      ->whereExists(function ($q5) {
+                          $q5->from('pagamentos as pg')
+                             ->join('faturamentos as f', 'f.id', '=', 'pg.faturamento_id')
+                             ->whereColumn('f.orcamento_id', 'o.id')
+                             ->where('pg.status', 'CONFIRMADO')
+                             ->select(DB::raw(1));
+                      });
+            })->orWhereExists(function ($qConv) {
+                $qConv->from('convenios as c')
+                      ->whereColumn('c.id', 'o.convenio_id')
+                      ->where('c.tipo', '!=', 'PARTICULAR')
+                      ->select(DB::raw(1));
+            });
         })
 
         /**
@@ -785,6 +829,9 @@ public function searchPaid(Request $request)
         }
         $payor = $this->resolvePayorByConvenioId($orcamento->convenio_id ? (int)$orcamento->convenio_id : null);
         $isConvenioPayor = $payor['tipo_pagador'] === 'CONVENIO';
+        if ($isConvenioPayor) {
+            return response()->json(['success' => false, 'message' => 'Orçamentos de convênio não necessitam de aprovação financeira prévia.'], 422);
+        }
         $faturamentoConvenioId = $payor['convenio_id'];
         DB::transaction(function () use ($orcamento, $isConvenioPayor, $faturamentoConvenioId) {
             $orcamento->aprovado = true;
@@ -808,6 +855,11 @@ public function searchPaid(Request $request)
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+            } else {
+                DB::table('faturamentos')->where('id', $fatId)->update([
+                    'status' => $isConvenioPayor ? 'AGUARDANDO_ENVIO' : 'AGUARDANDO_PAGAMENTO',
+                    'updated_at' => now(),
+                ]);
             }
 
             if ($fatId) {
@@ -821,6 +873,11 @@ public function searchPaid(Request $request)
                         'vencimento' => $isConvenioPayor ? now()->addDays(30)->toDateString() : now()->toDateString(),
                         'status' => 'ABERTO',
                         'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    DB::table('contas_receber')->where('id', $crId)->update([
+                        'status' => 'ABERTO',
                         'updated_at' => now(),
                     ]);
                 }

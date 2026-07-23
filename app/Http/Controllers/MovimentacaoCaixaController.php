@@ -75,7 +75,7 @@ class MovimentacaoCaixaController extends Controller
             ->orderByDesc('m.updated_at')
             ->limit(100)
             ->get();
-        $pagamentosPendentes = $this->getPagamentosPendentes();
+        $pagamentosPendentes = $this->getPagamentosPendentes(request('data_pendentes'));
         $ultimosPagamentos = DB::table('pagamentos as p')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
             ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
@@ -102,7 +102,7 @@ class MovimentacaoCaixaController extends Controller
             ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->select(
-                'p.id',
+                'p.id as num_pagamento',
                 'o.id as orcamento_id',
                 'p.valor',
                 'p.forma_pagamento',
@@ -128,8 +128,9 @@ class MovimentacaoCaixaController extends Controller
         ]);
     }
 
-    private function getPagamentosPendentes()
+    private function getPagamentosPendentes($date = null)
     {
+        $date = $date ?: now()->toDateString();
         $pendIds = DB::table('pagamentos as pg')
             ->select(DB::raw('MAX(pg.id) as id'), 'pg.faturamento_id')
             ->where('pg.status', 'PENDENTE')
@@ -157,6 +158,7 @@ class MovimentacaoCaixaController extends Controller
             )
             ->where('f.tipo_pagador', 'PARTICULAR')
             ->where('f.status', 'AGUARDANDO_PAGAMENTO')
+            ->whereDate('f.created_at', $date)
             ->whereNull('o.deleted_at')
             ->where('o.aprovado', true)
             ->orderByDesc('f.updated_at')

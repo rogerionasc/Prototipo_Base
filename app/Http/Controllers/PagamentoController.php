@@ -593,6 +593,14 @@ class PagamentoController extends Controller
             'recusa_justificativa' => $data['recusa_justificativa'] ?? null,
             'recusado_por' => $request->user()?->id,
         ]);
+
+        if ($pag->faturamento_id) {
+            DB::table('faturamentos')->where('id', $pag->faturamento_id)->update([
+                'status' => 'RECUSADO',
+                'updated_at' => now(),
+            ]);
+        }
+
         return back()->with('success', 'Pagamento recusado');
     }
 
@@ -604,7 +612,8 @@ class PagamentoController extends Controller
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->leftJoin('users as u', 'u.id', '=', 'p.recusado_por')
             ->select(
-                'p.id',
+                'p.id as num_pagamento',
+                'p.faturamento_id',
                 'o.id as orcamento_id',
                 'p.valor',
                 'p.forma_pagamento',
@@ -641,6 +650,14 @@ class PagamentoController extends Controller
             'recusa_justificativa' => null,
             'recusado_por' => null,
         ]);
+
+        if ($pag->faturamento_id) {
+            DB::table('faturamentos')->where('id', $pag->faturamento_id)->update([
+                'status' => 'AGUARDANDO_PAGAMENTO',
+                'updated_at' => now(),
+            ]);
+        }
+
         return back()->with('success', 'Recusa cancelada. Pagamento retornou para pendentes');
     }
 
@@ -687,6 +704,18 @@ class PagamentoController extends Controller
                 'status' => $novoStatusFat,
                 'updated_at' => now(),
             ]);
+
+            if ($quitado) {
+                // Fetch the orcamento_id from faturamento
+                $orcamentoId = DB::table('faturamentos')->where('id', $fatId)->value('orcamento_id');
+                if ($orcamentoId) {
+                    $statusAguardando = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Aguardando Atendimento']);
+                    DB::table('agendamentos')->where('orcamento_id', $orcamentoId)->update([
+                        'status_id' => $statusAguardando->id,
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
         } elseif ($tipo === 'CONVENIO') {
             if ($quitado) {
                 DB::table('faturamentos')->where('id', $fatId)->update([

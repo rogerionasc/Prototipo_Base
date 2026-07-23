@@ -4,192 +4,204 @@
         <Head title="Orçamentos" />
         <PageHeader title="Orçamento" pageTitle="Atendimento" />
 
+        <!-- Top Actions removed, button moved to Recent Quotes header -->
+
         <div class="row">
-            <div class="col-lg-9">
-                <div class="card">
+            <!-- Left Column: Main Form -->
+            <div class="col-lg-8">
+                
+                <!-- Card 1: Patient Data -->
+                <div class="card mb-3">
+                    <div class="card-header align-items-center d-flex">
+                        <h4 class="card-title mb-0 flex-grow-1">Dados do Paciente</h4>
+                    </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Paciente</label>
-                                <span class="text-danger ms-1">*</span>
+                            <div class="col-md-6">
+                                <label class="form-label">Paciente <span class="text-danger">*</span></label>
                                 <select data-choices v-model="form.paciente_id" class="form-select" ref="selPaciente"
                                     :disabled="locked" required :class="{ 'is-invalid': !!form.errors.paciente_id }">
-                                    <option value="">Selecione</option>
+                                    <option value="">Buscar paciente...</option>
                                 </select>
-                                <div v-if="form.errors.paciente_id" class="invalid-feedback d-block">{{
-                                    form.errors.paciente_id }}</div>
+                                <div v-if="form.errors.paciente_id" class="invalid-feedback d-block">{{ form.errors.paciente_id }}</div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Convênio</label>
-                                <span class="text-danger ms-1">*</span>
+                            <div class="col-md-6">
+                                <label class="form-label">Convênio Vinculado <span class="text-danger">*</span></label>
                                 <select data-choices v-model="form.convenio_id" class="form-select" ref="selConvenio"
-                                    :disabled="locked || convenioLoading" required
-                                    :class="{ 'is-invalid': !!form.errors.convenio_id }">
-                                    <option :value="null">Selecione</option>
-                                    <option v-for="c in conveniosPacienteLocal" :key="c.id" :value="c.id">{{ c.descricao }}
-                                    </option>
+                                    :disabled="locked || convenioLoading" required :class="{ 'is-invalid': !!form.errors.convenio_id }">
+                                    <option :value="null">Selecione o convênio...</option>
+                                    <option v-for="c in conveniosPacienteLocal" :key="c.id" :value="c.id">{{ c.descricao }}</option>
                                 </select>
-                                <div v-if="form.errors.convenio_id" class="invalid-feedback d-block">{{
-                                    form.errors.convenio_id }}</div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Procedimentos</label>
-                                <span class="text-danger ms-1">*</span>
-                                <select ref="selProcedimento" v-model="selectedProcId" class="form-select" data-choices :disabled="locked || procedimentosSelectLoading"
-                                    @change="onSelectProcedure" required :class="{ 'is-invalid': !!form.errors.itens }">
-                                    <option value="">Buscar procedimento</option>
-                                    <option v-for="p in procedimentosSelectRows" :key="`${p.source || ''}:${p.id}`" :value="`${p.source || ''}:${p.id}`">{{ p.descricao ? `${p.nome} - ${p.descricao}` : p.nome }}
-                                    </option>
-                                </select>
-                                <div v-if="form.errors.itens" class="invalid-feedback d-block">{{ form.errors.itens }}</div>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Data de Emissão</label>
-                                <flatPickr v-model="form.data_emissao" class="form-control" :config="flatpickrOptions"
-                                    :disabled="locked" placeholder="Selecione a data" />
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Validade</label>
-                                <flatPickr v-model="form.validade" class="form-control" :config="flatpickrOptions"
-                                    :disabled="locked" placeholder="Selecione a data" />
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Desconto (R$)</label>
-                                <input :value="formatCurrency(form.desconto)" type="text" class="form-control"
-                                    :disabled="locked" @input="onCurrencyInputForm($event, 'desconto')" />
+                                <div v-if="form.errors.convenio_id" class="invalid-feedback d-block">{{ form.errors.convenio_id }}</div>
                             </div>
 
-                            <div class="col-md-3 d-flex align-items-end">
-                                <div class="form-check">
-                                    <input v-model="form.faturamento_previsto" class="form-check-input" type="checkbox"
-                                        :disabled="locked" id="fatPrev" />
-                                    <label class="form-check-label" for="fatPrev">Faturamento Previsto</label>
-                                </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Data de Emissão</label>
+                                <flatPickr v-model="form.data_emissao" class="form-control" :config="flatpickrOptions" :disabled="locked" placeholder="Selecione a data" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Validade do Orçamento</label>
+                                <flatPickr v-model="form.validade" class="form-control" :config="flatpickrOptions" :disabled="locked" placeholder="Selecione a data" />
                             </div>
                         </div>
+                    </div>
+                </div>
 
+                <!-- Card 2: Procedures -->
+                <div class="card">
+                    <div class="card-header align-items-center d-flex">
+                        <h4 class="card-title mb-0 flex-grow-1">Procedimentos</h4>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Search Bar -->
+                        <div class="mb-3">
+                            <label class="form-label">Buscar Procedimento</label>
+                            <select ref="selProcedimento" v-model="selectedProcId" class="form-select" data-choices :disabled="locked || procedimentosSelectLoading"
+                                @change="onSelectProcedure" required :class="{ 'is-invalid': !!form.errors.itens }">
+                                <option value="">Digite para buscar por nome ou código...</option>
+                                <option v-for="p in procedimentosSelectRows" :key="`${p.source || ''}:${p.id}`" :value="`${p.source || ''}:${p.id}`">{{ p.descricao ? `${p.nome} - ${p.descricao}` : p.nome }}</option>
+                            </select>
+                            <div v-if="form.errors.itens" class="invalid-feedback d-block mt-2">{{ form.errors.itens }}</div>
+                        </div>
 
-
-                        <hr class="my-4" />
-
-
-
+                        <!-- Invoice Table -->
                         <div class="table-responsive">
-                            <table class="table align-middle">
+                            <table class="table table-bordered align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width: 35%">Procedimento</th>
-                                        <th style="width: 15%">Convênio</th>
-                                        <th style="width: 20%">Valor Unitário</th>
-                                        <th style="width: 20%">Valor Total</th>
-                                        <th style="width: 10%"></th>
+                                        <th scope="col" style="width: 50%">Descrição do Procedimento</th>
+                                        <th scope="col" class="text-end" style="width: 20%">Vlr. Unitário</th>
+                                        <th scope="col" class="text-end" style="width: 20%">Vlr. Total</th>
+                                        <th scope="col" class="text-center" style="width: 10%">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template v-for="(it, idx) in itensLocal" :key="`group-${idx}`">
+                                        <!-- Main Row -->
                                         <tr>
                                             <td>
-                                                <span>{{ procedimentoNome(it) }}</span>
+                                                <h6 class="mb-1">{{ procedimentoNome(it) }}</h6>
+                                                <span class="text-muted small">Convênio: {{ selectedConvenioRow?.descricao || '—' }}</span>
                                             </td>
-                                            <td>
-                                                <span>{{ selectedConvenioRow?.descricao || '—' }}</span>
-                                            </td>
-                                            <td>
-                                                <span>{{ formatCurrency(it.valor_unitario) }}</span>
-                                            </td>
-                                            <td>
-                                                <span>{{ formatCurrency(it.valor_total) }}</span>
-                                            </td>
-                                            <td class="text-end">
-                                                <button class="btn btn-outline-danger btn-sm" type="button"
-                                                    :disabled="locked" @click="removeItem(idx)">Remover</button>
+                                            <td class="text-end">{{ formatCurrency(it.valor_unitario) }}</td>
+                                            <td class="text-end fw-medium">{{ formatCurrency(it.valor_total) }}</td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm btn-soft-danger" type="button" :disabled="locked" @click="removeItem(idx)" title="Remover">
+                                                    <i class="ri-delete-bin-line"></i>
+                                                </button>
                                             </td>
                                         </tr>
-                                        <tr v-for="n in sessionCount(it)" :key="`sess-${idx}-${n}`"
-                                            class="session-row">
-                                            <td colspan="4">
-                                                <div class="session-line">
-                                                    <span class="session-dot"></span>
-                                                    <span class="session-badge"><i
-                                                            class="ri-calendar-line me-1"></i>Sessão {{ n }}/{{
-                                                        sessionCount(it) }}</span>
-                                                    <span class="session-text">Etapa do tratamento</span>
+                                        <!-- Sessions Rows -->
+                                        <tr v-for="n in sessionCount(it)" :key="`sess-${idx}-${n}`">
+                                            <td colspan="4" class="py-2 ps-4">
+                                                <div class="d-flex align-items-center text-muted small">
+                                                    <i class="ri-arrow-right-s-line me-2"></i>
+                                                    <span class="badge bg-light text-dark border me-2">Sessão {{ n }}/{{ sessionCount(it) }}</span>
+                                                    <span>Agendamento pendente</span>
                                                 </div>
                                             </td>
-                                            <td></td>
                                         </tr>
                                     </template>
+                                    <tr v-if="!itensLocal.length">
+                                        <td colspan="4" class="text-center py-4 text-muted">
+                                            Nenhum procedimento adicionado ao orçamento.
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
-
-                        <div class="row mt-3">
-                            <div class="col-md-4">
-                                <div class="p-3 border rounded">
-                                    <div class="d-flex justify-content-between">
-                                        <span>Valor Bruto</span>
-                                        <strong>{{ formatCurrency(valorBruto) }}</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Desconto</span>
-                                        <strong>- {{ formatCurrency(form.desconto || 0) }}</strong>
-                                    </div>
-                                    <hr />
-                                    <div class="d-flex justify-content-between">
-                                        <span>Valor Total</span>
-                                        <strong>{{ formatCurrency(valorTotal) }}</strong>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-8 text-end d-flex align-items-end justify-content-end">
-                                <button class="btn btn-soft-info me-2" type="button" @click="openConsultModal">Consultar
-                                    Orçamento</button>
-                                <button class="btn btn-success" type="button" :disabled="saveProcessing || locked"
-                                    @click="save">
-                                    <span v-if="saveProcessing" class="spinner-border spinner-border-sm me-2" />
-                                    Salvar Orçamento
-                                </button>
+                    </div>
+                </div>
+                <!-- Card 3: Financial Summary -->
+                <div class="card mt-3">
+                    <div class="card-header align-items-center d-flex">
+                        <h4 class="card-title mb-0 flex-grow-1">Resumo do Orçamento</h4>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted fw-medium">Subtotal Bruto</span>
+                            <span class="fw-medium text-dark">{{ formatCurrency(valorBruto) }}</span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted fw-medium">Desconto</span>
+                            <div class="w-25">
+                                <input :value="formatCurrency(form.desconto)" type="text" class="form-control text-end"
+                                    :disabled="locked" @input="onCurrencyInputForm($event, 'desconto')" placeholder="R$ 0,00" />
                             </div>
                         </div>
+
+                        <div class="form-check form-switch form-switch-success mb-3">
+                            <input v-model="form.faturamento_previsto" class="form-check-input" type="checkbox" :disabled="locked" id="fatPrev" />
+                            <label class="form-check-label text-muted" for="fatPrev">Faturamento Previsto (Receb. Convênio)</label>
+                        </div>
+                        
+                        <hr class="border-primary opacity-25">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <span class="fw-medium fs-15">Valor Total Líquido</span>
+                            <span class="fw-bolder fs-4 text-primary">{{ formatCurrency(valorTotal) }}</span>
+                        </div>
+                        
+                        <button class="btn btn-success w-100" type="button" :disabled="saveProcessing || locked" @click="save">
+                            <span v-if="saveProcessing" class="spinner-border spinner-border-sm me-2" />
+                            <i v-else class="ri-save-3-line align-middle me-1"></i>
+                            Salvar Orçamento
+                        </button>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3">
+
+            <!-- Right Column: Summary & History -->
+            <div class="col-lg-4">
+                
+                <!-- Card 4: Recent History (Moved to top) -->
                 <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Últimos Orçamentos</h5>
+                    <div class="card-header align-items-center d-flex">
+                        <h4 class="card-title mb-0 flex-grow-1">Orçamentos Recentes</h4>
+                        <div class="flex-shrink-0">
+                            <button class="btn btn-sm btn-soft-primary" type="button" @click="openConsultModal">
+                                <i class="ri-search-line align-bottom me-1"></i> Consultar
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            <li v-for="o in ultimosLocal" :key="o.id"
-                                class="list-group-item d-flex justify-content-between align-items-center">
-                                <span class="d-flex flex-column">
-                                    <span class="fw-bold">{{ o.numero }}</span>
-                                    <span class="text-muted small">{{ formatDateTimeBR(o.criado_em) }}</span>
-                                </span>
-                                <span class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-soft-info" type="button"
-                                        @click="handleConsultEdit(o.id)" :disabled="o.pago"
-                                        :title="o.pago ? 'Pagamento confirmado' : 'Editar'">
-                                        <i class="ri-pencil-fill align-bottom"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-soft-primary" type="button"
-                                        @click="handleUltimoApprove(o.id)" :disabled="o.aprovado || o.pago"
-                                        :title="o.pago ? 'Pagamento confirmado' : (o.aprovado ? 'Já aprovado' : 'Aprovar')">
-                                        <i class="ri-check-fill align-bottom"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-soft-warning" type="button"
-                                        @click="handleConsultPrint(o.id)" title="Imprimir">
-                                        <i class="ri-printer-fill align-bottom"></i>
-                                    </button>
-                                </span>
-                            </li>
-                            <li v-if="!ultimosLocal || ultimosLocal.length === 0" class="list-group-item text-muted">
-                                Sem orçamentos recentes
-                            </li>
-                        </ul>
+                        <div class="vstack gap-2" v-if="ultimosLocal && ultimosLocal.length > 0">
+                            <div v-for="o in ultimosLocal" :key="o.id" class="d-flex align-items-center border rounded p-2">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">#{{ o.numero }}
+                                        <span class="badge ms-1" :class="o.is_convenio ? '' : (o.pago ? 'bg-success' : (o.aprovado ? 'bg-info' : 'bg-warning'))" :style="o.is_convenio ? 'background-color: #8b5cf6 !important; color: #fff !important;' : ''">
+                                            {{ o.is_convenio ? 'Convênio' : (o.pago ? 'Pago' : (o.aprovado ? 'Aprovado' : 'Pendente')) }}
+                                        </span>
+                                    </h6>
+                                    <p class="text-muted mb-0 small">{{ formatDateTimeBR(o.criado_em) }}</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-sm btn-soft-info btn-icon" type="button"
+                                            @click="handleConsultEdit(o.id)" :disabled="o.pago" title="Abrir/Editar">
+                                            <i class="ri-pencil-fill"></i>
+                                        </button>
+                                        <button v-if="!o.is_convenio" class="btn btn-sm btn-soft-success btn-icon" type="button"
+                                            @click="handleUltimoApprove(o.id)" :disabled="o.aprovado || o.pago" title="Aprovar">
+                                            <i class="ri-check-double-line"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-soft-secondary btn-icon" type="button"
+                                            @click="handleConsultPrint(o.id)" title="Imprimir">
+                                            <i class="ri-printer-fill"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-center py-3 text-muted">
+                            Sem orçamentos recentes.
+                        </div>
                     </div>
                 </div>
+
             </div>
         </div>
         <Modal v-model="consultModal" :title="'Consultar Orçamento'" :name-button="'Fechar'" :processing="false"
@@ -428,6 +440,11 @@ const selectedConvenioRow = computed(() => {
 let procSelectReqSeq = 0;
 watch(() => form.convenio_id, async () => {
     const cid = String(form.convenio_id ?? '').trim();
+    
+    if (!keepConvenioOnPacienteChange.value) {
+        itensLocal.value = [];
+    }
+
     selectedProcId.value = "";
     procedimentosSelectRows.value = [];
     procedimentosSelectLoading.value = false;
@@ -833,6 +850,7 @@ const orcamentosConsulta = ref([]);
 const consultQuery = ref('');
 const consultColumns = [
     { id: 'numero', name: 'Número' },
+    { id: 'pagamento_id', name: 'Nº Pag.' },
     { id: 'data_emissao', name: 'Emissão' },
     { id: 'validade', name: 'Validade' },
     { id: 'paciente', name: 'Paciente' },
@@ -842,9 +860,11 @@ const consultColumns = [
             const v = String(cell || '').toLowerCase();
             const text = cell || '-';
             let cls = 'bg-light text-dark';
+            let style = '';
             if (v === 'aprovado') cls = 'bg-success-subtle text-success';
+            else if (v === 'convênio') { cls = ''; style = 'background-color: #e9d5ff !important; color: #7e22ce !important;'; }
             else if (v === 'aguardando aprovação' || v === 'pendente') cls = 'bg-warning-subtle text-warning';
-            return html(`<span class="badge ${cls}">${text}</span>`);
+            return html(`<span class="badge ${cls}" style="${style}">${text}</span>`);
         }
     },
     { id: 'total', name: 'Total' },
@@ -853,11 +873,12 @@ const orcamentosConsultaGrid = computed(() => {
     return (orcamentosConsulta.value || []).map(o => ({
         id: o.id,
         numero: o.numero,
+        pagamento_id: o.pagamento_id || '—',
         data_emissao: o.data_emissao,
         validade: o.validade,
         paciente: o.paciente,
         cpf: o.cpf,
-        status: o.aprovado ? 'Aprovado' : 'Aguardando aprovação',
+        status: o.is_convenio ? 'Convênio' : (o.aprovado ? 'Aprovado' : 'Aguardando aprovação'),
         total: formatCurrency(o.valor_total),
     }));
 });

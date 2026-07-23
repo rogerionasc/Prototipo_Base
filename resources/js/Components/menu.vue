@@ -43,19 +43,7 @@ export default {
                         { href: "#", label: "Relatórios" }
                     ]
                 },
-                {
-                    icon: "ri-file-list-3-line",
-                    title: "Faturamento",
-                    type: "link",
-                    target: "#faturamento",
-                    children: [
-                        { href: "/faturamento/particular", label: "Particular" },
-                        { href: "/faturamento/convenios", label: "Convênios" },
-                        { href: "#", label: "Guias" },
-                        { href: "#", label: "Glosas" },
-                        { href: "#", label: "Relatórios" }
-                    ]
-                },
+
                 {
                     icon: "ri-money-dollar-box-line",
                     title: this.$t("t-till"),

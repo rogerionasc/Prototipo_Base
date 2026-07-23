@@ -197,13 +197,7 @@ class AgendamentoController extends Controller
             $convenioId = empty($orcamentoId) ? ($data['convenio_id'] ?? null) : null;
 
             if (empty($orcamentoId)) {
-                if (empty($convenioId)) {
-                    throw new HttpResponseException(response()->json([
-                        'errors' => [
-                            'orcamento_id' => ['Para atendimento particular, selecione um orçamento pago.']
-                        ]
-                    ], 422));
-                }
+                // Auto-generate Orcamento for both Particular and Convenio if it doesn't exist.
                 if (!empty($convenioId)) {
                     $hasConvenio = DB::table('paciente_convenio')
                         ->where('paciente_id', $pacId)
@@ -299,7 +293,14 @@ class AgendamentoController extends Controller
                 ->join('orcamento_procedimentos as op', 'op.orcamento_id', '=', 'o.id')
                 ->where('o.id', (int)$orcamentoId)
                 ->where('o.paciente_id', $pacId)
-                ->where('o.aprovado', true)
+                ->where(function ($q) {
+                    $q->where('o.aprovado', true)
+                      ->orWhereExists(function ($q2) {
+                          $q2->from('convenios as c')
+                             ->whereColumn('c.id', 'o.convenio_id')
+                             ->where('c.tipo', '!=', 'PARTICULAR');
+                      });
+                })
                 ->whereNull('o.deleted_at')
                 ->whereNull('op.deleted_at');
 
@@ -363,6 +364,23 @@ class AgendamentoController extends Controller
                     DB::table('contas_receber')->where('id', $crId)->update([
                         'convenio_id' => $orcMeta->convenio_id,
                         'vencimento' => now()->addDays(30)->toDateString(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            if ($fatId && !$isConvenio) {
+                $pagId = (int)DB::table('pagamentos')->where('faturamento_id', $fatId)->where('status', 'PENDENTE')->value('id');
+                if (!$pagId && $orcMeta) {
+                    DB::table('pagamentos')->insert([
+                        'faturamento_id' => $fatId,
+                        'caixa_id' => null,
+                        'movimentacao_id' => null,
+                        'valor' => (float)($orcMeta->valor_total ?? 0),
+                        'forma_pagamento' => null,
+                        'data_pagamento' => null,
+                        'status' => 'PENDENTE',
+                        'created_at' => now(),
                         'updated_at' => now(),
                     ]);
                 }
@@ -451,6 +469,12 @@ class AgendamentoController extends Controller
                 ]);
             }
 
+            $agendamentoStatusId = $data['status_id'] ?? null;
+            if (empty($data['orcamento_id']) && !$isConvenio) {
+                $statusAguardando = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Aguardando Pagamento']);
+                $agendamentoStatusId = $statusAguardando->id;
+            }
+
             $agendamento = Agendamento::create([
                 'agenda_medica_id' => $agenda->id,
                 'data' => $dt->toDateString(),
@@ -460,7 +484,7 @@ class AgendamentoController extends Controller
                 'tuss_id' => $isConvenio ? $procId : null,
                 'sessao_tratamento_id' => $sessaoId,
                 'orcamento_id' => $orcamentoId,
-                'status_id' => $data['status_id'] ?? null,
+                'status_id' => $agendamentoStatusId,
                 'agendamento_origem_id' => null,
                 'valor_cobrado' => $valorCobrado,
                 'observacoes' => $data['observacoes'] ?? null,

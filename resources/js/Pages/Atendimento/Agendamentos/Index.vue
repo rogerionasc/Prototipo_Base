@@ -867,7 +867,7 @@ export default {
             try {
                 const resp = await window.axios.get(`/pacientes/${pid}/orcamentos`);
                 const arr = Array.isArray(resp?.data?.orcamentos) ? resp.data.orcamentos : [];
-                const paid = arr.filter(o => !!o.pago);
+                const paid = arr.filter(o => !!o.pago || !!o.is_convenio);
                 this.orcamentosPagos = paid;
                 const keepId = this.orcamentoSelecionadoId != null && paid.some(o => String(o.id) === String(this.orcamentoSelecionadoId));
                 if (!keepId) {
@@ -1004,7 +1004,17 @@ export default {
                     } catch (_) { }
                     return;
                 }
-                this.agendamentoForm.data = ds;
+                // Reset agendamentoForm and clear any flash warnings before showing modal
+                try {
+                    const fp = (this.$page?.props?.flash ?? {});
+                    if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
+                } catch (_) { }
+
+                this.agendamentoForm = { paciente_id: null, convenio_id: null, profissional_saude_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
+                this.termoBuscaPaciente = "";
+                this.conveniosPacienteCriacao = [];
+                this.procedimentosSelectRows = [];
+                this.procedimentosFiltrados = [...(this.procedimentosLocal || [])];
                 this.buscarAgendasPorData(ds);
             } catch (e) { }
             this.editandoNoModalDeCriacao = false;
@@ -1029,6 +1039,11 @@ export default {
         },
         abrirNovoAgendamento() {
             this.editandoNoModalDeCriacao = false;
+            // Limpa avisos de flash anteriores ao abrir modal limpo
+            try {
+                const fp = (this.$page?.props?.flash ?? {});
+                if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
+            } catch (_) { }
             this.agendamentoForm = { paciente_id: null, convenio_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
             this.termoBuscaPaciente = "";
             this.mostrarSugestoesPaciente = false;
@@ -1251,7 +1266,7 @@ export default {
             try {
                 const resp = await window.axios.get(`/pacientes/${pid}/orcamentos`);
                 const arr = Array.isArray(resp?.data?.orcamentos) ? resp.data.orcamentos : [];
-                const paid = arr.filter(o => !!o.pago);
+                const paid = arr.filter(o => !!o.pago || !!o.is_convenio);
                 this.orcamentosPagosEdicao = paid;
                 if (paid.length > 0) {
                     let chosen = null;
@@ -1314,10 +1329,29 @@ export default {
             try {
                 const res = await window.axios.get(`/orcamentos/${o.id}`);
                 const itens = Array.isArray(res?.data?.itens) ? res.data.itens : [];
-                const ids = new Set(itens.map(it => it.procedimento_id));
-                const filtered = (this.procedimentosLocal || []).filter(p => ids.has(p.id));
+                const filteredMap = new Map();
+                itens.forEach(it => {
+                    const id = it.tuss_id || it.procedimento_id;
+                    if (id && !filteredMap.has(id)) {
+                        filteredMap.set(id, {
+                            id: id,
+                            nome: it.procedimento_nome || "",
+                            descricao: it.procedimento_desc || "",
+                            eh_tratamento: it.eh_tratamento,
+                            quantidade_sessoes: it.quantidade_sessoes
+                        });
+                    }
+                });
+                const filtered = Array.from(filteredMap.values());
+                const ids = new Set(filtered.map(p => p.id));
+                
                 const byProc = {};
-                (itens || []).forEach(it => { byProc[String(it.procedimento_id)] = { valor_unitario: it.valor_unitario, valor_total: it.valor_total, quantidade: it.quantidade }; });
+                (itens || []).forEach(it => { 
+                    const id = it.tuss_id || it.procedimento_id;
+                    if (id) {
+                        byProc[String(id)] = { valor_unitario: it.valor_unitario, valor_total: it.valor_total, quantidade: it.quantidade }; 
+                    }
+                });
                 this.itensOrcamentoPorProcedimentoEdicao = byProc;
 
                 const scheduledProcId = this.procedimentoIdOriginalEdicao;
@@ -1341,7 +1375,7 @@ export default {
                     nextProcId = Number(scheduledProcId);
                 } else {
                     const first = (itens && itens.length) ? itens[0] : null;
-                    nextProcId = first ? first.procedimento_id : null;
+                    nextProcId = first ? (first.tuss_id || first.procedimento_id) : null;
                 }
                 this.editAgendamentoForm.procedimento_id = nextProcId;
 
@@ -1631,8 +1665,30 @@ export default {
         verificarAgendaProfissionalParaDia() {
             try {
                 const pid = this.agendamentoForm?.profissional_saude_id ?? null;
-                const has = pid != null && (this.agendasHoje || []).some(a => String(a.profissional_saude_id) === String(pid));
-                if (pid != null && !has) {
+                const dataForm = this.agendamentoForm?.data;
+
+                // Limpa o aviso se estiver presente para não persistir indevidamente
+                try {
+                    const fp = (this.$page?.props?.flash ?? {});
+                    if (fp.warning === "Profissional não possui agenda para o dia selecionado.") {
+                        this.$page.props.flash = { ...fp, warning: null };
+                    }
+                } catch (_) { }
+
+                // Sem profissional selecionado: nada a verificar
+                if (pid == null || pid === "") return;
+
+                // Sem data selecionada no formulário: não é possível validar
+                if (!dataForm) return;
+
+                // Agendas ainda carregando: pode ter dado desatualizado, aguardar
+                if (this.carregandoAgendas) return;
+
+                // Agendas carregadas são de uma data diferente: não podemos validar com precisão
+                if (this.dataAgendaSelecionada && dataForm !== this.dataAgendaSelecionada) return;
+
+                const has = (this.agendasHoje || []).some(a => String(a.profissional_saude_id) === String(pid));
+                if (!has) {
                     try {
                         const fp = (this.$page?.props?.flash ?? {});
                         this.$page.props.flash = { ...fp, warning: "Profissional não possui agenda para o dia selecionado." };
@@ -1908,24 +1964,40 @@ export default {
 
                 const byProc = {};
                 itens.forEach(it => {
-                    byProc[it.procedimento_id] = {
-                        valor_unitario: it.valor_unitario,
-                        valor_total: it.valor_total,
-                        quantidade: it.quantidade,
-                    };
+                    const id = it.tuss_id || it.procedimento_id;
+                    if (id) {
+                        byProc[id] = {
+                            valor_unitario: it.valor_unitario,
+                            valor_total: it.valor_total,
+                            quantidade: it.quantidade,
+                        };
+                    }
                 });
 
                 this.itensOrcamentoPorProcedimento = byProc;
 
-                const ids = new Set(itens.map(it => it.procedimento_id));
-                const filtered = (this.procedimentosLocal || []).filter(p => ids.has(p.id));
+                const filteredMap = new Map();
+                itens.forEach(it => {
+                    const id = it.tuss_id || it.procedimento_id;
+                    if (id && !filteredMap.has(id)) {
+                        filteredMap.set(id, {
+                            id: id,
+                            nome: it.procedimento_nome || "",
+                            descricao: it.procedimento_desc || "",
+                            eh_tratamento: it.eh_tratamento,
+                            quantidade_sessoes: it.quantidade_sessoes
+                        });
+                    }
+                });
+                const filtered = Array.from(filteredMap.values());
+                const ids = new Set(filtered.map(p => p.id));
                 this.procedimentosFiltrados = filtered;
 
                 let chosenProcId = this.agendamentoForm.procedimento_id;
                 const hasChosenInBudget = chosenProcId != null && ids.has(Number(chosenProcId));
                 if (!hasChosenInBudget) {
                     const first = itens[0] || null;
-                    chosenProcId = first ? first.procedimento_id : null;
+                    chosenProcId = first ? (first.tuss_id || first.procedimento_id) : null;
                 }
                 this.agendamentoForm.procedimento_id = chosenProcId;
 

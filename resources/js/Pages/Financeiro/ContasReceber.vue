@@ -170,6 +170,6 @@ function confirmReceive() {
 
 <style scoped>
 :deep(.table thead th:nth-child(1)),
-:deep(.table tbody td:nth-child(1)) { display: none; }
+:deep(.table tbody td:nth-child(1):not([colspan])) { display: none; }
 </style>
 
