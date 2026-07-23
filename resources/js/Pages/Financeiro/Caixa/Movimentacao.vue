@@ -1,7 +1,7 @@
 <template>
   <Layout>
     <Head title="Movimentação de Caixa" />
-    <PageHeader title="Movimentação de Caixa" pageTitle="Caixa" />
+    <PageHeader title="Movimentação" pageTitle="Caixa" />
 
     <div class="card mb-4 border-0 shadow-sm">
       <div class="card-body">
@@ -72,7 +72,7 @@
               </li>
               <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#pdv-historico" role="tab">
-                  <i class="ri-history-line me-1 align-bottom"></i> Histórico Completo
+                  <i class="ri-history-line me-1 align-bottom"></i> Histórico
                 </a>
               </li>
             </ul>
