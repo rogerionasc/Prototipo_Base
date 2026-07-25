@@ -14,11 +14,14 @@ use App\Http\Controllers\MovimentacaoCaixaController;
 use App\Http\Controllers\AgendamentoController;
 use App\Http\Controllers\FaturamentoController;
 use App\Http\Controllers\ContasReceberController;
+use App\Http\Controllers\AtendimentoController;
+use App\Http\Controllers\PepController;
 use App\Http\Controllers\SalaController;
 use App\Http\Controllers\GuicheController;
 use App\Http\Controllers\TotemController;
 use App\Http\Controllers\TotemOpcaoController;
 use App\Http\Controllers\PainelController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,12 +36,30 @@ use App\Http\Controllers\PainelController;
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',])->group(function () {
 
+    Route::resource('usuarios', UserController::class)->names('usuarios');
+    Route::get('/atendimentos', [AtendimentoController::class, 'index'])->name('atendimentos.index');
+    Route::post('/atendimentos/{atendimento}/chamar', [AtendimentoController::class, 'chamar'])->name('atendimentos.chamar');
+    Route::post('/atendimentos/{atendimento}/iniciar', [AtendimentoController::class, 'iniciar'])->name('atendimentos.iniciar');
+    Route::post('/atendimentos/{atendimento}/finalizar', [AtendimentoController::class, 'finalizar'])->name('atendimentos.finalizar');
+    Route::get('/atendimentos/{atendimento}/pep', [PepController::class, 'show'])->name('atendimentos.pep');
+    Route::post('/atendimentos/{atendimento}/pep/anamnese', [PepController::class, 'saveAnamnese'])->name('atendimentos.pep.anamnese.save');
+    Route::post('/atendimentos/{atendimento}/pep/sinais-vitais', [PepController::class, 'saveSinaisVitais'])->name('atendimentos.pep.sinais-vitais.save');
+    Route::post('/atendimentos/{atendimento}/pep/evolucao', [PepController::class, 'saveEvolucao'])->name('atendimentos.pep.evolucao.save');
+    Route::delete('/atendimentos/{atendimento}/pep/evolucao/{evolucao}', [PepController::class, 'deleteEvolucao'])->name('atendimentos.pep.evolucao.delete');
+    Route::post('/atendimentos/{atendimento}/pep/prescricao', [PepController::class, 'savePrescricao'])->name('atendimentos.pep.prescricao.save');
+    Route::delete('/atendimentos/{atendimento}/pep/prescricao/{prescricao}', [PepController::class, 'deletePrescricao'])->name('atendimentos.pep.prescricao.delete');
+    
+    Route::post('/atendimentos/{atendimento}/pep/diagnostico', [PepController::class, 'storeDiagnostico'])->name('atendimentos.pep.diagnostico.save');
+    Route::get('/cids/search', [\App\Http\Controllers\CidController::class, 'search'])->name('cids.search');
+    Route::get('/cids/list', [\App\Http\Controllers\CidController::class, 'list'])->name('cids.list');
+    Route::get('/cids/template', [\App\Http\Controllers\CidController::class, 'template'])->name('cids.template');
+    Route::post('/cids/import/progress', [\App\Http\Controllers\CidController::class, 'importCidsProgress'])->name('cids.import.progress');
+
     Route::controller(VelzonRoutesController::class)->group(function () {
 
         // dashboards
         Route::get('/', 'dashboard')->name('dashboard');
         Route::get('medicos', 'medico');
-        Route::get('usuarios', 'usuario');
         Route::get('componentes', 'componentes')->name('componentes');
         Route::get('configuracao', 'configuracao')->name('configuracao.index');
 
@@ -162,6 +183,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/agenda-medica", [AgendaMedicaController::class, "store"])->name('agenda_medica.store');
         Route::get("/agendamentos/profissionais-por-procedimento", [AgendamentoController::class, "profissionaisPorProcedimento"])->name('agendamentos.profissionais_por_procedimento');
         Route::get("/agendamentos", [AgendamentoController::class, "index"])->name('agendamentos.index');
+        
+        // Fila da Recepção
+        Route::get("/recepcao/fila", [\App\Http\Controllers\RecepcaoFilaController::class, "index"])->name('recepcao.fila.index');
+        Route::post("/recepcao/fila/{agendamento}/confirmar", [\App\Http\Controllers\RecepcaoFilaController::class, "confirmar"])->name('recepcao.fila.confirmar');
+        Route::post("/recepcao/fila/{agendamento}/cancelar", [\App\Http\Controllers\RecepcaoFilaController::class, "cancelar"])->name('recepcao.fila.cancelar');
+
         Route::get("/agendamentos/{id}", [AgendamentoController::class, "show"])->whereNumber('id')->name('agendamentos.show');
         Route::post("/agendamentos", [AgendamentoController::class, "store"])->name('agendamentos.store');
         Route::put("/agendamentos/{id}", [AgendamentoController::class, "update"])->whereNumber('id')->name('agendamentos.update');
@@ -225,6 +252,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::resource('clinica/paineis', PainelController::class)->names('paineis')->parameters(['paineis' => 'painel'])->except(['create', 'show', 'edit']);
 
     });
+
 });
 
 // PIX webhook (sem autenticação)

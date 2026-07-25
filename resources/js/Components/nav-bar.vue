@@ -428,7 +428,13 @@ export default {
                 <BCol cols="6" class="text-center">
                   <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.painel')" target="_blank">
                     <i class="ri-tv-2-line text-success" style="font-size: 32px;"></i>
-                    <span class="mt-2 fw-medium">Painel de TV</span>
+                    <span class="mt-2 fw-medium">Painel de Senhas</span>
+                  </BLink>
+                </BCol>
+                <BCol cols="6" class="text-center">
+                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.painel')" target="_blank">
+                    <i class="ri-tv-2-line text-success" style="font-size: 32px;"></i>
+                    <span class="mt-2 fw-medium">Painel do Atendimento</span>
                   </BLink>
                 </BCol>
               </BRow>

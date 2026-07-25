@@ -72,41 +72,34 @@
                 <BTab title="Orçamentos">
                     <div class="mt-2">
                         <div v-if="(orcamentosPaciente || []).length === 0" class="text-muted">Nenhum orçamento encontrado</div>
-                        <div v-else class="table-responsive">
-                            <table class="table table-sm align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>Número</th>
-                                        <th>Emissão</th>
-                                        <th>Validade</th>
-                                        <th class="text-end">Bruto</th>
-                                        <th class="text-end">Desconto</th>
-                                        <th class="text-end">Total</th>
-                                        <th>Status</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="o in orcamentosPaciente" :key="o.id">
-                                        <td>{{ o.numero }}</td>
-                                        <td>{{ formatDateTimeBR(o.data_emissao) }}</td>
-                                        <td>{{ formatDateTimeBR(o.validade) }}</td>
-                                        <td class="text-end">{{ formatCurrencyBR(o.valor_bruto) }}</td>
-                                        <td class="text-end">{{ formatCurrencyBR(o.desconto) }}</td>
-                                        <td class="text-end">{{ formatCurrencyBR(o.valor_total) }}</td>
-                                        <td>
-                                            <span v-if="o.aprovado" class="badge bg-success">Aprovado</span>
-                                            <span v-else class="badge bg-warning">Aguardando aprovação</span>
-                                        </td>
-                                        <td>
-                                            <button v-if="!o.aprovado" class="btn btn-sm btn-success me-2" @click="aprovarOrcamento(o.id)">Aprovar</button>
-                                            <span v-else-if="o.pago" class="badge bg-info">Pago</span>
-                                            <button v-else class="btn btn-sm btn-danger" @click="cancelarAprovacao(o.id)">Cancelar aprovação</button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        <SimpleTable
+                            v-else
+                            variant="borderless"
+                            compact
+                            tableClass="table-sm align-middle"
+                            :items="orcamentosPaciente"
+                            :columns="orcamentosColumns"
+                        >
+                            <template #body="{ items, columns }">
+                                <tr v-for="o in items" :key="o.id">
+                                    <td>{{ o.numero }}</td>
+                                    <td>{{ formatDateTimeBR(o.data_emissao) }}</td>
+                                    <td>{{ formatDateTimeBR(o.validade) }}</td>
+                                    <td class="text-end">{{ formatCurrencyBR(o.valor_bruto) }}</td>
+                                    <td class="text-end">{{ formatCurrencyBR(o.desconto) }}</td>
+                                    <td class="text-end">{{ formatCurrencyBR(o.valor_total) }}</td>
+                                    <td>
+                                        <span v-if="o.aprovado" class="badge bg-success">Aprovado</span>
+                                        <span v-else class="badge bg-warning">Aguardando aprovação</span>
+                                    </td>
+                                    <td>
+                                        <button v-if="!o.aprovado" class="btn btn-sm btn-success me-2" @click="aprovarOrcamento(o.id)">Aprovar</button>
+                                        <span v-else-if="o.pago" class="badge bg-info">Pago</span>
+                                        <button v-else class="btn btn-sm btn-danger" @click="cancelarAprovacao(o.id)">Cancelar aprovação</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </SimpleTable>
                     </div>
                 </BTab>
             </BTabs>
@@ -122,7 +115,19 @@ import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import PacienteForm from "@/Pages/Pacientes/Create.vue";
+import SimpleTable from "@/Components/SimpleTable.vue";
 import { ref, nextTick, watch, computed, watchEffect } from "vue";
+
+const orcamentosColumns = [
+    { key: 'numero', label: 'Número' },
+    { key: 'emissao', label: 'Emissão' },
+    { key: 'validade', label: 'Validade' },
+    { key: 'bruto', label: 'Bruto', thClass: 'text-end' },
+    { key: 'desconto', label: 'Desconto', thClass: 'text-end' },
+    { key: 'total', label: 'Total', thClass: 'text-end' },
+    { key: 'status', label: 'Status' },
+    { key: 'acoes', label: 'Ações' }
+];
 
 const props = defineProps({
     pacientes: { type: Array, default: () => [] },

@@ -74,6 +74,7 @@
               </div>
 
               <TableGrid
+                :key="tussTableKey"
                 :columns="tussColumns"
                 :data="[]"
                 :serverUrl="'/tuss/list'"
@@ -355,6 +356,122 @@
         </BTab>
         <BTab>
           <template #title>
+            <i class="ri-heart-pulse-line d-block fs-3xl mb-1"></i>Tabela CID
+          </template>
+          <BCard class="shadow-sm config-card">
+            <BCardHeader class="bg-light-subtle p-3 border-0">
+              <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                <BCardTitle class="mb-0"><i class="ri-heart-pulse-line text-primary me-2"></i>Tabela CID</BCardTitle>
+                <div class="d-flex align-items-center gap-2">
+                  <a
+                    href="#"
+                    class="link-primary fw-semibold text-nowrap link-offset-2 link-underline-opacity-0 link-underline-opacity-100-hover"
+                    title="Importar CIDs via arquivo CSV"
+                    :class="{ 'pe-none opacity-50': cidImportProcessing }"
+                    :aria-disabled="cidImportProcessing ? 'true' : 'false'"
+                    @click.prevent="cidImportProcessing ? null : openCidImportModal()"
+                  >
+                    <i class="ri-upload-2-line me-1"></i>
+                    Importar CSV
+                  </a>
+                </div>
+              </div>
+            </BCardHeader>
+            <BCardBody>
+              <p class="text-muted mb-3">Gerencie a tabela de CIDs (Classificação Internacional de Doenças) através da importação de arquivos CSV.</p>
+              
+              <Modal
+                v-model="cidImportModalOpen"
+                title="Importar arquivo CSV de CIDs"
+                size="lg"
+                :name-button="'Importar'"
+                :processing="cidImportProcessing"
+                :disable-close="cidImportProcessing"
+                @save="importCid"
+              >
+                <div class="d-flex align-items-start justify-content-between gap-2 pb-2 mb-3 border-bottom">
+                  <div class="text-muted small d-flex align-items-center gap-2">
+                    <i class="ri-information-line"></i>
+                    <span>Os campos <span class="text-danger">*</span> são obrigatórios.</span>
+                  </div>
+                  <a href="/cids/template" class="btn btn-sm btn-soft-primary text-nowrap" :class="{ 'pe-none opacity-50': cidImportProcessing }" :aria-disabled="cidImportProcessing ? 'true' : 'false'">
+                    <i class="ri-download-2-line me-1"></i>
+                    Baixar modelo CSV
+                  </a>
+                </div>
+                <BRow class="g-3">
+                  <BCol md="12">
+                    <label for="cidCsv" class="form-label d-flex align-items-center gap-2">
+                      <i class="ri-file-upload-line text-primary"></i>
+                      <span>Arquivo CSV <span class="text-danger">*</span></span>
+                    </label>
+                    <input
+                      id="cidCsv"
+                      type="file"
+                      accept=".csv,text/csv"
+                      class="form-control"
+                      :class="{ 'is-invalid': !!cidImportForm.errors.file }"
+                      :disabled="cidImportProcessing"
+                      @change="onCidFileChange"
+                    />
+                    <div v-if="cidImportForm.errors.file && cidImportUiStatus !== 'error'" class="invalid-feedback">{{ cidImportForm.errors.file }}</div>
+                    <div class="form-text">Aceita .csv (separador ; ou ,). Colunas necessárias: codigo, descricao.</div>
+                    <div v-if="cidImportForm.file" class="small text-muted mt-1 d-flex align-items-center justify-content-between gap-2">
+                      <div class="text-truncate">
+                        Selecionado: <span class="fw-semibold">{{ cidImportForm.file.name }}</span>
+                      </div>
+                      <div class="text-nowrap">{{ formatBytes(cidImportForm.file.size) }}</div>
+                    </div>
+                  </BCol>
+                </BRow>
+                <div v-if="cidImportProgressVisible" class="mt-3 p-3 border rounded" :class="cidImportUiStatus === 'error' ? 'bg-danger-subtle border-danger' : 'bg-light-subtle'">
+                  <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                    <div class="small fw-semibold d-flex align-items-center gap-2">
+                      <i v-if="cidImportUiStatus === 'error'" class="ri-close-circle-line text-danger"></i>
+                      <i v-else class="ri-loader-4-line text-primary"></i>
+                      <span>{{ cidImportUiMessage || (cidImportUiStatus === 'error' ? 'Falha ao validar arquivo' : 'Validando arquivo') }}</span>
+                      <span v-if="cidImportProcessing" class="tuss-validating-dots" aria-hidden="true">
+                        <span>.</span><span>.</span><span>.</span>
+                      </span>
+                    </div>
+                    <div class="text-muted small text-nowrap">{{ cidImportPercent }}%</div>
+                  </div>
+                  <div class="progress progress-sm">
+                    <div
+                      class="progress-bar"
+                      role="progressbar"
+                      :class="cidImportBarClass"
+                      :style="{ width: `${cidImportPercent}%` }"
+                      :aria-valuenow="cidImportPercent"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                    ></div>
+                  </div>
+                  <div v-if="cidImportUiStatus === 'error' && cidImportUiMessage" class="small text-danger mt-2 mb-0">{{ cidImportUiMessage }}</div>
+                </div>
+              </Modal>
+
+              <div class="cid-table-wrapper">
+                <TableGrid
+                  :key="cidTableKey"
+                  :columns="cidColumns"
+                  :data="[]"
+                  :serverUrl="'/cids/list'"
+                  :tableTitle="'Registros CID'"
+                  :showStatus="false"
+                  :searchPlaceholder="'Buscar por código ou descrição'"
+                  :showCheckbox="false"
+                  :showAddButton="false"
+                  :showActions="false"
+                  :actionsConfig="{ delete: false, edit: false, show: false, diary: false, print: false, download: false, restore: false, receive: false }"
+                  :compactSpacing="true"
+                />
+              </div>
+            </BCardBody>
+          </BCard>
+        </BTab>
+        <BTab>
+          <template #title>
             <i class="ri-file-list-3-line d-block fs-3xl mb-1"></i>Procedimentos
           </template>
           <Procedimento :procedimentos="props.procedimentos" :categoriasProcedimento="props.categoriasProcedimento" />
@@ -438,6 +555,8 @@ const pixSaving = ref(false);
 const pixError = ref("");
 const pixSuccess = ref(false);
 
+const tussTableKey = ref(0);
+
 const tussImportForm = useForm({
   file: null,
   tabela_forcada: '',
@@ -449,6 +568,22 @@ const tussImportUiStatus = ref('idle');
 const tussImportUiMessage = ref('');
 const tussImportLastPercent = ref(0);
 const tussImportProcessing = ref(false);
+
+const cidImportForm = useForm({
+  file: null,
+});
+const cidImportModalOpen = ref(false);
+const cidImportUiStatus = ref('idle');
+const cidImportUiMessage = ref('');
+const cidImportLastPercent = ref(0);
+const cidImportProcessing = ref(false);
+const cidTableKey = ref(0);
+
+const cidColumns = [
+  { id: 'codigo', name: 'Código', sortable: true },
+  { id: 'descricao', name: 'Descrição', sortable: true },
+];
+
 const tussImportPercent = computed(() => {
   return Math.min(Math.max(tussImportLastPercent.value || 0, 0), 100);
 });
@@ -784,18 +919,183 @@ async function importTuss() {
           }
           return;
         }
+        try { data = JSON.parse(trimmed); } catch (e) { continue; }
+        if (!data || typeof data !== 'object') continue;
+        resultId = data.id || resultId;
+        const p = Number(data.percent);
+        if (!isNaN(p)) tussImportLastPercent.value = p;
+        if (data.status) tussImportUiStatus.value = data.status;
+        if (data.message) tussImportUiMessage.value = String(data.message);
+        if (data.status === 'success' || data.status === 'error') {
+          finished = true;
+        }
       }
+      if (finished) break;
     }
-    if (!finished) {
-      tussImportProcessing.value = false;
-      tussImportUiStatus.value = 'error';
-      tussImportUiMessage.value = 'Falha ao iniciar importação.';
-      return;
+    tussImportProcessing.value = false;
+    if (tussImportUiStatus.value === 'success') {
+      tussTableKey.value++;
+      setTimeout(() => {
+        tussImportModalOpen.value = false;
+        tussImportForm.reset();
+        tussImportForm.clearErrors();
+      }, 2000);
     }
-  } catch (e) {
+  } catch (err) {
     tussImportProcessing.value = false;
     tussImportUiStatus.value = 'error';
-    tussImportUiMessage.value = 'Falha ao iniciar importação.';
+    tussImportUiMessage.value = 'Falha ao processar arquivo.';
+  }
+}
+
+// ======================= CID IMPORT =======================
+const cidImportPercent = computed(() => {
+  if (cidImportUiStatus.value === 'idle') return 0;
+  if (cidImportUiStatus.value === 'error') return 100;
+  return Math.min(100, Math.max(0, cidImportLastPercent.value || 0));
+});
+
+const cidImportProgressVisible = computed(() => {
+  return cidImportUiStatus.value !== 'idle' || cidImportProcessing.value;
+});
+
+const cidImportBarClass = computed(() => {
+  if (cidImportUiStatus.value === 'error') return 'bg-danger';
+  if (cidImportUiStatus.value === 'success') return 'bg-success';
+  return 'progress-bar-striped progress-bar-animated bg-primary';
+});
+
+function openCidImportModal() {
+  cidImportForm.reset();
+  cidImportForm.clearErrors();
+  cidImportUiStatus.value = 'idle';
+  cidImportUiMessage.value = '';
+  cidImportLastPercent.value = 0;
+  cidImportProcessing.value = false;
+  cidImportModalOpen.value = true;
+}
+
+function onCidFileChange(e) {
+  const f = e.target.files[0];
+  cidImportForm.file = f || null;
+  cidImportForm.clearErrors('file');
+  cidImportUiStatus.value = 'idle';
+  cidImportUiMessage.value = '';
+  cidImportLastPercent.value = 0;
+}
+
+async function importCid() {
+  if (!cidImportForm.file) {
+    cidImportForm.setError('file', 'O arquivo é obrigatório.');
+    return;
+  }
+  
+  cidImportUiStatus.value = 'running';
+  cidImportUiMessage.value = '';
+  cidImportLastPercent.value = 1;
+  cidImportProcessing.value = true;
+  try {
+    const fd = new FormData();
+    fd.append('file', cidImportForm.file);
+
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const resp = await fetch('/cids/import/progress', {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin',
+      headers: csrf
+        ? { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/x-ndjson, application/json' }
+        : { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/x-ndjson, application/json' },
+    });
+
+    if (resp.redirected || /\/login\b/i.test(resp.url || '')) {
+      cidImportProcessing.value = false;
+      cidImportUiStatus.value = 'error';
+      cidImportUiMessage.value = 'Sua sessão expirou. Recarregue a página e tente novamente.';
+      return;
+    }
+
+    if (!resp.ok) {
+      let msg = 'Falha ao iniciar importação.';
+      if (resp.status === 419) msg = 'Sua sessão expirou. Recarregue a página e tente novamente.';
+      try {
+        const data = await resp.json();
+        msg = data?.message || data?.errors?.file?.[0] || msg;
+      } catch (e) {
+      }
+      cidImportProcessing.value = false;
+      cidImportUiStatus.value = 'error';
+      cidImportUiMessage.value = String(msg);
+      return;
+    }
+
+    const ct = resp.headers.get('content-type') || '';
+    if (!/application\/x-ndjson/i.test(ct)) {
+      let msg = 'Falha ao iniciar importação.';
+      try {
+        const data = await resp.json();
+        msg = data?.message || data?.errors?.file?.[0] || msg;
+      } catch (e) {
+        try {
+          const t = await resp.text();
+          if (t && t.length < 500) msg = t;
+        } catch (e2) {
+        }
+      }
+      cidImportProcessing.value = false;
+      cidImportUiStatus.value = 'error';
+      cidImportUiMessage.value = String(msg);
+      return;
+    }
+
+    const reader = resp.body?.getReader();
+    if (!reader) {
+      cidImportProcessing.value = false;
+      cidImportUiStatus.value = 'error';
+      cidImportUiMessage.value = 'Não foi possível ler o progresso.';
+      return;
+    }
+
+    const decoder = new TextDecoder('utf-8');
+    let buf = '';
+    let resultId = '';
+    let finished = false;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        let data;
+        try { data = JSON.parse(trimmed); } catch (e) { continue; }
+        if (!data || typeof data !== 'object') continue;
+        resultId = data.id || resultId;
+        const p = Number(data.percent);
+        if (!isNaN(p)) cidImportLastPercent.value = p;
+        if (data.status) cidImportUiStatus.value = data.status;
+        if (data.message) cidImportUiMessage.value = String(data.message);
+        if (data.status === 'success' || data.status === 'error') {
+          finished = true;
+        }
+      }
+      if (finished) break;
+    }
+    cidImportProcessing.value = false;
+    if (cidImportUiStatus.value === 'success') {
+      cidTableKey.value++;
+      setTimeout(() => {
+        cidImportModalOpen.value = false;
+        cidImportForm.reset();
+        cidImportForm.clearErrors();
+      }, 2000);
+    }
+  } catch (err) {
+    cidImportProcessing.value = false;
+    cidImportUiStatus.value = 'error';
+    cidImportUiMessage.value = 'Falha ao processar arquivo.';
   }
 }
 watch(tussImportModalOpen, (v, old) => {
@@ -901,5 +1201,20 @@ onMounted(() => { carregarPixConfig(); });
   0% { opacity: 0.25; transform: translateY(0); }
   50% { opacity: 1; transform: translateY(-1px); }
   100% { opacity: 0.25; transform: translateY(0); }
+}
+
+/* Tabela CID: coluna Código compacta */
+.cid-table-wrapper :deep(table) {
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+.cid-table-wrapper :deep(th:first-child),
+.cid-table-wrapper :deep(td:first-child) {
+  width: 110px !important;
+  min-width: 110px !important;
+  max-width: 110px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 </style>

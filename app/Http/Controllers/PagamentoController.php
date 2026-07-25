@@ -714,6 +714,7 @@ class PagamentoController extends Controller
                         'status_id' => $statusAguardando->id,
                         'updated_at' => now(),
                     ]);
+                    // $this->gerarAtendimentos($fatId, $pag); // Removido para forçar confirmação pela recepção
                 }
             }
         } elseif ($tipo === 'CONVENIO') {
@@ -722,7 +723,59 @@ class PagamentoController extends Controller
                     'status' => 'RECEBIDO',
                     'updated_at' => now(),
                 ]);
+                // $this->gerarAtendimentos($fatId, $pag); // Removido para forçar confirmação pela recepção
             }
+        }
+    }
+
+    private function gerarAtendimentos(int $fatId, Pagamento $pag): void
+    {
+        $fat = DB::table('faturamentos')->where('id', $fatId)->first();
+        if (!$fat || !$fat->orcamento_id) return;
+
+        // Buscar agendamentos vinculados a este orçamento
+        $agendamentos = DB::table('agendamentos')->where('orcamento_id', $fat->orcamento_id)->get();
+
+        foreach ($agendamentos as $ag) {
+            // Check if atendimento already exists for this agendamento
+            $exists = DB::table('atendimentos')->where('agendamento_id', $ag->id)->exists();
+            if ($exists) continue;
+
+            // Encontrar o médico da agenda
+            $medicoId = null;
+            if ($ag->agenda_medica_id) {
+                $medicoId = DB::table('agenda_medica')->where('id', $ag->agenda_medica_id)->value('profissional_saude_id');
+            }
+
+            // Encontrar a categoria do procedimento
+            $catProcedimentoId = null;
+            if ($ag->procedimento_id) {
+                $catProcedimentoId = DB::table('procedimentos')->where('id', $ag->procedimento_id)->value('categoria_id');
+            }
+
+            // Fallbacks caso algum ID obrigatorio falte (embora devessem estar preenchidos)
+            if (!$medicoId) {
+                $medicoId = DB::table('profissionais_saude')->value('id'); // fallback temporario se o DB estiver inconsistente
+            }
+            if (!$catProcedimentoId) {
+                $catProcedimentoId = DB::table('categorias_procedimento')->value('id');
+            }
+
+            // Criar atendimento
+            \App\Models\Atendimento::create([
+                'paciente_id' => $ag->paciente_id ?? $fat->paciente_id,
+                'convenio_id' => $fat->convenio_id,
+                'medico_id' => $medicoId,
+                'agendamento_id' => $ag->id,
+                'caixa_pagamento_id' => $pag->id,
+                'procedimento_id' => $ag->procedimento_id,
+                'categoria_procedimento_id' => $catProcedimentoId,
+                'tipo_atendimento' => $fat->tipo_pagador,
+                'data_atendimento' => $ag->data ?? today(),
+                'hora_prevista' => ($ag->data && $ag->hora) ? ($ag->data . ' ' . $ag->hora) : now(),
+                'status' => 'AGUARDANDO',
+                'criado_por' => auth()->id(),
+            ]);
         }
     }
 }

@@ -236,9 +236,9 @@ class ProcedimentoController extends Controller
                     'status' => $status,
                     'message' => $message,
                 ];
-                echo json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n";
-                if (function_exists('ob_flush')) @ob_flush();
-                if (function_exists('flush')) @flush();
+                echo json_encode($payload, JSON_UNESCAPED_UNICODE) . str_repeat(' ', 4096) . "\n";
+                if (ob_get_level() > 0) @ob_flush();
+                @flush();
             };
 
             $emit(5, 'running', 'Lendo arquivo');

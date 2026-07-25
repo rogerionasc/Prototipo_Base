@@ -66,51 +66,44 @@
                         </div>
 
                         <!-- Invoice Table -->
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle mb-0">
-                                <thead class="table-light">
+                        <SimpleTable
+                            variant="borderless"
+                            tableClass="table-bordered"
+                            :items="itensLocal"
+                            :columns="procedimentosColumns"
+                            emptyTitle="Nenhum procedimento"
+                            emptyMessage="Nenhum procedimento adicionado ao orçamento."
+                            emptyIcon="ri-file-list-3-line"
+                        >
+                            <template #body="{ items, columns }">
+                                <template v-for="(it, idx) in items" :key="`group-${idx}`">
+                                    <!-- Main Row -->
                                     <tr>
-                                        <th scope="col" style="width: 50%">Descrição do Procedimento</th>
-                                        <th scope="col" class="text-end" style="width: 20%">Vlr. Unitário</th>
-                                        <th scope="col" class="text-end" style="width: 20%">Vlr. Total</th>
-                                        <th scope="col" class="text-center" style="width: 10%">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template v-for="(it, idx) in itensLocal" :key="`group-${idx}`">
-                                        <!-- Main Row -->
-                                        <tr>
-                                            <td>
-                                                <h6 class="mb-1">{{ procedimentoNome(it) }}</h6>
-                                                <span class="text-muted small">Convênio: {{ selectedConvenioRow?.descricao || '—' }}</span>
-                                            </td>
-                                            <td class="text-end">{{ formatCurrency(it.valor_unitario) }}</td>
-                                            <td class="text-end fw-medium">{{ formatCurrency(it.valor_total) }}</td>
-                                            <td class="text-center">
-                                                <button class="btn btn-sm btn-soft-danger" type="button" :disabled="locked" @click="removeItem(idx)" title="Remover">
-                                                    <i class="ri-delete-bin-line"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <!-- Sessions Rows -->
-                                        <tr v-for="n in sessionCount(it)" :key="`sess-${idx}-${n}`">
-                                            <td colspan="4" class="py-2 ps-4">
-                                                <div class="d-flex align-items-center text-muted small">
-                                                    <i class="ri-arrow-right-s-line me-2"></i>
-                                                    <span class="badge bg-light text-dark border me-2">Sessão {{ n }}/{{ sessionCount(it) }}</span>
-                                                    <span>Agendamento pendente</span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                    <tr v-if="!itensLocal.length">
-                                        <td colspan="4" class="text-center py-4 text-muted">
-                                            Nenhum procedimento adicionado ao orçamento.
+                                        <td>
+                                            <h6 class="mb-1">{{ procedimentoNome(it) }}</h6>
+                                            <span class="text-muted small">Convênio: {{ selectedConvenioRow?.descricao || '—' }}</span>
+                                        </td>
+                                        <td class="text-end">{{ formatCurrency(it.valor_unitario) }}</td>
+                                        <td class="text-end fw-medium">{{ formatCurrency(it.valor_total) }}</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-soft-danger" type="button" :disabled="locked" @click="removeItem(idx)" title="Remover">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
                                         </td>
                                     </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                                    <!-- Sessions Rows -->
+                                    <tr v-for="n in sessionCount(it)" :key="`sess-${idx}-${n}`">
+                                        <td colspan="4" class="py-2 ps-4">
+                                            <div class="d-flex align-items-center text-muted small">
+                                                <i class="ri-arrow-right-s-line me-2"></i>
+                                                <span class="badge bg-light text-dark border me-2">Sessão {{ n }}/{{ sessionCount(it) }}</span>
+                                                <span>Agendamento pendente</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+                        </SimpleTable>
                     </div>
                 </div>
                 <!-- Card 3: Financial Summary -->
@@ -256,6 +249,14 @@ import html2pdf from "html2pdf.js";
 import { html } from "gridjs";
 import OrcamentoPrint from "@/Pages/Atendimento/Orcamentos/OrcamentoPrint.vue";
 import { useChoicesRemoteSearch } from "@/Composables/useChoicesRemoteSearch";
+import SimpleTable from "@/Components/SimpleTable.vue";
+
+const procedimentosColumns = [
+    { key: 'descricao', label: 'Descrição do Procedimento', width: '50%' },
+    { key: 'vlr_unit', label: 'Vlr. Unitário', width: '20%', thClass: 'text-end', tdClass: 'text-end' },
+    { key: 'vlr_total', label: 'Vlr. Total', width: '20%', thClass: 'text-end', tdClass: 'text-end fw-medium' },
+    { key: 'acoes', label: 'Ações', width: '10%', thClass: 'text-center', tdClass: 'text-center' }
+];
 
 const selPaciente = ref(null);
 const selConvenio = ref(null);

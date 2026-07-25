@@ -375,6 +375,7 @@ function initGrid() {
                     else if (col.showImage === true) out.formatter = (cell) => buildImageCell(cell, col);
                     else out.formatter = defaultFormatter;
                     if (col.attributes) out.attributes = col.attributes;
+                    if (col.width) out.width = col.width;
                     return out;
                 } else {
                     return {
@@ -401,6 +402,7 @@ function initGrid() {
                 else if (col.showImage === true) out.formatter = (cell) => buildImageCell(cell, col);
                 else out.formatter = defaultFormatter;
                 if (col.attributes) out.attributes = col.attributes;
+                if (col.width) out.width = col.width;
                 return out;
             } else {
                 return {
@@ -682,7 +684,7 @@ onMounted(async () => {
                 <BCardBody class="border border-dashed border-end-0 border-start-0 px-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="search-box" style="width: 300px;" v-if="props.search">
-                            <input type="text" class="form-control search" :placeholder="searchPlaceholder" v-model="searchQuery" />
+                            <input type="text" name="table_search" autocomplete="on" class="form-control search" :placeholder="searchPlaceholder" v-model="searchQuery" />
                             <i class="ri-search-line search-icon"></i>
                         </div>
                         <div class="d-flex align-items-center gap-3">

@@ -36,17 +36,17 @@
                                     </BCol>
                                 </BRow>
                             </div>
-                            <div class="mt-4 table-responsive">
-                                <table class="table table-sm table-hover align-middle table-nowrap">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 80px;">ID</th>
-                                            <th>Descrição</th>
-                                            <th style="width: 120px;">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="ec in estadosCivisLocal" :key="ec.id">
+                                <SimpleTable
+                                    variant="borderless"
+                                    compact
+                                    tableClass="table-sm table-hover align-middle table-nowrap"
+                                    :items="estadosCivisLocal"
+                                    :columns="parametrosColumns"
+                                    emptyTitle="Nenhum registro"
+                                    emptyMessage="Nenhum estado civil cadastrado"
+                                >
+                                    <template #body="{ items }">
+                                        <tr v-for="ec in items" :key="ec.id">
                                             <template v-if="editingEstadoCivilId !== ec.id">
                                                 <td>#{{ ec.id }}</td>
                                                 <td>{{ ec.descricao }}</td>
@@ -84,12 +84,8 @@
                                                 </td>
                                             </template>
                                         </tr>
-                                        <tr v-if="!estadosCivisLocal?.length">
-                                            <td colspan="3" class="text-muted">Nenhum estado civil cadastrado</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </template>
+                                </SimpleTable>
                         </BCardBody>
                     </BCard>
                 </BCol>
@@ -120,43 +116,41 @@
                                             @click="saveParentesco">Adicionar</button>
                                     </BCol>
                                 </BRow>
-                            </div>
-                            <div class="mt-4 table-responsive">
-                                <table class="table table-sm table-hover align-middle table-nowrap">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 80px;">ID</th>
-                                            <th>Descrição</th>
-                                            <th style="width: 120px;">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="p in parentescosLocal" :key="p.id">
-                                            <template v-if="editingParentescoId !== p.id">
-                                                <td>#{{ p.id }}</td>
-                                                <td>{{ p.descricao }}</td>
+                                                          <SimpleTable
+                                    variant="borderless"
+                                    compact
+                                    tableClass="table-sm table-hover align-middle table-nowrap"
+                                    :items="parentescosLocal"
+                                    :columns="parametrosColumns"
+                                    emptyTitle="Nenhum registro"
+                                    emptyMessage="Nenhum parentesco cadastrado"
+                                >
+                                    <template #body="{ items }">
+                                        <tr v-for="pa in items" :key="pa.id">
+                                            <template v-if="editingParentescoId !== pa.id">
+                                                <td>#{{ pa.id }}</td>
+                                                <td>{{ pa.descricao }}</td>
                                                 <td>
                                                     <div class="d-flex gap-2">
                                                         <button type="button" class="btn btn-sm btn-soft-info"
-                                                            @click="startEditParentesco(p)" title="Editar">
+                                                            @click="startEditParentesco(pa)" title="Editar">
                                                             <i class="ri-pencil-line align-bottom"></i>
                                                         </button>
                                                         <button type="button" class="btn btn-sm btn-soft-danger"
-                                                            @click="destroyParentesco(p.id)" title="Excluir">
+                                                            @click="destroyParentesco(pa.id)" title="Excluir">
                                                             <i class="ri-delete-bin-line align-bottom"></i>
                                                         </button>
                                                     </div>
                                                 </td>
                                             </template>
                                             <template v-else>
-                                                <td>#{{ p.id }}</td>
+                                                <td>#{{ pa.id }}</td>
                                                 <td>
                                                     <input v-model="editParentesco.descricao" type="text"
                                                         class="form-control"
                                                         :class="{ 'is-invalid': editParentesco.errors.descricao }"
                                                         placeholder="Descrição" />
-                                                    <div class="invalid-feedback">{{ editParentesco.errors.descricao }}
-                                                    </div>
+                                                    <div class="invalid-feedback">{{ editParentesco.errors.descricao }}</div>
                                                 </td>
                                                 <td>
                                                     <div class="d-flex gap-2">
@@ -169,12 +163,8 @@
                                                 </td>
                                             </template>
                                         </tr>
-                                        <tr v-if="!parentescosLocal?.length">
-                                            <td colspan="3" class="text-muted">Nenhum parentesco cadastrado</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </template>
+                                </SimpleTable>         </div>
                         </BCardBody>
                     </BCard>
                 </BCol>
@@ -204,18 +194,17 @@
                                             :disabled="formTipoSang.processing" @click="saveTipoSang">Adicionar</button>
                                     </BCol>
                                 </BRow>
-                            </div>
-                            <div class="mt-4 table-responsive">
-                                <table class="table table-sm table-hover align-middle table-nowrap">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 80px;">ID</th>
-                                            <th>Descrição</th>
-                                            <th style="width: 120px;">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="ts in tiposSanguineosLocal" :key="ts.id">
+                                                 <SimpleTable
+                                    variant="borderless"
+                                    compact
+                                    tableClass="table-sm table-hover align-middle table-nowrap"
+                                    :items="tiposSanguineosLocal"
+                                    :columns="parametrosColumns"
+                                    emptyTitle="Nenhum registro"
+                                    emptyMessage="Nenhum tipo sanguíneo cadastrado"
+                                >
+                                    <template #body="{ items }">
+                                        <tr v-for="ts in items" :key="ts.id">
                                             <template v-if="editingTipoSangId !== ts.id">
                                                 <td>#{{ ts.id }}</td>
                                                 <td>{{ ts.descricao }}</td>
@@ -239,8 +228,7 @@
                                                         class="form-control"
                                                         :class="{ 'is-invalid': editTipoSang.errors.descricao }"
                                                         placeholder="Descrição" />
-                                                    <div class="invalid-feedback">{{ editTipoSang.errors.descricao }}
-                                                    </div>
+                                                    <div class="invalid-feedback">{{ editTipoSang.errors.descricao }}</div>
                                                 </td>
                                                 <td>
                                                     <div class="d-flex gap-2">
@@ -253,12 +241,8 @@
                                                 </td>
                                             </template>
                                         </tr>
-                                        <tr v-if="!tiposSanguineosLocal?.length">
-                                            <td colspan="3" class="text-muted">Nenhum tipo sanguíneo cadastrado</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </template>
+                                </SimpleTable>                   </div>
                         </BCardBody>
                     </BCard>
                 </BCol>
@@ -291,16 +275,17 @@
                                 </BRow>
                             </div>
                             <div class="mt-4 table-responsive">
-                                <table class="table table-sm table-hover align-middle table-nowrap">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 80px;">ID</th>
-                                            <th>Nome</th>
-                                            <th style="width: 120px;">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="ca in canaisAvisoLocal" :key="ca.id">
+                                                        <SimpleTable
+                                    variant="borderless"
+                                    compact
+                                    tableClass="table-sm table-hover align-middle table-nowrap"
+                                    :items="canaisAvisoLocal"
+                                    :columns="parametrosColumns"
+                                    emptyTitle="Nenhum registro"
+                                    emptyMessage="Nenhum canal de aviso cadastrado"
+                                >
+                                    <template #body="{ items }">
+                                        <tr v-for="ca in items" :key="ca.id">
                                             <template v-if="editingCanalAvisoId !== ca.id">
                                                 <td>#{{ ca.id }}</td>
                                                 <td>{{ ca.nome }}</td>
@@ -337,12 +322,8 @@
                                                 </td>
                                             </template>
                                         </tr>
-                                        <tr v-if="!canaisAvisoLocal?.length">
-                                            <td colspan="3" class="text-muted">Nenhum canal de aviso cadastrado</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </template>
+                                </SimpleTable>                     </div>
                         </BCardBody>
                     </BCard>
                 </BCol>
@@ -374,47 +355,41 @@
                                 </BRow>
                             </div>
                             <div class="mt-4 table-responsive">
-                                <table class="table table-sm table-hover align-middle table-nowrap">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 80px;">ID</th>
-                                            <th>Nome</th>
-                                            <th style="width: 120px;">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="c in categoriasLocal" :key="c.id">
-                                            <template v-if="editingCategoriaId !== c.id">
-                                                <td>#{{ c.id }}</td>
-                                                <td>
-                                                    <span>{{ c.nome }}</span>
-                                                </td>
+                                                            <SimpleTable
+                                    variant="borderless"
+                                    compact
+                                    tableClass="table-sm table-hover align-middle table-nowrap"
+                                    :items="categoriasLocal"
+                                    :columns="parametrosColumns"
+                                    emptyTitle="Nenhum registro"
+                                    emptyMessage="Nenhuma categoria cadastrada"
+                                >
+                                    <template #body="{ items }">
+                                        <tr v-for="cat in items" :key="cat.id">
+                                            <template v-if="editingCategoriaId !== cat.id">
+                                                <td>#{{ cat.id }}</td>
+                                                <td>{{ cat.nome }}</td>
                                                 <td>
                                                     <div class="d-flex gap-2">
                                                         <button type="button" class="btn btn-sm btn-soft-info"
-                                                            @click="startEditCategoria(c)" title="Editar">
+                                                            @click="startEditCategoria(cat)" title="Editar">
                                                             <i class="ri-pencil-line align-bottom"></i>
                                                         </button>
                                                         <button type="button" class="btn btn-sm btn-soft-danger"
-                                                            @click="destroyCategoria(c.id)" title="Excluir">
+                                                            @click="destroyCategoria(cat.id)" title="Excluir">
                                                             <i class="ri-delete-bin-line align-bottom"></i>
                                                         </button>
                                                     </div>
                                                 </td>
                                             </template>
                                             <template v-else>
-                                                <td>#{{ c.id }}</td>
+                                                <td>#{{ cat.id }}</td>
                                                 <td>
-                                                    <BRow class="g-2">
-                                                        <BCol md="6">
-                                                            <input v-model="editCategoria.nome" type="text"
-                                                                class="form-control"
-                                                                :class="{ 'is-invalid': editCategoria.errors.nome }"
-                                                                placeholder="Nome" />
-                                                            <div class="invalid-feedback">{{ editCategoria.errors.nome
-                                                                }}</div>
-                                                        </BCol>
-                                                    </BRow>
+                                                    <input v-model="editCategoria.nome" type="text"
+                                                        class="form-control"
+                                                        :class="{ 'is-invalid': editCategoria.errors.nome }"
+                                                        placeholder="Nome" />
+                                                    <div class="invalid-feedback">{{ editCategoria.errors.nome }}</div>
                                                 </td>
                                                 <td>
                                                     <div class="d-flex gap-2">
@@ -427,12 +402,8 @@
                                                 </td>
                                             </template>
                                         </tr>
-                                        <tr v-if="!categoriasLocal?.length">
-                                            <td colspan="3" class="text-muted">Nenhuma categoria cadastrada</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </template>
+                                </SimpleTable>                       </div>
                         </BCardBody>
                     </BCard>
                 </BCol>
@@ -452,6 +423,13 @@
 import { useForm, router } from "@inertiajs/vue3";
 import { ref, watch, computed } from "vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
+import SimpleTable from "@/Components/SimpleTable.vue";
+
+const parametrosColumns = [
+    { key: 'id', label: 'ID', width: '80px' },
+    { key: 'descricao', label: 'Descrição' },
+    { key: 'acoes', label: 'Ações', width: '120px' }
+];
 
 const props = defineProps({
     estadosCivis: { type: Array, default: () => [] },

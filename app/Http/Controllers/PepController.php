@@ -1,0 +1,238 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use App\Models\Atendimento;
+use App\Models\Cid;
+use App\Models\Pep;
+use App\Models\PepAnamnese;
+use App\Models\PepEvolucao;
+use App\Models\PepPrescricao;
+use App\Models\PepPrescricaoItem;
+use Illuminate\Support\Facades\DB;
+
+class PepController extends Controller
+{
+    public function show(Atendimento $atendimento)
+    {
+        $atendimento->load(['paciente', 'medico', 'procedimento']);
+        $paciente = $atendimento->paciente;
+        $user = auth()->user();
+        
+        // Verifica se já existe um PEP para o atendimento. Se não, cria.
+        $pep = Pep::firstOrCreate(
+            ['atendimento_id' => $atendimento->id],
+            [
+                'paciente_id' => $paciente->id,
+                'profissional_id' => $atendimento->medico_id ?? $user->profissional_saude_id,
+                'status' => 'Aberto',
+                'aberto_em' => now(),
+                'created_by' => $user->id,
+            ]
+        );
+
+        $pep->load(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'diagnosticos.profissional', 'diagnosticos.cid']);
+
+        // Carrega o histórico de PEPs anteriores do paciente
+        $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'diagnosticos.profissional', 'diagnosticos.cid'])
+            ->where('paciente_id', $paciente->id)
+            ->where('id', '!=', $pep->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return Inertia::render('Consultorio/Pep/Show', [
+            'atendimento' => $atendimento,
+            'paciente' => $paciente,
+            'pep' => $pep,
+            'historico' => $historico,
+            'auth_profissional_id' => $user->profissional_saude_id
+        ]);
+    }
+
+    public function saveAnamnese(Request $request, Atendimento $atendimento)
+    {
+        $request->validate([
+            'queixa_principal' => 'nullable|string',
+            'historia_doenca_atual' => 'nullable|string',
+            'antecedentes_pessoais' => 'nullable|string',
+            'alergias' => 'nullable|string',
+            'medicamentos_uso' => 'nullable|string',
+        ]);
+
+        $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
+        
+        // Na anamnese, como ela pertence ao PEP, apenas o criador do PEP ou o profissional atual pode salvar
+        if ($pep->profissional_id != auth()->user()->profissional_saude_id) {
+            abort(403, 'Apenas o médico responsável por este atendimento pode alterar a anamnese.');
+        }
+
+        $anamnese = PepAnamnese::updateOrCreate(
+            ['pep_id' => $pep->id],
+            array_merge($request->only([
+                'queixa_principal', 
+                'historia_doenca_atual', 
+                'antecedentes_pessoais', 
+                'alergias', 
+                'medicamentos_uso'
+            ]), [
+                'updated_by' => auth()->id(),
+                'created_by' => auth()->id() // Ignorado no update
+            ])
+        );
+
+        return redirect()->back()->with('success', 'Anamnese salva com sucesso.');
+    }
+
+    public function saveSinaisVitais(Request $request, Atendimento $atendimento)
+    {
+        $validated = $request->validate([
+            'pressao_sistolica' => 'nullable|string|max:20',
+            'pressao_diastolica' => 'nullable|string|max:20',
+            'frequencia_cardiaca' => 'nullable|string|max:20',
+            'frequencia_respiratoria' => 'nullable|string|max:20',
+            'temperatura' => 'nullable|string|max:20',
+            'saturacao' => 'nullable|string|max:20',
+            'peso' => 'nullable|numeric',
+            'altura' => 'nullable|numeric',
+            'imc' => 'nullable|numeric',
+            'glicemia' => 'nullable|string|max:20',
+            'circunferencia_abdominal' => 'nullable|string|max:20',
+            'observacao' => 'nullable|string'
+        ]);
+
+        $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
+
+        \App\Models\PepSinaisVitais::updateOrCreate(
+            ['pep_id' => $pep->id], // Atualiza a triagem existente do PEP ou cria uma nova
+            array_merge($validated, [
+                'profissional_id' => auth()->user()->profissional_saude_id
+            ])
+        );
+
+        return redirect()->back()->with('success', 'Sinais Vitais salvos com sucesso.');
+    }
+
+    public function saveEvolucao(Request $request, Atendimento $atendimento)
+    {
+        $request->validate([
+            'descricao' => 'required|string',
+            'tipo' => 'nullable|string'
+        ]);
+
+        $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
+        
+        PepEvolucao::create([
+            'pep_id' => $pep->id,
+            'profissional_id' => auth()->user()->profissional_saude_id,
+            'tipo' => $request->tipo ?? 'Evolução Clínica',
+            'descricao' => $request->descricao
+        ]);
+
+        return redirect()->back()->with('success', 'Evolução adicionada com sucesso.');
+    }
+
+    public function deleteEvolucao(Atendimento $atendimento, PepEvolucao $evolucao)
+    {
+        if ($evolucao->profissional_id != auth()->user()->profissional_saude_id) {
+            abort(403, 'Você não pode excluir uma evolução criada por outro profissional.');
+        }
+        
+        $evolucao->delete();
+        return redirect()->back()->with('success', 'Evolução removida com sucesso.');
+    }
+
+    public function savePrescricao(Request $request, Atendimento $atendimento)
+    {
+        $request->validate([
+            'observacao' => 'nullable|string',
+            'itens' => 'required|array|min:1',
+            'itens.*.medicamento_id' => 'nullable|integer',
+            'itens.*.medicamento_nome' => 'nullable|string', // Caso queira salvar só texto no observacao se nao tiver id
+            'itens.*.dosagem' => 'required|string',
+            'itens.*.frequencia' => 'required|string',
+            'itens.*.via' => 'required|string',
+            'itens.*.duracao' => 'nullable|string',
+            'itens.*.quantidade' => 'nullable|integer'
+        ]);
+
+        $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
+        
+        DB::transaction(function () use ($pep, $request) {
+            $prescricao = PepPrescricao::create([
+                'pep_id' => $pep->id,
+                'profissional_id' => auth()->user()->profissional_saude_id,
+                'observacao' => $request->observacao
+            ]);
+
+            foreach ($request->itens as $item) {
+                PepPrescricaoItem::create([
+                    'prescricao_id' => $prescricao->id,
+                    'medicamento_id' => $item['medicamento_id'] ?? null,
+                    'observacao' => $item['medicamento_nome'] ?? null, // Usaremos o campo de obs pra guardar o nome se for texto livre
+                    'dosagem' => $item['dosagem'],
+                    'frequencia' => $item['frequencia'],
+                    'via' => $item['via'],
+                    'duracao' => $item['duracao'],
+                    'quantidade' => $item['quantidade'] ?? 1
+                ]);
+            }
+        });
+
+        return redirect()->back()->with('success', 'Prescrição adicionada com sucesso.');
+    }
+
+    public function deletePrescricao(Atendimento $atendimento, PepPrescricao $prescricao)
+    {
+        if ($prescricao->profissional_id != auth()->user()->profissional_saude_id) {
+            abort(403, 'Você não pode excluir uma prescrição criada por outro profissional.');
+        }
+        
+        $prescricao->delete();
+        return redirect()->back()->with('success', 'Prescrição removida com sucesso.');
+    }
+    public function storeDiagnostico(Request $request, Atendimento $atendimento)
+    {
+        $request->validate([
+            'cid_id' => 'nullable|integer|exists:cids,id',
+            'descricao' => 'required|string',
+            'principal' => 'boolean',
+            'confirmado' => 'boolean',
+        ]);
+
+        $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
+        
+        $pep->diagnosticos()->create([
+            'cid_id' => $request->cid_id,
+            'descricao' => $request->descricao,
+            'principal' => $request->principal ?? false,
+            'confirmado' => $request->confirmado ?? false,
+            'profissional_id' => auth()->user()->profissional_saude_id,
+        ]);
+
+        return redirect()->back()->with('success', 'Diagnóstico adicionado com sucesso.');
+    }
+
+    public function searchCid(Request $request)
+    {
+        $query = $request->get('q');
+        if (!$query) {
+            return response()->json([]);
+        }
+
+        $cids = Cid::where('codigo', 'like', "%{$query}%")
+            ->orWhere('descricao', 'like', "%{$query}%")
+            ->limit(30)
+            ->get()
+            ->map(function($cid) {
+                return [
+                    'value' => $cid->id,
+                    'label' => $cid->codigo . ' - ' . $cid->descricao
+                ];
+            });
+
+        return response()->json($cids);
+    }
+}
+

@@ -53,67 +53,66 @@
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-sm table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Nome</th>
-                            <th>Código</th>
-                            <th>
-                                Ícone
-                                <a href="https://remixicon.com/" target="_blank" class="text-muted ms-1" title="Catálogo de Ícones" tabindex="-1"><i class="ri-external-link-line"></i></a>
-                            </th>
-                            <th>Cor</th>
-                            <th>Status</th>
-                            <th class="text-center" style="width: 80px;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="(opcao, index) in localOpcoes" :key="index">
-                            <td>
-                                <input type="text" class="form-control form-control-sm" v-model="opcao.nome" />
-                            </td>
-                            <td>
-                                <input type="text" class="form-control form-control-sm" v-model="opcao.codigo" />
-                            </td>
-                            <td>
-                                <input type="text" class="form-control form-control-sm" v-model="opcao.icone" placeholder="ri-heart-line" />
-                            </td>
-                            <td>
-                                <input type="color" class="form-control form-control-color form-control-sm p-0 border-0" v-model="opcao.cor" style="width: 30px; height: 30px; cursor: pointer;">
-                            </td>
-                            <td>
-                                <div class="form-check form-switch mt-1">
-                                    <input class="form-check-input" type="checkbox" v-model="opcao.status" :id="'status_' + index">
-                                    <label class="form-check-label" :for="'status_' + index">{{ opcao.status ? 'Ativo' : 'Inativo' }}</label>
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-soft-danger" @click="removeOpcaoLocal(index)" title="Excluir Opção">
-                                    <i class="ri-delete-bin-line"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr v-if="!localOpcoes.length">
-                            <td colspan="5" class="text-center text-muted">Nenhuma opção cadastrada para este totem.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <SimpleTable
+                variant="borderless"
+                compact
+                tableClass="table-bordered align-middle"
+                :items="localOpcoes"
+                :columns="opcoesColumns"
+                emptyTitle="Nenhuma opção"
+                emptyMessage="Nenhuma opção cadastrada para este totem."
+            >
+                <template #body="{ items, columns }">
+                    <tr v-for="(opcao, index) in items" :key="index">
+                        <td>
+                            <input type="text" class="form-control form-control-sm" v-model="opcao.nome" />
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm" v-model="opcao.codigo" />
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm" v-model="opcao.icone" placeholder="ri-heart-line" />
+                        </td>
+                        <td>
+                            <input type="color" class="form-control form-control-color form-control-sm p-0 border-0" v-model="opcao.cor" style="width: 30px; height: 30px; cursor: pointer;">
+                        </td>
+                        <td>
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" v-model="opcao.status" :id="'status_' + index">
+                                <label class="form-check-label" :for="'status_' + index">{{ opcao.status ? 'Ativo' : 'Inativo' }}</label>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-soft-danger" @click="removeOpcaoLocal(index)" title="Excluir Opção">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </template>
+            </SimpleTable>
         </Modal>
     </Layout>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useForm, Head } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
-
+import { ref, computed } from "vue";
+import SimpleTable from "@/Components/SimpleTable.vue";
 import { html } from 'gridjs';
+
+const opcoesColumns = [
+    { key: 'nome', label: 'Nome' },
+    { key: 'codigo', label: 'Código' },
+    { key: 'icone', label: 'Ícone' },
+    { key: 'cor', label: 'Cor' },
+    { key: 'status', label: 'Status' },
+    { key: 'acoes', label: 'Ações', thClass: 'text-center' }
+];
 
 const props = defineProps({
     totens: {

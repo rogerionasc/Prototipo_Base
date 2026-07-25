@@ -29,6 +29,7 @@ export default {
                     children: [
                         { href: "/orcamentos", label: this.$t("t-estimate") },
                         { href: "/agendamentos", label: "Agendamento" },
+                        { href: "/recepcao/fila", label: "Fila" },
                     ]
                 },
                 {
@@ -61,6 +62,15 @@ export default {
                     title: this.$t("t-doctor"),
                     type: "link",
                     target: "/medicos",
+                },
+                {
+                    icon: "ri-hospital-line",
+                    title: "Consultório",
+                    type: "link",
+                    target: "#consultorio",
+                    children: [
+                        { href: "/atendimentos", label: "Atendimentos" },
+                    ]
                 },
                 {
                     icon: "ri-building-line",

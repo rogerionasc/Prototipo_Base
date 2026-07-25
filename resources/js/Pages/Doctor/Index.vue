@@ -9,6 +9,8 @@ import ModalDelete from "@/Components/ModalDelete.vue";
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/l10n/pt.js";
+import SimpleTable from "@/Components/SimpleTable.vue";
+
 const flatpickrOptions = { altInput: true, altFormat: "d M, Y", dateFormat: "Y-m-d", locale: "pt" };
 const props = defineProps({
   profissionais: { type: Array, default: () => [] },
@@ -23,6 +25,17 @@ const columns = [
   { id: "crm", name: "CRM" },
   { id: "contato", name: "Contato" },
   { id: "especialidades", name: "Especialidades" },
+];
+const especialidadesColumns = [
+  { key: "especialidade", label: "Especialidade" },
+  { key: "qre", label: "QRE" },
+  { key: "acoes", label: "Ações", thClass: "text-end" }
+];
+const agendaColumns = [
+  { key: "dia", label: "Dia da semana" },
+  { key: "inicio", label: "Início" },
+  { key: "fim", label: "Fim" },
+  { key: "acoes", label: "Ações", thClass: "text-end" }
 ];
 const tableData = computed(() => {
   return (profissionaisLocal.value || []).map(p => {
@@ -176,11 +189,6 @@ const espMap = computed(() => {
   (props.especialidades || []).forEach(e => { m[e.id] = e.nome; });
   return m;
 });
-const espColumns = [
-  { id: "id", name: "ID" },
-  { id: "especialidade", name: "Especialidade" },
-  { id: "qre", name: "QRE" },
-];
 const espDataCreate = computed(() => mapEspData(formCreate));
 const espDataEdit = computed(() => mapEspData(formEdit));
 function removeEspById(targetForm, id) {
@@ -538,18 +546,19 @@ function submitAgenda() {
                   </BRow>
                   <BRow class="g-3">
                     <BCol md="12">
-                      <table v-if="(formCreate.especialidades || []).length > 0" class="table table-hover mb-0">
-                        <thead class="table-light">
-                          <tr>
-                            <th>Especialidade</th>
-                            <th>QRE</th>
-                            <th class="text-end">Ações</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="s in formCreate.especialidades" :key="String(s.id)">
-                            <td>{{ espMap[s.id] || "-" }}</td>
-                            <td>{{ s.qre || "" }}</td>
+                      <SimpleTable v-if="(formCreate.especialidades || []).length > 0"
+                        variant="borderless"
+                        compact
+                        tableClass="table-hover mb-0"
+                        :items="espDataCreate"
+                        :columns="especialidadesColumns"
+                        emptyTitle="Nenhuma especialidade"
+                        emptyMessage="Sem especialidades adicionadas"
+                      >
+                        <template #body="{ items, columns }">
+                          <tr v-for="s in items" :key="String(s.id)">
+                            <td>{{ s.especialidade }}</td>
+                            <td>{{ s.qre }}</td>
                             <td class="text-end">
                               <button class="btn btn-sm btn-soft-info me-2" type="button" @click="onEspEditCreate(s.id)">
                                 <i class="ri-pencil-fill align-bottom me-1"></i> Editar
@@ -559,8 +568,8 @@ function submitAgenda() {
                               </button>
                             </td>
                           </tr>
-                        </tbody>
-                      </table>
+                        </template>
+                      </SimpleTable>
                     </BCol>
                   </BRow>
                 </div>
@@ -676,18 +685,19 @@ function submitAgenda() {
                   </BRow>
                   <BRow class="g-3">
                     <BCol md="12">
-                    <table v-if="(formEdit.especialidades || []).length > 0" class="table table-hover mb-0">
-                      <thead class="table-light">
-                        <tr>
-                          <th>Especialidade</th>
-                          <th>QRE</th>
-                          <th class="text-end">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="s in formEdit.especialidades" :key="String(s.id)">
-                          <td>{{ espMap[s.id] || "-" }}</td>
-                          <td>{{ s.qre || "" }}</td>
+                    <SimpleTable v-if="(formEdit.especialidades || []).length > 0"
+                      variant="borderless"
+                      compact
+                      tableClass="table-hover mb-0"
+                      :items="espDataEdit"
+                      :columns="especialidadesColumns"
+                      emptyTitle="Nenhuma especialidade"
+                      emptyMessage="Sem especialidades adicionadas"
+                    >
+                      <template #body="{ items, columns }">
+                        <tr v-for="s in items" :key="String(s.id)">
+                          <td>{{ s.especialidade }}</td>
+                          <td>{{ s.qre }}</td>
                           <td class="text-end">
                             <button class="btn btn-sm btn-soft-info me-2" type="button" @click="onEspEditEdit(s.id)">
                               <i class="ri-pencil-fill align-bottom me-1"></i> Editar
@@ -697,8 +707,8 @@ function submitAgenda() {
                             </button>
                           </td>
                         </tr>
-                      </tbody>
-                    </table>
+                      </template>
+                    </SimpleTable>
                     </BCol>
                   </BRow>
                 </div>
@@ -773,17 +783,17 @@ function submitAgenda() {
             <span class="badge bg-primary me-1" v-for="l in selectedDaysLabels" :key="l">{{ l }}</span>
           </div>
           <div class="agenda-table-wrapper">
-            <table class="table table-hover mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th class="w-25">Dia da semana</th>
-                  <th class="w-25">Início</th>
-                  <th class="w-25">Fim</th>
-                  <th class="text-end w-25">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(it, idx) in agendaForm.itens" :key="idx">
+            <SimpleTable
+              variant="borderless"
+              compact
+              tableClass="table-hover mb-0"
+              :items="agendaForm.itens"
+              :columns="agendaColumns"
+              emptyTitle="Agenda Vazia"
+              emptyMessage="Adicione um dia para definir horários"
+            >
+              <template #body="{ items }">
+                <tr v-for="(it, idx) in items" :key="idx">
                   <td>
                     <div class="position-relative">
                       <select v-model.number="it.dia_semana" class="form-select">
@@ -802,13 +812,13 @@ function submitAgenda() {
                     <div class="text-muted small" v-if="!it.hora_inicio && !it.hora_fim">Vazio = 00:00 até 23:59</div>
                   </td>
                   <td class="text-end">
-                    <button type="button" class="btn btn-soft-danger" @click="removeAgendaItem(idx)">
+                    <button type="button" class="btn btn-sm btn-soft-danger" @click="removeAgendaItem(idx)">
                       <i class="ri-delete-bin-5-fill align-bottom me-1"></i> Remover
                     </button>
                   </td>
                 </tr>
-              </tbody>
-            </table>
+              </template>
+            </SimpleTable>
           </div>
         </div>
       </div>

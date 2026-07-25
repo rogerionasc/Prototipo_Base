@@ -33,12 +33,24 @@ class User extends Authenticatable implements MustVerifyEmail
         // 'password',
         'nome',
         'sobrenome',
+        'conta_id',
+        'profissional_saude_id',
         'cpf',
         'telefone',
         'data_nascimento',
         'email',
         'password',
     ];
+
+    public function conta()
+    {
+        return $this->belongsTo(Conta::class);
+    }
+
+    public function profissionalSaude()
+    {
+        return $this->belongsTo(ProfissionalSaude::class, 'profissional_saude_id');
+    }
 
     /**
      * The attributes that should be hidden for serialization.

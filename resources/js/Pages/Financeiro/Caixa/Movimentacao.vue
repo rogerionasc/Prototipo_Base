@@ -81,7 +81,7 @@
             <div class="tab-content text-muted">
           <!-- Aba: Operação (PDV) -->
           <div class="tab-pane active" id="pdv-operacao" role="tabpanel">
-            <div class="row g-4 align-items-stretch p-4 border-top border-light">
+            <div class="row g-4 align-items-stretch p-4">
               <!-- Coluna Esquerda: Fila -->
               <div class="col-lg-7 col-md-7 col-12">
                 <div class="d-flex flex-column h-100" style="min-height: 65vh;">
@@ -159,6 +159,10 @@
                               @click="cancelProcessing[selectedPendente.pagamento_id] ? null : cancelarPix(selectedPendente.pagamento_id)">
                         <span v-if="cancelProcessing[selectedPendente.pagamento_id]" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         <i class="ri-close-circle-line align-bottom me-1"></i> Cancelar PIX Pendente
+                      </button>
+                      <button v-else-if="waitingPayment[selectedPendente.faturamento_id]" class="btn btn-warning btn-lg shadow-sm" type="button">
+                        <span class="spinner-border spinner-border-sm align-middle me-2" role="status" aria-hidden="true"></span>
+                        Aguardando pagamento
                       </button>
                       <button v-else class="btn btn-success btn-lg shadow-sm" type="button" @click="abrirReceber(selectedPendente.faturamento_id)">
                         <i class="ri-money-dollar-box-line align-middle me-2 fs-20"></i> RECEBER PAGAMENTO
@@ -244,7 +248,7 @@
 
           <!-- Aba: Histórico Completo -->
           <div class="tab-pane" id="pdv-historico" role="tabpanel">
-            <div class="p-4 border-top border-light">
+            <div class="p-4">
                 <TableGrid
                   :columns="movCols"
                   :data="movsByCaixa"
@@ -382,7 +386,7 @@
 
       </div>
     </Modal>
-    <Modal v-model="showReceberModal" :title="'Receber Pagamento'" :name-button="'Prosseguir'" :processing="receberProcessing" size="md" @save="prosseguirRecebimento">
+    <Modal v-model="showReceberModal" :title="'Receber Pagamento'" :name-button="formaRecebimento === 'PIX' ? 'Prosseguir' : 'Receber Pagamento'" :processing="receberForm.processing" size="md" @save="prosseguirRecebimento">
       <div class="vstack gap-3">
         <div class="row g-2">
           <div class="col-6">
@@ -551,33 +555,27 @@
           </div>
           <div>
             <h6 class="mb-2">Pagamentos</h6>
-            <div class="table-responsive">
-              <table class="table table-sm table-bordered">
-                <thead>
-                  <tr>
-                  <th>Paciente</th>
-                  <th>Procedimento</th>
-                  <th>Data</th>
-                  <th class="text-end">Valor</th>
-                  <th>Forma</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in movPagamentosView" :key="row.id">
+            <SimpleTable
+                variant="borderless"
+                compact
+                tableClass="table-bordered"
+                :items="movPagamentosView"
+                :columns="pagamentosModalColumns"
+                emptyTitle="Sem pagamentos"
+                emptyMessage="Sem pagamentos nesta movimentação"
+                emptyIcon="ri-inbox-line"
+            >
+              <template #body="{ items, columns }">
+                <tr v-for="row in items" :key="row.id">
                   <td>{{ row.paciente }}</td>
-                  <td>{{ row.procedimentos || "—" }}</td>
-                  <td>{{ row.data_pagamento || "—" }}</td>
+                  <td>{{ row.procedimentos || '—' }}</td>
+                  <td>{{ row.data_pagamento || '—' }}</td>
                   <td class="text-end">{{ formatCurrency(row.valor) }}</td>
-                  <td>{{ row.forma_pagamento || "—" }}</td>
+                  <td>{{ row.forma_pagamento || '—' }}</td>
                   <td>{{ pagamentoStatusLabel(row) }}</td>
                 </tr>
-                <tr v-if="!movPagamentosView || movPagamentosView.length === 0">
-                  <td colspan="6" class="text-muted">Sem pagamentos nesta movimentação</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+              </template>
+            </SimpleTable>
           </div>
         </div>
       </div>
@@ -613,6 +611,16 @@ import axios from "axios";
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/l10n/pt.js";
+import SimpleTable from "@/Components/SimpleTable.vue";
+
+const pagamentosModalColumns = [
+  { key: 'paciente', label: 'Paciente' },
+  { key: 'procedimentos', label: 'Procedimento' },
+  { key: 'data_pagamento', label: 'Data' },
+  { key: 'valor', label: 'Valor', thClass: 'text-end' },
+  { key: 'forma_pagamento', label: 'Forma' },
+  { key: 'status', label: 'Status' }
+];
 
 const props = defineProps({
   caixas: { type: Array, default: () => [] },
@@ -629,6 +637,16 @@ const selectedPendente = ref(null);
 
 watch(() => props.pagamentosPendentes, (nv) => {
   pagamentosLocal.value = [...(nv || [])];
+  
+  // Atualiza a referência do paciente selecionado para refletir as mudanças do banco
+  if (selectedPendente.value) {
+    const atualizado = pagamentosLocal.value.find(p => p.faturamento_id === selectedPendente.value.faturamento_id);
+    if (atualizado) {
+      selectedPendente.value = atualizado;
+    } else {
+      selectedPendente.value = null; // Caso tenha sido pago e saído da fila
+    }
+  }
 }, { deep: true });
 const ultimosPagamentosLocal = toRef(props, "ultimosPagamentos");
 const ultimosPagamentosFiltered = computed(() => {
@@ -899,7 +917,10 @@ const receberFaturamentoId = ref(null);
 const receberPagamentoId = ref(null);
 const formaRecebimento = ref("PIX");
 const cancelProcessing = ref({});
-const receberProcessing = ref(false);
+const receberForm = useForm({
+  caixa_id: '',
+  forma_pagamento: ''
+});
 const receberError = ref("");
 const receberInfo = computed(() => {
   const id = receberFaturamentoId.value;
@@ -911,7 +932,13 @@ const receberInfo = computed(() => {
     emissao: r?.data_orcamento || "—",
   };
 });
+const waitingPayment = ref({});
+
 function abrirReceber(id) {
+  if (!isCaixaDisponivelReceber.value) {
+    showCaixaModal.value = true;
+    return;
+  }
   receberFaturamentoId.value = id;
   const r = (pagamentosLocal.value || []).find(x => String(x.faturamento_id) === String(id));
   receberPagamentoId.value = r?.pagamento_id || null;
@@ -928,6 +955,11 @@ function cancelarPix(id) {
   const f = useForm({});
   f.put(`/pagamentos/${id}/cancel-pix`, {
     onSuccess: async () => {
+      // Quando cancela, temos que resetar o estado de aguardando se existir
+      if (selectedPendente.value && selectedPendente.value.faturamento_id) {
+        waitingPayment.value[selectedPendente.value.faturamento_id] = false;
+      }
+      
       await new Promise((resolve) => {
         router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
       });
@@ -942,37 +974,68 @@ function prosseguirRecebimento() {
   const fatId = receberFaturamentoId.value;
   if (!fatId) { showReceberModal.value = false; return; }
   receberError.value = "";
-  receberProcessing.value = true;
+  waitingPayment.value[fatId] = true; // Ativa o estado amarelo no painel lateral
+  
   const run = async () => {
-    let pid = receberPagamentoId.value;
-    if (!pid) {
-      const resp = await axios.post(`/faturamentos/${fatId}/pagamentos`);
-      pid = resp?.data?.pagamento_id || null;
-      receberPagamentoId.value = pid;
-    }
-    if (!pid) return;
-    if (formaRecebimento.value === "PIX") {
-      if (!isCaixaDisponivelReceber.value) { showCaixaModal.value = true; return; }
-      const f = useForm({ caixa_id: openForm.caixa_id });
-      f.put(`/pagamentos/${pid}/prepare-pix`, {
-        onSuccess: async () => {
+    try {
+      let pid = receberPagamentoId.value;
+      if (!pid) {
+        const resp = await axios.post(`/faturamentos/${fatId}/pagamentos`);
+        pid = resp?.data?.pagamento_id || null;
+        receberPagamentoId.value = pid;
+      }
+      if (!pid) {
+        waitingPayment.value[fatId] = false;
+        return;
+      }
+      
+      receberForm.caixa_id = openForm.caixa_id;
+      receberForm.forma_pagamento = formaRecebimento.value;
+
+      if (formaRecebimento.value === "PIX") {
+        if (!isCaixaDisponivelReceber.value) {
+          waitingPayment.value[fatId] = false;
           showReceberModal.value = false;
-          await new Promise((resolve) => {
-            router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
-          });
-        },
-        onError: () => {
+          showCaixaModal.value = true; 
+          return; 
+        }
+        receberForm.put(`/pagamentos/${pid}/prepare-pix`, {
+          onSuccess: async () => {
+            showReceberModal.value = false;
+            await new Promise((resolve) => {
+              router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
+            });
+          },
+          onError: () => {
+            showReceberModal.value = false;
+          }
+        });
+      } else {
+        // Para dinheiro ou cartão
+        if (!isCaixaDisponivelReceber.value) { 
+          waitingPayment.value[fatId] = false;
           showReceberModal.value = false;
-        },
-      });
-    } else {
-      confirmarPagamento(pid, formaRecebimento.value);
-      showReceberModal.value = false;
+          showCaixaModal.value = true; 
+          return; 
+        }
+        receberForm.put(`/pagamentos/${pid}/confirm`, {
+          onSuccess: async () => {
+            showReceberModal.value = false;
+            await new Promise((resolve) => {
+              router.reload({ only: ["caixas","ultimos","movs","pagamentosPendentes","ultimosPagamentos"], onFinish: () => resolve() });
+            });
+            recomputeCurrentMov();
+          },
+          onError: () => {
+            showCaixaModal.value = true;
+          }
+        });
+      }
+    } catch (e) {
+      waitingPayment.value[fatId] = false;
     }
   };
-  run().finally(() => {
-    receberProcessing.value = false;
-  });
+  run();
 }
 function confirmarRecusa() {
   const fatId = recusarFaturamentoId.value;

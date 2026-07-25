@@ -242,23 +242,36 @@
             <BTab title="Convênio">
                 <div class="row g-3 mt-2">
                     <div class="col-md-12">
-                        <TableGrid
+                        <SimpleTable
+                            variant="borderless"
+                            compact
+                            tableClass="table-sm table-hover align-middle"
+                            :items="conveniosList"
                             :columns="convenioColumns"
-                            :data="conveniosList"
-                            :tableTitle="'Convênios do Paciente'"
-                            :showStatus="false"
-                            :searchPlaceholder="'Buscar convênio'"
-                            :showCheckbox="false"
-                            :showMultiDelete="false"
-                            :showAddButton="true"
-                            :addButtonText="'Adicionar Convênio'"
-                            :showActions="true"
-                            :actionsConfig="{ delete: true, edit: true, show: false }"
-                            :actionsLabels="{ delete: 'Remover', edit: 'Editar' }"
-                            @add="openConvenioModal"
-                            @edit="editConvenio"
-                            @delete="removeConvenio"
-                        />
+                            emptyTitle="Nenhum convênio"
+                            emptyMessage="Nenhum convênio vinculado a este paciente."
+                        >
+                            <template #header-actions>
+                                <button type="button" class="btn btn-primary btn-sm" @click="openConvenioModal">
+                                    <i class="ri-add-line align-bottom me-1"></i> Adicionar Convênio
+                                </button>
+                            </template>
+                            <template #body="{ items }">
+                                <tr v-for="c in items" :key="c.id">
+                                    <td>{{ c.id }}</td>
+                                    <td>{{ c.descricao }}</td>
+                                    <td>{{ c.numero_carteira || '-' }}</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-soft-info me-2" type="button" @click="editConvenio(c)">
+                                            <i class="ri-pencil-fill"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-soft-danger" type="button" @click="removeConvenio(c)">
+                                            <i class="ri-delete-bin-5-fill"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </SimpleTable>
                     </div>
                 </div>
             </BTab>
@@ -288,6 +301,7 @@ import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/l10n/pt.js";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
+import SimpleTable from "@/Components/SimpleTable.vue";
 import Modal from "@/Components/Modal.vue";
 const flatpickrOptions = { altInput: true, altFormat: "d M, Y", dateFormat: "Y-m-d", locale: "pt" };
 import { useForm } from "@inertiajs/vue3";
@@ -312,9 +326,10 @@ const newConvenio = ref({
 });
 const conveniosList = ref([]);
 const convenioColumns = [
-    { id: "id", name: "ID" },
-    { id: "descricao", name: "Convênio" },
-    { id: "numero_carteira", name: "Número da Carteira" },
+    { key: "id", label: "ID" },
+    { key: "descricao", label: "Convênio" },
+    { key: "numero_carteira", label: "Número da Carteira" },
+    { key: "acoes", label: "Ações", thClass: "text-end" }
 ];
 const showConvenioModal = ref(false);
 const convenioModalTitle = ref('Adicionar Convênio');
