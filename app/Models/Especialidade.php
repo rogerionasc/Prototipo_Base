@@ -32,6 +32,6 @@ class Especialidade extends Model
 
     public function procedimentos()
     {
-        return $this->hasMany(Procedimento::class, 'especialidade_id');
+        return $this->belongsToMany(Procedimento::class, 'especialidade_procedimento', 'especialidade_id', 'procedimento_id');
     }
 }

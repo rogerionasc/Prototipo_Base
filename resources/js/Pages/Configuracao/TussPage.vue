@@ -192,11 +192,12 @@
 <script setup>
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
-import { Head, useForm } from "@inertiajs/vue3";
+import { Head, useForm, usePage } from "@inertiajs/vue3";
 import { ref, computed } from "vue";
 import Modal from "@/Components/Modal.vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 
+const page = usePage();
 const tussTableKey = ref(0);
 const tussImportModalOpen = ref(false);
 const tussCreateModalOpen = ref(false);
@@ -302,7 +303,18 @@ async function importTuss() {
   fd.append('tabela_forcada', tussImportForm.tabela_forcada);
   fd.append('_token', document.querySelector('meta[name="csrf-token"]')?.content ?? '');
   try {
-    const resp = await fetch('/tuss/import/progress', { method: 'POST', body: fd });
+    const resp = await fetch('/tuss/import/progress', { 
+      method: 'POST', 
+      body: fd,
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!resp.ok) {
+      if (resp.status === 422) {
+        const data = await resp.json();
+        throw new Error(data.errors?.file?.[0] || data.errors?.tabela_forcada?.[0] || data.message || 'Erro de validação');
+      }
+      throw new Error(`Erro HTTP: ${resp.status}`);
+    }
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buf = '';
@@ -326,12 +338,16 @@ async function importTuss() {
     }
   } catch (e) {
     tussImportUiStatus.value = 'error';
-    tussImportUiMessage.value = 'Erro de conexão ao importar.';
+    tussImportUiMessage.value = e.message || 'Erro de conexão ao importar.';
+    page.props.flash = { ...page.props.flash, error: tussImportUiMessage.value + ' ' + Date.now() };
   }
   tussImportProcessing.value = false;
   if (tussImportUiStatus.value === 'success') {
+    page.props.flash = { ...page.props.flash, success: (tussImportUiMessage.value || 'Importação concluída.') + ' ' + Date.now() };
     tussTableKey.value++;
     setTimeout(() => { tussImportModalOpen.value = false; tussImportForm.reset(); }, 2000);
+  } else if (tussImportUiStatus.value === 'error' && !page.props.flash?.error?.includes(Date.now().toString().substring(0,8))) {
+     page.props.flash = { ...page.props.flash, error: tussImportUiMessage.value + ' ' + Date.now() };
   }
 }
 </script>

@@ -27,10 +27,17 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+
+        Schema::table('users', function (Blueprint $table) {
+            $table->foreign('profissional_saude_id')->references('id')->on('profissionais_saude')->onDelete('set null');
+        });
     }
 
     public function down(): void
     {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropForeign(['profissional_saude_id']);
+        });
         Schema::dropIfExists('profissionais_saude');
     }
 };

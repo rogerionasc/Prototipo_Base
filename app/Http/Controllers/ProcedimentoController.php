@@ -37,6 +37,7 @@ class ProcedimentoController extends Controller
             'valor' => ['nullable', 'numeric'],
             'comissao_percentual' => ['nullable', 'numeric'],
             'ativo' => ['nullable', 'boolean'],
+
         ];
     }
 
@@ -905,16 +906,20 @@ class ProcedimentoController extends Controller
 
     public function store(Request $request)
     {
-        $data = $this->normalizePayload($request->validate($this->rules()));
-        Procedimento::create($data);
+        $payload = $request->validate($this->rules());
+        $data = $this->normalizePayload($payload);
+        $proc = Procedimento::create($data);
+
         return back()->with('success', 'Procedimento cadastrado');
     }
 
     public function update(Request $request, string $id)
     {
-        $data = $this->normalizePayload($request->validate($this->rules()));
+        $payload = $request->validate($this->rules());
+        $data = $this->normalizePayload($payload);
         $proc = Procedimento::findOrFail($id);
         $proc->update($data);
+
         return back()->with('success', 'Procedimento atualizado');
     }
 

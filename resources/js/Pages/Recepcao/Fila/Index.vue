@@ -50,7 +50,7 @@ const openCancelModal = (agendamentoId) => {
 
 const confirmarCancelamento = () => {
     if (!selectedPacienteId.value) return;
-    
+
     isCanceling.value = true;
     const form = useForm({});
     form.post(route('recepcao.fila.cancelar', selectedPacienteId.value), {
@@ -68,8 +68,8 @@ const searchQuery = ref('');
 const filteredFila = computed(() => {
     if (!searchQuery.value) return props.fila;
     const q = searchQuery.value.toLowerCase();
-    return props.fila.filter(p => 
-        (p.paciente && p.paciente.toLowerCase().includes(q)) || 
+    return props.fila.filter(p =>
+        (p.paciente && p.paciente.toLowerCase().includes(q)) ||
         (p.cpf && p.cpf.includes(q)) ||
         (p.medico && p.medico.toLowerCase().includes(q))
     );
@@ -103,32 +103,28 @@ const getRowClass = (item) => {
 
 <template>
     <Layout>
+
         <Head title="Fila da Recepção" />
         <PageHeader title="Fila da Recepção" pageTitle="Recepção" />
 
         <div class="row">
             <div class="col-lg-12">
-                <SimpleTable
-                    title="Pacientes Agendados para Hoje"
-                    :items="fila"
-                    :columns="tableColumns"
-                    :searchable="true"
-                    searchPlaceholder="Buscar paciente, cpf ou médico..."
-                    :searchFields="['paciente', 'cpf', 'medico']"
-                    emptyTitle="Nenhum paciente encontrado"
+                <SimpleTable title="Pacientes Agendados para Hoje" :items="fila" :columns="tableColumns"
+                    :searchable="true" searchPlaceholder="Buscar paciente, cpf ou médico..."
+                    :searchFields="['paciente', 'cpf', 'medico']" emptyTitle="Nenhum paciente encontrado"
                     emptyMessage="Não há pacientes agendados para hoje ou com pagamentos confirmados."
-                    emptyIcon="ri-calendar-event-line"
-                    :rowClass="getRowClass"
-                >
+                    emptyIcon="ri-calendar-event-line" :rowClass="getRowClass">
                     <template #cell(hora)="{ item }">
-                        <div class="fw-medium text-dark"><i class="ri-time-line text-muted me-1"></i> {{ item.hora }}</div>
+                        <div class="fw-medium text-dark"><i class="ri-time-line text-muted me-1"></i> {{ item.hora }}
+                        </div>
                     </template>
-                    
+
                     <template #cell(paciente)="{ item }">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0">
                                 <div class="avatar-xs">
-                                    <div class="avatar-title rounded-circle shadow" :class="getRandomColorClass(item.paciente)">
+                                    <div class="avatar-title rounded-circle shadow"
+                                        :class="getRandomColorClass(item.paciente)">
                                         {{ getInitials(item.paciente) }}
                                     </div>
                                 </div>
@@ -139,39 +135,37 @@ const getRowClass = (item) => {
                             </div>
                         </div>
                     </template>
-                    
+
                     <template #cell(procedimento)="{ item }">
                         <div class="d-flex flex-column">
                             <span class="fw-medium text-dark">Dr(a). {{ item.medico }}</span>
                             <span class="text-muted fs-12">{{ item.procedimento }}</span>
                         </div>
                     </template>
-                    
+
                     <template #cell(status)="{ item }">
-                        <span class="badge px-2 py-1 fs-12" 
-                              :class="{
-                                  'bg-success-subtle text-success': item.ja_chegou,
-                                  'bg-warning-subtle text-warning': !item.ja_chegou,
-                              }">
-                            <i class="mdi mdi-circle-medium"></i> {{ item.status }}
+                        <span class="badge px-2 py-1 fs-12" :class="{
+                            'bg-info text-white': item.ja_chegou && String(item.status).toUpperCase().trim().includes('AGUARDANDO'),
+                            'bg-success text-white': item.ja_chegou && !String(item.status).toUpperCase().trim().includes('AGUARDANDO'),
+                            'bg-warning text-white': !item.ja_chegou,
+                        }">
+                            {{ item.status }}
                         </span>
                     </template>
-                    
+
                     <template #cell(acoes)="{ item }">
-                        <button v-if="!item.ja_chegou" 
-                                @click="confirmarPresenca(item.id)" 
-                                class="btn btn-sm btn-primary shadow-sm"
-                                :disabled="processingIds.includes(item.id)">
-                            <span v-if="processingIds.includes(item.id)" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        <button v-if="!item.ja_chegou" @click="confirmarPresenca(item.id)"
+                            class="btn btn-sm btn-primary shadow-sm" :disabled="processingIds.includes(item.id)">
+                            <span v-if="processingIds.includes(item.id)" class="spinner-border spinner-border-sm me-1"
+                                role="status" aria-hidden="true"></span>
                             <i v-else class="ri-check-line align-bottom me-1"></i> Confirmar Presença
                         </button>
                         <div v-else class="d-flex align-items-center justify-content-end gap-2">
                             <span class="text-success fw-medium fs-13">
                                 <i class="ri-checkbox-circle-fill align-middle me-1"></i> Presente
                             </span>
-                            <button @click="openCancelModal(item.id)" 
-                                    class="btn btn-sm btn-soft-danger shadow-sm"
-                                    title="Cancelar presença">
+                            <button @click="openCancelModal(item.id)" class="btn btn-sm btn-soft-danger shadow-sm"
+                                title="Cancelar presença">
                                 <i class="ri-close-line align-bottom"></i>
                             </button>
                         </div>
@@ -180,11 +174,14 @@ const getRowClass = (item) => {
             </div>
         </div>
 
-        <Modal v-model="showCancelModal" title="Cancelar Presença" name-button="Sim, Cancelar" :processing="isCanceling" size="md" @save="confirmarCancelamento">
+        <Modal v-model="showCancelModal" title="Cancelar Presença" name-button="Sim, Cancelar" :processing="isCanceling"
+            size="md" @save="confirmarCancelamento">
             <div class="text-center p-3">
                 <i class="ri-error-warning-line display-5 text-danger mb-3"></i>
                 <h5 class="fs-16">Deseja realmente cancelar a presença deste paciente?</h5>
-                <p class="text-muted mb-0">Esta ação removerá o paciente da fila do médico. Ele voltará ao status de aguardando na recepção.</p>
+                <p class="text-muted mb-0">Esta ação removerá o paciente da fila do médico. Ele voltará ao status de
+                    aguardando
+                    na recepção.</p>
             </div>
         </Modal>
     </Layout>

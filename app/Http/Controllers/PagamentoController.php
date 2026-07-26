@@ -31,18 +31,14 @@ class PagamentoController extends Controller
         ]);
         $p = DB::table('pagamentos as p')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->select(
                 'p.id',
-                'o.id as orcamento_id',
                 'p.caixa_id',
                 'p.valor',
                 'p.forma_pagamento',
                 'p.status',
-                DB::raw("COALESCE(pa.nome,'') AS paciente"),
-                DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
-                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_orcamento")
+                DB::raw("COALESCE(pa.nome,'') AS paciente")
             )
             ->where('p.status', 'PENDENTE')
             ->where('p.forma_pagamento', 'PIX')
@@ -230,7 +226,7 @@ class PagamentoController extends Controller
             DB::transaction(function () use ($pag, $mov) {
                 $pag->update([
                     'movimentacao_id' => $mov->id,
-                    'data_pagamento' => Carbon::today()->format('Y-m-d'),
+                    'data_pagamento' => \Carbon\Carbon::now(),
                     'status' => 'CONFIRMADO',
                 ]);
                 $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
@@ -281,7 +277,7 @@ class PagamentoController extends Controller
                         DB::transaction(function () use ($pag, $mov) {
                             $pag->update([
                                 'movimentacao_id' => $mov->id,
-                                'data_pagamento' => Carbon::today()->format('Y-m-d'),
+                                'data_pagamento' => \Carbon\Carbon::now(),
                                 'status' => 'CONFIRMADO',
                             ]);
                             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
@@ -350,7 +346,7 @@ class PagamentoController extends Controller
         DB::transaction(function () use ($pag, $mov) {
             $pag->update([
                 'movimentacao_id' => $mov->id,
-                'data_pagamento' => Carbon::today()->format('Y-m-d'),
+                'data_pagamento' => \Carbon\Carbon::now(),
                 'status' => 'CONFIRMADO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
@@ -417,7 +413,7 @@ class PagamentoController extends Controller
         DB::transaction(function () use ($pag, $mov) {
             $pag->update([
                 'movimentacao_id' => $mov->id,
-                'data_pagamento' => Carbon::today()->format('Y-m-d'),
+                'data_pagamento' => \Carbon\Carbon::now(),
                 'status' => 'CONFIRMADO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
@@ -512,7 +508,7 @@ class PagamentoController extends Controller
         DB::transaction(function () use ($pag, $mov) {
             $pag->update([
                 'movimentacao_id' => $mov->id,
-                'data_pagamento' => Carbon::today()->format('Y-m-d'),
+                'data_pagamento' => \Carbon\Carbon::now(),
                 'status' => 'CONFIRMADO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
@@ -556,7 +552,7 @@ class PagamentoController extends Controller
                 'caixa_id' => (int)$data['caixa_id'],
                 'movimentacao_id' => $mov->id,
                 'forma_pagamento' => $data['forma_pagamento'] ?? $pag->forma_pagamento,
-                'data_pagamento' => Carbon::today()->format('Y-m-d'),
+                'data_pagamento' => \Carbon\Carbon::now(),
                 'status' => 'CONFIRMADO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
@@ -608,21 +604,17 @@ class PagamentoController extends Controller
     {
         $pagamentosRecusados = DB::table('pagamentos as p')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->leftJoin('users as u', 'u.id', '=', 'p.recusado_por')
             ->select(
                 'p.id as num_pagamento',
                 'p.faturamento_id',
-                'o.id as orcamento_id',
                 'p.valor',
                 'p.forma_pagamento',
                 'p.status',
                 'p.recusa_justificativa',
                 DB::raw("DATE_FORMAT(p.updated_at, '%d-%m-%Y %H:%i') AS data_recusa"),
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
-                DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
-                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_orcamento"),
                 DB::raw("COALESCE(CONCAT(u.nome, ' ', u.sobrenome),'') AS recusado_por_nome")
             )
             ->where('p.status', 'RECUSADO')
@@ -706,11 +698,11 @@ class PagamentoController extends Controller
             ]);
 
             if ($quitado) {
-                // Fetch the orcamento_id from faturamento
-                $orcamentoId = DB::table('faturamentos')->where('id', $fatId)->value('orcamento_id');
-                if ($orcamentoId) {
+                // Fetch the agendamento_id from faturamento
+                $agendamentoId = DB::table('faturamentos')->where('id', $fatId)->value('agendamento_id');
+                if ($agendamentoId) {
                     $statusAguardando = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Aguardando Atendimento']);
-                    DB::table('agendamentos')->where('orcamento_id', $orcamentoId)->update([
+                    DB::table('agendamentos')->where('id', $agendamentoId)->update([
                         'status_id' => $statusAguardando->id,
                         'updated_at' => now(),
                     ]);
@@ -731,10 +723,10 @@ class PagamentoController extends Controller
     private function gerarAtendimentos(int $fatId, Pagamento $pag): void
     {
         $fat = DB::table('faturamentos')->where('id', $fatId)->first();
-        if (!$fat || !$fat->orcamento_id) return;
+        if (!$fat || !$fat->agendamento_id) return;
 
-        // Buscar agendamentos vinculados a este orçamento
-        $agendamentos = DB::table('agendamentos')->where('orcamento_id', $fat->orcamento_id)->get();
+        // Buscar agendamento vinculado a este faturamento
+        $agendamentos = DB::table('agendamentos')->where('id', $fat->agendamento_id)->get();
 
         foreach ($agendamentos as $ag) {
             // Check if atendimento already exists for this agendamento

@@ -545,36 +545,34 @@ export default {
         },
         eventosDiaGrid() {
             try {
-                return (this.eventosDiaModal || []).map(ev => {
-                    const t = String(ev?.title || "");
-                    let pacNome = "";
-                    let procNome = "";
-                    if (t.includes("•")) {
-                        const parts = t.split("•");
-                        pacNome = String(parts[0] || "").trim();
-                        procNome = String(parts[1] || "").trim();
-                    } else {
-                        pacNome = t.trim();
-                        procNome = String(ev?.extendedProps?.procedimento_nome || "").trim();
-                    }
-                    const st = String(ev?.extendedProps?.status || "").trim();
-                    const medNome = String(ev?.extendedProps?.profissional_nome || "").trim();
-                    const pgConf = !!ev?.extendedProps?.pagamento_confirmado;
-                    const pgStRaw = String(ev?.extendedProps?.pagamento_status || "").trim().toLowerCase();
-                    const pgSt = pgConf ? "Pago"
-                        : (pgStRaw === "pendente" ? "Pendente"
-                            : (pgStRaw === "recusado" ? "Recusado"
-                                : (pgStRaw ? pgStRaw : "—")));
-                    return {
-                        id: ev?.id,
-                        paciente: pacNome || "Paciente",
-                        procedimento: procNome || "Procedimento",
-                        hora: this.formatHora24(ev?.start) || "--:--",
-                        status: st || "Agendado",
-                        medico: medNome || "Profissional",
-                        pagamento: pgSt,
-                    };
-                });
+                return (this.eventosDiaModal || [])
+                    .filter(ev => {
+                        const st = String(ev?.extendedProps?.status || "").toLowerCase();
+                        return !st.includes("atendido");
+                    })
+                    .map(ev => {
+                        const t = String(ev?.title || "");
+                        let pacNome = "";
+                        let procNome = "";
+                        if (t.includes("•")) {
+                            const parts = t.split("•");
+                            pacNome = String(parts[0] || "").trim();
+                            procNome = String(parts[1] || "").trim();
+                        } else {
+                            pacNome = t.trim();
+                            procNome = String(ev?.extendedProps?.procedimento_nome || "").trim();
+                        }
+                        const st = String(ev?.extendedProps?.status || "").trim();
+                        const medNome = String(ev?.extendedProps?.profissional_nome || "").trim();
+                        return {
+                            id: ev?.id,
+                            paciente: pacNome || "Paciente",
+                            procedimento: procNome || "Procedimento",
+                            hora: this.formatHora24(ev?.start) || "--:--",
+                            status: st || "Agendado",
+                            medico: medNome || "Profissional"
+                        };
+                    });
             } catch (e) {
                 return [];
             }
@@ -627,7 +625,6 @@ export default {
                 if (!ev) return;
 
                 const st = String(ev?.extendedProps?.status || "").toLowerCase();
-                if (!st.includes("cancel")) return;
 
                 this.eventoSelecionado = ev;
                 let ds = "";
@@ -804,7 +801,7 @@ export default {
                     valor: r.valor,
                     eh_tratamento: r.eh_tratamento,
                     quantidade_sessoes: r.quantidade_sessoes,
-                    especialidade_id: r.especialidade_id
+                    especialidades: r.especialidades
                 }));
                 this.agendamentoForm.procedimento_id = null;
                 await this.$nextTick();
@@ -1010,7 +1007,7 @@ export default {
                     if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
                 } catch (_) { }
 
-                this.agendamentoForm = { paciente_id: null, convenio_id: null, profissional_saude_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
+                this.agendamentoForm = { paciente_id: null, convenio_id: null, profissional_saude_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
                 this.termoBuscaPaciente = "";
                 this.conveniosPacienteCriacao = [];
                 this.procedimentosSelectRows = [];
@@ -1044,7 +1041,7 @@ export default {
                 const fp = (this.$page?.props?.flash ?? {});
                 if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
             } catch (_) { }
-            this.agendamentoForm = { paciente_id: null, convenio_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
+            this.agendamentoForm = { paciente_id: null, convenio_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
             this.termoBuscaPaciente = "";
             this.mostrarSugestoesPaciente = false;
             this.usarOrcamentoPagoCriacao = false;
@@ -1344,12 +1341,12 @@ export default {
                 });
                 const filtered = Array.from(filteredMap.values());
                 const ids = new Set(filtered.map(p => p.id));
-                
+
                 const byProc = {};
-                (itens || []).forEach(it => { 
+                (itens || []).forEach(it => {
                     const id = it.tuss_id || it.procedimento_id;
                     if (id) {
-                        byProc[String(id)] = { valor_unitario: it.valor_unitario, valor_total: it.valor_total, quantidade: it.quantidade }; 
+                        byProc[String(id)] = { valor_unitario: it.valor_unitario, valor_total: it.valor_total, quantidade: it.quantidade };
                     }
                 });
                 this.itensOrcamentoPorProcedimentoEdicao = byProc;
@@ -1443,10 +1440,10 @@ export default {
                     const proc = (this.procedimentosLocal || []).find(p => String(p.id) === String(pid));
                     // se o procedimento não foi achado no local, é um TUSS, logo não deve rodar o fallback
                     if (proc) {
-                        const espId = proc?.especialidade_id;
-                        if (espId) {
+                        const esps = proc?.especialidades || [];
+                        if (esps.length > 0) {
                             this.profissionaisFiltradosEdicao = (this.profissionaisLocal || []).filter(prof => {
-                                return (prof.especialidades || []).some(e => String(e.id) === String(espId));
+                                return (prof.especialidades || []).some(pe => esps.some(e => String(e.id) === String(pe.id)));
                             });
                         }
                     }
@@ -1540,7 +1537,6 @@ export default {
                     const procNome = pFilt?.nome || pLocal?.nome || null;
                     const pacNome = this.pacientesLocal.find(p => String(p.id) === String(this.editAgendamentoForm.paciente_id))?.nome || null;
                     ev.setExtendedProp("procedimento_id", this.editAgendamentoForm.procedimento_id || null);
-                    ev.setExtendedProp("orcamento_id", this.orcamentoSelecionadoEdicaoId || this.orcamentoSelecionadoId || null);
                     if (procNome) ev.setExtendedProp("procedimento_nome", procNome);
                     if (pacNome || procNome) {
                         const title = `${pacNome || ev.title.split("•")[0].trim()} • ${procNome || (ev.title.includes("•") ? ev.title.split("•")[1].trim() : "Procedimento")}`;
@@ -2060,10 +2056,10 @@ export default {
 
                     if (isParticular) {
                         const proc = (this.procedimentosLocal || []).find(p => String(p.id) === String(pid));
-                        const espId = proc?.especialidade_id;
-                        if (espId) {
+                        const esps = proc?.especialidades || [];
+                        if (esps.length > 0) {
                             this.profissionaisFiltradosCriacao = (this.profissionaisLocal || []).filter(prof => {
-                                return (prof.especialidades || []).some(e => String(e.id) === String(espId));
+                                return (prof.especialidades || []).some(pe => esps.some(e => String(e.id) === String(pe.id)));
                             });
                         }
                     }
@@ -2116,15 +2112,14 @@ export default {
                 paciente_id: this.agendamentoForm.paciente_id,
                 profissional_saude_id: this.agendamentoForm.profissional_saude_id,
                 procedimento_id: this.agendamentoForm.procedimento_id,
-                orcamento_id: this.usarOrcamentoPagoCriacao ? (this.orcamentoSelecionadoId || null) : null,
-                convenio_id: !this.usarOrcamentoPagoCriacao && this.agendamentoForm.convenio_id ? Number(this.agendamentoForm.convenio_id) : null,
+                convenio_id: this.agendamentoForm.convenio_id ? Number(this.agendamentoForm.convenio_id) : null,
                 status_id: null,
                 valor_cobrado: this.agendamentoForm.valor_cobrado ? Number(String(this.agendamentoForm.valor_cobrado).replace(/[^\d.,-]/g, '').replace(',', '.')) : null,
                 observacoes: this.agendamentoForm.observacoes,
+                is_retorno: this.agendamentoForm.is_retorno,
             };
             this.processandoCriacao = true;
             try {
-                let orcamentoGeradoId = this.usarOrcamentoPagoCriacao ? (this.orcamentoSelecionadoId || null) : null;
                 let sessions = [];
                 const pSel = (this.procedimentosFiltrados || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id)) || (this.procedimentosLocal || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id));
                 const isTrat = !!pSel?.eh_tratamento;
@@ -2136,15 +2131,11 @@ export default {
                 }
                 let createdCount = 0;
                 for (const s of sessions) {
-                    const payload = { ...basePayload, orcamento_id: orcamentoGeradoId, data: s.data, hora: s.hora };
+                    const payload = { ...basePayload, data: s.data, hora: s.hora };
                     const resp = await window.axios.post("/agendamentos", payload);
                     const ag = resp?.data?.agendamento;
                     if (ag) {
                         createdCount++;
-                        if (!orcamentoGeradoId && ag?.orcamento_id) {
-                            orcamentoGeradoId = ag.orcamento_id;
-                            basePayload = { ...basePayload, orcamento_id: orcamentoGeradoId };
-                        }
                         const pLocal = (this.procedimentosLocal || []).find(pr => String(pr.id) === String(ag.procedimento_id));
                         const pFilt = (this.procedimentosFiltrados || []).find(pr => String(pr.id) === String(ag.procedimento_id));
                         const procNome = pFilt?.nome || pLocal?.nome || 'Procedimento';
@@ -2158,7 +2149,7 @@ export default {
                             allDay: false,
                             className: "bg-success-subtle",
                             classNames: ["bg-success-subtle"],
-                            extendedProps: { paciente_id: ag.paciente_id, procedimento_id: ag.procedimento_id, procedimento_nome: procNome, observacoes: this.agendamentoForm.observacoes || "", orcamento_id: ag.orcamento_id || basePayload.orcamento_id || null }
+                            extendedProps: { paciente_id: ag.paciente_id, procedimento_id: ag.procedimento_id, procedimento_nome: procNome, observacoes: this.agendamentoForm.observacoes || "" }
                         });
                         try { calendarApi.gotoDate(ag.data); } catch (e) { }
                     }
@@ -2168,7 +2159,7 @@ export default {
                     this.$page.props.flash = { ...fp, success: createdCount > 1 ? "Agendamentos criados" : "Agendamento criado" };
                 } catch (_) { }
                 this.modalAgendarVisivel = false;
-                this.agendamentoForm = { paciente_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "" };
+                this.agendamentoForm = { paciente_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
                 this.valorCobradoAutoCriacaoProcId = null;
                 this.orcamentoSelecionado = null;
                 this.orcamentoSelecionadoId = null;
@@ -2256,8 +2247,6 @@ export default {
                             orcamento_id: r.orcamento_id ?? null,
                             procedimento_nome: r.procedimento || "",
                             status: r.status || "",
-                            pagamento_status: r.pagamento_status || "",
-                            pagamento_confirmado: !!r.pagamento_confirmado,
                             observacoes: r.observacoes || "",
                             createdEm: r.criado_em || "",
                             sessao_numero: r.sessao_numero ?? null,
@@ -2371,7 +2360,7 @@ export default {
                                                         }}</span>
                                                     <span v-if="!diaInteiro(ag)"
                                                         class="ms-2 small text-muted text-nowrap">({{
-                                                        formatarIntervaloAgenda(ag) }})</span>
+                                                            formatarIntervaloAgenda(ag) }})</span>
                                                 </div>
                                                 <div v-if="ag.especialidades" class="text-muted small text-truncate">{{
                                                     ag.especialidades }}</div>
@@ -2443,16 +2432,16 @@ export default {
             <div class="row g-3">
                 <div class="col-md-12">
                     <div class="form-check mb-0">
-                        <input id="chkOrcamentoPagoCriacao" class="form-check-input" type="checkbox"
+                        <input id="chkOrcamentoCriacao" class="form-check-input" type="checkbox"
                             v-model="usarOrcamentoPagoCriacao" />
-                        <label class="form-check-label" for="chkOrcamentoPagoCriacao">Orçamento Pago</label>
+                        <label class="form-check-label" for="chkOrcamentoCriacao">Orçamento</label>
                     </div>
                 </div>
 
                 <div :class="usarOrcamentoPagoCriacao ? 'col-md-6' : 'col-md-12'">
                     <label class="form-label">Paciente</label>
                     <SuggestInput v-model="termoBuscaPaciente" :suggestions="pacientesSugestoesCriacao" :loading="false"
-                        :show="mostrarSugestoesPaciente" :disabled="!!orcamentoSelecionado"
+                        :show="mostrarSugestoesPaciente"
                         placeholder="Buscar paciente por nome ou CPF" keyPrefix="sug-pac" primaryTextProp="nome"
                         secondaryTextProp="cpf" @focus="mostrarSugestoesPaciente = true" @blur="onBlurSugestoesPaciente"
                         @select="selecionarSugestaoPaciente" />
@@ -2509,8 +2498,14 @@ export default {
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Valor Cobrado</label>
-                    <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao" type="text"
-                        class="form-control" placeholder="0,00" :disabled="!!orcamentoSelecionado" />
+                    <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao" @blur="onBlurInputValorCobrado" @focus="$event.target.select()" type="text"
+                        class="form-control" placeholder="0,00"
+                        :disabled="agendamentoForm.is_retorno" />
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="isRetornoCheckbox"
+                            v-model="agendamentoForm.is_retorno">
+                        <label class="form-check-label" for="isRetornoCheckbox">É Retorno?</label>
+                    </div>
                 </div>
                 <div class="col-md-12">
                     <label class="form-label">Observações</label>
@@ -2531,7 +2526,7 @@ export default {
                                 <div class="row g-2 align-items-end">
                                     <div class="col-md-6">
                                         <label class="form-label"><span class="session-badge">Sessão {{ idx + 1 }}/{{
-                                                sessoesCriacao.length }}</span> Data</label>
+                                            sessoesCriacao.length }}</span> Data</label>
                                         <flatPickr v-model="s.data" class="form-control" :config="opcoesFlatpickrData"
                                             placeholder="Selecione a data" />
                                     </div>
@@ -2558,13 +2553,13 @@ export default {
             :processing="false" :disableClose="bloquearAcoesModalEventosDia" size="xl"
             @update:modelValue="modalEventosDiaVisivel = $event">
             <TableGrid :key="chaveTabelaEventosDia"
-                :columns="[{ id: 'id', name: 'ID' }, { id: 'paciente', name: 'Paciente' }, { id: 'procedimento', name: 'Procedimento' }, { id: 'medico', name: 'Médico' }, { id: 'hora', name: 'Hora' }, { id: 'status', name: 'Status' }, { id: 'pagamento', name: 'Pagamento' }]"
+                :columns="[{ id: 'id', name: 'ID' }, { id: 'paciente', name: 'Paciente' }, { id: 'procedimento', name: 'Procedimento' }, { id: 'medico', name: 'Médico' }, { id: 'hora', name: 'Hora' }, { id: 'status', name: 'Status' }]"
                 :data="eventosDiaGrid()" :tableTitle="'Lista de agendamentos'" :search="true" :showCheckbox="false"
                 :showAddButton="false" :showStatus="false" :showActions="true" :compactSpacing="true"
                 :disableActions="bloquearAcoesModalEventosDia" :actionsLoading="acoesLoadingEventosDia"
-                :actionsConfig="{ delete: (row) => !String(row?.status || '').toLowerCase().includes('cancel'), edit: (row) => String(row?.status || '').toLowerCase().includes('cancel'), show: false, diary: false, print: false, download: false }"
-                :actionsLabels="{ delete: 'Cancelar', edit: 'Reagendar' }"
-                :actionsButtonText="{ delete: 'Cancelar', edit: 'Reagendar' }"
+                :actionsConfig="{ delete: (row) => !String(row?.status || '').toLowerCase().includes('cancel'), edit: () => true, show: false, diary: false, print: false, download: false }"
+                :actionsLabels="{ delete: 'Cancelar', edit: 'Editar / Reagendar' }"
+                :actionsButtonText="{ delete: 'Cancelar', edit: 'Editar / Reagendar' }"
                 :actionsIcons="{ delete: 'ri-close-line' }" @delete="cancelarAgendamentoPorId"
                 @edit="abrirReagendarSessaoDaLista" />
         </Modal>
@@ -2578,13 +2573,13 @@ export default {
                     <label class="form-label">Paciente</label>
                     <SuggestInput v-model="termoBuscaPacienteEdicao" :suggestions="pacientesSugestoesEdicao"
                         :loading="false" :show="mostrarSugestoesPacienteEdicao"
-                        :disabled="podeReagendarAgendamentoCancelado() || !!orcamentoSelecionadoEdicao"
+                        :disabled="podeReagendarAgendamentoCancelado()"
                         placeholder="Buscar paciente por nome ou CPF" keyPrefix="sug-pac-edit" primaryTextProp="nome"
                         secondaryTextProp="cpf" @focus="mostrarSugestoesPacienteEdicao = true"
                         @blur="onBlurSugestoesPacienteEdicao" @select="selecionarSugestaoPacienteEdicao" />
                 </div>
                 <div v-if="!podeReagendarAgendamentoCancelado()" class="col-md-6">
-                    <label class="form-label">Orçamento Pago</label>
+                    <label class="form-label">Orçamento</label>
                     <SuggestInput v-model="termoBuscaOrcamentoEdicao" :suggestions="orcamentosPagosEdicao"
                         :loading="buscandoOrcamentosPagosEdicao" :show="mostrarSugestoesOrcamentoEdicao"
                         placeholder="Buscar orçamento por número ou paciente" keyPrefix="sug-edit"
@@ -2607,7 +2602,7 @@ export default {
                     <select v-if="renderProcedimentoEdicao" ref="selProcedimentoEdicao"
                         v-model="editAgendamentoForm.procedimento_id" class="form-select"
                         @change="editAgendamentoForm.procedimento_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarProcedimentoEdicao()"
-                        :disabled="podeReagendarAgendamentoCancelado() || carregandoItensOrcamentoEdicao">
+                        :disabled="podeReagendarAgendamentoCancelado()">
                         <option :value="null">Selecione</option>
                         <option v-for="p in procedimentosFiltradosEdicao" :key="p.id" :value="p.id">{{ p.nome }}
                         </option>
@@ -2634,8 +2629,8 @@ export default {
                 <div class="col-md-6">
                     <label class="form-label">Valor Cobrado</label>
                     <input v-model="editAgendamentoForm.valor_cobrado" type="text" class="form-control"
-                        placeholder="0,00"
-                        :disabled="podeReagendarAgendamentoCancelado() || !!orcamentoSelecionadoEdicao" />
+                        placeholder="0,00" @blur="onBlurInputValorCobradoEdicao" @focus="$event.target.select()"
+                        :disabled="podeReagendarAgendamentoCancelado()" />
                 </div>
                 <div class="col-md-12">
                     <label class="form-label">Observações</label>
@@ -2643,10 +2638,7 @@ export default {
                         placeholder="Anotações gerais" :disabled="podeReagendarAgendamentoCancelado()"></textarea>
                 </div>
             </div>
-            <template #extraFooterLeft>
-                <button v-if="!podeReagendarAgendamentoCancelado()" type="button" class="btn btn-outline-danger"
-                    @click="cancelarAgendamento">Cancelar agendamento</button>
-            </template>
+
         </Modal>
     </Layout>
 </template>
@@ -2697,37 +2689,101 @@ export default {
     margin-right: 8px;
 }
 
-.bg-teal-subtle { background-color: rgba(32, 201, 151, 0.14) !important; }
-.text-teal { color: #20c997 !important; }
-.agenda-stripe.bg-teal-subtle { background-color: rgb(32, 201, 151); }
+.bg-teal-subtle {
+    background-color: rgba(32, 201, 151, 0.14) !important;
+}
 
-.bg-purple-subtle { background-color: rgba(111, 66, 193, 0.14) !important; }
-.text-purple { color: #6f42c1 !important; }
-.agenda-stripe.bg-purple-subtle { background-color: rgb(111, 66, 193); }
+.text-teal {
+    color: #20c997 !important;
+}
 
-.bg-pink-subtle { background-color: rgba(214, 51, 132, 0.14) !important; }
-.text-pink { color: #d63384 !important; }
-.agenda-stripe.bg-pink-subtle { background-color: rgb(214, 51, 132); }
+.agenda-stripe.bg-teal-subtle {
+    background-color: rgb(32, 201, 151);
+}
 
-.bg-orange-subtle { background-color: rgba(253, 126, 20, 0.14) !important; }
-.text-orange { color: #fd7e14 !important; }
-.agenda-stripe.bg-orange-subtle { background-color: rgb(253, 126, 20); }
+.bg-purple-subtle {
+    background-color: rgba(111, 66, 193, 0.14) !important;
+}
 
-.bg-indigo-subtle { background-color: rgba(102, 16, 242, 0.12) !important; }
-.text-indigo { color: #6610f2 !important; }
-.agenda-stripe.bg-indigo-subtle { background-color: rgb(102, 16, 242); }
+.text-purple {
+    color: #6f42c1 !important;
+}
 
-.bg-brown-subtle { background-color: rgba(121, 85, 72, 0.14) !important; }
-.text-brown { color: #795548 !important; }
-.agenda-stripe.bg-brown-subtle { background-color: rgb(121, 85, 72); }
+.agenda-stripe.bg-purple-subtle {
+    background-color: rgb(111, 66, 193);
+}
 
-.bg-lime-subtle { background-color: rgba(132, 204, 22, 0.16) !important; }
-.text-lime { color: #3f6212 !important; }
-.agenda-stripe.bg-lime-subtle { background-color: rgb(132, 204, 22); }
+.bg-pink-subtle {
+    background-color: rgba(214, 51, 132, 0.14) !important;
+}
 
-.bg-sky-subtle { background-color: rgba(56, 189, 248, 0.14) !important; }
-.text-sky { color: #0284c7 !important; }
-.agenda-stripe.bg-sky-subtle { background-color: rgb(56, 189, 248); }
+.text-pink {
+    color: #d63384 !important;
+}
+
+.agenda-stripe.bg-pink-subtle {
+    background-color: rgb(214, 51, 132);
+}
+
+.bg-orange-subtle {
+    background-color: rgba(253, 126, 20, 0.14) !important;
+}
+
+.text-orange {
+    color: #fd7e14 !important;
+}
+
+.agenda-stripe.bg-orange-subtle {
+    background-color: rgb(253, 126, 20);
+}
+
+.bg-indigo-subtle {
+    background-color: rgba(102, 16, 242, 0.12) !important;
+}
+
+.text-indigo {
+    color: #6610f2 !important;
+}
+
+.agenda-stripe.bg-indigo-subtle {
+    background-color: rgb(102, 16, 242);
+}
+
+.bg-brown-subtle {
+    background-color: rgba(121, 85, 72, 0.14) !important;
+}
+
+.text-brown {
+    color: #795548 !important;
+}
+
+.agenda-stripe.bg-brown-subtle {
+    background-color: rgb(121, 85, 72);
+}
+
+.bg-lime-subtle {
+    background-color: rgba(132, 204, 22, 0.16) !important;
+}
+
+.text-lime {
+    color: #3f6212 !important;
+}
+
+.agenda-stripe.bg-lime-subtle {
+    background-color: rgb(132, 204, 22);
+}
+
+.bg-sky-subtle {
+    background-color: rgba(56, 189, 248, 0.14) !important;
+}
+
+.text-sky {
+    color: #0284c7 !important;
+}
+
+.agenda-stripe.bg-sky-subtle {
+    background-color: rgb(56, 189, 248);
+}
 </style>
 <style scoped>
 /* Botões da toolbar do FullCalendar com cor primária do template */

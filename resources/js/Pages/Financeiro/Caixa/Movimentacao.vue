@@ -116,7 +116,7 @@
                             <td>{{ row.pagamento_id || "—" }}</td>
                             <td class="fw-medium text-dark">{{ row.paciente }}</td>
                             <td class="text-muted">{{ row.paciente_documento || "—" }}</td>
-                            <td>{{ row.data_orcamento || "—" }}</td>
+                            <td>{{ row.data_faturamento || "—" }}</td>
                             <td class="text-end fw-semibold text-success">{{ formatCurrency(row.valor) }}</td>
                           </tr>
                           <tr v-if="!pagamentosFiltered || pagamentosFiltered.length === 0">

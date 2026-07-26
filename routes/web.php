@@ -111,6 +111,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::delete("/pacientes/{id}", [PacienteController::class, "destroy"])->name('pacientes.destroy');
         Route::delete("/pacientes/bulk", [PacienteController::class, "destroyMany"])->name('pacientes.destroy_many');
         Route::get("/pacientes/{id}/convenios", [PacienteController::class, "convenios"])->whereNumber('id')->name('pacientes.convenios');
+        Route::get("/pacientes/{id}/agendamentos", [\App\Http\Controllers\AgendamentoController::class, "byPaciente"])->whereNumber('id')->name('agendamentos.by_paciente');
 
         // Convênios routes
         Route::get("/convenios", [ConvenioController::class, "index"])->name('convenios.index');

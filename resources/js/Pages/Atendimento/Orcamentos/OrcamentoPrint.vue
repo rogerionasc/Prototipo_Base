@@ -16,10 +16,9 @@
             <div class="meta-value">{{ orcamento?.validade || '' }}</div>
           </div>
         </div>
-        <div class="status" :class="orcamento?.aprovado ? 'approved' : 'pending'">
-          {{ orcamento?.aprovado ? 'Aprovado' : 'Aguardando aprovação' }}
+        <div v-if="orcamento?.aprovado" class="status approved">
+          Aprovado
         </div>
-        <div v-if="orcamento?.faturamento_previsto" class="billing">Faturamento Previsto</div>
       </div>
     </div>
 

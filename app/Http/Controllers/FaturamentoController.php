@@ -11,15 +11,14 @@ class FaturamentoController extends Controller
     public function particular()
     {
         $rows = DB::table('faturamentos as f')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('agendamentos as a', 'a.id', '=', 'f.agendamento_id')
             ->leftJoin('pacientes as p', 'p.id', '=', 'f.paciente_id')
             ->select(
                 'f.id',
                 'f.paciente_id',
-                'f.orcamento_id',
+                'f.agendamento_id',
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE(p.cpf,'') AS paciente_documento"),
-                DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
                 DB::raw("DATE_FORMAT(f.data_faturamento, '%d-%m-%Y %H:%i') AS data_faturamento"),
                 DB::raw("DATE_FORMAT(f.vencimento, '%d-%m-%Y') AS vencimento"),
                 'f.valor_total',
@@ -27,7 +26,6 @@ class FaturamentoController extends Controller
                 'f.status'
             )
             ->where('f.tipo_pagador', 'PARTICULAR')
-            ->whereNull('o.deleted_at')
             ->orderByDesc('f.updated_at')
             ->orderByDesc('f.id')
             ->limit(500)
@@ -41,17 +39,16 @@ class FaturamentoController extends Controller
     public function convenios()
     {
         $rows = DB::table('faturamentos as f')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('agendamentos as a', 'a.id', '=', 'f.agendamento_id')
             ->leftJoin('pacientes as p', 'p.id', '=', 'f.paciente_id')
             ->leftJoin('convenios as c', 'c.id', '=', 'f.convenio_id')
             ->select(
                 'f.id',
                 'f.paciente_id',
-                'f.orcamento_id',
+                'f.agendamento_id',
                 'f.convenio_id',
                 DB::raw("COALESCE(c.descricao,'') AS convenio"),
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
-                DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
                 DB::raw("DATE_FORMAT(f.data_faturamento, '%d-%m-%Y %H:%i') AS data_faturamento"),
                 DB::raw("DATE_FORMAT(f.vencimento, '%d-%m-%Y') AS vencimento"),
                 'f.valor_cobrado',
@@ -60,7 +57,6 @@ class FaturamentoController extends Controller
                 'f.status'
             )
             ->where('f.tipo_pagador', 'CONVENIO')
-            ->whereNull('o.deleted_at')
             ->orderByDesc('f.updated_at')
             ->orderByDesc('f.id')
             ->limit(500)

@@ -27,7 +27,7 @@ class EspecialidadeController extends Controller
         $esp = Especialidade::create($data);
 
         if (!empty($procedimentosIds)) {
-            Procedimento::whereIn('id', $procedimentosIds)->update(['especialidade_id' => $esp->id]);
+            $esp->procedimentos()->sync($procedimentosIds);
         }
 
         return back()->with('success', 'Especialidade cadastrada');
@@ -50,15 +50,7 @@ class EspecialidadeController extends Controller
 
         $esp->update($data);
 
-        // Resetar procedimentos que eram desta especialidade mas não estão mais na lista
-        Procedimento::where('especialidade_id', $esp->id)
-            ->whereNotIn('id', $procedimentosIds)
-            ->update(['especialidade_id' => null]);
-
-        // Atribuir novos procedimentos
-        if (!empty($procedimentosIds)) {
-            Procedimento::whereIn('id', $procedimentosIds)->update(['especialidade_id' => $esp->id]);
-        }
+        $esp->procedimentos()->sync($procedimentosIds);
 
         return back()->with('success', 'Especialidade atualizada');
     }

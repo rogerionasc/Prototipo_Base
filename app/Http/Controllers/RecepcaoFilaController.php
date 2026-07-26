@@ -26,7 +26,7 @@ class RecepcaoFilaController extends Controller
         ->whereExists(function ($query) {
             $query->select(DB::raw(1))
                   ->from('faturamentos')
-                  ->whereColumn('faturamentos.orcamento_id', 'agendamentos.orcamento_id')
+                  ->whereColumn('faturamentos.agendamento_id', 'agendamentos.id')
                   ->whereIn('faturamentos.status', ['PAGO', 'RECEBIDO']);
         })
         ->orderBy('hora', 'asc')
@@ -46,7 +46,7 @@ class RecepcaoFilaController extends Controller
                             ? $ag->agendaMedica->profissionalSaude->nome 
                             : 'N/A',
                 'medico_id' => $ag->agendaMedica ? $ag->agendaMedica->profissional_saude_id : null,
-                'status' => $atendimento ? $atendimento->status : ($ag->status ? $ag->status->nome : 'AGENDADO'),
+                'status' => $atendimento ? $atendimento->status : 'Não chegou',
                 'ja_chegou' => $jaChegou,
             ];
         });

@@ -13,7 +13,6 @@ class ContasReceberController extends Controller
     {
         $rows = DB::table('contas_receber as cr')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'cr.faturamento_id')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
             ->leftJoin('pacientes as p', 'p.id', '=', 'cr.paciente_id')
             ->leftJoin('convenios as c', 'c.id', '=', 'cr.convenio_id')
             ->select(
@@ -24,14 +23,14 @@ class ContasReceberController extends Controller
                 'cr.convenio_id',
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE(c.descricao,'') AS convenio"),
-                DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
+                DB::raw("COALESCE(c.tipo,'') AS tipo_convenio"),
                 DB::raw("DATE_FORMAT(cr.vencimento, '%d-%m-%Y') AS vencimento"),
                 'cr.valor',
                 'cr.status',
                 'f.tipo_pagador',
-                'f.status as faturamento_status'
+                DB::raw("(SELECT p.nu_pagamento FROM pagamentos p WHERE p.faturamento_id = cr.faturamento_id AND p.status = 'CONFIRMADO' ORDER BY p.id DESC LIMIT 1) as nu_pagamento"),
+                DB::raw("(SELECT DATE_FORMAT(MAX(p.data_pagamento), '%d/%m/%Y %H:%i') FROM pagamentos p WHERE p.faturamento_id = cr.faturamento_id AND p.status = 'CONFIRMADO') as data_pagamento")
             )
-            ->whereNull('o.deleted_at')
             ->orderByDesc('cr.updated_at')
             ->orderByDesc('cr.id')
             ->limit(1000)

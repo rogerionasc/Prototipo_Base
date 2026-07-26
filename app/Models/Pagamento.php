@@ -12,6 +12,7 @@ class Pagamento extends Model
     protected $table = 'pagamentos';
 
     protected $fillable = [
+        'nu_pagamento',
         'faturamento_id',
         'caixa_id',
         'movimentacao_id',
@@ -22,6 +23,25 @@ class Pagamento extends Model
         'recusa_justificativa',
         'recusado_por',
     ];
+
+    protected static function booted()
+    {
+        static::created(function ($pagamento) {
+            if ($pagamento->data_pagamento) {
+                $dateStr = \Carbon\Carbon::parse($pagamento->data_pagamento)->format('dmYHi');
+                $pagamento->nu_pagamento = $dateStr . str_pad($pagamento->id, 4, '0', STR_PAD_LEFT);
+                $pagamento->saveQuietly();
+            }
+        });
+
+        static::updated(function ($pagamento) {
+            if ($pagamento->data_pagamento && !$pagamento->nu_pagamento) {
+                $dateStr = \Carbon\Carbon::parse($pagamento->data_pagamento)->format('dmYHi');
+                $pagamento->nu_pagamento = $dateStr . str_pad($pagamento->id, 4, '0', STR_PAD_LEFT);
+                $pagamento->saveQuietly();
+            }
+        });
+    }
 
     protected $casts = [
         'valor' => 'decimal:2',

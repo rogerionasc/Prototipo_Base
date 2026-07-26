@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('nome');
             $table->string('codigo')->nullable();
             $table->boolean('status')->default(true);
+            $table->string('icone')->nullable();
+            $table->string('cor')->nullable();
             $table->timestamps();
         });
     }

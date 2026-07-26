@@ -16,7 +16,6 @@ class Procedimento extends Model
         'nome',
         'descricao',
         'categoria_id',
-        'especialidade_id',
         'eh_tratamento',
         'quantidade_sessoes',
         'valor',
@@ -34,8 +33,8 @@ class Procedimento extends Model
         return $this->belongsTo(CategoriaProcedimento::class, 'categoria_id');
     }
 
-    public function especialidade()
+    public function especialidades()
     {
-        return $this->belongsTo(Especialidade::class, 'especialidade_id');
+        return $this->belongsToMany(Especialidade::class, 'especialidade_procedimento', 'procedimento_id', 'especialidade_id');
     }
 }

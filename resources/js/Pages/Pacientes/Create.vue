@@ -562,4 +562,7 @@ onMounted(async () => {
 .choices {
     margin-bottom: 0 !important;
 }
+:deep(.nav-tabs-custom .nav-item .nav-link.active) {
+    background-color: #ffffff !important;
+}
 </style>

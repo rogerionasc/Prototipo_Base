@@ -1,85 +1,81 @@
 <template>
     <Layout>
+
         <Head title="Pacientes" />
         <PageHeader title="Pacientes" pageTitle="Menu" />
         <TableGrid :columns="columns" :data="pacientesLocal" :tableTitle="'Todos os Pacientes'" :showStatus="false"
             :searchPlaceholder="'Buscar por paciente'" @modalDdeletarMultiplos="openModalDeleteMulti"
             @delete="openModalDelete" @edit="openModalEdit" @show="openModalShow" @add="openModalAdd" />
-        <Modal v-model="showModal" :title="modalTitle" size="xl" :name-button="saveButtonText" :processing="saveProcessing" @save="onSavePaciente">
-            <PacienteForm
-                ref="pacienteFormRef"
-                :key="formKey"
-                :estados-civis="props.estadosCivis"
-                :tipos-sanguineos="props.tiposSanguineos"
-                :canais-aviso="props.canaisAviso"
-                :convenios="props.convenios"
-                :parentescos="props.parentescos"
-            />
+        <Modal v-model="showModal" :title="modalTitle" size="xl" :name-button="saveButtonText"
+            :processing="saveProcessing" @save="onSavePaciente">
+            <PacienteForm ref="pacienteFormRef" :key="formKey" :estados-civis="props.estadosCivis"
+                :tipos-sanguineos="props.tiposSanguineos" :canais-aviso="props.canaisAviso" :convenios="props.convenios"
+                :parentescos="props.parentescos" />
         </Modal>
-        <ModalDelete v-model="deleteModal" :title="'Excluir Paciente'" :subTitle="deleteSubTitle" :item-delete="pacienteToDelete" @save="confirmDelete" />
-        <ModalDelete v-model="bulkDeleteModal" :title="'Excluir Pacientes'" :subTitle="bulkDeleteSubTitle" :item-delete="bulkDeleteSummary" @save="confirmBulkDelete" />
-        <Modal
-            v-model="showViewModal"
-            :title="'Paciente'"
-            size="xl"
-            :name-button="'Fechar'"
-            :processing="false"
-            @save="fecharViewModal"
-        >
+        <ModalDelete v-model="deleteModal" :title="'Excluir Paciente'" :subTitle="deleteSubTitle"
+            :item-delete="pacienteToDelete" @save="confirmDelete" />
+        <ModalDelete v-model="bulkDeleteModal" :title="'Excluir Pacientes'" :subTitle="bulkDeleteSubTitle"
+            :item-delete="bulkDeleteSummary" @save="confirmBulkDelete" />
+        <Modal v-model="showViewModal" :title="'Paciente'" size="xl" :name-button="'Fechar'" :processing="false"
+            @save="fecharViewModal">
             <BTabs nav-class="nav-tabs-custom text-muted">
                 <BTab title="Informações">
                     <div class="row g-3 mt-2" v-if="selectedPaciente">
+                        <h6 class="fs-14 mb-0 text-primary">Dados Pessoais</h6>
+                        <hr class="mt-2 mb-0 border-primary" style="opacity: 0.1;" />
+                        
                         <div class="col-md-6">
-                            <label class="form-label">Nome</label>
-                            <div class="fw-medium">{{ selectedPaciente.nome }}</div>
+                            <label class="form-label text-muted mb-1">Nome</label>
+                            <div class="fw-medium fs-14">{{ selectedPaciente.nome }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted mb-1">CPF</label>
+                            <div class="fw-medium fs-14">{{ selectedPaciente.cpf }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted mb-1">Nascimento</label>
+                            <div class="fw-medium fs-14">{{ formatDateTimeBR(selectedPaciente.data_nascimento) || '-' }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-muted mb-1">Convênio</label>
+                            <div class="fw-medium fs-14">{{ selectedPaciente.convenio || 'Particular' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">CPF</label>
-                            <div class="fw-medium">{{ selectedPaciente.cpf }}</div>
+                            <label class="form-label text-muted mb-1">Sexo</label>
+                            <div class="fw-medium fs-14">{{ selectedPaciente.sexo || '-' }}</div>
+                        </div>
+
+                        <h6 class="fs-14 mb-0 mt-4 text-primary">Contato e Endereço</h6>
+                        <hr class="mt-2 mb-0 border-primary" style="opacity: 0.1;" />
+                        
+                        <div class="col-md-6">
+                            <label class="form-label text-muted mb-1">Celular</label>
+                            <div class="fw-medium fs-14">{{ selectedPaciente.celular || '-' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Email</label>
-                            <div class="fw-medium">{{ selectedPaciente.email || '-' }}</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Celular</label>
-                            <div class="fw-medium">{{ selectedPaciente.celular || '-' }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Sexo</label>
-                            <div class="fw-medium">{{ selectedPaciente.sexo || '-' }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Nascimento</label>
-                            <div class="fw-medium">{{ formatDateTimeBR(selectedPaciente.data_nascimento) || '-' }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Convênio</label>
-                            <div class="fw-medium">{{ selectedPaciente.convenio || 'Particular' }}</div>
+                            <label class="form-label text-muted mb-1">Email</label>
+                            <div class="fw-medium fs-14">{{ selectedPaciente.email || '-' }}</div>
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label">Endereço</label>
-                            <div class="fw-medium">
-                                {{ [selectedPaciente.endereco, selectedPaciente.numero, selectedPaciente.bairro, selectedPaciente.cidade].filter(Boolean).join(', ') || '-' }}
+                            <label class="form-label text-muted mb-1">Endereço</label>
+                            <div class="fw-medium fs-14">
+                                {{ [selectedPaciente.endereco, selectedPaciente.numero, selectedPaciente.bairro,
+                                selectedPaciente.cidade].filter(Boolean).join(', ') || '-' }}
                             </div>
                         </div>
                         <div class="col-md-12" v-if="selectedPaciente.observacoes">
-                            <label class="form-label">Observações</label>
-                            <div class="fw-medium">{{ selectedPaciente.observacoes }}</div>
+                            <label class="form-label text-muted mb-1">Observações</label>
+                            <div class="fw-medium fs-14 text-muted">{{ selectedPaciente.observacoes }}</div>
                         </div>
                     </div>
                 </BTab>
                 <BTab title="Orçamentos">
                     <div class="mt-2">
-                        <div v-if="(orcamentosPaciente || []).length === 0" class="text-muted">Nenhum orçamento encontrado</div>
-                        <SimpleTable
-                            v-else
-                            variant="borderless"
-                            compact
-                            tableClass="table-sm align-middle"
-                            :items="orcamentosPaciente"
-                            :columns="orcamentosColumns"
-                        >
+                        <div v-if="(orcamentosPaciente || []).length === 0" class="text-muted">Nenhum orçamento
+                            encontrado</div>
+                        <SimpleTable v-else variant="borderless" compact tableClass="table-sm align-middle"
+                            :items="orcamentosPaciente" :columns="orcamentosColumns">
                             <template #body="{ items, columns }">
                                 <tr v-for="o in items" :key="o.id">
                                     <td>{{ o.numero }}</td>
@@ -88,14 +84,29 @@
                                     <td class="text-end">{{ formatCurrencyBR(o.valor_bruto) }}</td>
                                     <td class="text-end">{{ formatCurrencyBR(o.desconto) }}</td>
                                     <td class="text-end">{{ formatCurrencyBR(o.valor_total) }}</td>
+                                </tr>
+                            </template>
+                        </SimpleTable>
+                    </div>
+                </BTab>
+                <BTab title="Agendamentos">
+                    <div class="mt-2">
+                        <div v-if="(agendamentosPaciente || []).length === 0" class="text-muted">Nenhum agendamento
+                            encontrado</div>
+                        <SimpleTable v-else variant="borderless" compact tableClass="table-sm align-middle"
+                            :items="agendamentosPaciente"
+                            :columns="[{ key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }, { key: 'acoes', label: 'Ações' }]">
+                            <template #body="{ items }">
+                                <tr v-for="a in items" :key="a.id">
+                                    <td>{{ formatDateTimeBR(a.data).split(' ')[0] }}</td>
+                                    <td>{{ a.hora }}</td>
+                                    <td>{{ a.procedimento }}</td>
+                                    <td>{{ a.profissional }}</td>
+                                    <td>{{ a.status }}</td>
                                     <td>
-                                        <span v-if="o.aprovado" class="badge bg-success">Aprovado</span>
-                                        <span v-else class="badge bg-warning">Aguardando aprovação</span>
-                                    </td>
-                                    <td>
-                                        <button v-if="!o.aprovado" class="btn btn-sm btn-success me-2" @click="aprovarOrcamento(o.id)">Aprovar</button>
-                                        <span v-else-if="o.pago" class="badge bg-info">Pago</span>
-                                        <button v-else class="btn btn-sm btn-danger" @click="cancelarAprovacao(o.id)">Cancelar aprovação</button>
+                                        <button v-if="!a.atendido" class="btn btn-sm btn-primary"
+                                            @click="abrirModalReagendar(a)">Reagendar</button>
+                                        <span v-else class="text-muted small">—</span>
                                     </td>
                                 </tr>
                             </template>
@@ -103,6 +114,49 @@
                     </div>
                 </BTab>
             </BTabs>
+        </Modal>
+
+        <!-- Modal de Reagendamento Rápido -->
+        <Modal v-model="reagendarModal" title="Reagendar Agendamento" size="xl" name-button="Confirmar"
+            :processing="reagendarProcessing" @save="confirmarReagendamento">
+            <div class="mb-4 p-3 bg-light rounded border" v-if="reagendarAgendamentoData">
+                <h6 class="mb-2 text-primary"><i class="ri-calendar-event-line me-1"></i> Agendamento Atual</h6>
+                <div class="row text-muted small">
+                    <div class="col-sm-6">
+                        <strong>Data:</strong> {{ formatDateTimeBR(reagendarAgendamentoData.data).split(' ')[0] }} às {{
+                        reagendarAgendamentoData.hora }}<br>
+                        <strong>Médico:</strong> {{ reagendarAgendamentoData.profissional || 'Não definido' }}
+                    </div>
+                    <div class="col-sm-6">
+                        <strong>Procedimento:</strong> {{ reagendarAgendamentoData.procedimento || 'Não definido' }}<br>
+                        <strong>Status:</strong> {{ reagendarAgendamentoData.status }}
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="mb-3 border-bottom pb-2">Detalhes do Reagendamento</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Nova Data</label>
+                    <flatPickr v-model="reagendarForm.data" class="form-control" :config="opcoesFlatpickrData"
+                        placeholder="Selecione a data" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Nova Hora</label>
+                    <flatPickr v-model="reagendarForm.hora" class="form-control" :config="opcoesFlatpickrHora"
+                        placeholder="Selecione a hora" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Médico / Profissional</label>
+                    <select v-model="reagendarForm.profissional_saude_id" data-choices class="form-select"
+                        ref="reagendarProfissionalSelect">
+                        <option :value="null">Selecione um médico</option>
+                        <option v-for="prof in reagendarProfissionais" :key="prof.id" :value="prof.id">
+                            {{ prof.nome }}
+                        </option>
+                    </select>
+                </div>
+            </div>
         </Modal>
     </Layout>
 </template>
@@ -116,7 +170,27 @@ import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import PacienteForm from "@/Pages/Pacientes/Create.vue";
 import SimpleTable from "@/Components/SimpleTable.vue";
+import flatPickr from "vue-flatpickr-component";
+import "flatpickr/dist/flatpickr.css";
+import "flatpickr/dist/l10n/pt.js";
 import { ref, nextTick, watch, computed, watchEffect } from "vue";
+
+const opcoesFlatpickrData = {
+    altInput: true,
+    altFormat: "d M, Y",
+    dateFormat: "Y-m-d",
+    locale: "pt",
+    minDate: "today",
+};
+const opcoesFlatpickrHora = {
+    enableTime: true,
+    noCalendar: true,
+    altInput: true,
+    altFormat: "H:i",
+    dateFormat: "H:i",
+    time_24hr: true,
+    locale: "pt",
+};
 
 const orcamentosColumns = [
     { key: 'numero', label: 'Número' },
@@ -124,9 +198,7 @@ const orcamentosColumns = [
     { key: 'validade', label: 'Validade' },
     { key: 'bruto', label: 'Bruto', thClass: 'text-end' },
     { key: 'desconto', label: 'Desconto', thClass: 'text-end' },
-    { key: 'total', label: 'Total', thClass: 'text-end' },
-    { key: 'status', label: 'Status' },
-    { key: 'acoes', label: 'Ações' }
+    { key: 'total', label: 'Total', thClass: 'text-end' }
 ];
 
 const props = defineProps({
@@ -169,6 +241,86 @@ const saveButtonText = computed(() => isEditing.value ? 'Atualizar' : 'Salvar');
 const showViewModal = ref(false);
 const selectedPaciente = ref(null);
 const orcamentosPaciente = ref([]);
+const agendamentosPaciente = ref([]);
+
+const reagendarModal = ref(false);
+const reagendarAgendamentoId = ref(null);
+const reagendarAgendamentoData = ref(null);
+const reagendarForm = ref({ data: '', hora: '', profissional_saude_id: null });
+const reagendarProcessing = ref(false);
+const reagendarProfissionais = ref([]);
+const reagendarProfissionalSelect = ref(null);
+
+async function abrirModalReagendar(ag) {
+    reagendarAgendamentoId.value = ag.id;
+    reagendarAgendamentoData.value = ag;
+    reagendarForm.value.data = ag.data || '';
+    reagendarForm.value.hora = ag.hora || '';
+    reagendarForm.value.profissional_saude_id = ag.profissional_saude_id || null;
+    reagendarProfissionais.value = [];
+    reagendarModal.value = true;
+
+    // Fetch professionals
+    const procId = ag.procedimento_id || ag.tuss_id;
+    if (procId) {
+        try {
+
+            const res = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
+                params: {
+                    procedimento_id: procId,
+                    convenio_id: ag.convenio_id || null
+                }
+            });
+            reagendarProfissionais.value = Array.isArray(res?.data?.profissionais) ? res.data.profissionais : [];
+            await nextTick();
+
+            const el = reagendarProfissionalSelect.value;
+            if (el) {
+                if (el._choicesInstance) {
+                    el._choicesInstance.destroy();
+                    el._choicesInstance = null;
+                    el.dataset.choicesInitialized = 'false';
+                }
+                if (window.initChoiceEl) {
+                    window.initChoiceEl(el);
+                } else if (window.initChoices) {
+                    window.initChoices();
+                }
+                if (window.syncChoiceValue) {
+                    window.syncChoiceValue(el, reagendarForm.value.profissional_saude_id || '');
+                }
+            }
+        } catch (e) { }
+    }
+}
+
+async function confirmarReagendamento() {
+    if (!reagendarAgendamentoId.value) return;
+    reagendarProcessing.value = true;
+    try {
+        await window.axios.put(`/agendamentos/${reagendarAgendamentoId.value}`, {
+            data: reagendarForm.value.data,
+            hora: reagendarForm.value.hora,
+            profissional_saude_id: reagendarForm.value.profissional_saude_id
+        });
+        reagendarModal.value = false;
+        // Recarregar os agendamentos do paciente aberto
+        if (selectedPaciente.value) {
+            carregarAgendamentos(selectedPaciente.value.id);
+        }
+    } catch (e) {
+        console.error("Erro ao reagendar", e);
+    } finally {
+        reagendarProcessing.value = false;
+    }
+}
+
+function carregarAgendamentos(id) {
+    window.axios.get(`/pacientes/${id}/agendamentos`).then((res) => {
+        agendamentosPaciente.value = Array.isArray(res?.data?.agendamentos) ? res.data.agendamentos : [];
+    }).catch(() => { });
+}
+
 function formatCurrencyBR(v) {
     const n = Number(v || 0);
     return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -302,7 +454,7 @@ watch(showModal, async (v) => {
             try {
                 pacienteFormRef.value.form.clearErrors?.();
                 pacienteFormRef.value.form.reset?.();
-            } catch (e) {}
+            } catch (e) { }
         }
         formKey.value += 1;
     }
@@ -315,7 +467,7 @@ async function openModalEdit(id) {
     modalTitle.value = 'Editar Paciente';
     showModal.value = true;
     await nextTick();
-    
+
     // Load convenios with details
     let conveniosData = [];
     try {
@@ -324,7 +476,7 @@ async function openModalEdit(id) {
     } catch (e) {
         console.error('Error loading convenios:', e);
     }
-    
+
     if (pacienteFormRef.value?.form) {
         const f = pacienteFormRef.value.form;
         f.nome = p.nome || '';
@@ -383,48 +535,34 @@ function openModalShow(id) {
     selectedPaciente.value = { ...p };
     showViewModal.value = true;
     orcamentosPaciente.value = [];
+    agendamentosPaciente.value = [];
+    carregarAgendamentos(p.id);
     try {
         window.axios.get(`/pacientes/${p.id}/orcamentos`).then((res) => {
             const arr = Array.isArray(res?.data?.orcamentos) ? res.data.orcamentos : [];
-                orcamentosPaciente.value = arr.map(o => ({
-                    id: o.id,
-                    numero: o.numero,
-                    data_emissao: o.data_emissao,
-                    validade: o.validade,
-                    valor_bruto: o.valor_bruto,
-                    desconto: o.desconto,
-                    valor_total: o.valor_total,
-                    aprovado: !!o.aprovado,
-                    pago: !!o.pago,
-                }));
-        }).catch(() => {});
-    } catch (e) {}
+            orcamentosPaciente.value = arr.map(o => ({
+                id: o.id,
+                numero: o.numero,
+                data_emissao: o.data_emissao,
+                validade: o.validade,
+                valor_bruto: o.valor_bruto,
+                desconto: o.desconto,
+                valor_total: o.valor_total,
+            }));
+        }).catch(() => { });
+    } catch (e) { }
 }
 function fecharViewModal() {
     showViewModal.value = false;
     selectedPaciente.value = null;
     orcamentosPaciente.value = [];
 }
-function aprovarOrcamento(id) {
-    if (!id) return;
-    try {
-        window.axios.put(`/orcamentos/${id}/approve`).then(() => {
-            const idx = (orcamentosPaciente.value || []).findIndex(x => String(x.id) === String(id));
-            if (idx !== -1) {
-                orcamentosPaciente.value[idx] = { ...orcamentosPaciente.value[idx], aprovado: true };
-            }
-        }).catch(() => {});
-    } catch (e) {}
-}
-function cancelarAprovacao(id) {
-    if (!id) return;
-    try {
-        window.axios.put(`/orcamentos/${id}/unapprove`).then(() => {
-            const idx = (orcamentosPaciente.value || []).findIndex(x => String(x.id) === String(id));
-            if (idx !== -1) {
-                orcamentosPaciente.value[idx] = { ...orcamentosPaciente.value[idx], aprovado: false };
-            }
-        }).catch(() => {});
-    } catch (e) {}
-}
+// Funções de aprovação removidas
+
 </script>
+
+<style scoped>
+:deep(.nav-tabs-custom .nav-item .nav-link.active) {
+    background-color: #ffffff !important;
+}
+</style>

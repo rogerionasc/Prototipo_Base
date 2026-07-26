@@ -26,7 +26,9 @@ class AgendamentoController extends Controller
     {
         $pacientes = Paciente::select('id','nome','cpf')->orderBy('nome')->get();
         $profissionais = ProfissionalSaude::with('especialidades:id')->select('id','nome')->orderBy('nome')->get();
-        $procedimentos = Procedimento::select('id','nome','valor','eh_tratamento','quantidade_sessoes','especialidade_id')->orderBy('nome')->get();
+        $procedimentos = Procedimento::select('id','nome','valor','eh_tratamento','quantidade_sessoes')
+            ->with('especialidades:id,nome')
+            ->orderBy('nome')->get();
         $status = StatusAgendamento::select('id','descricao')->orderBy('descricao')->get();
         $weekday = Carbon::now()->dayOfWeek;
         $agendasHoje = DB::table('agenda_medica as a')
@@ -118,21 +120,11 @@ class AgendamentoController extends Controller
     public function store(Request $request)
     {
         $convenioIdInput = $request->input('convenio_id');
-        $orcamentoIdInput = $request->input('orcamento_id');
-
         $isConvenio = false;
-        if (empty($orcamentoIdInput) && !empty($convenioIdInput)) {
+        if (!empty($convenioIdInput)) {
             $conv = Convenio::select('tipo')->find($convenioIdInput);
             if ($conv && strtoupper((string)$conv->tipo) !== 'PARTICULAR') {
                 $isConvenio = true;
-            }
-        } elseif (!empty($orcamentoIdInput)) {
-            $orc = Orcamento::select('convenio_id')->find($orcamentoIdInput);
-            if ($orc && $orc->convenio_id) {
-                $conv = Convenio::select('tipo')->find($orc->convenio_id);
-                if ($conv && strtoupper((string)$conv->tipo) !== 'PARTICULAR') {
-                    $isConvenio = true;
-                }
             }
         }
 
@@ -140,7 +132,6 @@ class AgendamentoController extends Controller
 
         \Illuminate\Support\Facades\Log::info('Agendamento Store:', [
             'convenio_id' => $convenioIdInput,
-            'orcamento_id' => $orcamentoIdInput,
             'isConvenio' => $isConvenio,
             'procRule' => $procRule,
             'payload' => $request->all(),
@@ -155,9 +146,11 @@ class AgendamentoController extends Controller
             'status_id' => ['nullable','integer','exists:status_agendamento,id'],
             'valor_cobrado' => ['nullable','numeric','min:0'],
             'observacoes' => ['nullable','string'],
-            'orcamento_id' => ['nullable','integer','exists:orcamentos,id'],
             'convenio_id' => ['nullable','integer','exists:convenios,id'],
+            'is_retorno' => ['nullable','boolean'],
         ]);
+
+        $isRetorno = $request->input('is_retorno', false);
 
         $dt = Carbon::createFromFormat('Y-m-d', $data['data'])->startOfDay();
         if ($dt->lessThan(Carbon::today())) {
@@ -189,264 +182,91 @@ class AgendamentoController extends Controller
             ], 422);
         }
 
-        $ag = DB::transaction(function () use ($data, $agenda, $dt, $hora, $isConvenio) {
-            $orcamentoId = $data['orcamento_id'] ?? null;
+        $agendamentoOrigemId = null;
+        if ($isRetorno) {
+            $diasRetorno = 0;
+            if (!empty($convenioIdInput)) {
+                $conv = Convenio::find($convenioIdInput);
+                if ($conv) $diasRetorno = (int) $conv->dias_retorno;
+            }
+
+            $lastAgendamento = Agendamento::where('paciente_id', (int)$data['paciente_id'])
+                ->whereHas('agendaMedica', function($q) use ($data) {
+                    $q->where('profissional_saude_id', (int)$data['profissional_saude_id']);
+                })
+                ->where(function($q) use ($isConvenio, $data) {
+                    if ($isConvenio) {
+                        $q->where('tuss_id', (int)$data['procedimento_id']);
+                    } else {
+                        $q->where('procedimento_id', (int)$data['procedimento_id']);
+                    }
+                })
+                ->whereNull('agendamento_origem_id')
+                ->where(function($q) {
+                    $q->whereNull('status_id')
+                      ->orWhereHas('status', function($sub) {
+                          $sub->whereRaw("LOWER(descricao) NOT LIKE '%cancel%'");
+                      });
+                })
+                ->orderBy('data', 'desc')
+                ->first();
+
+            if (!$lastAgendamento) {
+                return response()->json([
+                    'errors' => [
+                        'is_retorno' => ['Nenhum atendimento anterior elegível para retorno foi encontrado para este procedimento e profissional.']
+                    ]
+                ], 422);
+            }
+
+            $dataUltimo = Carbon::parse($lastAgendamento->data)->startOfDay();
+            if ($dt->diffInDays($dataUltimo) > $diasRetorno) {
+                return response()->json([
+                    'errors' => [
+                        'is_retorno' => ["Prazo para retorno excedido (limite de $diasRetorno dias do convênio)."]
+                    ]
+                ], 422);
+            }
+
+            $hasReturn = Agendamento::where('agendamento_origem_id', $lastAgendamento->id)
+                ->where(function($q) {
+                    $q->whereNull('status_id')
+                      ->orWhereHas('status', function($sub) {
+                          $sub->whereRaw("LOWER(descricao) NOT LIKE '%cancel%'");
+                      });
+                })
+                ->exists();
+
+            if ($hasReturn) {
+                return response()->json([
+                    'errors' => [
+                        'is_retorno' => ['Este atendimento já consumiu o seu direito de 1 retorno.']
+                    ]
+                ], 422);
+            }
+
+            $agendamentoOrigemId = $lastAgendamento->id;
+        }
+
+        $ag = DB::transaction(function () use ($data, $agenda, $dt, $hora, $isConvenio, $isRetorno, $agendamentoOrigemId) {
             $procId = (int)$data['procedimento_id'];
             $pacId = (int)$data['paciente_id'];
             $valorCobrado = $data['valor_cobrado'] ?? null;
-            $convenioId = empty($orcamentoId) ? ($data['convenio_id'] ?? null) : null;
-
-            if (empty($orcamentoId)) {
-                // Auto-generate Orcamento for both Particular and Convenio if it doesn't exist.
-                if (!empty($convenioId)) {
-                    $hasConvenio = DB::table('paciente_convenio')
-                        ->where('paciente_id', $pacId)
-                        ->where('convenio_id', (int)$convenioId)
-                        ->where('ativo', 1)
-                        ->whereNull('deleted_at')
-                        ->exists();
-                    if (!$hasConvenio) {
-                        throw new HttpResponseException(response()->json([
-                            'errors' => [
-                                'convenio_id' => ['Convênio inválido para este paciente.']
-                            ]
-                        ], 422));
-                    }
-                }
-
-                if ($isConvenio) {
-                    $proc = DB::table('tuss')->select('id', 'total as valor')->where('id', $procId)->first();
-                } else {
-                    $proc = Procedimento::select('id','valor')->findOrFail($procId);
-                }
-
-                $valorUnit = $valorCobrado ?? ($proc->valor ?? 0);
-                $valorBruto = (float)$valorUnit;
-                $valorTotal = (float)$valorUnit;
-                if ($valorCobrado === null) $valorCobrado = $valorUnit;
-
-                $orcamento = Orcamento::create([
-                    'numero' => 'ORC-' . now()->format('YmdHis'),
-                    'data_emissao' => Carbon::now()->format('Y-m-d H:i:s'),
-                    'validade' => now()->addDays(30)->toDateString(),
-                    'paciente_id' => $pacId,
-                    'convenio_id' => $convenioId,
-                    'valor_bruto' => $valorBruto,
-                    'desconto' => 0,
-                    'valor_total' => $valorTotal,
-                    'valor_avista' => null,
-                    'faturamento_previsto' => false,
-                    'aprovado' => true,
-                    'status' => 'APROVADO',
-                ]);
-
-                OrcamentoProcedimento::create([
-                    'orcamento_id' => $orcamento->id,
-                    'procedimento_id' => $isConvenio ? null : $procId,
-                    'tuss_id' => $isConvenio ? $procId : null,
-                    'quantidade' => 1,
-                    'valor_unitario' => $valorUnit,
-                    'valor_total' => $valorTotal,
-                    'observacoes' => null,
-                ]);
-
-                $fatId = (int)DB::table('faturamentos')->where('orcamento_id', $orcamento->id)->value('id');
-                if (!$fatId) {
-                    $fatId = (int)DB::table('faturamentos')->insertGetId([
-                        'paciente_id' => $pacId,
-                        'orcamento_id' => $orcamento->id,
-                        'valor_final' => (float)($orcamento->valor_total ?? 0),
-                        'tipo_pagador' => $isConvenio ? 'CONVENIO' : 'PARTICULAR',
-                        'convenio_id' => $convenioId,
-                        'valor_total' => (float)($orcamento->valor_bruto ?? 0),
-                        'valor_cobrado' => (float)($orcamento->valor_total ?? 0),
-                        'valor_aprovado' => 0,
-                        'valor_glosado' => 0,
-                        'status' => $isConvenio ? 'AGUARDANDO_ENVIO' : 'AGUARDANDO_PAGAMENTO',
-                        'data_faturamento' => now()->format('Y-m-d H:i:s'),
-                        'vencimento' => now()->addDays(30)->toDateString(),
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-
-                if ($fatId) {
-                    $crId = (int)DB::table('contas_receber')->where('faturamento_id', $fatId)->value('id');
-                    if (!$crId) {
-                        DB::table('contas_receber')->insert([
-                            'faturamento_id' => $fatId,
-                            'paciente_id' => $pacId,
-                            'convenio_id' => $convenioId,
-                            'valor' => (float)($orcamento->valor_total ?? 0),
-                            'vencimento' => now()->addDays(30)->toDateString(),
-                            'status' => 'ABERTO',
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                    }
-                }
-
-                $orcamentoId = $orcamento->id;
-            }
-
-            $orcOk = clone DB::table('orcamentos as o')
-                ->join('orcamento_procedimentos as op', 'op.orcamento_id', '=', 'o.id')
-                ->where('o.id', (int)$orcamentoId)
-                ->where('o.paciente_id', $pacId)
-                ->where(function ($q) {
-                    $q->where('o.aprovado', true)
-                      ->orWhereExists(function ($q2) {
-                          $q2->from('convenios as c')
-                             ->whereColumn('c.id', 'o.convenio_id')
-                             ->where('c.tipo', '!=', 'PARTICULAR');
-                      });
-                })
-                ->whereNull('o.deleted_at')
-                ->whereNull('op.deleted_at');
+            $convenioId = $data['convenio_id'] ?? null;
 
             if ($isConvenio) {
-                $orcOk->where('op.tuss_id', $procId);
+                $proc = DB::table('tuss')->select('id', 'total as valor', 'eh_tratamento', 'quantidade_sessoes')->where('id', $procId)->first();
             } else {
-                $orcOk->where('op.procedimento_id', $procId);
-            }
-            $orcOk = $orcOk->exists();
-
-            $orcMeta = DB::table('orcamentos')->select('convenio_id', 'paciente_id', 'valor_total')->where('id', (int)$orcamentoId)->first();
-            
-            $fatId = (int)DB::table('faturamentos')->where('orcamento_id', (int)$orcamentoId)->value('id');
-            if (!$fatId && $orcMeta) {
-                $fatId = (int)DB::table('faturamentos')->insertGetId([
-                    'paciente_id' => $orcMeta->paciente_id,
-                    'orcamento_id' => (int)$orcamentoId,
-                    'valor_final' => (float)($orcMeta->valor_total ?? 0),
-                    'tipo_pagador' => $isConvenio ? 'CONVENIO' : 'PARTICULAR',
-                    'convenio_id' => $orcMeta->convenio_id,
-                    'valor_total' => (float)($orcMeta->valor_total ?? 0),
-                    'valor_cobrado' => (float)($orcMeta->valor_total ?? 0),
-                    'valor_aprovado' => 0,
-                    'valor_glosado' => 0,
-                    'status' => $isConvenio ? 'AGUARDANDO_ENVIO' : 'AGUARDANDO_PAGAMENTO',
-                    'data_faturamento' => now()->format('Y-m-d H:i:s'),
-                    'vencimento' => now()->addDays(30)->toDateString(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            } elseif ($fatId && $orcMeta) {
-                $fatTipo = (string)DB::table('faturamentos')->where('id', $fatId)->value('tipo_pagador');
-                $expectedTipo = $isConvenio ? 'CONVENIO' : 'PARTICULAR';
-                if (strtoupper((string)$fatTipo) !== $expectedTipo) {
-                    DB::table('faturamentos')->where('id', $fatId)->update([
-                        'tipo_pagador' => $expectedTipo,
-                        'convenio_id' => $orcMeta->convenio_id,
-                        'status' => $isConvenio ? 'AGUARDANDO_ENVIO' : 'AGUARDANDO_PAGAMENTO',
-                        'data_faturamento' => now()->format('Y-m-d H:i:s'),
-                        'vencimento' => now()->addDays(30)->toDateString(),
-                        'valor_cobrado' => (float)($orcMeta->valor_total ?? 0),
-                        'valor_final' => (float)($orcMeta->valor_total ?? 0),
-                        'updated_at' => now(),
-                    ]);
-                }
-            }
-            if ($fatId) {
-                $crId = (int)DB::table('contas_receber')->where('faturamento_id', $fatId)->value('id');
-                if (!$crId && $orcMeta) {
-                    DB::table('contas_receber')->insert([
-                        'faturamento_id' => $fatId,
-                        'paciente_id' => $orcMeta->paciente_id,
-                        'convenio_id' => $orcMeta->convenio_id,
-                        'valor' => (float)($orcMeta->valor_total ?? 0),
-                        'vencimento' => now()->addDays(30)->toDateString(),
-                        'status' => 'ABERTO',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                } elseif ($crId && $orcMeta) {
-                    DB::table('contas_receber')->where('id', $crId)->update([
-                        'convenio_id' => $orcMeta->convenio_id,
-                        'vencimento' => now()->addDays(30)->toDateString(),
-                        'updated_at' => now(),
-                    ]);
-                }
+                $proc = Procedimento::select('id','valor', 'eh_tratamento', 'quantidade_sessoes')->findOrFail($procId);
             }
 
-            if ($fatId && !$isConvenio) {
-                $pagId = (int)DB::table('pagamentos')->where('faturamento_id', $fatId)->where('status', 'PENDENTE')->value('id');
-                if (!$pagId && $orcMeta) {
-                    DB::table('pagamentos')->insert([
-                        'faturamento_id' => $fatId,
-                        'caixa_id' => null,
-                        'movimentacao_id' => null,
-                        'valor' => (float)($orcMeta->valor_total ?? 0),
-                        'forma_pagamento' => null,
-                        'data_pagamento' => null,
-                        'status' => 'PENDENTE',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-            }
-
-            if (!$orcOk) {
-                throw new HttpResponseException(response()->json([
-                    'errors' => [
-                        'orcamento' => ['Orçamento inválido para este paciente/procedimento.']
-                    ]
-                ], 422));
-            }
-
-            $qtyRowQuery = DB::table('orcamento_procedimentos as op')
-                ->where('op.orcamento_id', (int)$orcamentoId)
-                ->whereNull('op.deleted_at');
-
-            if ($isConvenio) {
-                $qtyRowQuery->leftJoin('tuss as t', 't.id', '=', 'op.tuss_id')
-                    ->where('op.tuss_id', $procId)
-                    ->select('op.quantidade', 't.eh_tratamento', 't.quantidade_sessoes');
-            } else {
-                $qtyRowQuery->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id')
-                    ->where('op.procedimento_id', $procId)
-                    ->select('op.quantidade', 'pr.eh_tratamento', 'pr.quantidade_sessoes');
-            }
-            $qtyRow = $qtyRowQuery->first();
-
-            $baseQty = max(1, (int)($qtyRow->quantidade ?? 1));
-            $mult = ((bool)($qtyRow->eh_tratamento ?? false)) ? max(1, (int)($qtyRow->quantidade_sessoes ?? 0)) : 1;
-            $allowedQty = $baseQty * $mult;
-
-            $scheduledCountQuery = DB::table('agendamentos as a')
-                ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
-                ->whereNull('a.deleted_at')
-                ->where('a.orcamento_id', (int)$orcamentoId)
-                ->where(function ($q) {
-                    $q->whereNull('s.id')
-                      ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
-                });
-
-            if ($isConvenio) {
-                $scheduledCountQuery->where('a.tuss_id', $procId);
-            } else {
-                $scheduledCountQuery->where('a.procedimento_id', $procId);
-            }
-            $scheduledCount = $scheduledCountQuery->count();
-
-            if ($scheduledCount >= $allowedQty) {
-                throw new HttpResponseException(response()->json([
-                    'errors' => [
-                        'duplicidade' => ['Limite de agendamentos atingido para este orçamento e procedimento.']
-                    ]
-                ], 422));
+            if ($valorCobrado === null) {
+                $valorCobrado = (float)($proc->valor ?? 0);
             }
 
             $sessaoId = null;
-            if ($isConvenio) {
-                $procMeta = DB::table('tuss')->select('id', 'eh_tratamento', 'quantidade_sessoes')->where('id', $procId)->first();
-            } else {
-                $procMeta = Procedimento::select('id','eh_tratamento','quantidade_sessoes')->find($procId);
-            }
-
-            if ($procMeta && (bool)$procMeta->eh_tratamento) {
-                $lastNumQuery = DB::table('sessoes_tratamento')
-                    ->where('paciente_id', $pacId);
+            if ($proc && (bool)$proc->eh_tratamento) {
+                $lastNumQuery = DB::table('sessoes_tratamento')->where('paciente_id', $pacId);
 
                 if ($isConvenio) {
                     $lastNumQuery->where('tuss_id', $procId);
@@ -470,9 +290,10 @@ class AgendamentoController extends Controller
             }
 
             $agendamentoStatusId = $data['status_id'] ?? null;
-            if (empty($data['orcamento_id']) && !$isConvenio) {
-                $statusAguardando = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Aguardando Pagamento']);
-                $agendamentoStatusId = $statusAguardando->id;
+            if (!$agendamentoStatusId) {
+                // Default to Agendado or similar if no status passed
+                $statusAgendado = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Agendado']);
+                $agendamentoStatusId = $statusAgendado->id;
             }
 
             $agendamento = Agendamento::create([
@@ -483,18 +304,18 @@ class AgendamentoController extends Controller
                 'procedimento_id' => $isConvenio ? null : $procId,
                 'tuss_id' => $isConvenio ? $procId : null,
                 'sessao_tratamento_id' => $sessaoId,
-                'orcamento_id' => $orcamentoId,
+                'orcamento_id' => null,
                 'status_id' => $agendamentoStatusId,
-                'agendamento_origem_id' => null,
+                'agendamento_origem_id' => $agendamentoOrigemId,
                 'valor_cobrado' => $valorCobrado,
                 'observacoes' => $data['observacoes'] ?? null,
             ]);
 
             // Se for agendamento de convênio, verificar fluxo de autorização vs atendimento
-            if ($isConvenio && $orcMeta && $orcMeta->convenio_id) {
+            if ($isConvenio && $convenioId) {
                 // Verificar se o procedimento deste convênio requer autorização
                 $convenioTuss = DB::table('convenio_tuss')
-                    ->where('convenio_id', $orcMeta->convenio_id)
+                    ->where('convenio_id', $convenioId)
                     ->where('tuss_id', $procId)
                     ->whereNull('deleted_at')
                     ->first();
@@ -502,7 +323,7 @@ class AgendamentoController extends Controller
                 $requerAutorizacao = $convenioTuss && $convenioTuss->requer_autorizacao;
 
                 \Illuminate\Support\Facades\Log::info('Autorizacao Check:', [
-                    'convenio_id' => $orcMeta->convenio_id,
+                    'convenio_id' => $convenioId,
                     'tuss_id' => $procId,
                     'convenioTuss' => $convenioTuss,
                     'requerAutorizacao' => $requerAutorizacao,
@@ -511,13 +332,13 @@ class AgendamentoController extends Controller
                 if ($requerAutorizacao) {
                     $pacienteConvenio = DB::table('paciente_convenio')
                         ->where('paciente_id', $pacId)
-                        ->where('convenio_id', $orcMeta->convenio_id)
+                        ->where('convenio_id', $convenioId)
                         ->where('ativo', 1)
                         ->whereNull('deleted_at')
                         ->first();
 
                     Autorizacao::create([
-                        'convenio_id' => $orcMeta->convenio_id,
+                        'convenio_id' => $convenioId,
                         'carteira' => $pacienteConvenio->numero_carteira ?? null,
                         'numero_autorizacao' => null,
                         'status' => 'Pendente',
@@ -532,6 +353,47 @@ class AgendamentoController extends Controller
                     // TODO: Futuramente vai gerar um atendimento automático
                     // Atendimento::create([...]);
                 }
+            }
+
+            // Gerar faturamento + pagamento PENDENTE automaticamente para particulares
+            if (!$isConvenio) {
+                $fatId = (int)DB::table('faturamentos')->insertGetId([
+                    'paciente_id'      => $pacId,
+                    'agendamento_id'   => $agendamento->id,
+                    'valor_final'      => (float)$valorCobrado,
+                    'tipo_pagador'     => 'PARTICULAR',
+                    'convenio_id'      => null,
+                    'valor_total'      => (float)$valorCobrado,
+                    'valor_cobrado'    => (float)$valorCobrado,
+                    'valor_aprovado'   => 0,
+                    'valor_glosado'    => 0,
+                    'status'           => 'AGUARDANDO_PAGAMENTO',
+                    'data_faturamento' => Carbon::now()->format('Y-m-d H:i:s'),
+                    'vencimento'       => Carbon::today()->toDateString(),
+                    'created_at'       => Carbon::now(),
+                    'updated_at'       => Carbon::now(),
+                ]);
+
+                DB::table('contas_receber')->insert([
+                    'faturamento_id' => $fatId,
+                    'paciente_id' => $pacId,
+                    'convenio_id' => null,
+                    'valor' => (float)$valorCobrado,
+                    'vencimento' => Carbon::today()->toDateString(),
+                    'status' => 'ABERTO',
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ]);
+
+                Pagamento::create([
+                    'faturamento_id'  => $fatId,
+                    'caixa_id'        => null,
+                    'movimentacao_id' => null,
+                    'valor'           => (float)$valorCobrado,
+                    'forma_pagamento' => null,
+                    'data_pagamento'  => null,
+                    'status'          => 'PENDENTE',
+                ]);
             }
 
             return $agendamento;
@@ -559,14 +421,11 @@ class AgendamentoController extends Controller
                 'a.paciente_id',
                 DB::raw('COALESCE(a.procedimento_id, a.tuss_id) AS procedimento_id'),
                 'a.sessao_tratamento_id',
-                'a.orcamento_id',
                 DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
                 DB::raw('COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes, NULL) AS sessao_total'),
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE(pr.nome, t.descricao, '') AS procedimento"),
                 DB::raw("COALESCE(s.descricao,'') AS status"),
-                DB::raw("(SELECT pg.status FROM pagamentos AS pg JOIN faturamentos AS f ON f.id = pg.faturamento_id WHERE f.orcamento_id = a.orcamento_id ORDER BY pg.id DESC LIMIT 1) AS pagamento_status"),
-                DB::raw("(SELECT CASE WHEN pg.status = 'CONFIRMADO' THEN 1 ELSE 0 END FROM pagamentos AS pg JOIN faturamentos AS f ON f.id = pg.faturamento_id WHERE f.orcamento_id = a.orcamento_id ORDER BY pg.id DESC LIMIT 1) AS pagamento_confirmado"),
                 'a.observacoes',
                 DB::raw("DATE_FORMAT(a.created_at, '%d/%m %H:%i') AS criado_em")
             )
@@ -587,14 +446,12 @@ class AgendamentoController extends Controller
             ->leftJoin('tuss as t', 't.id', '=', 'a.tuss_id')
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
             ->leftJoin('sessoes_tratamento as st', 'st.id', '=', 'a.sessao_tratamento_id')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'a.orcamento_id')
             ->where('a.id', (int)$id)
             ->whereNull('a.deleted_at')
             ->select(
                 'a.id',
                 'a.paciente_id',
                 DB::raw('COALESCE(a.procedimento_id, a.tuss_id) AS procedimento_id'),
-                'a.orcamento_id',
                 'a.sessao_tratamento_id',
                 'a.data',
                 DB::raw("TIME_FORMAT(a.hora, '%H:%i') AS hora"),
@@ -605,8 +462,7 @@ class AgendamentoController extends Controller
                 DB::raw("COALESCE(p.nome,'') AS paciente_nome"),
                 DB::raw("COALESCE(pr.nome, t.descricao, '') AS procedimento_nome"),
                 DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
-                DB::raw('COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes, NULL) AS sessao_total'),
-                DB::raw("COALESCE(o.numero,'') AS orcamento_numero")
+                DB::raw('COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes, NULL) AS sessao_total')
             )
             ->first();
 
@@ -628,15 +484,7 @@ class AgendamentoController extends Controller
         $agendamento = Agendamento::findOrFail($id);
 
         $isConvenio = false;
-        if (!empty($agendamento->orcamento_id)) {
-            $orc = Orcamento::select('convenio_id')->find($agendamento->orcamento_id);
-            if ($orc && $orc->convenio_id) {
-                $conv = Convenio::select('tipo')->find($orc->convenio_id);
-                if ($conv && strtoupper((string)$conv->tipo) !== 'PARTICULAR') {
-                    $isConvenio = true;
-                }
-            }
-        } elseif (!empty($agendamento->tuss_id)) {
+        if (!empty($agendamento->tuss_id)) {
             $isConvenio = true;
         }
 
@@ -679,56 +527,7 @@ class AgendamentoController extends Controller
                 ], 422);
             }
         }
-        if (!empty($agendamento->orcamento_id)) {
-            $procCheckId = array_key_exists('procedimento_id', $data) && $data['procedimento_id'] !== null
-                ? (int)$data['procedimento_id']
-                : ($isConvenio ? (int)$agendamento->tuss_id : (int)$agendamento->procedimento_id);
-            if ($procCheckId) {
-                $qtyRowQuery = DB::table('orcamento_procedimentos as op')
-                    ->where('op.orcamento_id', (int)$agendamento->orcamento_id)
-                    ->whereNull('op.deleted_at');
 
-                if ($isConvenio) {
-                    $qtyRowQuery->leftJoin('tuss as t', 't.id', '=', 'op.tuss_id')
-                        ->where('op.tuss_id', $procCheckId)
-                        ->select('op.quantidade', 't.eh_tratamento', 't.quantidade_sessoes');
-                } else {
-                    $qtyRowQuery->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id')
-                        ->where('op.procedimento_id', $procCheckId)
-                        ->select('op.quantidade', 'pr.eh_tratamento', 'pr.quantidade_sessoes');
-                }
-                $qtyRow = $qtyRowQuery->first();
-
-                $baseQty = max(1, (int)($qtyRow->quantidade ?? 1));
-                $mult = ((bool)($qtyRow->eh_tratamento ?? false)) ? max(1, (int)($qtyRow->quantidade_sessoes ?? 0)) : 1;
-                $allowedQty = $baseQty * $mult;
-
-                $scheduledCountQuery = DB::table('agendamentos as a')
-                    ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
-                    ->whereNull('a.deleted_at')
-                    ->where('a.orcamento_id', (int)$agendamento->orcamento_id)
-                    ->where('a.id', '<>', (int)$agendamento->id)
-                    ->where(function ($q) {
-                        $q->whereNull('s.id')
-                          ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
-                    });
-
-                if ($isConvenio) {
-                    $scheduledCountQuery->where('a.tuss_id', $procCheckId);
-                } else {
-                    $scheduledCountQuery->where('a.procedimento_id', $procCheckId);
-                }
-                $scheduledCount = $scheduledCountQuery->count();
-
-                if ($scheduledCount >= $allowedQty) {
-                    return response()->json([
-                        'errors' => [
-                            'duplicidade' => ['Limite de agendamentos atingido para este orçamento e procedimento.']
-                        ]
-                    ], 422);
-                }
-            }
-        }
         if (!empty($payload)) {
             $agendamento->update($payload);
         }
@@ -815,54 +614,7 @@ class AgendamentoController extends Controller
             ], 422);
         }
 
-        if (!empty($agendamento->orcamento_id) && (!empty($agendamento->procedimento_id) || !empty($agendamento->tuss_id))) {
-            $isConvenio = !empty($agendamento->tuss_id);
-            $procCheckId = $isConvenio ? (int)$agendamento->tuss_id : (int)$agendamento->procedimento_id;
-
-            $qtyRowQuery = DB::table('orcamento_procedimentos as op')
-                ->where('op.orcamento_id', (int)$agendamento->orcamento_id)
-                ->whereNull('op.deleted_at');
-
-            if ($isConvenio) {
-                $qtyRowQuery->leftJoin('tuss as t', 't.id', '=', 'op.tuss_id')
-                    ->where('op.tuss_id', $procCheckId)
-                    ->select('op.quantidade', 't.eh_tratamento', 't.quantidade_sessoes');
-            } else {
-                $qtyRowQuery->leftJoin('procedimentos as pr', 'pr.id', '=', 'op.procedimento_id')
-                    ->where('op.procedimento_id', $procCheckId)
-                    ->select('op.quantidade', 'pr.eh_tratamento', 'pr.quantidade_sessoes');
-            }
-            $qtyRow = $qtyRowQuery->first();
-
-            $baseQty = max(1, (int)($qtyRow->quantidade ?? 1));
-            $mult = ((bool)($qtyRow->eh_tratamento ?? false)) ? max(1, (int)($qtyRow->quantidade_sessoes ?? 0)) : 1;
-            $allowedQty = $baseQty * $mult;
-
-            $scheduledCountQuery = DB::table('agendamentos as a')
-                ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
-                ->whereNull('a.deleted_at')
-                ->where('a.orcamento_id', (int)$agendamento->orcamento_id)
-                ->where('a.id', '<>', (int)$agendamento->id)
-                ->where(function ($q) {
-                    $q->whereNull('s.id')
-                      ->orWhereRaw("LOWER(s.descricao) NOT LIKE '%cancel%'");
-                });
-
-            if ($isConvenio) {
-                $scheduledCountQuery->where('a.tuss_id', $procCheckId);
-            } else {
-                $scheduledCountQuery->where('a.procedimento_id', $procCheckId);
-            }
-            $scheduledCount = $scheduledCountQuery->count();
-
-            if ($scheduledCount >= $allowedQty) {
-                return response()->json([
-                    'errors' => [
-                        'duplicidade' => ['Limite de agendamentos atingido para este orçamento e procedimento.']
-                    ]
-                ], 422);
-            }
-        }
+        // Sem validação de limite de orçamentos
 
         $agendamento->update([
             'agenda_medica_id' => $agenda->id,
@@ -905,15 +657,15 @@ class AgendamentoController extends Controller
             }
         }
 
-        $procedimento = Procedimento::select('id', 'especialidade_id')->find($procedimentoId);
-        if (!$procedimento || !$procedimento->especialidade_id) {
+        $procedimento = Procedimento::with('especialidades:id')->find($procedimentoId);
+        if (!$procedimento || $procedimento->especialidades->isEmpty()) {
             return response()->json(['profissionais' => []]);
         }
 
-        $especialidadeId = (int) $procedimento->especialidade_id;
+        $especialidadesIds = $procedimento->especialidades->pluck('id')->toArray();
         $profissionais = ProfissionalSaude::query()
             ->join('profissional_especialidade as pe', 'pe.profissional_saude_id', '=', 'profissionais_saude.id')
-            ->where('pe.especialidade_id', $especialidadeId)
+            ->whereIn('pe.especialidade_id', $especialidadesIds)
             ->select('profissionais_saude.id', 'profissionais_saude.nome')
             ->distinct()
             ->orderBy('profissionais_saude.nome')
@@ -921,6 +673,57 @@ class AgendamentoController extends Controller
 
         return response()->json([
             'profissionais' => $profissionais
+        ]);
+    }
+    public function byPaciente(string $paciente_id)
+    {
+        $agendamentos = DB::table('agendamentos as a')
+            ->leftJoin('sessoes_tratamento as st', 'st.id', '=', 'a.sessao_tratamento_id')
+            ->leftJoin('procedimentos as pr', 'pr.id', '=', 'a.procedimento_id')
+            ->leftJoin('tuss as t', 't.id', '=', 'a.tuss_id')
+            ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
+            ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
+            ->leftJoin('profissionais_saude as prof', 'prof.id', '=', 'am.profissional_saude_id')
+            ->leftJoin('orcamentos as orc', 'orc.id', '=', 'a.orcamento_id')
+            ->where('a.paciente_id', $paciente_id)
+            ->select(
+                'a.id',
+                'a.data',
+                'a.hora',
+                'a.procedimento_id',
+                'a.tuss_id',
+                'orc.convenio_id',
+                'am.profissional_saude_id',
+                DB::raw('COALESCE(pr.nome, t.descricao, "") AS procedimento_nome'),
+                DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),
+                DB::raw('COALESCE(s.descricao, "") AS status')
+            )
+            ->orderBy('a.data', 'desc')
+            ->orderBy('a.hora', 'desc')
+            ->get();
+
+        $result = $agendamentos->map(function ($ag) {
+            $stRaw = strtolower(trim((string)$ag->status));
+            $atendido = str_contains($stRaw, 'atendido');
+
+            return [
+                'id' => $ag->id,
+                'data' => $ag->data,
+                'hora' => substr($ag->hora, 0, 5),
+                'procedimento' => $ag->procedimento_nome ?: 'Procedimento',
+                'profissional' => $ag->profissional_nome ?: 'Profissional',
+                'status' => $ag->status ?: 'Agendado',
+                'atendido' => $atendido,
+                'procedimento_id' => $ag->procedimento_id,
+                'tuss_id' => $ag->tuss_id,
+                'convenio_id' => $ag->convenio_id,
+                'profissional_saude_id' => $ag->profissional_saude_id,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'agendamentos' => $result
         ]);
     }
 }

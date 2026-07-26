@@ -126,11 +126,7 @@
                             </div>
                         </div>
 
-                        <div class="form-check form-switch form-switch-success mb-3">
-                            <input v-model="form.faturamento_previsto" class="form-check-input" type="checkbox" :disabled="locked" id="fatPrev" />
-                            <label class="form-check-label text-muted" for="fatPrev">Faturamento Previsto (Receb. Convênio)</label>
-                        </div>
-                        
+
                         <hr class="border-primary opacity-25">
                         
                         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -164,11 +160,7 @@
                         <div class="vstack gap-2" v-if="ultimosLocal && ultimosLocal.length > 0">
                             <div v-for="o in ultimosLocal" :key="o.id" class="d-flex align-items-center border rounded p-2">
                                 <div class="flex-grow-1">
-                                    <h6 class="mb-1">#{{ o.numero }}
-                                        <span class="badge ms-1" :class="o.is_convenio ? '' : (o.pago ? 'bg-success' : (o.aprovado ? 'bg-info' : 'bg-warning'))" :style="o.is_convenio ? 'background-color: #8b5cf6 !important; color: #fff !important;' : ''">
-                                            {{ o.is_convenio ? 'Convênio' : (o.pago ? 'Pago' : (o.aprovado ? 'Aprovado' : 'Pendente')) }}
-                                        </span>
-                                    </h6>
+                                    <h6 class="mb-1">#{{ o.numero }}</h6>
                                     <p class="text-muted mb-0 small">{{ formatDateTimeBR(o.criado_em) }}</p>
                                 </div>
                                 <div class="flex-shrink-0">
@@ -177,10 +169,7 @@
                                             @click="handleConsultEdit(o.id)" :disabled="o.pago" title="Abrir/Editar">
                                             <i class="ri-pencil-fill"></i>
                                         </button>
-                                        <button v-if="!o.is_convenio" class="btn btn-sm btn-soft-success btn-icon" type="button"
-                                            @click="handleUltimoApprove(o.id)" :disabled="o.aprovado || o.pago" title="Aprovar">
-                                            <i class="ri-check-double-line"></i>
-                                        </button>
+
                                         <button class="btn btn-sm btn-soft-secondary btn-icon" type="button"
                                             @click="handleConsultPrint(o.id)" title="Imprimir">
                                             <i class="ri-printer-fill"></i>
@@ -850,34 +839,21 @@ const consultModal = ref(false);
 const orcamentosConsulta = ref([]);
 const consultQuery = ref('');
 const consultColumns = [
+    { id: 'id', name: 'ID' },
     { id: 'numero', name: 'Número' },
-    { id: 'pagamento_id', name: 'Nº Pag.' },
     { id: 'data_emissao', name: 'Emissão' },
     { id: 'validade', name: 'Validade' },
     { id: 'paciente', name: 'Paciente' },
     { id: 'cpf', name: 'CPF' },
-    {
-        id: 'status', name: 'Status', formatter: (cell) => {
-            const v = String(cell || '').toLowerCase();
-            const text = cell || '-';
-            let cls = 'bg-light text-dark';
-            let style = '';
-            if (v === 'aprovado') cls = 'bg-success-subtle text-success';
-            else if (v === 'convênio') { cls = ''; style = 'background-color: #e9d5ff !important; color: #7e22ce !important;'; }
-            else if (v === 'aguardando aprovação' || v === 'pendente') cls = 'bg-warning-subtle text-warning';
-            return html(`<span class="badge ${cls}" style="${style}">${text}</span>`);
-        }
-    },
     { id: 'total', name: 'Total' },
 ];
 const orcamentosConsultaGrid = computed(() => {
     return (orcamentosConsulta.value || []).map(o => ({
         id: o.id,
         numero: o.numero,
-        pagamento_id: o.pagamento_id || '—',
         data_emissao: o.data_emissao,
         validade: o.validade,
-        paciente: o.paciente,
+        paciente: o.paciente || '-',
         cpf: o.cpf,
         status: o.is_convenio ? 'Convênio' : (o.aprovado ? 'Aprovado' : 'Aguardando aprovação'),
         total: formatCurrency(o.valor_total),

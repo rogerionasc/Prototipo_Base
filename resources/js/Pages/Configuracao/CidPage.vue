@@ -70,11 +70,12 @@
 <script setup>
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
-import { Head, useForm } from "@inertiajs/vue3";
+import { Head, useForm, usePage } from "@inertiajs/vue3";
 import { ref, computed } from "vue";
 import Modal from "@/Components/Modal.vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 
+const page = usePage();
 const cidImportModalOpen = ref(false);
 const cidImportUiStatus = ref('idle');
 const cidImportUiMessage = ref('');
@@ -116,7 +117,18 @@ async function importCid() {
   fd.append('file', cidImportForm.file);
   fd.append('_token', document.querySelector('meta[name="csrf-token"]')?.content ?? '');
   try {
-    const resp = await fetch('/cids/import/progress', { method: 'POST', body: fd });
+    const resp = await fetch('/cids/import/progress', { 
+      method: 'POST', 
+      body: fd,
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!resp.ok) {
+      if (resp.status === 422) {
+        const data = await resp.json();
+        throw new Error(data.errors?.file?.[0] || data.message || 'Erro de validação');
+      }
+      throw new Error(`Erro HTTP: ${resp.status}`);
+    }
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buf = '';
@@ -140,12 +152,16 @@ async function importCid() {
     }
   } catch (e) {
     cidImportUiStatus.value = 'error';
-    cidImportUiMessage.value = 'Erro de conexão ao importar.';
+    cidImportUiMessage.value = e.message || 'Erro de conexão ao importar.';
+    page.props.flash = { ...page.props.flash, error: cidImportUiMessage.value + ' ' + Date.now() };
   }
   cidImportProcessing.value = false;
   if (cidImportUiStatus.value === 'success') {
+    page.props.flash = { ...page.props.flash, success: (cidImportUiMessage.value || 'Importação concluída.') + ' ' + Date.now() };
     cidTableKey.value++;
     setTimeout(() => { cidImportModalOpen.value = false; cidImportForm.reset(); }, 2000);
+  } else if (cidImportUiStatus.value === 'error' && !page.props.flash?.error?.includes(Date.now().toString().substring(0,8))) {
+     page.props.flash = { ...page.props.flash, error: cidImportUiMessage.value + ' ' + Date.now() };
   }
 }
 </script>

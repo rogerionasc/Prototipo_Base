@@ -9,68 +9,25 @@
           <BCardTitle class="mb-0 flex-grow-1">Cadastro de Especialidades</BCardTitle>
         </BCardHeader>
         <BCardBody>
-          <p class="text-muted mb-3">Gerencie especialidades médicas disponíveis no sistema.</p>
-          <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
-            <BRow class="g-3 align-items-end">
-              <BCol md="4">
-                <label for="espNome" class="form-label">Nome</label>
-                <span class="text-danger ms-1">*</span>
-                <input v-model="formCreate.nome" type="text" class="form-control" id="espNome"
-                  :class="{ 'is-invalid': formCreate.errors.nome }" placeholder="Ex.: Cardiologia" maxlength="120" />
-                <div class="invalid-feedback">{{ formCreate.errors.nome }}</div>
-              </BCol>
-              <BCol md="3">
-                <label for="espCodigo" class="form-label">Código</label>
-                <input v-model="formCreate.codigo" type="text" class="form-control" id="espCodigo"
-                  placeholder="Ex.: CARD" maxlength="20" />
-              </BCol>
-              <BCol md="3">
-                <label for="espAtivo" class="form-label">Ativa</label>
-                <select v-model="formCreate.ativo" class="form-select" id="espAtivo">
-                  <option :value="true">Sim</option>
-                  <option :value="false">Não</option>
-                </select>
-              </BCol>
-              <BCol md="2">
-                <button type="button" class="btn btn-primary w-100" :disabled="formCreate.processing"
-                  @click="saveEspecialidade">Adicionar</button>
-              </BCol>
-            </BRow>
-            <BRow class="mt-3 g-3">
-              <BCol md="12">
-                <label for="espProcedimentos" class="form-label">Procedimentos Particular</label>
-                <select multiple data-choices data-choices-removeItem class="form-control" id="espProcedimentos"
-                  ref="createProcedimentosSelect">
-                  <option v-for="p in procedimentosOptions" :key="p.value" :value="p.value">
-                    {{ p.label }}
-                  </option>
-                </select>
-              </BCol>
-            </BRow>
-            <BRow class="mt-3 g-3">
-              <BCol md="12">
-                <label for="espDescricao" class="form-label">Descrição</label>
-                <textarea v-model="formCreate.descricao" id="espDescricao" class="form-control" rows="2"
-                  placeholder="Descrição opcional"></textarea>
-              </BCol>
-            </BRow>
-          </div>
-          <TableGrid :columns="columns" :data="tableData" :tableTitle="'Lista de Especialidades Médicas'" :showTitle="false" :search="true"
-            :searchPlaceholder="'Buscar por especialidade'" :showCheckbox="false" :showActions="true" :showStatus="true"
-            :showPerPagination="true" :showAddButton="false" @delete="askDelete" @edit="startEditById"
-            @show="openModalShow" />
-          <Modal v-model="editModal" :title="'Editar Especialidade'" size="lg" :name-button="'Salvar'"
-            :processing="formEdit.processing" @save="updateEspecialidade">
+          <p class="text-muted mb-0">Gerencie especialidades médicas disponíveis no sistema.</p>
+
+          <TableGrid :columns="columns" :data="tableData" :tableTitle="'Lista de Especialidades Médicas'"
+            :showTitle="false" :search="true" :searchPlaceholder="'Buscar por especialidade'" :showCheckbox="false"
+            :showActions="true" :showStatus="true" :showPerPagination="true" :showAddButton="true" @add="startCreate"
+            @delete="askDelete" @edit="startEditById" @show="openModalShow" />
+          <Modal v-model="editModal" :title="editingId ? 'Editar Especialidade' : 'Adicionar Especialidade'" size="lg"
+            :name-button="'Salvar'" :processing="formEdit.processing" @save="updateEspecialidade">
             <BRow class="g-3">
               <BCol md="6">
                 <label for="espEditNome" class="form-label">Nome</label>
-                <input v-model="formEdit.nome" type="text" id="espEditNome" class="form-control"
-                  :class="{ 'is-invalid': formEdit.errors.nome }" maxlength="120" />
+                <input placeholder="Ex.: Cardiologia" v-model="formEdit.nome" type="text" id="espEditNome"
+                  class="form-control" :class="{ 'is-invalid': formEdit.errors.nome }" maxlength="120" />
                 <div class="invalid-feedback">{{ formEdit.errors.nome }}</div>
               </BCol>
               <BCol md="6">
                 <label for="espEditCodigo" class="form-label">Código</label>
-                <input v-model="formEdit.codigo" type="text" id="espEditCodigo" class="form-control" maxlength="20" />
+                <input placeholder="Ex.: CARD" v-model="formEdit.codigo" type="text" id="espEditCodigo"
+                  class="form-control" maxlength="20" />
               </BCol>
             </BRow>
             <BRow class="g-3 mt-1">
@@ -87,7 +44,8 @@
             <BRow class="g-3 mt-1">
               <BCol md="8">
                 <label for="espEditDescricao" class="form-label">Descrição</label>
-                <textarea v-model="formEdit.descricao" id="espEditDescricao" class="form-control" rows="3"></textarea>
+                <textarea placeholder="Descrição opcional" v-model="formEdit.descricao" id="espEditDescricao"
+                  class="form-control" rows="3"></textarea>
               </BCol>
               <BCol md="4">
                 <label for="espEditAtivo" class="form-label">Ativa</label>
@@ -121,7 +79,6 @@ const props = defineProps({
 const especialidadesLocal = ref([...(props.especialidades || [])]);
 watch(() => props.especialidades, (v) => { especialidadesLocal.value = [...(v || [])]; });
 
-const createProcedimentosSelect = ref(null);
 const editProcedimentosSelect = ref(null);
 
 const procedimentosOptions = computed(() => {
@@ -171,28 +128,23 @@ const tableData = computed(() => {
   }));
 });
 
-const formCreate = useForm({
-  nome: "",
-  codigo: "",
-  descricao: "",
-  ativo: true,
-  procedimentos_ids: [],
-});
+const editingId = ref(null);
 
-function saveEspecialidade() {
-  formCreate.procedimentos_ids = (getSelectedValues(createProcedimentosSelect.value) || [])
-    .filter(v => v != null && String(v).trim() !== "");
-  formCreate.post('/especialidades', {
-    preserveScroll: true,
-    onSuccess: () => {
-      formCreate.reset();
-      setChoiceValues(createProcedimentosSelect.value, []);
-      router.reload({ only: ['especialidades'] });
-    },
+function startCreate() {
+  editingId.value = null;
+  formEdit.reset();
+  formEdit.nome = "";
+  formEdit.codigo = "";
+  formEdit.descricao = "";
+  formEdit.ativo = true;
+  formEdit.procedimentos_ids = [];
+
+  editModal.value = true;
+  nextTick(async () => {
+    if (window.initChoices) window.initChoices();
+    setChoiceValues(editProcedimentosSelect.value, []);
   });
 }
-
-const editingId = ref(null);
 const formEdit = useForm({
   nome: "",
   codigo: "",
@@ -233,16 +185,26 @@ function cancelEdit() {
 }
 
 function updateEspecialidade() {
-  if (!editingId.value) return;
   formEdit.procedimentos_ids = (getSelectedValues(editProcedimentosSelect.value) || [])
     .filter(v => v != null && String(v).trim() !== "");
-  formEdit.put(`/especialidades/${editingId.value}`, {
-    preserveScroll: true,
-    onSuccess: () => {
-      cancelEdit();
-      router.reload({ only: ['especialidades'] });
-    },
-  });
+
+  if (editingId.value) {
+    formEdit.put(`/especialidades/${editingId.value}`, {
+      preserveScroll: true,
+      onSuccess: () => {
+        cancelEdit();
+        router.reload({ only: ['especialidades'] });
+      },
+    });
+  } else {
+    formEdit.post('/especialidades', {
+      preserveScroll: true,
+      onSuccess: () => {
+        cancelEdit();
+        router.reload({ only: ['especialidades'] });
+      },
+    });
+  }
 }
 
 function openModalShow(id) {

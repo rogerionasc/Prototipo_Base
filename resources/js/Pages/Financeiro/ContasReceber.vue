@@ -1,22 +1,16 @@
 <template>
   <Layout>
+
     <Head title="Contas a Receber" />
     <PageHeader title="Contas a Receber" pageTitle="Financeiro" />
 
-    <TableGrid
-      :columns="cols"
-      :data="rows"
-      :tableTitle="'Contas a Receber'"
-      :showCheckbox="false"
-      :search="true"
-      :showAddButton="false"
-      :showStatus="false"
-      :showActions="true"
+    <TableGrid :columns="cols" :data="rows" :tableTitle="'Contas a Receber'" :showCheckbox="false" :search="true"
+      :showAddButton="false" :showStatus="false" :showActions="true"
       :actionsConfig="{ delete: false, edit: false, show: false, diary: false, print: false, download: false, restore: false, receive: canReceive }"
-      @receive="onReceive"
-    />
+      @receive="onReceive" />
 
-    <Modal v-model="showReceive" title="Registrar Recebimento (Convênio)" name-button="Registrar" :processing="receiveForm.processing" size="md" @save="confirmReceive">
+    <Modal v-model="showReceive" title="Registrar Recebimento (Convênio)" name-button="Registrar"
+      :processing="receiveForm.processing" size="md" @save="confirmReceive">
       <div class="vstack gap-3">
         <div class="row g-2">
           <div class="col-12">
@@ -88,14 +82,13 @@ function formatCurrency(n) {
 
 const cols = [
   { id: "id", name: "Faturamento" },
-  { id: "tipo_pagador", name: "Pagador" },
-  { id: "convenio", name: "Convênio" },
+  { id: "nu_pagamento", name: "Nº Pagamento" },
+  { id: "tipo_pagador", name: "Convênio" },
   { id: "paciente", name: "Paciente" },
-  { id: "numero_orcamento", name: "Orçamento" },
   { id: "vencimento", name: "Vencimento" },
+  { id: "data_pagamento", name: "Pagamento" },
   { id: "valor", name: "Valor", formatter: (cell) => formatCurrency(cell) },
   { id: "status", name: "Status" },
-  { id: "faturamento_status", name: "Faturamento Status" },
 ];
 
 function canReceive(row) {
@@ -170,6 +163,7 @@ function confirmReceive() {
 
 <style scoped>
 :deep(.table thead th:nth-child(1)),
-:deep(.table tbody td:nth-child(1):not([colspan])) { display: none; }
+:deep(.table tbody td:nth-child(1):not([colspan])) {
+  display: none;
+}
 </style>
-

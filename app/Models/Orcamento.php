@@ -22,9 +22,6 @@ class Orcamento extends Model
         'desconto',
         'valor_total',
         'valor_avista',
-        'faturamento_previsto',
-        'aprovado',
-        'status',
     ];
 
     protected $casts = [
@@ -34,8 +31,6 @@ class Orcamento extends Model
         'desconto' => 'decimal:2',
         'valor_total' => 'decimal:2',
         'valor_avista' => 'decimal:2',
-        'faturamento_previsto' => 'boolean',
-        'aprovado' => 'boolean',
     ];
 
     public function paciente()

@@ -78,7 +78,6 @@ class MovimentacaoCaixaController extends Controller
         $pagamentosPendentes = $this->getPagamentosPendentes(request('data_pendentes'));
         $ultimosPagamentos = DB::table('pagamentos as p')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->leftJoin('caixas as c', 'c.id', '=', 'p.caixa_id')
             ->select(
@@ -99,18 +98,15 @@ class MovimentacaoCaixaController extends Controller
             ->get();
         $pagamentosRecusados = DB::table('pagamentos as p')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->select(
                 'p.id as num_pagamento',
-                'o.id as orcamento_id',
                 'p.valor',
                 'p.forma_pagamento',
                 'p.status',
                 DB::raw("DATE_FORMAT(p.updated_at, '%d-%m-%Y %H:%i') AS data_recusa"),
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
-                DB::raw("COALESCE(o.numero,'') AS numero_orcamento"),
-                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y') AS data_orcamento")
+                DB::raw("DATE_FORMAT(f.created_at, '%d-%m-%Y') AS data_faturamento")
             )
             ->where('p.status', 'RECUSADO')
             ->where('f.tipo_pagador', 'PARTICULAR')
@@ -137,30 +133,25 @@ class MovimentacaoCaixaController extends Controller
             ->groupBy('pg.faturamento_id');
 
         return DB::table('faturamentos as f')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->leftJoin('contas_receber as cr', 'cr.faturamento_id', '=', 'f.id')
-            ->leftJoinSub($pendIds, 'pp', function ($join) {
+            ->joinSub($pendIds, 'pp', function ($join) {
                 $join->on('pp.faturamento_id', '=', 'f.id');
             })
-            ->leftJoin('pagamentos as p', 'p.id', '=', 'pp.id')
+            ->join('pagamentos as p', 'p.id', '=', 'pp.id')
             ->select(
                 'f.id as faturamento_id',
-                'o.id as orcamento_id',
                 DB::raw('COALESCE(cr.valor, f.valor_final, f.valor_cobrado, f.valor_total, 0) AS valor'),
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
                 DB::raw("COALESCE(pa.cpf,'') AS paciente_documento"),
-                DB::raw("DATE_FORMAT(o.data_emissao, '%d-%m-%Y %H:%i') AS data_orcamento"),
+                DB::raw("DATE_FORMAT(f.created_at, '%d-%m-%Y %H:%i') AS data_faturamento"),
                 'p.id as pagamento_id',
                 'p.caixa_id',
                 'p.forma_pagamento',
                 'p.status as pagamento_status'
             )
             ->where('f.tipo_pagador', 'PARTICULAR')
-            ->where('f.status', 'AGUARDANDO_PAGAMENTO')
-            ->whereDate('f.created_at', $date)
-            ->whereNull('o.deleted_at')
-            ->where('o.aprovado', true)
+            ->whereDate('p.created_at', $date)
             ->orderByDesc('f.updated_at')
             ->orderByDesc('f.id')
             ->get();
@@ -301,23 +292,17 @@ class MovimentacaoCaixaController extends Controller
         }
         $pagamentos = DB::table('pagamentos as p')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
-            ->leftJoin('orcamentos as o', 'o.id', '=', 'f.orcamento_id')
+            ->leftJoin('agendamentos as a', 'a.id', '=', 'f.agendamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->select(
                 'p.id',
-                'o.id as orcamento_id',
                 'p.caixa_id',
                 'p.valor',
                 'p.forma_pagamento',
                 DB::raw("DATE_FORMAT(p.data_pagamento, '%d-%m-%Y') AS data_pagamento"),
                 'p.status',
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
-                DB::raw("(SELECT GROUP_CONCAT(DISTINCT pr.nome ORDER BY pr.nome SEPARATOR ', ')
-                          FROM orcamento_procedimentos AS op
-                          LEFT JOIN procedimentos AS pr ON pr.id = op.procedimento_id
-                          WHERE op.orcamento_id = o.id
-                            AND (op.deleted_at IS NULL)
-                            AND (pr.deleted_at IS NULL)) AS procedimentos")
+                DB::raw("(SELECT pr.nome FROM procedimentos AS pr WHERE pr.id = a.procedimento_id LIMIT 1) AS procedimentos")
             )
             ->where('p.movimentacao_id', $id)
             ->orderByDesc('p.data_pagamento')

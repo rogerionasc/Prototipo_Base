@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('totem_opcoes', function (Blueprint $table) {
-            $table->string('icone')->nullable()->after('codigo');
+        Schema::table('pagamentos', function (Blueprint $table) {
+            $table->string('nu_pagamento', 25)->nullable()->after('id');
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('totem_opcoes', function (Blueprint $table) {
-            //
+        Schema::table('pagamentos', function (Blueprint $table) {
+            $table->dropColumn('nu_pagamento');
         });
     }
 };
