@@ -119,6 +119,37 @@ export default {
                 },
 
                 {
+                    icon: "ri-equalizer-line",
+                    title: "Parametrização",
+                    type: "link",
+                    target: "/configuracao/parametrizacao",
+                },
+                {
+                    icon: "ri-first-aid-kit-line",
+                    title: "Especialidades",
+                    type: "link",
+                    target: "/configuracao/especialidades",
+                },
+                {
+                    icon: "ri-file-list-3-line",
+                    title: "Procedimentos",
+                    type: "link",
+                    target: "/configuracao/procedimentos",
+                },
+                {
+                    icon: "ri-layout-grid-line",
+                    title: "Tabela TUSS",
+                    type: "link",
+                    target: "/configuracao/tuss",
+                },
+                {
+                    icon: "ri-heart-pulse-line",
+                    title: "Tabela CID",
+                    type: "link",
+                    target: "/configuracao/cid",
+                },
+
+                {
                     icon: "ri-account-circle-line",
                     title: this.$t("t-authentication"),
                     type: "link",

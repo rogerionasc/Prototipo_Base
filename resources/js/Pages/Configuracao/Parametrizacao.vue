@@ -1,422 +1,310 @@
 <template>
-    <BCard class="shadow-sm config-card">
-        <BCardBody>
-            <div class="d-flex align-items-start mb-3">
-                <div class="flex-grow-1">
-                    <h5 class="mb-2">Parametrização</h5>
-                    <p class="text-muted mb-0">Gerencie listas usadas nos cadastros.</p>
-                </div>
-                <i class="ri-equalizer-line text-primary fs-20 ms-3"></i>
-            </div>
-            <BRow class="g-4">
-                <BCol lg="6">
-                    <BCard class="shadow-sm h-100">
-                        <BCardHeader class="bg-light-subtle p-3 border-0">
-                            <BCardTitle><i class="ri-user-heart-line text-primary me-2"></i>Estado Civil</BCardTitle>
-                        </BCardHeader>
-                        <BCardBody>
-                            <div class="d-flex justify-content-end align-items-center mb-3">
-                                <span class="badge bg-primary-subtle text-primary">Total: {{ estadosCivisLocal?.length
-                                    || 0 }}</span>
+    <Layout>
+
+        <Head title="Parametrização" />
+        <PageHeader title="Parametrização" pageTitle="Configurações" />
+
+        <BContainer fluid>
+            <BCard class="shadow-sm border-0">
+                <BCardHeader class="align-items-center d-flex border-bottom-dashed">
+                    <BCardTitle class="mb-0 flex-grow-1">Parâmetros do Sistema</BCardTitle>
+                </BCardHeader>
+                <BCardBody>
+                    <BTabs nav-class="nav-tabs-custom text-muted mb-4">
+                        <!-- ESTADO CIVIL -->
+                        <BTab title="Estado Civil" active>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Lista de Estados Civis</h6>
                             </div>
-                            <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
-                                <BRow class="g-3 align-items-end">
-                                    <BCol md="8">
-                                        <label for="estadoCivilDescricao" class="form-label">Descrição</label>
-                                        <input v-model="formEstadoCivil.descricao" type="text" class="form-control"
-                                            id="estadoCivilDescricao"
-                                            :class="{ 'is-invalid': formEstadoCivil.errors.descricao }"
-                                            placeholder="Ex.: Casado(a)" />
-                                        <div class="invalid-feedback">{{ formEstadoCivil.errors.descricao }}</div>
-                                    </BCol>
-                                    <BCol md="4">
-                                        <button type="button" class="btn btn-primary w-100"
-                                            :disabled="formEstadoCivil.processing"
-                                            @click="saveEstadoCivil">Adicionar</button>
-                                    </BCol>
-                                </BRow>
+                            <div class="border rounded p-3 bg-light-subtle mb-4">
+                                <form @submit.prevent="saveEstadoCivil">
+                                    <BRow class="g-3 align-items-end">
+                                        <BCol md="8">
+                                            <label class="form-label">Descrição do Estado Civil</label>
+                                            <input v-model="formEstadoCivil.descricao" type="text" class="form-control"
+                                                :class="{ 'is-invalid': formEstadoCivil.errors.descricao }"
+                                                placeholder="Ex.: Solteiro(a)..." />
+                                            <div class="invalid-feedback">{{ formEstadoCivil.errors.descricao }}</div>
+                                        </BCol>
+                                        <BCol md="4">
+                                            <button type="submit" class="btn btn-primary w-100"
+                                                :disabled="formEstadoCivil.processing"><i
+                                                    class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                        </BCol>
+                                    </BRow>
+                                </form>
                             </div>
-                                <SimpleTable
-                                    variant="borderless"
-                                    compact
-                                    tableClass="table-sm table-hover align-middle table-nowrap"
-                                    :items="estadosCivisLocal"
-                                    :columns="parametrosColumns"
-                                    emptyTitle="Nenhum registro"
-                                    emptyMessage="Nenhum estado civil cadastrado"
-                                >
-                                    <template #body="{ items }">
-                                        <tr v-for="ec in items" :key="ec.id">
-                                            <template v-if="editingEstadoCivilId !== ec.id">
-                                                <td>#{{ ec.id }}</td>
-                                                <td>{{ ec.descricao }}</td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-sm btn-soft-info"
-                                                            @click="startEditEstadoCivil(ec)" title="Editar">
-                                                            <i class="ri-pencil-line align-bottom"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-soft-danger"
-                                                            @click="destroyEstadoCivil(ec.id)" title="Excluir">
-                                                            <i class="ri-delete-bin-line align-bottom"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                            <template v-else>
-                                                <td>#{{ ec.id }}</td>
-                                                <td>
+                            <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                                :items="estadosCivisLocal" :columns="parametrosColumns" emptyTitle=""
+                                emptyMessage="Nenhum registro encontrado.">
+                                <template #body="{ items }">
+                                    <tr v-for="ec in items" :key="ec.id">
+                                        <template v-if="editingEstadoCivilId !== ec.id">
+                                            <td style="width:80px">#{{ ec.id }}</td>
+                                            <td>{{ ec.descricao }}</td>
+                                            <td class="text-end" style="width:150px">
+                                                <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                    @click="startEditEstadoCivil(ec)" title="Editar"><i
+                                                        class="ri-pencil-line"></i></button>
+                                                <button type="button" class="btn btn-sm btn-soft-danger"
+                                                    @click="destroyEstadoCivil(ec.id)" title="Excluir"><i
+                                                        class="ri-delete-bin-line"></i></button>
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td colspan="3">
+                                                <div class="d-flex gap-2">
                                                     <input v-model="editEstadoCivil.descricao" type="text"
-                                                        class="form-control"
-                                                        :class="{ 'is-invalid': editEstadoCivil.errors.descricao }"
-                                                        placeholder="Descrição" />
-                                                    <div class="invalid-feedback">{{ editEstadoCivil.errors.descricao }}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-success btn-sm"
-                                                            :disabled="editEstadoCivil.processing"
-                                                            @click="updateEstadoCivil">Salvar</button>
-                                                        <button type="button" class="btn btn-light btn-sm"
-                                                            @click="cancelEditEstadoCivil">Cancelar</button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                        </tr>
-                                    </template>
-                                </SimpleTable>
-                        </BCardBody>
-                    </BCard>
-                </BCol>
+                                                        class="form-control" />
+                                                    <button type="button" class="btn btn-success"
+                                                        @click="updateEstadoCivil">Salvar</button>
+                                                    <button type="button" class="btn btn-light"
+                                                        @click="cancelEditEstadoCivil">Cancelar</button>
+                                                </div>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </SimpleTable>
+                        </BTab>
 
-                <BCol lg="6">
-                    <BCard class="shadow-sm h-100">
-                        <BCardHeader class="bg-light-subtle p-3 border-0">
-                            <BCardTitle><i class="ri-team-line text-primary me-2"></i>Parentesco</BCardTitle>
-                        </BCardHeader>
-                        <BCardBody>
-                            <div class="d-flex justify-content-end align-items-center mb-3">
-                                <span class="badge bg-primary-subtle text-primary">Total: {{ parentescosLocal?.length ||
-                                    0 }}</span>
+                        <!-- PARENTESCO -->
+                        <BTab title="Parentesco">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Lista de Parentescos</h6>
                             </div>
-                            <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
-                                <BRow class="g-3 align-items-end">
-                                    <BCol md="8">
-                                        <label for="parentescoDescricao" class="form-label">Descrição</label>
-                                        <input v-model="formParentesco.descricao" type="text" class="form-control"
-                                            id="parentescoDescricao"
-                                            :class="{ 'is-invalid': formParentesco.errors.descricao }"
-                                            placeholder="Ex.: Pai, Mãe, Tutor" />
-                                        <div class="invalid-feedback">{{ formParentesco.errors.descricao }}</div>
-                                    </BCol>
-                                    <BCol md="4">
-                                        <button type="button" class="btn btn-primary w-100"
-                                            :disabled="formParentesco.processing"
-                                            @click="saveParentesco">Adicionar</button>
-                                    </BCol>
-                                </BRow>
-                                                          <SimpleTable
-                                    variant="borderless"
-                                    compact
-                                    tableClass="table-sm table-hover align-middle table-nowrap"
-                                    :items="parentescosLocal"
-                                    :columns="parametrosColumns"
-                                    emptyTitle="Nenhum registro"
-                                    emptyMessage="Nenhum parentesco cadastrado"
-                                >
-                                    <template #body="{ items }">
-                                        <tr v-for="pa in items" :key="pa.id">
-                                            <template v-if="editingParentescoId !== pa.id">
-                                                <td>#{{ pa.id }}</td>
-                                                <td>{{ pa.descricao }}</td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-sm btn-soft-info"
-                                                            @click="startEditParentesco(pa)" title="Editar">
-                                                            <i class="ri-pencil-line align-bottom"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-soft-danger"
-                                                            @click="destroyParentesco(pa.id)" title="Excluir">
-                                                            <i class="ri-delete-bin-line align-bottom"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                            <template v-else>
-                                                <td>#{{ pa.id }}</td>
-                                                <td>
+                            <div class="border rounded p-3 bg-light-subtle mb-4">
+                                <form @submit.prevent="saveParentesco">
+                                    <BRow class="g-3 align-items-end">
+                                        <BCol md="8">
+                                            <label class="form-label">Descrição do Parentesco</label>
+                                            <input v-model="formParentesco.descricao" type="text" class="form-control"
+                                                :class="{ 'is-invalid': formParentesco.errors.descricao }"
+                                                placeholder="Ex.: Pai, Mãe..." />
+                                            <div class="invalid-feedback">{{ formParentesco.errors.descricao }}</div>
+                                        </BCol>
+                                        <BCol md="4">
+                                            <button type="submit" class="btn btn-primary w-100"
+                                                :disabled="formParentesco.processing"><i
+                                                    class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                        </BCol>
+                                    </BRow>
+                                </form>
+                            </div>
+                            <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                                :items="parentescosLocal" :columns="parametrosColumns" emptyTitle=""
+                                emptyMessage="Nenhum registro encontrado.">
+                                <template #body="{ items }">
+                                    <tr v-for="pa in items" :key="pa.id">
+                                        <template v-if="editingParentescoId !== pa.id">
+                                            <td style="width:80px">#{{ pa.id }}</td>
+                                            <td>{{ pa.descricao }}</td>
+                                            <td class="text-end" style="width:150px">
+                                                <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                    @click="startEditParentesco(pa)" title="Editar"><i
+                                                        class="ri-pencil-line"></i></button>
+                                                <button type="button" class="btn btn-sm btn-soft-danger"
+                                                    @click="destroyParentesco(pa.id)" title="Excluir"><i
+                                                        class="ri-delete-bin-line"></i></button>
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td colspan="3">
+                                                <div class="d-flex gap-2">
                                                     <input v-model="editParentesco.descricao" type="text"
-                                                        class="form-control"
-                                                        :class="{ 'is-invalid': editParentesco.errors.descricao }"
-                                                        placeholder="Descrição" />
-                                                    <div class="invalid-feedback">{{ editParentesco.errors.descricao }}</div>
-                                                </td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-success btn-sm"
-                                                            :disabled="editParentesco.processing"
-                                                            @click="updateParentesco">Salvar</button>
-                                                        <button type="button" class="btn btn-light btn-sm"
-                                                            @click="cancelEditParentesco">Cancelar</button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                        </tr>
-                                    </template>
-                                </SimpleTable>         </div>
-                        </BCardBody>
-                    </BCard>
-                </BCol>
+                                                        class="form-control" />
+                                                    <button type="button" class="btn btn-success"
+                                                        @click="updateParentesco">Salvar</button>
+                                                    <button type="button" class="btn btn-light"
+                                                        @click="cancelEditParentesco">Cancelar</button>
+                                                </div>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </SimpleTable>
+                        </BTab>
 
-                <BCol lg="6">
-                    <BCard class="shadow-sm h-100">
-                        <BCardHeader class="bg-light-subtle p-3 border-0">
-                            <BCardTitle><i class="ri-heart-pulse-line text-primary me-2"></i>Tipo Sanguíneo</BCardTitle>
-                        </BCardHeader>
-                        <BCardBody>
-                            <div class="d-flex justify-content-end align-items-center mb-3">
-                                <span class="badge bg-primary-subtle text-primary">Total: {{
-                                    tiposSanguineosLocal?.length || 0 }}</span>
+                        <!-- TIPO SANGUINEO -->
+                        <BTab title="Tipo Sanguíneo">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Lista de Tipos Sanguíneos</h6>
                             </div>
-                            <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
-                                <BRow class="g-3 align-items-end">
-                                    <BCol md="8">
-                                        <label for="tipoSangDescricao" class="form-label">Descrição</label>
-                                        <input v-model="formTipoSang.descricao" type="text" class="form-control"
-                                            id="tipoSangDescricao"
-                                            :class="{ 'is-invalid': formTipoSang.errors.descricao }"
-                                            placeholder="Ex.: O+" />
-                                        <div class="invalid-feedback">{{ formTipoSang.errors.descricao }}</div>
-                                    </BCol>
-                                    <BCol md="4">
-                                        <button type="button" class="btn btn-primary w-100"
-                                            :disabled="formTipoSang.processing" @click="saveTipoSang">Adicionar</button>
-                                    </BCol>
-                                </BRow>
-                                                 <SimpleTable
-                                    variant="borderless"
-                                    compact
-                                    tableClass="table-sm table-hover align-middle table-nowrap"
-                                    :items="tiposSanguineosLocal"
-                                    :columns="parametrosColumns"
-                                    emptyTitle="Nenhum registro"
-                                    emptyMessage="Nenhum tipo sanguíneo cadastrado"
-                                >
-                                    <template #body="{ items }">
-                                        <tr v-for="ts in items" :key="ts.id">
-                                            <template v-if="editingTipoSangId !== ts.id">
-                                                <td>#{{ ts.id }}</td>
-                                                <td>{{ ts.descricao }}</td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-sm btn-soft-info"
-                                                            @click="startEditTipoSang(ts)" title="Editar">
-                                                            <i class="ri-pencil-line align-bottom"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-soft-danger"
-                                                            @click="destroyTipoSang(ts.id)" title="Excluir">
-                                                            <i class="ri-delete-bin-line align-bottom"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                            <template v-else>
-                                                <td>#{{ ts.id }}</td>
-                                                <td>
+                            <div class="border rounded p-3 bg-light-subtle mb-4">
+                                <form @submit.prevent="saveTipoSang">
+                                    <BRow class="g-3 align-items-end">
+                                        <BCol md="8">
+                                            <label class="form-label">Descrição do Tipo Sanguíneo</label>
+                                            <input v-model="formTipoSang.descricao" type="text" class="form-control"
+                                                :class="{ 'is-invalid': formTipoSang.errors.descricao }"
+                                                placeholder="Ex.: O+..." />
+                                            <div class="invalid-feedback">{{ formTipoSang.errors.descricao }}</div>
+                                        </BCol>
+                                        <BCol md="4">
+                                            <button type="submit" class="btn btn-primary w-100"
+                                                :disabled="formTipoSang.processing"><i
+                                                    class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                        </BCol>
+                                    </BRow>
+                                </form>
+                            </div>
+                            <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                                :items="tiposSanguineosLocal" :columns="parametrosColumns" emptyTitle=""
+                                emptyMessage="Nenhum registro encontrado.">
+                                <template #body="{ items }">
+                                    <tr v-for="ts in items" :key="ts.id">
+                                        <template v-if="editingTipoSangId !== ts.id">
+                                            <td style="width:80px">#{{ ts.id }}</td>
+                                            <td>{{ ts.descricao }}</td>
+                                            <td class="text-end" style="width:150px">
+                                                <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                    @click="startEditTipoSang(ts)" title="Editar"><i
+                                                        class="ri-pencil-line"></i></button>
+                                                <button type="button" class="btn btn-sm btn-soft-danger"
+                                                    @click="destroyTipoSang(ts.id)" title="Excluir"><i
+                                                        class="ri-delete-bin-line"></i></button>
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td colspan="3">
+                                                <div class="d-flex gap-2">
                                                     <input v-model="editTipoSang.descricao" type="text"
-                                                        class="form-control"
-                                                        :class="{ 'is-invalid': editTipoSang.errors.descricao }"
-                                                        placeholder="Descrição" />
-                                                    <div class="invalid-feedback">{{ editTipoSang.errors.descricao }}</div>
-                                                </td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-success btn-sm"
-                                                            :disabled="editTipoSang.processing"
-                                                            @click="updateTipoSang">Salvar</button>
-                                                        <button type="button" class="btn btn-light btn-sm"
-                                                            @click="cancelEditTipoSang">Cancelar</button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                        </tr>
-                                    </template>
-                                </SimpleTable>                   </div>
-                        </BCardBody>
-                    </BCard>
-                </BCol>
+                                                        class="form-control" />
+                                                    <button type="button" class="btn btn-success"
+                                                        @click="updateTipoSang">Salvar</button>
+                                                    <button type="button" class="btn btn-light"
+                                                        @click="cancelEditTipoSang">Cancelar</button>
+                                                </div>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </SimpleTable>
+                        </BTab>
 
-                <BCol lg="6">
-                    <BCard class="shadow-sm h-100">
-                        <BCardHeader class="bg-light-subtle p-3 border-0">
-                            <BCardTitle><i class="ri-notification-3-line text-primary me-2"></i>Canal de Aviso
-                            </BCardTitle>
-                        </BCardHeader>
-                        <BCardBody>
-                            <div class="d-flex justify-content-end align-items-center mb-3">
-                                <span class="badge bg-primary-subtle text-primary">Total: {{ canaisAvisoLocal?.length ||
-                                    0 }}</span>
+                        <!-- CANAL DE AVISO -->
+                        <BTab title="Canais de Aviso">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Lista de Canais de Aviso</h6>
                             </div>
-                            <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
-                                <BRow class="g-3 align-items-end">
-                                    <BCol md="8">
-                                        <label for="canalAvisoNome" class="form-label">Nome</label>
-                                        <input v-model="formCanalAviso.nome" type="text" class="form-control"
-                                            id="canalAvisoNome" :class="{ 'is-invalid': formCanalAviso.errors.nome }"
-                                            placeholder="Ex.: WhatsApp" />
-                                        <div class="invalid-feedback">{{ formCanalAviso.errors.nome }}</div>
-                                    </BCol>
-                                    <BCol md="4">
-                                        <button type="button" class="btn btn-primary w-100"
-                                            :disabled="formCanalAviso.processing"
-                                            @click="saveCanalAviso">Adicionar</button>
-                                    </BCol>
-                                </BRow>
+                            <div class="border rounded p-3 bg-light-subtle mb-4">
+                                <form @submit.prevent="saveCanalAviso">
+                                    <BRow class="g-3 align-items-end">
+                                        <BCol md="8">
+                                            <label class="form-label">Nome do Canal de Aviso</label>
+                                            <input v-model="formCanalAviso.nome" type="text" class="form-control"
+                                                :class="{ 'is-invalid': formCanalAviso.errors.nome }"
+                                                placeholder="Ex.: E-mail, WhatsApp..." />
+                                            <div class="invalid-feedback">{{ formCanalAviso.errors.nome }}</div>
+                                        </BCol>
+                                        <BCol md="4">
+                                            <button type="submit" class="btn btn-primary w-100"
+                                                :disabled="formCanalAviso.processing"><i
+                                                    class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                        </BCol>
+                                    </BRow>
+                                </form>
                             </div>
-                            <div class="mt-4 table-responsive">
-                                                        <SimpleTable
-                                    variant="borderless"
-                                    compact
-                                    tableClass="table-sm table-hover align-middle table-nowrap"
-                                    :items="canaisAvisoLocal"
-                                    :columns="parametrosColumns"
-                                    emptyTitle="Nenhum registro"
-                                    emptyMessage="Nenhum canal de aviso cadastrado"
-                                >
-                                    <template #body="{ items }">
-                                        <tr v-for="ca in items" :key="ca.id">
-                                            <template v-if="editingCanalAvisoId !== ca.id">
-                                                <td>#{{ ca.id }}</td>
-                                                <td>{{ ca.nome }}</td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-sm btn-soft-info"
-                                                            @click="startEditCanalAviso(ca)" title="Editar">
-                                                            <i class="ri-pencil-line align-bottom"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-soft-danger"
-                                                            @click="destroyCanalAviso(ca.id)" title="Excluir">
-                                                            <i class="ri-delete-bin-line align-bottom"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                            <template v-else>
-                                                <td>#{{ ca.id }}</td>
-                                                <td>
+                            <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                                :items="canaisAvisoLocal" :columns="parametrosColumns" emptyTitle=""
+                                emptyMessage="Nenhum registro encontrado.">
+                                <template #body="{ items }">
+                                    <tr v-for="ca in items" :key="ca.id">
+                                        <template v-if="editingCanalAvisoId !== ca.id">
+                                            <td style="width:80px">#{{ ca.id }}</td>
+                                            <td>{{ ca.nome }}</td>
+                                            <td class="text-end" style="width:150px">
+                                                <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                    @click="startEditCanalAviso(ca)" title="Editar"><i
+                                                        class="ri-pencil-line"></i></button>
+                                                <button type="button" class="btn btn-sm btn-soft-danger"
+                                                    @click="destroyCanalAviso(ca.id)" title="Excluir"><i
+                                                        class="ri-delete-bin-line"></i></button>
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td colspan="3">
+                                                <div class="d-flex gap-2">
                                                     <input v-model="editCanalAviso.nome" type="text"
-                                                        class="form-control"
-                                                        :class="{ 'is-invalid': editCanalAviso.errors.nome }"
-                                                        placeholder="Nome" />
-                                                    <div class="invalid-feedback">{{ editCanalAviso.errors.nome }}</div>
-                                                </td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-success btn-sm"
-                                                            :disabled="editCanalAviso.processing"
-                                                            @click="updateCanalAviso">Salvar</button>
-                                                        <button type="button" class="btn btn-light btn-sm"
-                                                            @click="cancelEditCanalAviso">Cancelar</button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                        </tr>
-                                    </template>
-                                </SimpleTable>                     </div>
-                        </BCardBody>
-                    </BCard>
-                </BCol>
-                <BCol lg="6">
-                    <BCard class="shadow-sm h-100">
-                        <BCardHeader class="bg-light-subtle p-3 border-0">
-                            <BCardTitle><i class="ri-price-tag-3-line text-primary me-2"></i>Categorias de Procedimento
-                            </BCardTitle>
-                        </BCardHeader>
-                        <BCardBody>
-                            <div class="d-flex justify-content-end align-items-center mb-3">
-                                <span class="badge bg-primary-subtle text-primary">Total: {{ categoriasLocal?.length ||
-                                    0 }}</span>
+                                                        class="form-control" />
+                                                    <button type="button" class="btn btn-success"
+                                                        @click="updateCanalAviso">Salvar</button>
+                                                    <button type="button" class="btn btn-light"
+                                                        @click="cancelEditCanalAviso">Cancelar</button>
+                                                </div>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </SimpleTable>
+                        </BTab>
+
+                        <!-- CATEGORIAS -->
+                        <BTab title="Categorias de Procedimento">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Lista de Categorias</h6>
                             </div>
-                            <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
-                                <BRow class="g-3 align-items-end">
-                                    <BCol md="8">
-                                        <label for="catProcNome" class="form-label">Nome</label>
-                                        <input v-model="formCategoria.nome" type="text" class="form-control"
-                                            id="catProcNome" :class="{ 'is-invalid': formCategoria.errors.nome }"
-                                            placeholder="Ex.: Tratamentos" />
-                                        <div class="invalid-feedback">{{ formCategoria.errors.nome }}</div>
-                                    </BCol>
-                                    <BCol md="4">
-                                        <button type="button" class="btn btn-primary w-100"
-                                            :disabled="formCategoria.processing"
-                                            @click="saveCategoria">Adicionar</button>
-                                    </BCol>
-                                </BRow>
+                            <div class="border rounded p-3 bg-light-subtle mb-4">
+                                <form @submit.prevent="saveCategoria">
+                                    <BRow class="g-3 align-items-end">
+                                        <BCol md="8">
+                                            <label class="form-label">Nome da Categoria</label>
+                                            <input v-model="formCategoria.nome" type="text" class="form-control"
+                                                :class="{ 'is-invalid': formCategoria.errors.nome }"
+                                                placeholder="Ex.: Consultas, Exames..." />
+                                            <div class="invalid-feedback">{{ formCategoria.errors.nome }}</div>
+                                        </BCol>
+                                        <BCol md="4">
+                                            <button type="submit" class="btn btn-primary w-100"
+                                                :disabled="formCategoria.processing"><i
+                                                    class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                        </BCol>
+                                    </BRow>
+                                </form>
                             </div>
-                            <div class="mt-4 table-responsive">
-                                                            <SimpleTable
-                                    variant="borderless"
-                                    compact
-                                    tableClass="table-sm table-hover align-middle table-nowrap"
-                                    :items="categoriasLocal"
-                                    :columns="parametrosColumns"
-                                    emptyTitle="Nenhum registro"
-                                    emptyMessage="Nenhuma categoria cadastrada"
-                                >
-                                    <template #body="{ items }">
-                                        <tr v-for="cat in items" :key="cat.id">
-                                            <template v-if="editingCategoriaId !== cat.id">
-                                                <td>#{{ cat.id }}</td>
-                                                <td>{{ cat.nome }}</td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-sm btn-soft-info"
-                                                            @click="startEditCategoria(cat)" title="Editar">
-                                                            <i class="ri-pencil-line align-bottom"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-soft-danger"
-                                                            @click="destroyCategoria(cat.id)" title="Excluir">
-                                                            <i class="ri-delete-bin-line align-bottom"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                            <template v-else>
-                                                <td>#{{ cat.id }}</td>
-                                                <td>
+                            <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                                :items="categoriasLocal" :columns="parametrosColumns" emptyTitle=""
+                                emptyMessage="Nenhum registro encontrado.">
+                                <template #body="{ items }">
+                                    <tr v-for="cat in items" :key="cat.id">
+                                        <template v-if="editingCategoriaId !== cat.id">
+                                            <td style="width:80px">#{{ cat.id }}</td>
+                                            <td>{{ cat.nome }}</td>
+                                            <td class="text-end" style="width:150px">
+                                                <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                    @click="startEditCategoria(cat)" title="Editar"><i
+                                                        class="ri-pencil-line"></i></button>
+                                                <button type="button" class="btn btn-sm btn-soft-danger"
+                                                    @click="destroyCategoria(cat.id)" title="Excluir"><i
+                                                        class="ri-delete-bin-line"></i></button>
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td colspan="3">
+                                                <div class="d-flex gap-2">
                                                     <input v-model="editCategoria.nome" type="text"
-                                                        class="form-control"
-                                                        :class="{ 'is-invalid': editCategoria.errors.nome }"
-                                                        placeholder="Nome" />
-                                                    <div class="invalid-feedback">{{ editCategoria.errors.nome }}</div>
-                                                </td>
-                                                <td>
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-success btn-sm"
-                                                            :disabled="editCategoria.processing"
-                                                            @click="updateCategoria">Salvar</button>
-                                                        <button type="button" class="btn btn-light btn-sm"
-                                                            @click="cancelEditCategoria">Cancelar</button>
-                                                    </div>
-                                                </td>
-                                            </template>
-                                        </tr>
-                                    </template>
-                                </SimpleTable>                       </div>
-                        </BCardBody>
-                    </BCard>
-                </BCol>
-            </BRow>
-        </BCardBody>
-        <ModalDelete
-            v-model="deleteModal"
-            :title="deleteTitle"
-            :subTitle="deleteSubTitleComputed"
-            :item-delete="deleteContext"
-            @save="confirmDelete"
-        />
-    </BCard>
+                                                        class="form-control" />
+                                                    <button type="button" class="btn btn-success"
+                                                        @click="updateCategoria">Salvar</button>
+                                                    <button type="button" class="btn btn-light"
+                                                        @click="cancelEditCategoria">Cancelar</button>
+                                                </div>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </SimpleTable>
+                        </BTab>
+                    </BTabs>
+
+
+
+                </BCardBody>
+            </BCard>
+
+            <ModalDelete v-model="deleteModal" :title="deleteTitle" :message="deleteMessage" @confirm="confirmDelete" />
+        </BContainer>
+    </Layout>
 </template>
 
 <script setup>
@@ -689,3 +577,9 @@ const confirmDelete = () => {
     deleteContext.value = { type: '', id: null, nome: '' };
 };
 </script>
+
+<style scoped>
+:deep(.nav-tabs-custom .nav-link.active) {
+    background-color: #ffffff !important;
+}
+</style>

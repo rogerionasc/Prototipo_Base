@@ -43,6 +43,50 @@ class VelzonRoutesController extends Controller
         ]);
     }
 
+    public function configuracaoParametrizacao() {
+        $estados = EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
+        $tipos = TipoSanguineo::select('id','descricao')->orderBy('descricao')->get();
+        $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
+        $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
+        $categoriasProcedimento = CategoriaProcedimento::select('id','nome')->orderBy('nome')->get();
+        return Inertia::render('Configuracao/ParametrizacaoPage', [
+            'estadosCivis' => $estados,
+            'tiposSanguineos' => $tipos,
+            'canaisAviso' => $canais,
+            'parentescos' => $parentescos,
+            'categoriasProcedimento' => $categoriasProcedimento,
+        ]);
+    }
+
+    public function configuracaoEspecialidades() {
+        $especialidades = Especialidade::with(['procedimentos:id,nome,especialidade_id'])->select('id','nome','codigo','descricao','ativo')->orderBy('nome')->get();
+        $procedimentos = Procedimento::select('id','nome','descricao','categoria_id','eh_tratamento','quantidade_sessoes','valor','comissao_percentual','ativo')->orderBy('nome')->get();
+        $tuss = \App\Models\Tuss::select('id','tabela','codigo','descricao')->orderBy('descricao')->get();
+        return Inertia::render('Configuracao/EspecialidadePage', [
+            'especialidades' => $especialidades,
+            'procedimentos' => $procedimentos,
+            'tuss' => $tuss,
+        ]);
+    }
+
+    public function configuracaoTuss() {
+        return Inertia::render('Configuracao/TussPage');
+    }
+
+    public function configuracaoCid() {
+        return Inertia::render('Configuracao/CidPage');
+    }
+
+    public function configuracaoProcedimentos() {
+        $categoriasProcedimento = CategoriaProcedimento::select('id','nome')->orderBy('nome')->get();
+        $procedimentos = Procedimento::select('id','nome','descricao','categoria_id','eh_tratamento','quantidade_sessoes','valor','comissao_percentual','ativo')->orderBy('nome')->get();
+        return Inertia::render('Configuracao/ProcedimentoPage', [
+            'categoriasProcedimento' => $categoriasProcedimento,
+            'procedimentos' => $procedimentos,
+        ]);
+    }
+
+
     public function usuario()
     {
         return Inertia::render('Users/Index');

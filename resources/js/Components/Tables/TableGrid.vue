@@ -31,6 +31,7 @@ const props = defineProps({
     showImage: { type: Boolean, default: false },
     showPerPagination: { type: Boolean, default: true },
     tableTitle: { type: String, default: 'Listas ...' },
+    showTitle: { type: Boolean, default: true },
     showDiaryButton: { type: Boolean, default: false },
     actionsConfig: { type: Object, default: () => ({ delete: true, edit: true, show: true, diary: false, print: false, download: false, restore: false, receive: false }) },
     actionsLabels: { type: Object, default: () => ({ delete: 'Excluir', edit: 'Editar', show: 'Visualizar', diary: 'Agenda', print: 'Imprimir', download: 'Baixar', restore: 'Reabrir', receive: 'Receber' }) },
@@ -138,9 +139,16 @@ function buildServerUrl(offset, limitValue, searchValue) {
     const base = String(props.serverUrl || '').trim();
     const q = String(searchValue || '').trim();
     const params = new URLSearchParams();
-    params.set('limit', String(limitValue ?? 10));
-    params.set('offset', String(offset ?? 0));
-    if (q) params.set('q', q);
+    const limitFinal = limitValue ?? 10;
+    const offsetFinal = offset ?? 0;
+    params.set('limit', String(limitFinal));
+    params.set('offset', String(offsetFinal));
+    params.set('per_page', String(limitFinal));
+    params.set('page', String(Math.floor(offsetFinal / limitFinal) + 1));
+    if (q) {
+        params.set('q', q);
+        params.set('search', q);
+    }
     const extra = props.serverQuery && typeof props.serverQuery === 'object' ? props.serverQuery : {};
     Object.entries(extra).forEach(([k, v]) => {
         if (v === null || typeof v === 'undefined') return;
@@ -501,7 +509,10 @@ function initGrid() {
         pagination: {
             previous: 'Anterior',
             next: 'Próximo',
-            showing: 'Exibindo'
+            showing: 'Exibindo',
+            results: () => 'registros',
+            of: 'de',
+            to: 'até'
         },
         loading: () => html(''),
     };
@@ -679,7 +690,7 @@ onMounted(async () => {
     <div class="row">
         <div :class="props.compactSpacing ? 'card' : 'card card-body'">
             <div :class="['card-body', props.compactSpacing ? 'px-0 pt-0' : 'px-0']">
-                <h5 :class="['card-title','mb-0','flex-grow-1', props.compactSpacing ? 'mb-1' : 'mb-3']">{{ props.tableTitle }}</h5>
+                <h5 v-if="props.showTitle" :class="['card-title','mb-0','flex-grow-1', props.compactSpacing ? 'mb-1' : 'mb-3']">{{ props.tableTitle }}</h5>
                 <!-- Filtros -->
                 <BCardBody class="border border-dashed border-end-0 border-start-0 px-0">
                     <div class="d-flex justify-content-between align-items-center">
@@ -697,7 +708,6 @@ onMounted(async () => {
                             <div v-if="showPerPagination" class="d-flex align-items-center">
                                 <span class="text-muted text-nowrap me-2">Exibir:</span>
                                 <Multiselect
-                                    class="form-control text-nowrap"
                                     style="width: 100px;"
                                     name="perPagination"
                                     id="perPagination"
