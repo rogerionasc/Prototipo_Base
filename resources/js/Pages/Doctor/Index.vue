@@ -111,6 +111,7 @@ const formCreate = useForm({
   email: "",
   telefone: "",
   celular: "",
+  is_medico: true,
   observacoes: "",
   especialidades: [],
 });
@@ -133,6 +134,7 @@ const formEdit = useForm({
   email: "",
   telefone: "",
   celular: "",
+  is_medico: true,
   observacoes: "",
   especialidades: [],
 });
@@ -518,8 +520,8 @@ function submitAgenda() {
                 </select>
               </div>
               <div class="col-md-3">
-                <label for="psCrm" class="form-label">CRM</label>
-                <input v-mask="'CRM/AA #####'" v-model="formCreate.crm" type="text" id="psCrm" class="form-control" placeholder="CRM/RN #####" maxlength="12" />
+                <label for="psCrm" class="form-label">CRM <span class="text-danger">*</span></label>
+                <input v-mask="'CRM/AA #####'" v-model="formCreate.crm" type="text" id="psCrm" class="form-control" placeholder="CRM/RN #####" maxlength="12" required />
               </div>
               <div class="col-md-3">
                 <label for="psCnes" class="form-label">CNES</label>
@@ -657,8 +659,8 @@ function submitAgenda() {
                 </select>
               </div>
               <div class="col-md-3">
-                <label for="psEditCrm" class="form-label">CRM</label>
-                <input v-mask="'CRM/AA #####'" v-model="formEdit.crm" type="text" id="psEditCrm" class="form-control" placeholder="CRM/XX #####" maxlength="12" />
+                <label for="psEditCrm" class="form-label">CRM <span class="text-danger">*</span></label>
+                <input v-mask="'CRM/AA #####'" v-model="formEdit.crm" type="text" id="psEditCrm" class="form-control" placeholder="CRM/XX #####" maxlength="12" required />
               </div>
               <div class="col-md-3">
                 <label for="psEditCnes" class="form-label">CNES</label>

@@ -22,6 +22,7 @@ class Pessoa extends Model
         'estado_civil_id',
         'cnes',
         'crm',
+        'cargo',
         'endereco_id',
         'celular',
         'telefone',

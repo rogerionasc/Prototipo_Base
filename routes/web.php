@@ -60,6 +60,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         // dashboards
         Route::get('/', 'dashboard')->name('dashboard');
         Route::get('medicos', 'medico');
+        Route::get('empregados', 'empregados');
         Route::get('componentes', 'componentes')->name('componentes');
         Route::get('configuracao', 'configuracao')->name('configuracao.index');
         Route::get('configuracao/parametrizacao', 'configuracaoParametrizacao')->name('configuracao.parametrizacao');

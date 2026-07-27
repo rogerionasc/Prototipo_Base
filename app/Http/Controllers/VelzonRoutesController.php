@@ -120,6 +120,7 @@ class VelzonRoutesController extends Controller
                 DB::raw("COALESCE(e.complemento,'') AS complemento"),
             )
             ->leftJoin('enderecos as e', 'e.id', '=', 'pessoas.endereco_id')
+            ->whereNotNull('crm')
             ->with(['agendas', 'especialidades' => function($q) {
                 $q->select('especialidades.id','nome')->withPivot('qre');
             }])
@@ -130,6 +131,43 @@ class VelzonRoutesController extends Controller
         return Inertia::render('Doctor/Index', [
             'profissionais' => $profissionais,
             'especialidades' => $especialidades,
+            'estadosCivis' => $estadosCivis,
+        ]);
+    }
+
+    public function empregados()
+    {
+        $pessoas = \App\Models\Pessoa::select(
+                'pessoas.id',
+                'nome',
+                'cpf',
+                'rg',
+                'sexo',
+                DB::raw("DATE_FORMAT(pessoas.data_nascimento, '%Y-%m-%d') AS data_nascimento"),
+                'naturalidade',
+                'estado_civil_id',
+                'cnes',
+                'crm',
+                'cargo',
+                'endereco_id',
+                'celular',
+                'telefone',
+                'email',
+                'observacoes',
+                DB::raw("COALESCE(e.cep,'') AS cep"),
+                DB::raw("COALESCE(e.endereco,'') AS endereco"),
+                DB::raw("COALESCE(e.numero,'') AS numero"),
+                DB::raw("COALESCE(e.bairro,'') AS bairro"),
+                DB::raw("COALESCE(e.cidade,'') AS cidade"),
+                DB::raw("COALESCE(e.complemento,'') AS complemento"),
+            )
+            ->leftJoin('enderecos as e', 'e.id', '=', 'pessoas.endereco_id')
+            ->whereNull('crm')
+            ->orderBy('nome')
+            ->get();
+        $estadosCivis = \App\Models\EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
+        return Inertia::render('Empregados/Index', [
+            'profissionais' => $pessoas,
             'estadosCivis' => $estadosCivis,
         ]);
     }

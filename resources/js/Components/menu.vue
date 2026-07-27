@@ -94,6 +94,12 @@ export default {
                     target: "/usuarios",
                 },
                 {
+                    icon: "mdi mdi-tie",
+                    title: "Empregados",
+                    type: "link",
+                    target: "/empregados",
+                },
+                {
                     icon: "ri-building-line",
                     title: "Clínica",
                     type: "link",
@@ -188,7 +194,7 @@ export default {
                             ]
                         }
                     ]
-                }            ]
+                }]
         };
     },
     computed: {
