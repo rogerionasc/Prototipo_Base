@@ -15,6 +15,7 @@ const flatpickrOptions = { altInput: true, altFormat: "d M, Y", dateFormat: "Y-m
 const props = defineProps({
   profissionais: { type: Array, default: () => [] },
   estadosCivis: { type: Array, default: () => [] },
+  cargos: { type: Array, default: () => [] },
 });
 const profissionaisLocal = ref([...(props.profissionais || [])]);
 watch(() => props.profissionais, (v) => { profissionaisLocal.value = [...(v || [])]; });
@@ -23,6 +24,11 @@ const columns = [
   { id: "nome", name: "Nome" },
   { id: "cargo", name: "Cargo/Função" },
   { id: "contato", name: "Contato" },
+];
+
+const cargosColumns = [
+  { key: "cargo", label: "Cargo" },
+  { key: "acoes", label: "Ações", thClass: "text-end" }
 ];
 const tableData = computed(() => {
   return (profissionaisLocal.value || []).map(p => {
@@ -69,6 +75,7 @@ const formCreate = useForm({
   celular: "",
   is_medico: false,
   observacoes: "",
+  cargos: [],
 });
 const formEdit = useForm({
   nome: "",
@@ -90,6 +97,7 @@ const formEdit = useForm({
   celular: "",
   is_medico: false,
   observacoes: "",
+  cargos: [],
 });
 const editingId = ref(null);
 function openAdd() {
@@ -127,6 +135,57 @@ function attachChoiceSync(formObj, key, selectRef, mapper) {
 }
 attachChoiceSync(formCreate, "sexo", sexoSelectCreate, v => v || "");
 attachChoiceSync(formCreate, "estado_civil_id", estadoCivilSelectCreate, v => v != null ? String(v) : "");
+
+
+const cargoAddModal = ref(false);
+const cargoAddTargetForm = ref(null);
+const cargoAddId = ref(null);
+
+const cargoMap = computed(() => {
+  const m = {};
+  (props.cargos || []).forEach(e => { m[e.id] = e.nome; });
+  return m;
+});
+
+const cargoDataCreate = computed(() => {
+  return (formCreate.cargos || []).map(s => ({
+    id: s.id,
+    cargo: cargoMap.value[s.id] || "-",
+  }));
+});
+
+const cargoDataEdit = computed(() => {
+  return (formEdit.cargos || []).map(s => ({
+    id: s.id,
+    cargo: cargoMap.value[s.id] || "-",
+  }));
+});
+
+function removeCargoById(targetForm, idToRemove) {
+  const arr = targetForm.cargos || [];
+  targetForm.cargos = arr.filter(x => String(x.id) !== String(idToRemove));
+}
+
+function openCargoAdd(targetForm) {
+  cargoAddTargetForm.value = targetForm;
+  cargoAddId.value = null;
+  cargoAddModal.value = true;
+}
+
+const availableCargosToAdd = computed(() => {
+  const selectedIds = ((cargoAddTargetForm.value?.cargos) || []).map(x => String(x.id));
+  return (props.cargos || []).filter(e => !selectedIds.includes(String(e.id)));
+});
+
+function addCargoConfirm() {
+  const tf = cargoAddTargetForm.value;
+  if (!tf || !cargoAddId.value) { cargoAddModal.value = false; return; }
+  const arr = tf.cargos || [];
+  if (arr.some(x => String(x.id) === String(cargoAddId.value))) { cargoAddModal.value = false; return; }
+  arr.push({ id: cargoAddId.value });
+  tf.cargos = [...arr];
+  cargoAddModal.value = false;
+}
 
 function submitCreate() {
   const payload = buildPayload(formCreate);
@@ -286,11 +345,6 @@ function addWeekdays() {
                   <option v-for="e in props.estadosCivis" :key="e.id" :value="e.id">{{ e.descricao }}</option>
                 </select>
               </div>
-              <div class="col-md-6">
-                <label for="psCargo" class="form-label">Cargo/Função</label>
-                <input v-model="formCreate.cargo" type="text" id="psCargo" class="form-control"
-                  placeholder="Cargo/Função" />
-              </div>
 
               <div class="col-md-6">
                 <label for="psEmail" class="form-label">E-mail</label>
@@ -308,6 +362,45 @@ function addWeekdays() {
                   class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
               </div>
 
+              <div class="col-md-12 mt-2">
+                <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
+                  <BRow class="g-3 align-items-center mb-2">
+                    <BCol md="9">
+                      <div class="d-flex align-items-center">
+                      </div>
+                    </BCol>
+                    <BCol md="3" class="text-end">
+                      <a href="javascript:void(0);" class="link-primary text-nowrap" @click="openCargoAdd(formCreate)">
+                        <i class="ri-add-line align-bottom me-1"></i>Adicionar Cargo
+                      </a>
+                    </BCol>
+                  </BRow>
+                  <BRow class="g-3">
+                    <BCol md="12">
+                      <SimpleTable v-if="(formCreate.cargos || []).length > 0"
+                        variant="borderless"
+                        compact
+                        tableClass="table-hover mb-0"
+                        :items="cargoDataCreate"
+                        :columns="cargosColumns"
+                        emptyTitle="Nenhum cargo"
+                        emptyMessage="Sem cargos adicionados"
+                      >
+                        <template #body="{ items }">
+                          <tr v-for="s in items" :key="String(s.id)">
+                            <td>{{ s.cargo }}</td>
+                            <td class="text-end">
+                              <button class="btn btn-sm btn-soft-danger" type="button" @click="removeCargoById(formCreate, s.id)">
+                                <i class="ri-delete-bin-5-fill align-bottom me-1"></i> Excluir
+                              </button>
+                            </td>
+                          </tr>
+                        </template>
+                      </SimpleTable>
+                    </BCol>
+                  </BRow>
+                </div>
+              </div>
               <div class="col-md-12">
                 <label for="psObservacoes" class="form-label">Observações</label>
                 <textarea v-model="formCreate.observacoes" id="psObservacoes" class="form-control" rows="3"
@@ -399,11 +492,6 @@ function addWeekdays() {
                   <option v-for="e in props.estadosCivis" :key="e.id" :value="e.id">{{ e.descricao }}</option>
                 </select>
               </div>
-              <div class="col-md-6">
-                <label for="psEditCargo" class="form-label">Cargo/Função</label>
-                <input v-model="formEdit.cargo" type="text" id="psEditCargo" class="form-control"
-                  placeholder="Cargo/Função" />
-              </div>
 
               <div class="col-md-6">
                 <label for="psEditEmail" class="form-label">E-mail</label>
@@ -421,6 +509,45 @@ function addWeekdays() {
                   class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
               </div>
 
+              <div class="col-md-12 mt-2">
+                <div class="border border-dashed rounded p-3 bg-light-subtle mb-3">
+                  <BRow class="g-3 align-items-center mb-2">
+                    <BCol md="9">
+                      <div class="d-flex align-items-center">
+                      </div>
+                    </BCol>
+                    <BCol md="3" class="text-end">
+                      <a href="javascript:void(0);" class="link-primary text-nowrap" @click="openCargoAdd(formEdit)">
+                        <i class="ri-add-line align-bottom me-1"></i>Adicionar Cargo
+                      </a>
+                    </BCol>
+                  </BRow>
+                  <BRow class="g-3">
+                    <BCol md="12">
+                      <SimpleTable v-if="(formEdit.cargos || []).length > 0"
+                        variant="borderless"
+                        compact
+                        tableClass="table-hover mb-0"
+                        :items="cargoDataEdit"
+                        :columns="cargosColumns"
+                        emptyTitle="Nenhum cargo"
+                        emptyMessage="Sem cargos adicionados"
+                      >
+                        <template #body="{ items }">
+                          <tr v-for="s in items" :key="String(s.id)">
+                            <td>{{ s.cargo }}</td>
+                            <td class="text-end">
+                              <button class="btn btn-sm btn-soft-danger" type="button" @click="removeCargoById(formEdit, s.id)">
+                                <i class="ri-delete-bin-5-fill align-bottom me-1"></i> Excluir
+                              </button>
+                            </td>
+                          </tr>
+                        </template>
+                      </SimpleTable>
+                    </BCol>
+                  </BRow>
+                </div>
+              </div>
               <div class="col-md-12">
                 <label for="psEditObservacoes" class="form-label">Observações</label>
                 <textarea v-model="formEdit.observacoes" id="psEditObservacoes" class="form-control" rows="3"
@@ -467,6 +594,24 @@ function addWeekdays() {
     </Modal>
 
 
+
+    <!-- Modal Add Cargo -->
+    <Modal
+      v-model="cargoAddModal"
+      :title="'Adicionar Cargo'"
+      :name-button="'Adicionar'"
+      :z-index="2000"
+      :backdrop-z-index="1990"
+      @save="addCargoConfirm"
+    >
+      <div class="mb-3">
+        <label for="cargoAddSelect" class="form-label">Cargo</label>
+        <select v-model="cargoAddId" id="cargoAddSelect" class="form-select">
+          <option :value="null" disabled>Selecione um cargo</option>
+          <option v-for="e in availableCargosToAdd" :key="e.id" :value="e.id">{{ e.nome }}</option>
+        </select>
+      </div>
+    </Modal>
     <ModalDelete v-model="deleteModal" :title="'Excluir Profissional'" :subTitle="deleteSubTitle"
       :item-delete="deleteItem" @save="confirmDelete" />
   </Layout>
