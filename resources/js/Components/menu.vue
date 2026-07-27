@@ -33,18 +33,14 @@ export default {
                     ]
                 },
                 {
-                    icon: "ri-line-chart-line",
-                    title: this.$t("t-finance"),
+                    icon: "ri-hospital-line",
+                    title: "Consultório",
                     type: "link",
-                    target: "#financeiro",
+                    target: "#consultorio",
                     children: [
-                        { href: "/contas-receber", label: "Contas a Receber" },
-                        { href: "#", label: "Contas a Pagar" },
-                        { href: "#", label: "Fluxo de Caixa" },
-                        { href: "#", label: "Relatórios" }
+                        { href: "/atendimentos", label: "Atendimentos" },
                     ]
                 },
-
                 {
                     icon: "ri-money-dollar-box-line",
                     title: this.$t("t-till"),
@@ -58,48 +54,16 @@ export default {
                     ]
                 },
                 {
-                    icon: "ri-stethoscope-line",
-                    title: this.$t("t-doctor"),
+                    icon: "ri-line-chart-line",
+                    title: this.$t("t-finance"),
                     type: "link",
-                    target: "/medicos",
-                },
-                {
-                    icon: "ri-hospital-line",
-                    title: "Consultório",
-                    type: "link",
-                    target: "#consultorio",
+                    target: "#financeiro",
                     children: [
-                        { href: "/atendimentos", label: "Atendimentos" },
+                        { href: "/contas-receber", label: "Contas a Receber" },
+                        { href: "#", label: "Contas a Pagar" },
+                        { href: "#", label: "Fluxo de Caixa" },
+                        { href: "#", label: "Relatórios" }
                     ]
-                },
-                {
-                    icon: "ri-building-line",
-                    title: "Clínica",
-                    type: "link",
-                    target: "#clinica",
-                    children: [
-                        { href: "/clinica/salas", label: "Salas" },
-                        { href: "/clinica/guiches", label: "Guichês" },
-                        { href: "/clinica/totens", label: "Totens" },
-                        { href: "/clinica/paineis", label: "Painéis" },
-                    ]
-                },
-                {
-                    icon: "ri-user-heart-fill",
-                    title: this.$t("t-patient"),
-                    type: "link",
-                    target: "/pacientes",
-                    //   children: [
-                    //     { href: "/pacientes", label: this.$t("t-register") },
-                    //     { href: "/pacientes/editar", label: this.$t("t-edit") }
-                    //   ]
-                },
-
-                {
-                    icon: "ri-user-fill",
-                    title: this.$t("t-user"),
-                    type: "link",
-                    target: "/usuarios",
                 },
                 {
                     icon: "ri-shield-cross-line",
@@ -112,17 +76,34 @@ export default {
                     ]
                 },
                 {
-                    icon: "ri-layout-grid-fill",
-                    title: this.$t("t-components"),
+                    icon: "ri-user-heart-fill",
+                    title: this.$t("t-patient"),
                     type: "link",
-                    target: "/componentes",
+                    target: "/pacientes",
                 },
-
                 {
-                    icon: "ri-equalizer-line",
-                    title: "Parametrização",
+                    icon: "ri-stethoscope-line",
+                    title: this.$t("t-doctor"),
                     type: "link",
-                    target: "/configuracao/parametrizacao",
+                    target: "/medicos",
+                },
+                {
+                    icon: "ri-user-fill",
+                    title: this.$t("t-user"),
+                    type: "link",
+                    target: "/usuarios",
+                },
+                {
+                    icon: "ri-building-line",
+                    title: "Clínica",
+                    type: "link",
+                    target: "#clinica",
+                    children: [
+                        { href: "/clinica/salas", label: "Salas" },
+                        { href: "/clinica/guiches", label: "Guichês" },
+                        { href: "/clinica/totens", label: "Totens" },
+                        { href: "/clinica/paineis", label: "Painéis" },
+                    ]
                 },
                 {
                     icon: "ri-first-aid-kit-line",
@@ -148,7 +129,18 @@ export default {
                     type: "link",
                     target: "/configuracao/cid",
                 },
-
+                {
+                    icon: "ri-equalizer-line",
+                    title: "Parametrização",
+                    type: "link",
+                    target: "/configuracao/parametrizacao",
+                },
+                {
+                    icon: "ri-layout-grid-fill",
+                    title: this.$t("t-components"),
+                    type: "link",
+                    target: "/componentes",
+                },
                 {
                     icon: "ri-account-circle-line",
                     title: this.$t("t-authentication"),
@@ -196,8 +188,7 @@ export default {
                             ]
                         }
                     ]
-                }
-            ]
+                }            ]
         };
     },
     computed: {

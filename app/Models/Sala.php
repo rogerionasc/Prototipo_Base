@@ -14,7 +14,7 @@ class Sala extends Model
     protected $fillable = [
         'nome',
         'status',
-        'profissional_saude_id',
+        'pessoa_id',
     ];
 
     protected $casts = [
@@ -23,6 +23,6 @@ class Sala extends Model
 
     public function profissionalSaude()
     {
-        return $this->belongsTo(\App\Models\ProfissionalSaude::class, 'profissional_saude_id');
+        return $this->belongsTo(\App\Models\Pessoa::class, 'pessoa_id');
     }
 }

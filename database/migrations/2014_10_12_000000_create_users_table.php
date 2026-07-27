@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('data_nascimento');
             $table->string('email', 100)->unique();
             $table->string('password', 255);
-            $table->unsignedBigInteger('profissional_saude_id')->nullable();
+            $table->unsignedBigInteger('pessoa_id')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->foreignId('current_team_id')->nullable();

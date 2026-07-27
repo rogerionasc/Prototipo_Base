@@ -40,7 +40,7 @@ class Tuss extends Model
 
     public function medicoConvenios()
     {
-        return $this->belongsToMany(ProfissionalSaude::class, 'convenio_medico_tuss', 'tuss_id', 'profissional_saude_id')
+        return $this->belongsToMany(Pessoa::class, 'convenio_medico_tuss', 'tuss_id', 'pessoa_id')
             ->withPivot('convenio_id')
             ->withTimestamps();
     }

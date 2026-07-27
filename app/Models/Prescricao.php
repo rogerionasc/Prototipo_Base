@@ -14,7 +14,7 @@ class Prescricao extends Model
 
     protected $fillable = [
         'prontuario_id',
-        'profissional_saude_id',
+        'pessoa_id',
         'data_prescricao',
         'prescricao',
         'observacoes',
@@ -28,6 +28,6 @@ class Prescricao extends Model
 
     public function profissionalSaude()
     {
-        return $this->belongsTo(ProfissionalSaude::class, 'profissional_saude_id');
+        return $this->belongsTo(Pessoa::class, 'pessoa_id');
     }
 }

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('agenda_medica', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('profissional_saude_id')->constrained('profissionais_saude');
+            $table->foreignId('pessoa_id')->constrained('pessoas');
             $table->unsignedTinyInteger('dia_semana');
             $table->time('hora_inicio');
             $table->time('hora_fim');

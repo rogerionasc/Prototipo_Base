@@ -23,11 +23,11 @@
             <div class="row g-3">
                 <div class="col-12">
                     <label class="form-label">Quem vai usar a sala?</label>
-                    <select class="form-select" data-choices id="medicoSelect" ref="medicoSelect" v-model="doctorForm.profissional_saude_id" :class="{ 'is-invalid': doctorForm.errors.profissional_saude_id }">
+                    <select class="form-select" data-choices id="medicoSelect" ref="medicoSelect" v-model="doctorForm.pessoa_id" :class="{ 'is-invalid': doctorForm.errors.pessoa_id }">
                         <option value="">Sala Vazia</option>
                         <option v-for="prof in profissionais" :key="prof.id" :value="prof.id">{{ prof.nome }}</option>
                     </select>
-                    <div class="invalid-feedback" v-if="doctorForm.errors.profissional_saude_id">{{ doctorForm.errors.profissional_saude_id }}</div>
+                    <div class="invalid-feedback" v-if="doctorForm.errors.pessoa_id">{{ doctorForm.errors.pessoa_id }}</div>
                 </div>
             </div>
         </Modal>
@@ -61,12 +61,12 @@ const columns = [
     { name: 'Nome', id: 'nome' },
     { 
         name: 'Médico', 
-        id: 'profissional_saude', 
+        id: 'pessoa', 
         formatter: (val) => val ? val.nome : 'Sem médico' 
     },
     { 
         name: 'Status', 
-        id: 'profissional_saude_id', 
+        id: 'pessoa_id', 
         formatter: (val) => {
             if (val) return html(`<span class="badge bg-danger-subtle text-danger">Ocupada</span>`);
             return html(`<span class="badge bg-success-subtle text-success">Disponível</span>`);
@@ -87,12 +87,12 @@ const doctorModal = ref(false);
 const doctorForm = useForm({
     nome: '',
     status: true,
-    profissional_saude_id: null,
+    pessoa_id: null,
 });
 
 const medicoSelect = ref(null);
 
-watch(() => doctorForm.profissional_saude_id, async (v) => {
+watch(() => doctorForm.pessoa_id, async (v) => {
     await nextTick();
     if (window.syncChoiceValue && medicoSelect.value) {
         window.syncChoiceValue(medicoSelect.value, v != null ? String(v) : "");
@@ -129,7 +129,7 @@ const openModalDoctor = (id, sala) => {
     salaId.value = id;
     doctorForm.nome = sala.nome;
     doctorForm.status = sala.status;
-    doctorForm.profissional_saude_id = sala.profissional_saude_id;
+    doctorForm.pessoa_id = sala.pessoa_id;
     doctorForm.clearErrors();
     doctorModal.value = true;
 };

@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class ProfissionalSaude extends Model
+class Pessoa extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'profissionais_saude';
+    protected $table = 'pessoas';
 
     protected $fillable = [
         'nome',
@@ -41,50 +41,50 @@ class ProfissionalSaude extends Model
 
     public function especialidades()
     {
-        return $this->belongsToMany(Especialidade::class, 'profissional_especialidade', 'profissional_saude_id', 'especialidade_id')
+        return $this->belongsToMany(Especialidade::class, 'profissional_especialidade', 'pessoa_id', 'especialidade_id')
             ->withPivot('qre');
     }
 
     public function agendas()
     {
-        return $this->hasMany(AgendaMedica::class, 'profissional_saude_id');
+        return $this->hasMany(AgendaMedica::class, 'pessoa_id');
     }
 
     public function atendimentos()
     {
-        return $this->hasMany(Atendimento::class, 'profissional_saude_id');
+        return $this->hasMany(Atendimento::class, 'pessoa_id');
     }
 
     public function documentosProntuario()
     {
-        return $this->hasMany(DocumentoProntuario::class, 'profissional_saude_id');
+        return $this->hasMany(DocumentoProntuario::class, 'pessoa_id');
     }
 
     public function prescricoes()
     {
-        return $this->hasMany(Prescricao::class, 'profissional_saude_id');
+        return $this->hasMany(Prescricao::class, 'pessoa_id');
     }
 
     public function solicitacoesExames()
     {
-        return $this->hasMany(SolicitacaoExame::class, 'profissional_saude_id');
+        return $this->hasMany(SolicitacaoExame::class, 'pessoa_id');
     }
 
     public function convenios()
     {
-        return $this->belongsToMany(Convenio::class, 'convenio_medico_tuss', 'profissional_saude_id', 'convenio_id')
+        return $this->belongsToMany(Convenio::class, 'convenio_medico_tuss', 'pessoa_id', 'convenio_id')
             ->distinct();
     }
 
     public function convenioTuss()
     {
-        return $this->belongsToMany(Tuss::class, 'convenio_medico_tuss', 'profissional_saude_id', 'tuss_id')
+        return $this->belongsToMany(Tuss::class, 'convenio_medico_tuss', 'pessoa_id', 'tuss_id')
             ->withPivot('convenio_id')
             ->withTimestamps();
     }
 
     public function salas()
     {
-        return $this->hasMany(Sala::class, 'profissional_saude_id');
+        return $this->hasMany(Sala::class, 'pessoa_id');
     }
 }

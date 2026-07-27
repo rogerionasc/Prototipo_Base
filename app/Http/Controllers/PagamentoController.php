@@ -736,7 +736,7 @@ class PagamentoController extends Controller
             // Encontrar o médico da agenda
             $medicoId = null;
             if ($ag->agenda_medica_id) {
-                $medicoId = DB::table('agenda_medica')->where('id', $ag->agenda_medica_id)->value('profissional_saude_id');
+                $medicoId = DB::table('agenda_medica')->where('id', $ag->agenda_medica_id)->value('pessoa_id');
             }
 
             // Encontrar a categoria do procedimento
@@ -747,7 +747,7 @@ class PagamentoController extends Controller
 
             // Fallbacks caso algum ID obrigatorio falte (embora devessem estar preenchidos)
             if (!$medicoId) {
-                $medicoId = DB::table('profissionais_saude')->value('id'); // fallback temporario se o DB estiver inconsistente
+                $medicoId = DB::table('pessoas')->value('id'); // fallback temporario se o DB estiver inconsistente
             }
             if (!$catProcedimentoId) {
                 $catProcedimentoId = DB::table('categorias_procedimento')->value('id');

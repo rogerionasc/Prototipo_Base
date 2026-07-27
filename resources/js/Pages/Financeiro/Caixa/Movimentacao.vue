@@ -103,6 +103,7 @@
                         <thead class="table-light text-muted sticky-top">
                           <tr class="border-bottom border-light">
                             <th scope="col" class="py-3">Nº</th>
+                            <th scope="col" class="py-3">Nº Pagamento</th>
                             <th scope="col" class="py-3">Paciente</th>
                             <th scope="col" class="py-3">Documento</th>
                             <th scope="col" class="py-3">Emissão</th>
@@ -114,13 +115,14 @@
                               @click="selectedPendente = row"
                               :class="{'table-primary border-primary': selectedPendente?.faturamento_id === row.faturamento_id, 'border-bottom border-bottom-dashed': selectedPendente?.faturamento_id !== row.faturamento_id}">
                             <td>{{ row.pagamento_id || "—" }}</td>
+                            <td>{{ row.nu_pagamento || "—" }}</td>
                             <td class="fw-medium text-dark">{{ row.paciente }}</td>
                             <td class="text-muted">{{ row.paciente_documento || "—" }}</td>
                             <td>{{ row.data_faturamento || "—" }}</td>
                             <td class="text-end fw-semibold text-success">{{ formatCurrency(row.valor) }}</td>
                           </tr>
                           <tr v-if="!pagamentosFiltered || pagamentosFiltered.length === 0">
-                            <td colspan="5" class="text-center text-muted p-5">
+                            <td colspan="6" class="text-center text-muted p-5">
                               <i class="ri-inbox-line fs-1 mb-3 d-block text-light"></i>
                               <h5 class="fw-medium">Nenhum pagamento na fila</h5>
                               <p class="mb-0">Todos os atendimentos foram recebidos ou a data selecionada está vazia.</p>
@@ -611,7 +613,7 @@ import axios from "axios";
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/l10n/pt.js";
-import SimpleTable from "@/Components/SimpleTable.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 
 const pagamentosModalColumns = [
   { key: 'paciente', label: 'Paciente' },

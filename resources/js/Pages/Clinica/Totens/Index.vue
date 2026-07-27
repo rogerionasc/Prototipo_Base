@@ -102,7 +102,7 @@ import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import { ref, computed } from "vue";
-import SimpleTable from "@/Components/SimpleTable.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 import { html } from 'gridjs';
 
 const opcoesColumns = [

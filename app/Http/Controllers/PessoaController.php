@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProfissionalSaude;
+use App\Models\Pessoa;
 use App\Models\Especialidade;
 use App\Models\Endereco;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class ProfissionalSaudeController extends Controller
+class PessoaController extends Controller
 {
     public function store(Request $request)
     {
@@ -50,7 +50,7 @@ class ProfissionalSaudeController extends Controller
             $data['endereco_id'] = null;
         }
 
-        $prof = ProfissionalSaude::create($data);
+        $prof = Pessoa::create($data);
 
         $pivot = $request->validate([
             'especialidades' => ['array'],
@@ -71,7 +71,7 @@ class ProfissionalSaudeController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $prof = ProfissionalSaude::findOrFail($id);
+        $prof = Pessoa::findOrFail($id);
 
         $data = $request->validate([
             'nome' => ['required','string','max:255'],
@@ -140,7 +140,7 @@ class ProfissionalSaudeController extends Controller
 
     public function destroy(int $id)
     {
-        $prof = ProfissionalSaude::findOrFail($id);
+        $prof = Pessoa::findOrFail($id);
         $prof->delete();
         return back()->with('success', 'Profissional removido');
     }

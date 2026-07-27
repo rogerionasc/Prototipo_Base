@@ -23,8 +23,7 @@ class DatabaseSeeder extends Seeder
             ConvenioSeeder::class,
             ProcedimentoSeeder::class,
             PacienteSeeder::class,
-            ProfissionalSaudeSeeder::class,
-            OrcamentoNaoAprovadoSeeder::class,
+            PessoaSeeder::class,
         ]);
         // \App\Models\User::factory(10)->create();
 

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('atendimento_id')->constrained('atendimentos');
             $table->foreignId('paciente_id')->constrained('pacientes');
-            $table->foreignId('profissional_id')->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->constrained('pessoas');
             $table->dateTime('aberto_em')->nullable();
             $table->dateTime('encerrado_em')->nullable();
             $table->string('status', 50)->default('Aberto');
@@ -60,7 +60,7 @@ return new class extends Migration
             $table->string('glicemia', 20)->nullable();
             $table->string('circunferencia_abdominal', 20)->nullable();
             $table->text('observacao')->nullable();
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->timestamps();
         });
 
@@ -70,7 +70,7 @@ return new class extends Migration
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->text('descricao')->nullable();
             $table->text('observacao')->nullable();
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->timestamps();
         });
 
@@ -82,7 +82,7 @@ return new class extends Migration
             $table->boolean('principal')->default(false);
             $table->text('descricao')->nullable();
             $table->boolean('confirmado')->default(false);
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->timestamps();
         });
 
@@ -90,7 +90,7 @@ return new class extends Migration
         Schema::create('pep_evolucoes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->string('tipo', 100)->nullable();
             $table->text('descricao')->nullable();
             $table->timestamps();
@@ -103,7 +103,7 @@ return new class extends Migration
             $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos');
             $table->integer('quantidade')->default(1);
             $table->text('observacao')->nullable();
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->dateTime('realizado_em')->nullable();
             $table->timestamps();
         });
@@ -112,7 +112,7 @@ return new class extends Migration
         Schema::create('pep_prescricoes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->text('observacao')->nullable();
             $table->date('validade')->nullable();
             $table->timestamps();
@@ -140,7 +140,7 @@ return new class extends Migration
             $table->text('justificativa')->nullable();
             $table->boolean('urgente')->default(false);
             $table->string('status', 50)->default('Solicitado');
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->timestamps();
         });
 
@@ -151,7 +151,7 @@ return new class extends Migration
             $table->foreignId('prescricao_id')->nullable()->constrained('pep_prescricoes')->onDelete('set null');
             $table->text('texto')->nullable();
             $table->dateTime('emitido_em')->nullable();
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->timestamps();
         });
 
@@ -163,7 +163,7 @@ return new class extends Migration
             $table->unsignedBigInteger('cid_id')->nullable();
             $table->text('texto')->nullable();
             $table->dateTime('emitido_em')->nullable();
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->timestamps();
         });
 
@@ -175,7 +175,7 @@ return new class extends Migration
             $table->string('profissional_destino', 255)->nullable();
             $table->text('motivo')->nullable();
             $table->text('observacao')->nullable();
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->timestamps();
         });
 
@@ -187,7 +187,7 @@ return new class extends Migration
             $table->string('titulo', 255)->nullable();
             $table->longText('conteudo')->nullable();
             $table->dateTime('emitido_em')->nullable();
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->timestamps();
         });
 
@@ -209,7 +209,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->unsignedBigInteger('documento_id')->nullable();
-            $table->foreignId('profissional_id')->nullable()->constrained('profissionais_saude');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->string('tipo_documento', 100)->nullable();
             $table->text('hash_documento')->nullable();
             $table->text('certificado')->nullable();

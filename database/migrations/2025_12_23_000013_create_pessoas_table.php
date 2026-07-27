@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('profissionais_saude', function (Blueprint $table) {
+        Schema::create('pessoas', function (Blueprint $table) {
             $table->id();
             $table->string('nome', 120);
             $table->string('cpf', 14)->nullable()->index();
@@ -29,15 +29,15 @@ return new class extends Migration
         });
 
         Schema::table('users', function (Blueprint $table) {
-            $table->foreign('profissional_saude_id')->references('id')->on('profissionais_saude')->onDelete('set null');
+            $table->foreign('pessoa_id')->references('id')->on('pessoas')->onDelete('set null');
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['profissional_saude_id']);
+            $table->dropForeign(['pessoa_id']);
         });
-        Schema::dropIfExists('profissionais_saude');
+        Schema::dropIfExists('pessoas');
     }
 };

@@ -12,7 +12,7 @@ class AgendaMedicaController extends Controller
     public function showByProfissional(string $id)
     {
         $items = AgendaMedica::select('id','dia_semana','hora_inicio','hora_fim')
-            ->where('profissional_saude_id', $id)
+            ->where('pessoa_id', $id)
             ->orderBy('dia_semana')
             ->get();
         return response()->json([
@@ -24,7 +24,7 @@ class AgendaMedicaController extends Controller
     {
         // dd($request->all());
         $data = $request->validate([
-            'profissional_saude_id' => ['required', 'integer', 'exists:profissionais_saude,id'],
+            'pessoa_id' => ['required', 'integer', 'exists:pessoas,id'],
             'itens' => ['nullable', 'array'],
             'itens.*.dia_semana' => ['required', 'integer', 'between:0,6'],
             'itens.*.hora_inicio' => ['nullable', 'regex:/^\d{2}:\d{2}(?::\d{2})?$/'],
@@ -33,12 +33,12 @@ class AgendaMedicaController extends Controller
 
         // dd($data);
 
-        $psId = (int) $data['profissional_saude_id'];
+        $psId = (int) $data['pessoa_id'];
         $items = $data['itens'] ?? [];
 
         if (empty($items)) {
             DB::transaction(function () use ($psId) {
-                AgendaMedica::where('profissional_saude_id', $psId)->delete();
+                AgendaMedica::where('pessoa_id', $psId)->delete();
             });
             return back()->with('success', 'Agenda médica limpa com sucesso');
         } else {
@@ -66,12 +66,12 @@ class AgendaMedicaController extends Controller
                     }
                     $diasSubmitted[] = $dia;
                     AgendaMedica::updateOrCreate(
-                        ['profissional_saude_id' => $psId, 'dia_semana' => $dia],
+                        ['pessoa_id' => $psId, 'dia_semana' => $dia],
                         ['hora_inicio' => $hi, 'hora_fim' => $hf]
                     );
                 }
                 $diasSubmitted = array_unique(array_filter($diasSubmitted, fn($d) => $d !== null));
-                AgendaMedica::where('profissional_saude_id', $psId)
+                AgendaMedica::where('pessoa_id', $psId)
                     ->when(!empty($diasSubmitted), function ($q) use ($diasSubmitted) {
                         $q->whereNotIn('dia_semana', $diasSubmitted);
                     }, function ($q) {

@@ -21,7 +21,7 @@ class Especialidade extends Model
 
     public function profissionaisSaude()
     {
-        return $this->belongsToMany(ProfissionalSaude::class, 'profissional_especialidade', 'especialidade_id', 'profissional_saude_id')
+        return $this->belongsToMany(Pessoa::class, 'profissional_especialidade', 'especialidade_id', 'pessoa_id')
             ->withPivot('qre');
     }
 

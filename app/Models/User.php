@@ -34,7 +34,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'nome',
         'sobrenome',
         'conta_id',
-        'profissional_saude_id',
+        'pessoa_id',
         'cpf',
         'telefone',
         'data_nascimento',
@@ -49,7 +49,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function profissionalSaude()
     {
-        return $this->belongsTo(ProfissionalSaude::class, 'profissional_saude_id');
+        return $this->belongsTo(Pessoa::class, 'pessoa_id');
     }
 
     /**

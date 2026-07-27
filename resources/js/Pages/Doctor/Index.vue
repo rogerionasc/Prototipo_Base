@@ -9,7 +9,7 @@ import ModalDelete from "@/Components/ModalDelete.vue";
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/l10n/pt.js";
-import SimpleTable from "@/Components/SimpleTable.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 
 const flatpickrOptions = { altInput: true, altFormat: "d M, Y", dateFormat: "Y-m-d", locale: "pt" };
 const props = defineProps({
@@ -25,6 +25,7 @@ const columns = [
   { id: "crm", name: "CRM" },
   { id: "contato", name: "Contato" },
   { id: "especialidades", name: "Especialidades" },
+  { id: "dias_atendimento", name: "Dias Atendimento" },
 ];
 const especialidadesColumns = [
   { key: "especialidade", label: "Especialidade" },
@@ -44,7 +45,12 @@ const tableData = computed(() => {
       return `${e.nome}${qre}`;
     }).join(', ');
     const contato = [p.email, p.celular || p.telefone].filter(Boolean).join(' | ');
-    return { id: p.id, nome: p.nome, crm: p.crm || '-', contato: contato || '-', especialidades: esp || '-' };
+    const diasUnicos = [...new Set((p.agendas || []).map(a => a.dia_semana))];
+    const diasStr = diasUnicos.map(d => {
+      const opt = diaSemanaOptions.find(o => o.value === d);
+      return opt ? opt.label.substring(0, 3) : '';
+    }).filter(Boolean).join(', ');
+    return { id: p.id, nome: p.nome, crm: p.crm || '-', contato: contato || '-', especialidades: esp || '-', dias_atendimento: diasStr || '-' };
   });
 });
 const singleModal = ref(false);
@@ -62,7 +68,7 @@ const diaSemanaOptions = [
   { value: 6, label: 'Sábado' },
 ];
 const agendaForm = useForm({
-  profissional_saude_id: null,
+  pessoa_id: null,
   itens: [{ dia_semana: null, hora_inicio: '', hora_fim: '' }],
 });
 const diaryProfNome = computed(() => {
@@ -337,7 +343,7 @@ function openDiary(id) {
   diaryProfId.value = id != null ? Number(id) : null;
   agendaForm.reset();
   agendaForm.clearErrors();
-  agendaForm.profissional_saude_id = diaryProfId.value;
+  agendaForm.pessoa_id = diaryProfId.value;
   agendaForm.itens = [{ dia_semana: null, hora_inicio: '', hora_fim: '' }];
   diaryModal.value = true;
   nextTick(() => { if (window.initChoices) window.initChoices(); });
@@ -428,7 +434,7 @@ function submitAgenda() {
     };
   }).filter(it => it.dia_semana != null);
   const payload = {
-    profissional_saude_id: agendaForm.profissional_saude_id,
+    pessoa_id: agendaForm.pessoa_id,
     itens,
   };
   useForm(payload).post('/agenda-medica', {

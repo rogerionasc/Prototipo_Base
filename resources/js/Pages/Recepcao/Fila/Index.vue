@@ -4,7 +4,7 @@ import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import Modal from "@/Components/Modal.vue";
-import SimpleTable from "@/Components/SimpleTable.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 
 const props = defineProps({
     fila: Array,
@@ -91,8 +91,7 @@ const tableColumns = [
     { key: 'hora', label: 'Horário', thClass: 'px-3', tdClass: 'px-3', width: '1%' },
     { key: 'paciente', label: 'Paciente' },
     { key: 'procedimento', label: 'Profissional / Procedimento' },
-    { key: 'status', label: 'Status Atual' },
-    { key: 'acoes', label: 'Ações', thClass: 'text-end', tdClass: 'text-end', width: '1%' }
+    { key: 'status', label: 'Status Atual' }
 ];
 
 const getRowClass = (item) => {
@@ -110,6 +109,7 @@ const getRowClass = (item) => {
         <div class="row">
             <div class="col-lg-12">
                 <SimpleTable title="Pacientes Agendados para Hoje" :items="fila" :columns="tableColumns"
+                    has-actions
                     :searchable="true" searchPlaceholder="Buscar paciente, cpf ou médico..."
                     :searchFields="['paciente', 'cpf', 'medico']" emptyTitle="Nenhum paciente encontrado"
                     emptyMessage="Não há pacientes agendados para hoje ou com pagamentos confirmados."
@@ -143,17 +143,9 @@ const getRowClass = (item) => {
                         </div>
                     </template>
 
-                    <template #cell(status)="{ item }">
-                        <span class="badge px-2 py-1 fs-12" :class="{
-                            'bg-info text-white': item.ja_chegou && String(item.status).toUpperCase().trim().includes('AGUARDANDO'),
-                            'bg-success text-white': item.ja_chegou && !String(item.status).toUpperCase().trim().includes('AGUARDANDO'),
-                            'bg-warning text-white': !item.ja_chegou,
-                        }">
-                            {{ item.status }}
-                        </span>
-                    </template>
 
-                    <template #cell(acoes)="{ item }">
+
+                    <template #actions="{ item }">
                         <button v-if="!item.ja_chegou" @click="confirmarPresenca(item.id)"
                             class="btn btn-sm btn-primary shadow-sm" :disabled="processingIds.includes(item.id)">
                             <span v-if="processingIds.includes(item.id)" class="spinner-border spinner-border-sm me-1"

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\User;
-use App\Models\ProfissionalSaude;
+use App\Models\Pessoa;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -14,7 +14,7 @@ class UserController extends Controller
     public function index()
     {
         $usuarios = User::with('profissionalSaude')->get();
-        $profissionais = ProfissionalSaude::all();
+        $profissionais = Pessoa::all();
 
         return Inertia::render('Usuarios/Index', [
             'usuarios' => $usuarios,
@@ -32,7 +32,7 @@ class UserController extends Controller
             'telefone' => ['required', 'string', 'max:15'],
             'data_nascimento' => ['required', 'date'],
             'password' => ['required', 'confirmed', Password::defaults()],
-            'profissional_saude_id' => ['nullable', 'exists:profissionais_saude,id'],
+            'pessoa_id' => ['nullable', 'exists:pessoas,id'],
         ]);
 
         $validated['password'] = Hash::make($validated['password']);

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sala;
-use App\Models\ProfissionalSaude;
+use App\Models\Pessoa;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,7 +12,7 @@ class SalaController extends Controller
     public function index()
     {
         $salas = Sala::with('profissionalSaude')->get();
-        $profissionais = ProfissionalSaude::get(['id', 'nome']);
+        $profissionais = Pessoa::get(['id', 'nome']);
 
         return Inertia::render('Clinica/Salas/Index', [
             'salas' => $salas,
@@ -25,7 +25,7 @@ class SalaController extends Controller
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
             'status' => 'boolean',
-            'profissional_saude_id' => 'nullable|exists:profissionais_saude,id',
+            'pessoa_id' => 'nullable|exists:pessoas,id',
         ]);
 
         Sala::create($validated);
@@ -38,7 +38,7 @@ class SalaController extends Controller
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
             'status' => 'boolean',
-            'profissional_saude_id' => 'nullable|exists:profissionais_saude,id',
+            'pessoa_id' => 'nullable|exists:pessoas,id',
         ]);
 
         $sala->update($validated);

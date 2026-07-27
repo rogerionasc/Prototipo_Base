@@ -91,24 +91,29 @@
                 </BTab>
                 <BTab title="Agendamentos">
                     <div class="mt-2">
-                        <div v-if="(agendamentosPaciente || []).length === 0" class="text-muted">Nenhum agendamento
-                            encontrado</div>
-                        <SimpleTable v-else variant="borderless" compact tableClass="table-sm align-middle"
+                        <SimpleTable variant="borderless" compact tableClass="table-sm align-middle"
                             :items="agendamentosPaciente"
-                            :columns="[{ key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }, { key: 'acoes', label: 'Ações' }]">
-                            <template #body="{ items }">
-                                <tr v-for="a in items" :key="a.id">
-                                    <td>{{ formatDateTimeBR(a.data).split(' ')[0] }}</td>
-                                    <td>{{ a.hora }}</td>
-                                    <td>{{ a.procedimento }}</td>
-                                    <td>{{ a.profissional }}</td>
-                                    <td>{{ a.status }}</td>
-                                    <td>
-                                        <button v-if="!a.atendido" class="btn btn-sm btn-primary"
-                                            @click="abrirModalReagendar(a)">Reagendar</button>
-                                        <span v-else class="text-muted small">—</span>
-                                    </td>
-                                </tr>
+                            :columns="[{ key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }]"
+                            has-actions
+                            :searchable="true"
+                            searchPlaceholder="Buscar agendamento..."
+                            :searchFields="['procedimento', 'profissional', 'status']"
+                            emptyTitle="Nenhum agendamento encontrado">
+
+                            <template #cell(data)="{ item }">
+                                {{ item.data ? formatDateTimeBR(item.data).split(' ')[0] : 'A Agendar' }}
+                            </template>
+                            
+                            <template #cell(hora)="{ item }">
+                                {{ item.hora || '--:--' }}
+                            </template>
+
+                            <template #actions="{ item }">
+                                <button v-if="!item.atendido" type="button" class="btn btn-sm btn-light" title="Reagendar"
+                                    @click="abrirModalReagendar(item)">
+                                    <i class="ri-edit-line me-1"></i> Reagendar
+                                </button>
+                                <span v-else class="text-muted small">—</span>
                             </template>
                         </SimpleTable>
                     </div>
@@ -148,7 +153,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-medium">Médico / Profissional</label>
-                    <select v-model="reagendarForm.profissional_saude_id" data-choices class="form-select"
+                    <select v-model="reagendarForm.pessoa_id" data-choices class="form-select"
                         ref="reagendarProfissionalSelect">
                         <option :value="null">Selecione um médico</option>
                         <option v-for="prof in reagendarProfissionais" :key="prof.id" :value="prof.id">
@@ -169,7 +174,7 @@ import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import PacienteForm from "@/Pages/Pacientes/Create.vue";
-import SimpleTable from "@/Components/SimpleTable.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.css";
 import "flatpickr/dist/l10n/pt.js";
@@ -246,7 +251,7 @@ const agendamentosPaciente = ref([]);
 const reagendarModal = ref(false);
 const reagendarAgendamentoId = ref(null);
 const reagendarAgendamentoData = ref(null);
-const reagendarForm = ref({ data: '', hora: '', profissional_saude_id: null });
+const reagendarForm = ref({ data: '', hora: '', pessoa_id: null });
 const reagendarProcessing = ref(false);
 const reagendarProfissionais = ref([]);
 const reagendarProfissionalSelect = ref(null);
@@ -256,7 +261,7 @@ async function abrirModalReagendar(ag) {
     reagendarAgendamentoData.value = ag;
     reagendarForm.value.data = ag.data || '';
     reagendarForm.value.hora = ag.hora || '';
-    reagendarForm.value.profissional_saude_id = ag.profissional_saude_id || null;
+    reagendarForm.value.pessoa_id = ag.pessoa_id || null;
     reagendarProfissionais.value = [];
     reagendarModal.value = true;
 
@@ -264,7 +269,7 @@ async function abrirModalReagendar(ag) {
     const procId = ag.procedimento_id || ag.tuss_id;
     if (procId) {
         try {
-
+            const targetPessoaId = ag.pessoa_id ? String(ag.pessoa_id) : '';
             const res = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
                 params: {
                     procedimento_id: procId,
@@ -274,22 +279,29 @@ async function abrirModalReagendar(ag) {
             reagendarProfissionais.value = Array.isArray(res?.data?.profissionais) ? res.data.profissionais : [];
             await nextTick();
 
-            const el = reagendarProfissionalSelect.value;
-            if (el) {
-                if (el._choicesInstance) {
-                    el._choicesInstance.destroy();
-                    el._choicesInstance = null;
-                    el.dataset.choicesInitialized = 'false';
+            setTimeout(() => {
+                const el = reagendarProfissionalSelect.value;
+                if (el) {
+                    if (el._choicesInstance) {
+                        el._choicesInstance.destroy();
+                        el._choicesInstance = null;
+                        el.dataset.choicesInitialized = 'false';
+                    }
+                    if (window.initChoiceEl) {
+                        window.initChoiceEl(el);
+                    } else if (window.initChoices) {
+                        window.initChoices();
+                    }
+                    if (el._choicesInstance && targetPessoaId) {
+                        try {
+                            el._choicesInstance.setChoiceByValue(targetPessoaId);
+                        } catch (e) {}
+                    }
+                    if (window.syncChoiceValue) {
+                        window.syncChoiceValue(el, targetPessoaId);
+                    }
                 }
-                if (window.initChoiceEl) {
-                    window.initChoiceEl(el);
-                } else if (window.initChoices) {
-                    window.initChoices();
-                }
-                if (window.syncChoiceValue) {
-                    window.syncChoiceValue(el, reagendarForm.value.profissional_saude_id || '');
-                }
-            }
+            }, 100);
         } catch (e) { }
     }
 }
@@ -301,7 +313,7 @@ async function confirmarReagendamento() {
         await window.axios.put(`/agendamentos/${reagendarAgendamentoId.value}`, {
             data: reagendarForm.value.data,
             hora: reagendarForm.value.hora,
-            profissional_saude_id: reagendarForm.value.profissional_saude_id
+            pessoa_id: reagendarForm.value.pessoa_id
         });
         reagendarModal.value = false;
         // Recarregar os agendamentos do paciente aberto

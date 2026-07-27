@@ -96,13 +96,13 @@ class VelzonRoutesController extends Controller
 
     public function medico()
     {
-        $profissionais = \App\Models\ProfissionalSaude::select(
-                'profissionais_saude.id',
+        $profissionais = \App\Models\Pessoa::select(
+                'pessoas.id',
                 'nome',
                 'cpf',
                 'rg',
                 'sexo',
-                DB::raw("DATE_FORMAT(profissionais_saude.data_nascimento, '%Y-%m-%d') AS data_nascimento"),
+                DB::raw("DATE_FORMAT(pessoas.data_nascimento, '%Y-%m-%d') AS data_nascimento"),
                 'naturalidade',
                 'estado_civil_id',
                 'cnes',
@@ -119,8 +119,8 @@ class VelzonRoutesController extends Controller
                 DB::raw("COALESCE(e.cidade,'') AS cidade"),
                 DB::raw("COALESCE(e.complemento,'') AS complemento"),
             )
-            ->leftJoin('enderecos as e', 'e.id', '=', 'profissionais_saude.endereco_id')
-            ->with(['especialidades' => function($q) {
+            ->leftJoin('enderecos as e', 'e.id', '=', 'pessoas.endereco_id')
+            ->with(['agendas', 'especialidades' => function($q) {
                 $q->select('especialidades.id','nome')->withPivot('qre');
             }])
             ->orderBy('nome')

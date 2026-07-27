@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('nome');
             $table->boolean('status')->default(true);
-            $table->unsignedBigInteger('profissional_saude_id')->nullable();
-            $table->foreign('profissional_saude_id')->references('id')->on('profissionais_saude')->nullOnDelete();
+            $table->unsignedBigInteger('pessoa_id')->nullable();
+            $table->foreign('pessoa_id')->references('id')->on('pessoas')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
         });

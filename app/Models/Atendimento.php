@@ -47,7 +47,7 @@ class Atendimento extends Model
 
     public function medico()
     {
-        return $this->belongsTo(ProfissionalSaude::class, 'medico_id');
+        return $this->belongsTo(Pessoa::class, 'medico_id');
     }
 
     public function agendamento()

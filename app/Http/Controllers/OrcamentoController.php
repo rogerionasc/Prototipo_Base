@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use App\Models\Orcamento;
 use App\Models\OrcamentoProcedimento;
 use App\Models\Paciente;
-use App\Models\ProfissionalSaude;
+use App\Models\Pessoa;
 use App\Models\Convenio;
 use App\Models\Procedimento;
 use App\Models\Pagamento;

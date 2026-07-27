@@ -26,6 +26,6 @@ class EstadoCivil extends Model
 
     public function profissionaisSaude()
     {
-        return $this->hasMany(ProfissionalSaude::class, 'estado_civil_id');
+        return $this->hasMany(Pessoa::class, 'estado_civil_id');
     }
 }

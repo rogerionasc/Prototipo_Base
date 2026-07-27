@@ -14,7 +14,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('paciente_id')->constrained('pacientes');
             $table->foreignId('convenio_id')->nullable()->constrained('convenios');
-            $table->foreignId('medico_id')->constrained('profissionais_saude');
+            $table->foreignId('medico_id')->constrained('pessoas');
             $table->foreignId('agendamento_id')->nullable()->constrained('agendamentos');
             $table->unsignedBigInteger('autorizacao_id')->nullable(); // nullable
             $table->unsignedBigInteger('guia_id')->nullable(); // nullable

@@ -222,9 +222,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::delete("/agenda-medica/{id}", [AgendaMedicaController::class, "destroy"])->name('agenda_medica.destroy');
 
         // Profissionais de Saúde routes
-        Route::post("/profissionais-saude", [\App\Http\Controllers\ProfissionalSaudeController::class, "store"])->name('profissionais_saude.store');
-        Route::put("/profissionais-saude/{id}", [\App\Http\Controllers\ProfissionalSaudeController::class, "update"])->name('profissionais_saude.update');
-        Route::delete("/profissionais-saude/{id}", [\App\Http\Controllers\ProfissionalSaudeController::class, "destroy"])->name('profissionais_saude.destroy');
+        Route::post("/profissionais-saude", [\App\Http\Controllers\PessoaController::class, "store"])->name('pessoas.store');
+        Route::put("/profissionais-saude/{id}", [\App\Http\Controllers\PessoaController::class, "update"])->name('pessoas.update');
+        Route::delete("/profissionais-saude/{id}", [\App\Http\Controllers\PessoaController::class, "destroy"])->name('pessoas.destroy');
 
         // Parametrização routes
         Route::post("/parametros/estado-civil", [VelzonRoutesController::class, "parametros_store_estado_civil"])->name('parametros.estado_civil.store');

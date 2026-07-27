@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Convenio;
 use App\Models\Conta;
-use App\Models\ProfissionalSaude;
+use App\Models\Pessoa;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -32,7 +32,7 @@ class ConvenioController extends Controller
             'tuss_tabela' => ['nullable', 'exclude_if:tuss_tabela,', 'string', 'max:20', 'exists:tuss,tabela'],
             'tuss_ids' => ['nullable', 'array'],
             'medicos' => ['nullable', 'array'],
-            'medicos.*.id' => ['required', 'integer', 'exists:profissionais_saude,id'],
+            'medicos.*.id' => ['required', 'integer', 'exists:pessoas,id'],
             'medicos.*.tuss_ids' => ['nullable', 'array'],
             'medicos.*.tuss_ids.*' => ['integer', 'exists:tuss,id'],
             'tipo' => ['nullable', 'string', 'max:20'],
@@ -49,7 +49,7 @@ class ConvenioController extends Controller
             ->select('id','descricao','logo_path','tuss_tabela','tipo','empresa_id','ans','dias_recebimento','dias_retorno')
             ->get();
         $contas = Conta::select('id','nome')->orderBy('nome')->get();
-        $profissionaisSaude = ProfissionalSaude::with(['especialidades:id,nome'])->select('id','nome','crm')->orderBy('nome')->get();
+        $profissionaisSaude = Pessoa::with(['especialidades:id,nome'])->select('id','nome','crm')->orderBy('nome')->get();
         $tussTabelas = DB::table('tuss')
             ->whereNotNull('tabela')
             ->where('tabela', '<>', '')
@@ -132,7 +132,7 @@ class ConvenioController extends Controller
                     if (empty($mTuss)) {
                         $medicoTussRows[] = [
                             'convenio_id' => $convenio->id,
-                            'profissional_saude_id' => $m['id'],
+                            'pessoa_id' => $m['id'],
                             'tuss_id' => null,
                             'created_at' => now(),
                             'updated_at' => now(),
@@ -141,7 +141,7 @@ class ConvenioController extends Controller
                         foreach ($mTuss as $tid) {
                             $medicoTussRows[] = [
                                 'convenio_id' => $convenio->id,
-                                'profissional_saude_id' => $m['id'],
+                                'pessoa_id' => $m['id'],
                                 'tuss_id' => $tid,
                                 'created_at' => now(),
                                 'updated_at' => now(),
@@ -238,7 +238,7 @@ class ConvenioController extends Controller
                     if (empty($mTuss)) {
                         $medicoTussRows[] = [
                             'convenio_id' => $convenio->id,
-                            'profissional_saude_id' => $m['id'],
+                            'pessoa_id' => $m['id'],
                             'tuss_id' => null,
                             'created_at' => now(),
                             'updated_at' => now(),
@@ -247,7 +247,7 @@ class ConvenioController extends Controller
                         foreach ($mTuss as $tid) {
                             $medicoTussRows[] = [
                                 'convenio_id' => $convenio->id,
-                                'profissional_saude_id' => $m['id'],
+                                'pessoa_id' => $m['id'],
                                 'tuss_id' => $tid,
                                 'created_at' => now(),
                                 'updated_at' => now(),

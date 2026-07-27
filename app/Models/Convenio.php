@@ -30,7 +30,7 @@ class Convenio extends Model
 
     public function medicos()
     {
-        return $this->belongsToMany(ProfissionalSaude::class, 'convenio_medico_tuss', 'convenio_id', 'profissional_saude_id')
+        return $this->belongsToMany(Pessoa::class, 'convenio_medico_tuss', 'convenio_id', 'pessoa_id')
             ->distinct();
     }
 
@@ -44,7 +44,7 @@ class Convenio extends Model
     public function medicoTuss()
     {
         return $this->belongsToMany(Tuss::class, 'convenio_medico_tuss', 'convenio_id', 'tuss_id')
-            ->withPivot('profissional_saude_id')
+            ->withPivot('pessoa_id')
             ->withTimestamps();
     }
 }

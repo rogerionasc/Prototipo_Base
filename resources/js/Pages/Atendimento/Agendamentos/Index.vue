@@ -21,7 +21,7 @@ import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import Modal from "@/Components/Modal.vue";
 import SuggestInput from "@/Components/SuggestInput.vue";
-import TableGrid from "@/Components/Tables/TableGrid.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 
 export default {
     data() {
@@ -81,7 +81,7 @@ export default {
             agendamentoForm: {
                 paciente_id: null,
                 convenio_id: null,
-                profissional_saude_id: null,
+                pessoa_id: null,
                 procedimento_id: null,
                 data: "",
                 hora: "",
@@ -158,7 +158,7 @@ export default {
             editAgendamentoForm: {
                 id: null,
                 paciente_id: null,
-                profissional_saude_id: null,
+                pessoa_id: null,
                 procedimento_id: null,
                 data: "",
                 hora: "",
@@ -203,7 +203,7 @@ export default {
         simpleBar,
         Modal,
         SuggestInput,
-        TableGrid
+        SimpleTable
     },
     computed: {
         tituloModalEventosDia() {
@@ -216,12 +216,15 @@ export default {
         },
         tituloModalEditarAgendamento() {
             try {
-                if (!this.podeReagendarAgendamentoCancelado()) return "Editar Agendamento";
+                const isCancelado = this.podeReagendarAgendamentoCancelado();
+                const prefix = isCancelado ? "Reagendar" : "Editar Agendamento";
                 const n = this.eventoSelecionado?.extendedProps?.sessao_numero ?? null;
                 const t = this.eventoSelecionado?.extendedProps?.sessao_total ?? null;
-                if (n != null && t != null) return `Reagendar Sessão ${n}/${t}`;
-                if (n != null) return `Reagendar Sessão ${n}`;
-                return "Reagendar Agendamento";
+                
+                if (n != null && t != null) return `${prefix} - Sessão ${n}/${t}`;
+                if (n != null) return `${prefix} - Sessão ${n}`;
+                
+                return isCancelado ? "Reagendar Agendamento" : "Editar Agendamento";
             } catch (e) {
                 return "Editar Agendamento";
             }
@@ -458,7 +461,7 @@ export default {
                 }, 250);
             } catch (e) { }
         },
-        "agendamentoForm.profissional_saude_id"() {
+        "agendamentoForm.pessoa_id"() {
             try { this.verificarAgendaProfissionalParaDia(); } catch (e) { }
         },
         "agendamentoForm.procedimento_id"(nv, ov) {
@@ -524,9 +527,9 @@ export default {
                         if (chosen) {
                             if (typeof ev.setExtendedProp === "function") {
                                 ev.setExtendedProp("profissional_nome", chosen.nome || "Profissional");
-                                ev.setExtendedProp("profissional_saude_id", chosen.profissional_saude_id ?? null);
+                                ev.setExtendedProp("pessoa_id", chosen.pessoa_id ?? null);
                             } else {
-                                ev.extendedProps = { ...(ev.extendedProps || {}), profissional_nome: chosen.nome || "Profissional", profissional_saude_id: chosen.profissional_saude_id ?? null };
+                                ev.extendedProps = { ...(ev.extendedProps || {}), profissional_nome: chosen.nome || "Profissional", pessoa_id: chosen.pessoa_id ?? null };
                             }
                         }
                     } catch (_) { }
@@ -564,6 +567,15 @@ export default {
                         }
                         const st = String(ev?.extendedProps?.status || "").trim();
                         const medNome = String(ev?.extendedProps?.profissional_nome || "").trim();
+
+                        const sessN = ev?.extendedProps?.sessao_numero ?? null;
+                        const sessT = ev?.extendedProps?.sessao_total ?? null;
+                        if (sessN != null && sessT != null) {
+                            procNome += ` (Sessão ${sessN}/${sessT})`;
+                        } else if (sessN != null) {
+                            procNome += ` (Sessão ${sessN})`;
+                        }
+
                         return {
                             id: ev?.id,
                             paciente: pacNome || "Paciente",
@@ -687,7 +699,7 @@ export default {
                     this.procedimentosFiltradosEdicao = proc ? [{ ...proc, nome: proc.nome }] : [...(this.procedimentosLocal || [])];
                 } catch (_) { }
 
-                this.editAgendamentoForm.profissional_saude_id = null;
+                this.editAgendamentoForm.pessoa_id = null;
                 await this.inferirProfissionalDaAgenda(this.editAgendamentoForm.data, this.editAgendamentoForm.hora);
                 try { await this.aoAlterarProcedimentoEdicao(); } catch (_) { }
 
@@ -1007,7 +1019,7 @@ export default {
                     if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
                 } catch (_) { }
 
-                this.agendamentoForm = { paciente_id: null, convenio_id: null, profissional_saude_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
+                this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
                 this.termoBuscaPaciente = "";
                 this.conveniosPacienteCriacao = [];
                 this.procedimentosSelectRows = [];
@@ -1041,7 +1053,7 @@ export default {
                 const fp = (this.$page?.props?.flash ?? {});
                 if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
             } catch (_) { }
-            this.agendamentoForm = { paciente_id: null, convenio_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
+            this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
             this.termoBuscaPaciente = "";
             this.mostrarSugestoesPaciente = false;
             this.usarOrcamentoPagoCriacao = false;
@@ -1114,7 +1126,7 @@ export default {
                 const pac = this.encontrarPacientePorNome(pacNome);
                 this.editAgendamentoForm.paciente_id = pac ? pac.id : null;
             }
-            this.editAgendamentoForm.profissional_saude_id = null;
+            this.editAgendamentoForm.pessoa_id = null;
             if (procIdFromEP !== null && procIdFromEP !== "") {
                 this.editAgendamentoForm.procedimento_id = Number(procIdFromEP);
             } else {
@@ -1144,7 +1156,7 @@ export default {
             this.buscarOrcamentosPorPacienteEdicao();
             this.inferirProfissionalDaAgenda(ds, hs);
             this.agendamentoForm.paciente_id = this.editAgendamentoForm.paciente_id;
-            this.agendamentoForm.profissional_saude_id = this.editAgendamentoForm.profissional_saude_id;
+            this.agendamentoForm.pessoa_id = this.editAgendamentoForm.pessoa_id;
             this.agendamentoForm.procedimento_id = this.editAgendamentoForm.procedimento_id;
             this.agendamentoForm.data = this.editAgendamentoForm.data;
             this.agendamentoForm.hora = this.editAgendamentoForm.hora;
@@ -1451,11 +1463,11 @@ export default {
             }
 
             try {
-                const currentId = this.editAgendamentoForm.profissional_saude_id;
+                const currentId = this.editAgendamentoForm.pessoa_id;
                 const list = Array.isArray(this.profissionaisFiltradosEdicao) ? this.profissionaisFiltradosEdicao : [];
                 const ok = currentId != null && list.some(p => String(p.id) === String(currentId));
                 if (!ok) {
-                    this.editAgendamentoForm.profissional_saude_id = (list.length === 1) ? (list[0]?.id ?? null) : null;
+                    this.editAgendamentoForm.pessoa_id = (list.length === 1) ? (list[0]?.id ?? null) : null;
                 }
             } catch (_) { }
 
@@ -1497,20 +1509,20 @@ export default {
                         const mf = m(a.hora_fim);
                         if (mi == null || mf == null) return;
                         if (mh >= mi && mh <= mf && chosen == null) {
-                            chosen = a.profissional_saude_id;
+                            chosen = a.pessoa_id;
                         }
                     });
                 }
                 if (!chosen && arr.length > 0) {
-                    chosen = arr[0].profissional_saude_id;
+                    chosen = arr[0].pessoa_id;
                 }
-                this.editAgendamentoForm.profissional_saude_id = chosen != null ? Number(chosen) : this.editAgendamentoForm.profissional_saude_id;
+                this.editAgendamentoForm.pessoa_id = chosen != null ? Number(chosen) : this.editAgendamentoForm.pessoa_id;
             } catch (e) { }
         },
         async salvarEdicaoAgendamento() {
             const payload = {
                 paciente_id: this.editAgendamentoForm.paciente_id,
-                profissional_saude_id: this.editAgendamentoForm.profissional_saude_id,
+                pessoa_id: this.editAgendamentoForm.pessoa_id,
                 procedimento_id: this.editAgendamentoForm.procedimento_id,
                 data: this.editAgendamentoForm.data,
                 hora: this.editAgendamentoForm.hora,
@@ -1604,7 +1616,7 @@ export default {
             if (!this.editAgendamentoForm?.id) return;
             if (!this.podeReagendarAgendamentoCancelado()) return;
             const payload = {
-                profissional_saude_id: this.editAgendamentoForm.profissional_saude_id,
+                pessoa_id: this.editAgendamentoForm.pessoa_id,
                 data: this.editAgendamentoForm.data,
                 hora: this.editAgendamentoForm.hora,
             };
@@ -1660,7 +1672,7 @@ export default {
         },
         verificarAgendaProfissionalParaDia() {
             try {
-                const pid = this.agendamentoForm?.profissional_saude_id ?? null;
+                const pid = this.agendamentoForm?.pessoa_id ?? null;
                 const dataForm = this.agendamentoForm?.data;
 
                 // Limpa o aviso se estiver presente para não persistir indevidamente
@@ -1683,7 +1695,7 @@ export default {
                 // Agendas carregadas são de uma data diferente: não podemos validar com precisão
                 if (this.dataAgendaSelecionada && dataForm !== this.dataAgendaSelecionada) return;
 
-                const has = (this.agendasHoje || []).some(a => String(a.profissional_saude_id) === String(pid));
+                const has = (this.agendasHoje || []).some(a => String(a.pessoa_id) === String(pid));
                 if (!has) {
                     try {
                         const fp = (this.$page?.props?.flash ?? {});
@@ -1798,7 +1810,7 @@ export default {
         },
         async buscarMapaDiasSemanaSelecionados() {
             try {
-                const ids = (this.agendasHoje || []).map(a => a.profissional_saude_id).filter(v => v != null);
+                const ids = (this.agendasHoje || []).map(a => a.pessoa_id).filter(v => v != null);
                 if (!ids.length) {
                     this.mapaDiasSemanaSelecionados = {};
                     this.aplicarTodasListras();
@@ -1815,7 +1827,7 @@ export default {
         },
         corDoMedicoSelecionado(id) {
             const arr = this.agendasHoje || [];
-            const idx = arr.findIndex(a => String(a.profissional_saude_id) === String(id));
+            const idx = arr.findIndex(a => String(a.pessoa_id) === String(id));
             if (idx < 0) return null;
             return (this.coresDataSelecionada || [])[idx % this.paletaMedicos.length] || null;
         },
@@ -1888,7 +1900,7 @@ export default {
                 const h = (slots || frame).offsetHeight || 0;
                 const allColors = [];
                 (agendas || []).forEach(ag => {
-                    const c = this.corDoMedicoSelecionado(ag?.profissional_saude_id);
+                    const c = this.corDoMedicoSelecionado(ag?.pessoa_id);
                     if (c && !allColors.includes(c)) allColors.push(c);
                 });
                 const max = (this.paletaMedicos && this.paletaMedicos.length) ? this.paletaMedicos.length : 6;
@@ -1908,7 +1920,7 @@ export default {
                 }
                 overlay.innerHTML = "";
                 (agendas || []).forEach(ag => {
-                    const c = this.corDoMedicoSelecionado(ag?.profissional_saude_id);
+                    const c = this.corDoMedicoSelecionado(ag?.pessoa_id);
                     if (!c) return;
                     const idx = Math.max(0, allColors.indexOf(c));
                     const left = `${(idx * 100) / (n || 1)}%`;
@@ -2067,11 +2079,11 @@ export default {
             }
 
             try {
-                const currentId = this.agendamentoForm.profissional_saude_id;
+                const currentId = this.agendamentoForm.pessoa_id;
                 const list = Array.isArray(this.profissionaisFiltradosCriacao) ? this.profissionaisFiltradosCriacao : [];
                 const ok = currentId != null && list.some(p => String(p.id) === String(currentId));
                 if (!ok) {
-                    this.agendamentoForm.profissional_saude_id = (list.length === 1) ? (list[0]?.id ?? null) : null;
+                    this.agendamentoForm.pessoa_id = (list.length === 1) ? (list[0]?.id ?? null) : null;
                 }
             } catch (_) { }
 
@@ -2110,7 +2122,7 @@ export default {
         async salvarAgendamento() {
             let basePayload = {
                 paciente_id: this.agendamentoForm.paciente_id,
-                profissional_saude_id: this.agendamentoForm.profissional_saude_id,
+                pessoa_id: this.agendamentoForm.pessoa_id,
                 procedimento_id: this.agendamentoForm.procedimento_id,
                 convenio_id: this.agendamentoForm.convenio_id ? Number(this.agendamentoForm.convenio_id) : null,
                 status_id: null,
@@ -2159,7 +2171,7 @@ export default {
                     this.$page.props.flash = { ...fp, success: createdCount > 1 ? "Agendamentos criados" : "Agendamento criado" };
                 } catch (_) { }
                 this.modalAgendarVisivel = false;
-                this.agendamentoForm = { paciente_id: null, profissional_saude_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
+                this.agendamentoForm = { paciente_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
                 this.valorCobradoAutoCriacaoProcId = null;
                 this.orcamentoSelecionado = null;
                 this.orcamentoSelecionadoId = null;
@@ -2182,7 +2194,7 @@ export default {
         async salvarAgendarOuEditar() {
             if (this.editandoNoModalDeCriacao) {
                 this.editAgendamentoForm.paciente_id = this.agendamentoForm.paciente_id;
-                this.editAgendamentoForm.profissional_saude_id = this.agendamentoForm.profissional_saude_id;
+                this.editAgendamentoForm.pessoa_id = this.agendamentoForm.pessoa_id;
                 this.editAgendamentoForm.procedimento_id = this.agendamentoForm.procedimento_id;
                 this.editAgendamentoForm.data = this.agendamentoForm.data;
                 this.editAgendamentoForm.hora = this.agendamentoForm.hora;
@@ -2348,8 +2360,7 @@ export default {
                                     <template v-else>
                                         <div v-if="agendasHoje.length === 0" class="text-muted small mb-2">Nenhum
                                             profissional com agenda nesta data.</div>
-                                        <div v-for="(ag, idx) in agendasHoje"
-                                            :key="`${ag.profissional_saude_id}-${idx}`"
+                                        <div v-for="(ag, idx) in agendasHoje" :key="`${ag.pessoa_id}-${idx}`"
                                             class="external-event fc-event d-flex align-items-center"
                                             :class="[paletaMedicos[idx % paletaMedicos.length].bg, paletaMedicos[idx % paletaMedicos.length].text]"
                                             :data-class="paletaMedicos[idx % paletaMedicos.length].bg">
@@ -2357,7 +2368,7 @@ export default {
                                             <div class="flex-grow-1" style="min-width:0">
                                                 <div class="d-flex align-items-center" style="min-width:0">
                                                     <span class="text-truncate flex-grow-1" :title="ag.nome">{{ ag.nome
-                                                        }}</span>
+                                                    }}</span>
                                                     <span v-if="!diaInteiro(ag)"
                                                         class="ms-2 small text-muted text-nowrap">({{
                                                             formatarIntervaloAgenda(ag) }})</span>
@@ -2385,7 +2396,7 @@ export default {
                                             </div>
                                             <div class="flex-shrink-0">
                                                 <span class="fs-10 text-muted ms-auto">{{ obterTextoBadgeEvento(event)
-                                                    }}</span>
+                                                }}</span>
                                             </div>
                                         </div>
                                         <h6 class="card-title fs-16">{{ event.title }}</h6>
@@ -2441,9 +2452,9 @@ export default {
                 <div :class="usarOrcamentoPagoCriacao ? 'col-md-6' : 'col-md-12'">
                     <label class="form-label">Paciente</label>
                     <SuggestInput v-model="termoBuscaPaciente" :suggestions="pacientesSugestoesCriacao" :loading="false"
-                        :show="mostrarSugestoesPaciente"
-                        placeholder="Buscar paciente por nome ou CPF" keyPrefix="sug-pac" primaryTextProp="nome"
-                        secondaryTextProp="cpf" @focus="mostrarSugestoesPaciente = true" @blur="onBlurSugestoesPaciente"
+                        :show="mostrarSugestoesPaciente" placeholder="Buscar paciente por nome ou CPF"
+                        keyPrefix="sug-pac" primaryTextProp="nome" secondaryTextProp="cpf"
+                        @focus="mostrarSugestoesPaciente = true" @blur="onBlurSugestoesPaciente"
                         @select="selecionarSugestaoPaciente" />
                 </div>
 
@@ -2479,9 +2490,8 @@ export default {
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Profissional</label>
-                    <select ref="selProfissionalCriacao" v-model="agendamentoForm.profissional_saude_id"
-                        class="form-select"
-                        @change="agendamentoForm.profissional_saude_id = $event.detail ? $event.detail.value : $event.target.value">
+                    <select ref="selProfissionalCriacao" v-model="agendamentoForm.pessoa_id" class="form-select"
+                        @change="agendamentoForm.pessoa_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="d in listaProfissionaisCriacao" :key="d.id" :value="d.id">{{ d.nome }}</option>
                     </select>
@@ -2498,9 +2508,9 @@ export default {
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Valor Cobrado</label>
-                    <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao" @blur="onBlurInputValorCobrado" @focus="$event.target.select()" type="text"
-                        class="form-control" placeholder="0,00"
-                        :disabled="agendamentoForm.is_retorno" />
+                    <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao"
+                        @blur="onBlurInputValorCobrado" @focus="$event.target.select()" type="text" class="form-control"
+                        placeholder="0,00" :disabled="agendamentoForm.is_retorno" />
                     <div class="form-check mt-2">
                         <input class="form-check-input" type="checkbox" id="isRetornoCheckbox"
                             v-model="agendamentoForm.is_retorno">
@@ -2550,18 +2560,29 @@ export default {
         </Modal>
 
         <Modal :modelValue="modalEventosDiaVisivel" :title="tituloModalEventosDia" :nameButton="'Fechar'"
-            :processing="false" :disableClose="bloquearAcoesModalEventosDia" size="xl"
+            :processing="false" :disableClose="bloquearAcoesModalEventosDia" size="xl" customWidth="95vw"
             @update:modelValue="modalEventosDiaVisivel = $event">
-            <TableGrid :key="chaveTabelaEventosDia"
-                :columns="[{ id: 'id', name: 'ID' }, { id: 'paciente', name: 'Paciente' }, { id: 'procedimento', name: 'Procedimento' }, { id: 'medico', name: 'Médico' }, { id: 'hora', name: 'Hora' }, { id: 'status', name: 'Status' }]"
-                :data="eventosDiaGrid()" :tableTitle="'Lista de agendamentos'" :search="true" :showCheckbox="false"
-                :showAddButton="false" :showStatus="false" :showActions="true" :compactSpacing="true"
-                :disableActions="bloquearAcoesModalEventosDia" :actionsLoading="acoesLoadingEventosDia"
-                :actionsConfig="{ delete: (row) => !String(row?.status || '').toLowerCase().includes('cancel'), edit: () => true, show: false, diary: false, print: false, download: false }"
-                :actionsLabels="{ delete: 'Cancelar', edit: 'Editar / Reagendar' }"
-                :actionsButtonText="{ delete: 'Cancelar', edit: 'Editar / Reagendar' }"
-                :actionsIcons="{ delete: 'ri-close-line' }" @delete="cancelarAgendamentoPorId"
-                @edit="abrirReagendarSessaoDaLista" />
+            <SimpleTable :key="chaveTabelaEventosDia"
+                title="Lista de agendamentos"
+                :items="eventosDiaGrid()"
+                :columns="[{ key: 'id', label: 'ID', width: '50px' }, { key: 'paciente', label: 'Paciente' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'medico', label: 'Médico' }, { key: 'hora', label: 'Hora' }, { key: 'status', label: 'Status' }]"
+                has-actions
+                :searchable="true"
+                searchPlaceholder="Buscar agendamento..."
+                :searchFields="['paciente', 'procedimento', 'medico']"
+                emptyTitle="Nenhum agendamento encontrado">
+
+
+
+                <template #actions="{ item }">
+                    <button type="button" class="btn btn-sm btn-light" title="Reagendar" :disabled="bloquearAcoesModalEventosDia || acoesLoadingEventosDia?.[item.id]?.edit" @click="abrirReagendarSessaoDaLista(item.id)">
+                        <i class="ri-edit-line me-1"></i> Reagendar
+                    </button>
+                    <button v-if="!String(item.status || '').toLowerCase().includes('cancel')" type="button" class="btn btn-sm btn-danger" title="Cancelar" :disabled="bloquearAcoesModalEventosDia || acoesLoadingEventosDia?.[item.id]?.delete" @click="cancelarAgendamentoPorId(item)">
+                        <i class="ri-close-line me-1"></i> Cancelar
+                    </button>
+                </template>
+            </SimpleTable>
         </Modal>
 
         <Modal :modelValue="modalEditarVisivel" :title="tituloModalEditarAgendamento"
@@ -2569,16 +2590,15 @@ export default {
             :z-index="2000" :backdrop-z-index="1990" size="lg" @update:modelValue="modalEditarVisivel = $event"
             @save="podeReagendarAgendamentoCancelado() ? reagendarSessaoTratamento() : salvarEdicaoAgendamento()">
             <div :key="chaveRenderizacaoModalEvento" class="row g-3">
-                <div :class="podeReagendarAgendamentoCancelado() ? 'col-md-12' : 'col-md-6'">
+                <div class="col-md-12">
                     <label class="form-label">Paciente</label>
                     <SuggestInput v-model="termoBuscaPacienteEdicao" :suggestions="pacientesSugestoesEdicao"
-                        :loading="false" :show="mostrarSugestoesPacienteEdicao"
-                        :disabled="podeReagendarAgendamentoCancelado()"
+                        :loading="false" :show="mostrarSugestoesPacienteEdicao" :disabled="true"
                         placeholder="Buscar paciente por nome ou CPF" keyPrefix="sug-pac-edit" primaryTextProp="nome"
                         secondaryTextProp="cpf" @focus="mostrarSugestoesPacienteEdicao = true"
                         @blur="onBlurSugestoesPacienteEdicao" @select="selecionarSugestaoPacienteEdicao" />
                 </div>
-                <div v-if="!podeReagendarAgendamentoCancelado()" class="col-md-6">
+                <div v-if="false" class="col-md-6">
                     <label class="form-label">Orçamento</label>
                     <SuggestInput v-model="termoBuscaOrcamentoEdicao" :suggestions="orcamentosPagosEdicao"
                         :loading="buscandoOrcamentosPagosEdicao" :show="mostrarSugestoesOrcamentoEdicao"
@@ -2590,9 +2610,8 @@ export default {
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Profissional</label>
-                    <select ref="selProfissionalEdicao" v-model="editAgendamentoForm.profissional_saude_id"
-                        class="form-select"
-                        @change="editAgendamentoForm.profissional_saude_id = $event.detail ? $event.detail.value : $event.target.value">
+                    <select ref="selProfissionalEdicao" v-model="editAgendamentoForm.pessoa_id" class="form-select"
+                        @change="editAgendamentoForm.pessoa_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="d in listaProfissionaisEdicao" :key="d.id" :value="d.id">{{ d.nome }}</option>
                     </select>
@@ -2602,7 +2621,7 @@ export default {
                     <select v-if="renderProcedimentoEdicao" ref="selProcedimentoEdicao"
                         v-model="editAgendamentoForm.procedimento_id" class="form-select"
                         @change="editAgendamentoForm.procedimento_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarProcedimentoEdicao()"
-                        :disabled="podeReagendarAgendamentoCancelado()">
+                        :disabled="true">
                         <option :value="null">Selecione</option>
                         <option v-for="p in procedimentosFiltradosEdicao" :key="p.id" :value="p.id">{{ p.nome }}
                         </option>
@@ -2618,7 +2637,7 @@ export default {
                     <flatPickr v-model="editAgendamentoForm.hora" class="form-control" :config="opcoesFlatpickrHora"
                         placeholder="Selecione a hora" />
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" v-if="false">
                     <label class="form-label">Status</label>
                     <select v-model="editAgendamentoForm.status_id" class="form-select"
                         :disabled="podeReagendarAgendamentoCancelado()">
@@ -2626,11 +2645,11 @@ export default {
                         <option v-for="s in opcoesStatus" :key="s.id" :value="s.id">{{ s.descricao }}</option>
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label">Valor Cobrado</label>
                     <input v-model="editAgendamentoForm.valor_cobrado" type="text" class="form-control"
                         placeholder="0,00" @blur="onBlurInputValorCobradoEdicao" @focus="$event.target.select()"
-                        :disabled="podeReagendarAgendamentoCancelado()" />
+                        :disabled="true" />
                 </div>
                 <div class="col-md-12">
                     <label class="form-label">Observações</label>

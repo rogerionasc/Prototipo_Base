@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
-import SimpleTable from "@/Components/SimpleTable.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 
 const props = defineProps({
     atendimentos: Array,
@@ -71,8 +71,7 @@ const tableColumns = [
     { key: 'paciente', label: 'Paciente' },
     { key: 'detalhes', label: 'Detalhes' },
     { key: 'chegada', label: 'Chegada / Agendamento' },
-    { key: 'status', label: 'Status' },
-    { key: 'acoes', label: 'Ações', width: '150px' }
+    { key: 'status', label: 'Status' }
 ];
 
 </script>
@@ -90,6 +89,7 @@ const tableColumns = [
                     title="Fila de Atendimento"
                     :items="filteredAtendimentos"
                     :columns="tableColumns"
+                    has-actions
                     :searchable="true"
                     searchPlaceholder="Buscar paciente..."
                     :searchFields="['paciente.nome', 'paciente.cpf']"
@@ -157,19 +157,9 @@ const tableColumns = [
                         </div>
                     </template>
                     
-                    <template #cell(status)="{ item }">
-                        <span class="badge px-2 py-1 fs-12" 
-                              :class="{
-                                  'bg-warning-subtle text-warning': item.status === 'AGUARDANDO',
-                                  'bg-info-subtle text-info': item.status === 'CHAMADO',
-                                  'bg-success-subtle text-success': item.status === 'ATENDIDO',
-                                  'bg-primary-subtle text-primary': item.status === 'EM ATENDIMENTO',
-                              }">
-                            <i class="mdi mdi-circle-medium"></i> {{ item.status }}
-                        </span>
-                    </template>
+
                     
-                    <template #cell(acoes)="{ item }">
+                    <template #actions="{ item }">
                         <div class="d-flex gap-2">
                             <template v-if="item.status === 'AGUARDANDO' || item.status === 'CHAMADO'">
                                 <Link 

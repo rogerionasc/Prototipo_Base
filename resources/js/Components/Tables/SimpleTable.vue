@@ -14,8 +14,13 @@ const props = defineProps({
     rowClass: { type: Function, default: () => '' },
     variant: { type: String, default: 'card' }, // 'card' or 'borderless'
     compact: { type: Boolean, default: false },
-    tableClass: { type: String, default: 'table-borderless' }
+    tableClass: { type: String, default: 'table-borderless' },
+    hasActions: { type: Boolean, default: false },
+    actions: { type: Array, default: () => [] },
+    actionsLabel: { type: String, default: 'Ações' }
 });
+
+const emit = defineEmits(['action']);
 
 const searchQuery = ref('');
 
@@ -67,6 +72,7 @@ const slots = useSlots();
                             <th v-for="(col, index) in columns" :key="index" :style="{ width: col.width || 'auto' }" :class="col.thClass || ''">
                                 {{ col.label }}
                             </th>
+                            <th v-if="hasActions" style="width: 120px;" class="text-end">{{ actionsLabel }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -77,11 +83,24 @@ const slots = useSlots();
                                         {{ item[col.key] }}
                                     </slot>
                                 </td>
+                                <td v-if="hasActions" class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <slot name="actions" :item="item" :index="index">
+                                            <button v-for="(action, actionIndex) in actions" :key="actionIndex" 
+                                                class="btn btn-sm" :class="action.class || 'btn-soft-secondary'"
+                                                :title="action.label"
+                                                @click="$emit('action', action.event, item)">
+                                                <i v-if="action.icon" :class="action.icon"></i>
+                                                <span v-if="action.showLabel" :class="{'ms-1': action.icon}">{{ action.label }}</span>
+                                            </button>
+                                        </slot>
+                                    </div>
+                                </td>
                             </tr>
                         </slot>
 
                         <tr v-if="filteredItems.length === 0">
-                            <td :colspan="columns.length">
+                            <td :colspan="hasActions ? columns.length + 1 : columns.length">
                                 <div class="text-center py-4">
                                     <div class="avatar-md mx-auto mb-3">
                                         <div class="avatar-title bg-light text-primary rounded-circle fs-24">

@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('solicitacao_exames', function (Blueprint $table) {
             $table->id();
             $table->foreignId('prontuario_id')->constrained('prontuarios');
-            $table->foreignId('profissional_saude_id')->constrained('profissionais_saude');
+            $table->foreignId('pessoa_id')->constrained('pessoas');
             $table->text('prescricao')->nullable();
             $table->text('observacoes')->nullable();
             $table->boolean('ativa')->default(true);

@@ -9,7 +9,7 @@ use Inertia\Inertia;
 use Carbon\Carbon;
 use App\Models\Agendamento;
 use App\Models\Paciente;
-use App\Models\ProfissionalSaude;
+use App\Models\Pessoa;
 use App\Models\Procedimento;
 use App\Models\AgendaMedica;
 use App\Models\StatusAgendamento;
@@ -25,25 +25,25 @@ class AgendamentoController extends Controller
     public function index()
     {
         $pacientes = Paciente::select('id','nome','cpf')->orderBy('nome')->get();
-        $profissionais = ProfissionalSaude::with('especialidades:id')->select('id','nome')->orderBy('nome')->get();
+        $profissionais = Pessoa::with('especialidades:id')->select('id','nome')->orderBy('nome')->get();
         $procedimentos = Procedimento::select('id','nome','valor','eh_tratamento','quantidade_sessoes')
             ->with('especialidades:id,nome')
             ->orderBy('nome')->get();
         $status = StatusAgendamento::select('id','descricao')->orderBy('descricao')->get();
         $weekday = Carbon::now()->dayOfWeek;
         $agendasHoje = DB::table('agenda_medica as a')
-            ->join('profissionais_saude as ps', 'ps.id', '=', 'a.profissional_saude_id')
-            ->leftJoin('profissional_especialidade as pe', 'pe.profissional_saude_id', '=', 'ps.id')
+            ->join('pessoas as ps', 'ps.id', '=', 'a.pessoa_id')
+            ->leftJoin('profissional_especialidade as pe', 'pe.pessoa_id', '=', 'ps.id')
             ->leftJoin('especialidades as e', 'e.id', '=', 'pe.especialidade_id')
             ->select(
-                'a.profissional_saude_id',
+                'a.pessoa_id',
                 DB::raw("COALESCE(ps.nome,'') AS nome"),
                 'a.hora_inicio',
                 'a.hora_fim',
                 DB::raw("GROUP_CONCAT(DISTINCT e.nome ORDER BY e.nome SEPARATOR ', ') AS especialidades")
             )
             ->where('a.dia_semana', $weekday)
-            ->groupBy('a.profissional_saude_id','ps.nome','a.hora_inicio','a.hora_fim')
+            ->groupBy('a.pessoa_id','ps.nome','a.hora_inicio','a.hora_fim')
             ->orderBy('ps.nome')
             ->get();
         return Inertia::render('Atendimento/Agendamentos/Index', [
@@ -62,18 +62,18 @@ class AgendamentoController extends Controller
         ]);
         $weekday = Carbon::createFromFormat('Y-m-d', $data['data'])->dayOfWeek;
         $agendas = DB::table('agenda_medica as a')
-            ->join('profissionais_saude as ps', 'ps.id', '=', 'a.profissional_saude_id')
-            ->leftJoin('profissional_especialidade as pe', 'pe.profissional_saude_id', '=', 'ps.id')
+            ->join('pessoas as ps', 'ps.id', '=', 'a.pessoa_id')
+            ->leftJoin('profissional_especialidade as pe', 'pe.pessoa_id', '=', 'ps.id')
             ->leftJoin('especialidades as e', 'e.id', '=', 'pe.especialidade_id')
             ->select(
-                'a.profissional_saude_id',
+                'a.pessoa_id',
                 DB::raw("COALESCE(ps.nome,'') AS nome"),
                 DB::raw("MIN(a.hora_inicio) AS hora_inicio"),
                 DB::raw("MAX(a.hora_fim) AS hora_fim"),
                 DB::raw("GROUP_CONCAT(DISTINCT e.nome ORDER BY e.nome SEPARATOR ', ') AS especialidades")
             )
             ->where('a.dia_semana', $weekday)
-            ->groupBy('a.profissional_saude_id','ps.nome')
+            ->groupBy('a.pessoa_id','ps.nome')
             ->orderBy('ps.nome')
             ->get();
         return response()->json([
@@ -84,7 +84,7 @@ class AgendamentoController extends Controller
     public function countsByWeekday()
     {
         $rows = DB::table('agenda_medica')
-            ->select('dia_semana', DB::raw('COUNT(DISTINCT profissional_saude_id) AS cnt'))
+            ->select('dia_semana', DB::raw('COUNT(DISTINCT pessoa_id) AS cnt'))
             ->groupBy('dia_semana')
             ->get();
         $counts = [];
@@ -100,11 +100,11 @@ class AgendamentoController extends Controller
     {
         $data = $request->validate([
             'ids' => ['required','array','min:1'],
-            'ids.*' => ['integer','exists:profissionais_saude,id'],
+            'ids.*' => ['integer','exists:pessoas,id'],
         ]);
         $rows = DB::table('agenda_medica')
-            ->select('dia_semana', DB::raw('GROUP_CONCAT(DISTINCT profissional_saude_id) AS prof_ids'))
-            ->whereIn('profissional_saude_id', $data['ids'])
+            ->select('dia_semana', DB::raw('GROUP_CONCAT(DISTINCT pessoa_id) AS prof_ids'))
+            ->whereIn('pessoa_id', $data['ids'])
             ->groupBy('dia_semana')
             ->get();
         $map = [];
@@ -139,7 +139,7 @@ class AgendamentoController extends Controller
 
         $data = $request->validate([
             'paciente_id' => ['required','integer','exists:pacientes,id'],
-            'profissional_saude_id' => ['required','integer','exists:profissionais_saude,id'],
+            'pessoa_id' => ['required','integer','exists:pessoas,id'],
             'procedimento_id' => $procRule,
             'data' => ['required','date_format:Y-m-d'],
             'hora' => ['required','regex:/^\d{2}:\d{2}$/'],
@@ -161,7 +161,7 @@ class AgendamentoController extends Controller
             ], 422);
         }
         $weekday = $dt->dayOfWeek;
-        $agenda = AgendaMedica::where('profissional_saude_id', (int)$data['profissional_saude_id'])
+        $agenda = AgendaMedica::where('pessoa_id', (int)$data['pessoa_id'])
             ->where('dia_semana', $weekday)
             ->first();
         if (!$agenda) {
@@ -192,7 +192,7 @@ class AgendamentoController extends Controller
 
             $lastAgendamento = Agendamento::where('paciente_id', (int)$data['paciente_id'])
                 ->whereHas('agendaMedica', function($q) use ($data) {
-                    $q->where('profissional_saude_id', (int)$data['profissional_saude_id']);
+                    $q->where('pessoa_id', (int)$data['pessoa_id']);
                 })
                 ->where(function($q) use ($isConvenio, $data) {
                     if ($isConvenio) {
@@ -264,139 +264,138 @@ class AgendamentoController extends Controller
                 $valorCobrado = (float)($proc->valor ?? 0);
             }
 
-            $sessaoId = null;
-            if ($proc && (bool)$proc->eh_tratamento) {
-                $lastNumQuery = DB::table('sessoes_tratamento')->where('paciente_id', $pacId);
+            $quantidade_sessoes = ($proc && (bool)$proc->eh_tratamento && (int)$proc->quantidade_sessoes > 0) ? (int)$proc->quantidade_sessoes : 1;
 
-                if ($isConvenio) {
-                    $lastNumQuery->where('tuss_id', $procId);
-                } else {
-                    $lastNumQuery->where('procedimento_id', $procId);
+            $agendamentos = [];
+
+            for ($i = 1; $i <= $quantidade_sessoes; $i++) {
+                $isFirst = ($i === 1);
+                
+                $sessaoId = null;
+                if ($proc && (bool)$proc->eh_tratamento) {
+                    $lastNumQuery = DB::table('sessoes_tratamento')->where('paciente_id', $pacId);
+
+                    if ($isConvenio) {
+                        $lastNumQuery->where('tuss_id', $procId);
+                    } else {
+                        $lastNumQuery->where('procedimento_id', $procId);
+                    }
+
+                    $lastNum = $lastNumQuery->max('numero_sessao');
+                    $nextNum = (int)($lastNum ?? 0) + 1;
+                    $sessaoId = DB::table('sessoes_tratamento')->insertGetId([
+                        'procedimento_id' => $isConvenio ? null : $procId,
+                        'tuss_id' => $isConvenio ? $procId : null,
+                        'paciente_id' => $pacId,
+                        'numero_sessao' => $nextNum,
+                        'data_prevista' => $isFirst ? $dt->toDateString() : null,
+                        'realizada' => false,
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
+                        'deleted_at' => null,
+                    ]);
                 }
 
-                $lastNum = $lastNumQuery->max('numero_sessao');
-                $nextNum = (int)($lastNum ?? 0) + 1;
-                $sessaoId = DB::table('sessoes_tratamento')->insertGetId([
+                $agendamentoStatusId = $data['status_id'] ?? null;
+                if (!$agendamentoStatusId || !$isFirst) {
+                    $statusDesc = $isFirst ? 'Agendado' : 'A Agendar';
+                    $statusAgendado = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => $statusDesc]);
+                    $agendamentoStatusId = $statusAgendado->id;
+                }
+
+                $agendamento = Agendamento::create([
+                    'agenda_medica_id' => $isFirst ? $agenda->id : null,
+                    'data' => $isFirst ? $dt->toDateString() : null,
+                    'hora' => $isFirst ? $hora : null,
+                    'paciente_id' => $pacId,
                     'procedimento_id' => $isConvenio ? null : $procId,
                     'tuss_id' => $isConvenio ? $procId : null,
-                    'paciente_id' => $pacId,
-                    'numero_sessao' => $nextNum,
-                    'data_prevista' => $dt->toDateString(),
-                    'realizada' => false,
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
-                    'deleted_at' => null,
-                ]);
-            }
-
-            $agendamentoStatusId = $data['status_id'] ?? null;
-            if (!$agendamentoStatusId) {
-                // Default to Agendado or similar if no status passed
-                $statusAgendado = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Agendado']);
-                $agendamentoStatusId = $statusAgendado->id;
-            }
-
-            $agendamento = Agendamento::create([
-                'agenda_medica_id' => $agenda->id,
-                'data' => $dt->toDateString(),
-                'hora' => $hora,
-                'paciente_id' => $pacId,
-                'procedimento_id' => $isConvenio ? null : $procId,
-                'tuss_id' => $isConvenio ? $procId : null,
-                'sessao_tratamento_id' => $sessaoId,
-                'orcamento_id' => null,
-                'status_id' => $agendamentoStatusId,
-                'agendamento_origem_id' => $agendamentoOrigemId,
-                'valor_cobrado' => $valorCobrado,
-                'observacoes' => $data['observacoes'] ?? null,
-            ]);
-
-            // Se for agendamento de convênio, verificar fluxo de autorização vs atendimento
-            if ($isConvenio && $convenioId) {
-                // Verificar se o procedimento deste convênio requer autorização
-                $convenioTuss = DB::table('convenio_tuss')
-                    ->where('convenio_id', $convenioId)
-                    ->where('tuss_id', $procId)
-                    ->whereNull('deleted_at')
-                    ->first();
-
-                $requerAutorizacao = $convenioTuss && $convenioTuss->requer_autorizacao;
-
-                \Illuminate\Support\Facades\Log::info('Autorizacao Check:', [
-                    'convenio_id' => $convenioId,
-                    'tuss_id' => $procId,
-                    'convenioTuss' => $convenioTuss,
-                    'requerAutorizacao' => $requerAutorizacao,
+                    'sessao_tratamento_id' => $sessaoId,
+                    'orcamento_id' => null,
+                    'status_id' => $agendamentoStatusId,
+                    'agendamento_origem_id' => $agendamentoOrigemId,
+                    'valor_cobrado' => $valorCobrado,
+                    'observacoes' => $data['observacoes'] ?? null,
                 ]);
 
-                if ($requerAutorizacao) {
-                    $pacienteConvenio = DB::table('paciente_convenio')
-                        ->where('paciente_id', $pacId)
+                // Se for agendamento de convênio, verificar fluxo de autorização vs atendimento
+                if ($isConvenio && $convenioId) {
+                    $convenioTuss = DB::table('convenio_tuss')
                         ->where('convenio_id', $convenioId)
-                        ->where('ativo', 1)
+                        ->where('tuss_id', $procId)
                         ->whereNull('deleted_at')
                         ->first();
 
-                    Autorizacao::create([
-                        'convenio_id' => $convenioId,
-                        'carteira' => $pacienteConvenio->numero_carteira ?? null,
-                        'numero_autorizacao' => null,
-                        'status' => 'Pendente',
-                        'validade' => null,
-                        'data_solicitacao' => Carbon::now(),
-                        'data_resposta' => null,
-                        'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
-                        'usuario_id' => Auth::id() ?? 1,
-                        'usuario_id_validou' => null,
-                    ]);
-                } else {
-                    // TODO: Futuramente vai gerar um atendimento automático
-                    // Atendimento::create([...]);
+                    $requerAutorizacao = $convenioTuss && $convenioTuss->requer_autorizacao;
+
+                    if ($requerAutorizacao) {
+                        $pacienteConvenio = DB::table('paciente_convenio')
+                            ->where('paciente_id', $pacId)
+                            ->where('convenio_id', $convenioId)
+                            ->where('ativo', 1)
+                            ->whereNull('deleted_at')
+                            ->first();
+
+                        Autorizacao::create([
+                            'convenio_id' => $convenioId,
+                            'carteira' => $pacienteConvenio->numero_carteira ?? null,
+                            'numero_autorizacao' => null,
+                            'status' => 'Pendente',
+                            'validade' => null,
+                            'data_solicitacao' => Carbon::now(),
+                            'data_resposta' => null,
+                            'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
+                            'usuario_id' => Auth::id() ?? 1,
+                            'usuario_id_validou' => null,
+                        ]);
+                    }
                 }
+
+                // Gerar faturamento + pagamento PENDENTE automaticamente para particulares
+                if (!$isConvenio) {
+                    $fatId = (int)DB::table('faturamentos')->insertGetId([
+                        'paciente_id'      => $pacId,
+                        'agendamento_id'   => $agendamento->id,
+                        'valor_final'      => (float)$valorCobrado,
+                        'tipo_pagador'     => 'PARTICULAR',
+                        'convenio_id'      => null,
+                        'valor_total'      => (float)$valorCobrado,
+                        'valor_cobrado'    => (float)$valorCobrado,
+                        'valor_aprovado'   => 0,
+                        'valor_glosado'    => 0,
+                        'status'           => 'AGUARDANDO_PAGAMENTO',
+                        'data_faturamento' => Carbon::now()->format('Y-m-d H:i:s'),
+                        'vencimento'       => Carbon::today()->toDateString(),
+                        'created_at'       => Carbon::now(),
+                        'updated_at'       => Carbon::now(),
+                    ]);
+
+                    DB::table('contas_receber')->insert([
+                        'faturamento_id' => $fatId,
+                        'paciente_id' => $pacId,
+                        'convenio_id' => null,
+                        'valor' => (float)$valorCobrado,
+                        'vencimento' => Carbon::today()->toDateString(),
+                        'status' => 'ABERTO',
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
+                    ]);
+
+                    Pagamento::create([
+                        'faturamento_id'  => $fatId,
+                        'caixa_id'        => null,
+                        'movimentacao_id' => null,
+                        'valor'           => (float)$valorCobrado,
+                        'forma_pagamento' => null,
+                        'data_pagamento'  => null,
+                        'status'          => 'PENDENTE',
+                    ]);
+                }
+
+                $agendamentos[] = $agendamento;
             }
 
-            // Gerar faturamento + pagamento PENDENTE automaticamente para particulares
-            if (!$isConvenio) {
-                $fatId = (int)DB::table('faturamentos')->insertGetId([
-                    'paciente_id'      => $pacId,
-                    'agendamento_id'   => $agendamento->id,
-                    'valor_final'      => (float)$valorCobrado,
-                    'tipo_pagador'     => 'PARTICULAR',
-                    'convenio_id'      => null,
-                    'valor_total'      => (float)$valorCobrado,
-                    'valor_cobrado'    => (float)$valorCobrado,
-                    'valor_aprovado'   => 0,
-                    'valor_glosado'    => 0,
-                    'status'           => 'AGUARDANDO_PAGAMENTO',
-                    'data_faturamento' => Carbon::now()->format('Y-m-d H:i:s'),
-                    'vencimento'       => Carbon::today()->toDateString(),
-                    'created_at'       => Carbon::now(),
-                    'updated_at'       => Carbon::now(),
-                ]);
-
-                DB::table('contas_receber')->insert([
-                    'faturamento_id' => $fatId,
-                    'paciente_id' => $pacId,
-                    'convenio_id' => null,
-                    'valor' => (float)$valorCobrado,
-                    'vencimento' => Carbon::today()->toDateString(),
-                    'status' => 'ABERTO',
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
-                ]);
-
-                Pagamento::create([
-                    'faturamento_id'  => $fatId,
-                    'caixa_id'        => null,
-                    'movimentacao_id' => null,
-                    'valor'           => (float)$valorCobrado,
-                    'forma_pagamento' => null,
-                    'data_pagamento'  => null,
-                    'status'          => 'PENDENTE',
-                ]);
-            }
-
-            return $agendamento;
+            return $agendamentos[0];
         });
 
         return response()->json([
@@ -492,7 +491,7 @@ class AgendamentoController extends Controller
 
         $data = $request->validate([
             'paciente_id' => ['nullable','integer','exists:pacientes,id'],
-            'profissional_saude_id' => ['nullable','integer','exists:profissionais_saude,id'],
+            'pessoa_id' => ['nullable','integer','exists:pessoas,id'],
             'procedimento_id' => $procRule,
             'data' => ['nullable','date_format:Y-m-d'],
             'hora' => ['nullable','regex:/^\d{2}:\d{2}$/'],
@@ -501,7 +500,7 @@ class AgendamentoController extends Controller
             'observacoes' => ['nullable','string'],
         ]);
         $payload = [];
-        foreach (['paciente_id','profissional_saude_id','data','hora','status_id','valor_cobrado','observacoes'] as $k) {
+        foreach (['paciente_id','pessoa_id','data','hora','status_id','valor_cobrado','observacoes'] as $k) {
             if (array_key_exists($k, $data) && $data[$k] !== null) {
                 $payload[$k] = $data[$k];
             }
@@ -517,7 +516,7 @@ class AgendamentoController extends Controller
             }
         }
 
-        if (array_key_exists('data', $payload)) {
+        if (array_key_exists('data', $payload) && $payload['data']) {
             $dt = Carbon::createFromFormat('Y-m-d', $payload['data'])->startOfDay();
             if ($dt->lessThan(Carbon::today())) {
                 return response()->json([
@@ -525,6 +524,35 @@ class AgendamentoController extends Controller
                         'data' => ['Não é permitido agendar em data passada.']
                     ]
                 ], 422);
+            }
+        }
+
+        $pessoaId = $payload['pessoa_id'] ?? ($agendamento->agendaMedica->pessoa_id ?? null);
+        $novaData = $payload['data'] ?? $agendamento->data;
+
+        if (isset($payload['pessoa_id']) || isset($payload['data'])) {
+            if ($pessoaId && $novaData) {
+                $dt = Carbon::parse($novaData);
+                $weekday = $dt->dayOfWeek;
+                $agenda = \App\Models\AgendaMedica::firstOrCreate(
+                    ['pessoa_id' => $pessoaId, 'dia_semana' => $weekday],
+                    ['horario_inicio' => '08:00', 'horario_fim' => '18:00', 'duracao_consulta' => 30]
+                );
+                $payload['agenda_medica_id'] = $agenda->id;
+            }
+        }
+        
+        if (array_key_exists('pessoa_id', $payload)) {
+            unset($payload['pessoa_id']);
+        }
+
+        // Se estiver atribuindo data para uma sessão pendente ou cancelada, muda o status para 'Agendado'
+        if (isset($payload['data']) && isset($payload['hora']) && !isset($payload['status_id'])) {
+            $statusAtual = $agendamento->status_id ? \App\Models\StatusAgendamento::find($agendamento->status_id) : null;
+            $desc = $statusAtual ? strtolower(trim((string)$statusAtual->descricao)) : '';
+            if (empty($desc) || $desc === 'a agendar' || str_contains($desc, 'cancel')) {
+                $statusAgendado = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Agendado']);
+                $payload['status_id'] = $statusAgendado->id;
             }
         }
 
@@ -561,23 +589,17 @@ class AgendamentoController extends Controller
         if (!empty($agendamento->status_id)) {
             $st = StatusAgendamento::select('id', 'descricao')->find((int)$agendamento->status_id);
             $desc = $st ? strtolower((string)$st->descricao) : '';
-            if (!$desc || strpos($desc, 'cancel') === false) {
+            if ($desc && strpos($desc, 'atendido') !== false) {
                 return response()->json([
                     'errors' => [
-                        'status' => ['Apenas sessões canceladas podem ser reagendadas.']
+                        'status' => ['Sessões já atendidas não podem ser reagendadas.']
                     ]
                 ], 422);
             }
-        } else {
-            return response()->json([
-                'errors' => [
-                    'status' => ['Apenas sessões canceladas podem ser reagendadas.']
-                ]
-            ], 422);
         }
 
         $data = $request->validate([
-            'profissional_saude_id' => ['required','integer','exists:profissionais_saude,id'],
+            'pessoa_id' => ['required','integer','exists:pessoas,id'],
             'data' => ['required','date_format:Y-m-d'],
             'hora' => ['required','regex:/^\d{2}:\d{2}$/'],
         ]);
@@ -592,7 +614,7 @@ class AgendamentoController extends Controller
         }
 
         $weekday = $dt->dayOfWeek;
-        $agenda = AgendaMedica::where('profissional_saude_id', (int)$data['profissional_saude_id'])
+        $agenda = AgendaMedica::where('pessoa_id', (int)$data['pessoa_id'])
             ->where('dia_semana', $weekday)
             ->first();
         if (!$agenda) {
@@ -620,7 +642,7 @@ class AgendamentoController extends Controller
             'agenda_medica_id' => $agenda->id,
             'data' => $dt->toDateString(),
             'hora' => $hora,
-            'status_id' => null,
+            'status_id' => 1,
         ]);
 
         return response()->json([
@@ -642,13 +664,13 @@ class AgendamentoController extends Controller
         if ($convenioId) {
             $convenio = Convenio::select('tipo')->find($convenioId);
             if ($convenio && strtoupper((string)$convenio->tipo) !== 'PARTICULAR') {
-                $profissionais = ProfissionalSaude::query()
-                    ->join('convenio_medico_tuss as cmt', 'cmt.profissional_saude_id', '=', 'profissionais_saude.id')
+                $profissionais = Pessoa::query()
+                    ->join('convenio_medico_tuss as cmt', 'cmt.pessoa_id', '=', 'pessoas.id')
                     ->where('cmt.convenio_id', $convenioId)
                     ->where('cmt.tuss_id', $procedimentoId)
-                    ->select('profissionais_saude.id', 'profissionais_saude.nome')
+                    ->select('pessoas.id', 'pessoas.nome')
                     ->distinct()
-                    ->orderBy('profissionais_saude.nome')
+                    ->orderBy('pessoas.nome')
                     ->get();
 
                 return response()->json([
@@ -663,12 +685,12 @@ class AgendamentoController extends Controller
         }
 
         $especialidadesIds = $procedimento->especialidades->pluck('id')->toArray();
-        $profissionais = ProfissionalSaude::query()
-            ->join('profissional_especialidade as pe', 'pe.profissional_saude_id', '=', 'profissionais_saude.id')
+        $profissionais = Pessoa::query()
+            ->join('profissional_especialidade as pe', 'pe.pessoa_id', '=', 'pessoas.id')
             ->whereIn('pe.especialidade_id', $especialidadesIds)
-            ->select('profissionais_saude.id', 'profissionais_saude.nome')
+            ->select('pessoas.id', 'pessoas.nome')
             ->distinct()
-            ->orderBy('profissionais_saude.nome')
+            ->orderBy('pessoas.nome')
             ->get();
 
         return response()->json([
@@ -683,7 +705,7 @@ class AgendamentoController extends Controller
             ->leftJoin('tuss as t', 't.id', '=', 'a.tuss_id')
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
-            ->leftJoin('profissionais_saude as prof', 'prof.id', '=', 'am.profissional_saude_id')
+            ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
             ->leftJoin('orcamentos as orc', 'orc.id', '=', 'a.orcamento_id')
             ->where('a.paciente_id', $paciente_id)
             ->select(
@@ -693,13 +715,17 @@ class AgendamentoController extends Controller
                 'a.procedimento_id',
                 'a.tuss_id',
                 'orc.convenio_id',
-                'am.profissional_saude_id',
-                DB::raw('COALESCE(pr.nome, t.descricao, "") AS procedimento_nome'),
+                'am.pessoa_id',
+                DB::raw('COALESCE(CONCAT(pr.nome, CASE WHEN st.numero_sessao IS NOT NULL AND pr.quantidade_sessoes IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, "/", pr.quantidade_sessoes, ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END), t.descricao, "") AS procedimento_nome'),
                 DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),
                 DB::raw('COALESCE(s.descricao, "") AS status')
             )
-            ->orderBy('a.data', 'desc')
-            ->orderBy('a.hora', 'desc')
+            ->orderByRaw("CASE WHEN LOWER(COALESCE(s.descricao, '')) LIKE '%atendido%' OR LOWER(COALESCE(s.descricao, '')) LIKE '%cancelado%' THEN 1 ELSE 0 END ASC")
+            ->orderByRaw("CASE WHEN LOWER(COALESCE(s.descricao, '')) LIKE '%atendido%' OR LOWER(COALESCE(s.descricao, '')) LIKE '%cancelado%' THEN a.data END DESC")
+            ->orderByRaw("CASE WHEN a.data IS NULL THEN 0 ELSE 1 END ASC")
+            ->orderBy('a.data', 'asc')
+            ->orderBy('st.numero_sessao', 'asc')
+            ->orderBy('a.hora', 'asc')
             ->get();
 
         $result = $agendamentos->map(function ($ag) {
@@ -717,7 +743,7 @@ class AgendamentoController extends Controller
                 'procedimento_id' => $ag->procedimento_id,
                 'tuss_id' => $ag->tuss_id,
                 'convenio_id' => $ag->convenio_id,
-                'profissional_saude_id' => $ag->profissional_saude_id,
+                'pessoa_id' => $ag->pessoa_id,
             ];
         });
 

@@ -311,7 +311,7 @@
 import { useForm, router } from "@inertiajs/vue3";
 import { ref, watch, computed } from "vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
-import SimpleTable from "@/Components/SimpleTable.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 
 const parametrosColumns = [
     { key: 'id', label: 'ID', width: '80px' },

@@ -45,7 +45,7 @@ class RecepcaoFilaController extends Controller
                 'medico' => $ag->agendaMedica && $ag->agendaMedica->profissionalSaude 
                             ? $ag->agendaMedica->profissionalSaude->nome 
                             : 'N/A',
-                'medico_id' => $ag->agendaMedica ? $ag->agendaMedica->profissional_saude_id : null,
+                'medico_id' => $ag->agendaMedica ? $ag->agendaMedica->pessoa_id : null,
                 'status' => $atendimento ? $atendimento->status : 'Não chegou',
                 'ja_chegou' => $jaChegou,
             ];
@@ -67,7 +67,7 @@ class RecepcaoFilaController extends Controller
 
             Atendimento::create([
                 'paciente_id' => $agendamento->paciente_id,
-                'medico_id' => $agendamento->agendaMedica->profissional_saude_id ?? null,
+                'medico_id' => $agendamento->agendaMedica->pessoa_id ?? null,
                 'agendamento_id' => $agendamento->id,
                 'procedimento_id' => $agendamento->procedimento_id ?? $agendamento->tuss_id,
                 'categoria_procedimento_id' => $catId ?: 1,

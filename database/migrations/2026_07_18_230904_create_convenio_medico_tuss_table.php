@@ -11,12 +11,12 @@ return new class extends Migration
         Schema::create('convenio_medico_tuss', function (Blueprint $table) {
             $table->id();
             $table->foreignId('convenio_id')->constrained('convenios');
-            $table->foreignId('profissional_saude_id')->constrained('profissionais_saude');
+            $table->foreignId('pessoa_id')->constrained('pessoas');
             $table->foreignId('tuss_id')->nullable()->constrained('tuss');
             $table->timestamps();
             $table->softDeletes();
-            $table->unique(['convenio_id', 'profissional_saude_id', 'tuss_id'], 'cv_med_tuss_unique');
-            $table->index(['convenio_id', 'profissional_saude_id']);
+            $table->unique(['convenio_id', 'pessoa_id', 'tuss_id'], 'cv_med_tuss_unique');
+            $table->index(['convenio_id', 'pessoa_id']);
             $table->index(['convenio_id', 'tuss_id']);
         });
     }

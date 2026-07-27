@@ -33,6 +33,6 @@ class Endereco extends Model
 
     public function profissionaisSaude()
     {
-        return $this->hasMany(ProfissionalSaude::class, 'endereco_id');
+        return $this->hasMany(Pessoa::class, 'endereco_id');
     }
 }

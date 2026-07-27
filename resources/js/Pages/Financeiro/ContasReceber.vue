@@ -85,6 +85,7 @@ const cols = [
   { id: "nu_pagamento", name: "Nº Pagamento" },
   { id: "tipo_pagador", name: "Convênio" },
   { id: "paciente", name: "Paciente" },
+  { id: "procedimento", name: "Procedimento" },
   { id: "vencimento", name: "Vencimento" },
   { id: "data_pagamento", name: "Pagamento" },
   { id: "valor", name: "Valor", formatter: (cell) => formatCurrency(cell) },

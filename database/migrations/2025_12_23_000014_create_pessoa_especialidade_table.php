@@ -11,12 +11,12 @@ return new class extends Migration
         if (!Schema::hasTable('profissional_especialidade')) {
             Schema::create('profissional_especialidade', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('profissional_saude_id')->constrained('profissionais_saude');
+                $table->foreignId('pessoa_id')->constrained('pessoas');
                 $table->foreignId('especialidade_id')->constrained('especialidades');
                 $table->string('qre', 6)->nullable();
                 $table->timestamps();
                 $table->softDeletes();
-                $table->unique(['profissional_saude_id', 'especialidade_id'], 'ps_esp_unique');
+                $table->unique(['pessoa_id', 'especialidade_id'], 'ps_esp_unique');
             });
         }
     }

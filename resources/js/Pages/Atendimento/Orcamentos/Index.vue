@@ -238,7 +238,7 @@ import html2pdf from "html2pdf.js";
 import { html } from "gridjs";
 import OrcamentoPrint from "@/Pages/Atendimento/Orcamentos/OrcamentoPrint.vue";
 import { useChoicesRemoteSearch } from "@/Composables/useChoicesRemoteSearch";
-import SimpleTable from "@/Components/SimpleTable.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 
 const procedimentosColumns = [
     { key: 'descricao', label: 'Descrição do Procedimento', width: '50%' },

@@ -146,6 +146,7 @@ class MovimentacaoCaixaController extends Controller
                 DB::raw("COALESCE(pa.cpf,'') AS paciente_documento"),
                 DB::raw("DATE_FORMAT(f.created_at, '%d-%m-%Y %H:%i') AS data_faturamento"),
                 'p.id as pagamento_id',
+                'p.nu_pagamento',
                 'p.caixa_id',
                 'p.forma_pagamento',
                 'p.status as pagamento_status'

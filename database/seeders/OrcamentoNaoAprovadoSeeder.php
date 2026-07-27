@@ -6,7 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Orcamento;
 use App\Models\OrcamentoProcedimento;
 use App\Models\Paciente;
-use App\Models\ProfissionalSaude;
+use App\Models\Pessoa;
 use App\Models\Procedimento;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -35,7 +35,6 @@ class OrcamentoNaoAprovadoSeeder extends Seeder
                     'desconto' => 0,
                     'valor_total' => 0,
                     'valor_avista' => null,
-                    'faturamento_previsto' => false,
                     'aprovado' => false,
                 ]
             );

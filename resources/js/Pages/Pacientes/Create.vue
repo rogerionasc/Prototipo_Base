@@ -301,7 +301,7 @@ import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/l10n/pt.js";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
-import SimpleTable from "@/Components/SimpleTable.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 import Modal from "@/Components/Modal.vue";
 const flatpickrOptions = { altInput: true, altFormat: "d M, Y", dateFormat: "Y-m-d", locale: "pt" };
 import { useForm } from "@inertiajs/vue3";

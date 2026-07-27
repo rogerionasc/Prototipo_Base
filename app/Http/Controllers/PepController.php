@@ -26,7 +26,7 @@ class PepController extends Controller
             ['atendimento_id' => $atendimento->id],
             [
                 'paciente_id' => $paciente->id,
-                'profissional_id' => $atendimento->medico_id ?? $user->profissional_saude_id,
+                'profissional_id' => $atendimento->medico_id ?? $user->pessoa_id,
                 'status' => 'Aberto',
                 'aberto_em' => now(),
                 'created_by' => $user->id,
@@ -47,7 +47,7 @@ class PepController extends Controller
             'paciente' => $paciente,
             'pep' => $pep,
             'historico' => $historico,
-            'auth_profissional_id' => $user->profissional_saude_id
+            'auth_profissional_id' => $user->pessoa_id
         ]);
     }
 
@@ -64,7 +64,7 @@ class PepController extends Controller
         $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
         
         // Na anamnese, como ela pertence ao PEP, apenas o criador do PEP ou o profissional atual pode salvar
-        if ($pep->profissional_id != auth()->user()->profissional_saude_id) {
+        if ($pep->profissional_id != auth()->user()->pessoa_id) {
             abort(403, 'Apenas o médico responsável por este atendimento pode alterar a anamnese.');
         }
 
@@ -107,7 +107,7 @@ class PepController extends Controller
         \App\Models\PepSinaisVitais::updateOrCreate(
             ['pep_id' => $pep->id], // Atualiza a triagem existente do PEP ou cria uma nova
             array_merge($validated, [
-                'profissional_id' => auth()->user()->profissional_saude_id
+                'profissional_id' => auth()->user()->pessoa_id
             ])
         );
 
@@ -125,7 +125,7 @@ class PepController extends Controller
         
         PepEvolucao::create([
             'pep_id' => $pep->id,
-            'profissional_id' => auth()->user()->profissional_saude_id,
+            'profissional_id' => auth()->user()->pessoa_id,
             'tipo' => $request->tipo ?? 'Evolução Clínica',
             'descricao' => $request->descricao
         ]);
@@ -135,7 +135,7 @@ class PepController extends Controller
 
     public function deleteEvolucao(Atendimento $atendimento, PepEvolucao $evolucao)
     {
-        if ($evolucao->profissional_id != auth()->user()->profissional_saude_id) {
+        if ($evolucao->profissional_id != auth()->user()->pessoa_id) {
             abort(403, 'Você não pode excluir uma evolução criada por outro profissional.');
         }
         
@@ -162,7 +162,7 @@ class PepController extends Controller
         DB::transaction(function () use ($pep, $request) {
             $prescricao = PepPrescricao::create([
                 'pep_id' => $pep->id,
-                'profissional_id' => auth()->user()->profissional_saude_id,
+                'profissional_id' => auth()->user()->pessoa_id,
                 'observacao' => $request->observacao
             ]);
 
@@ -185,7 +185,7 @@ class PepController extends Controller
 
     public function deletePrescricao(Atendimento $atendimento, PepPrescricao $prescricao)
     {
-        if ($prescricao->profissional_id != auth()->user()->profissional_saude_id) {
+        if ($prescricao->profissional_id != auth()->user()->pessoa_id) {
             abort(403, 'Você não pode excluir uma prescrição criada por outro profissional.');
         }
         
@@ -208,7 +208,7 @@ class PepController extends Controller
             'descricao' => $request->descricao,
             'principal' => $request->principal ?? false,
             'confirmado' => $request->confirmado ?? false,
-            'profissional_id' => auth()->user()->profissional_saude_id,
+            'profissional_id' => auth()->user()->pessoa_id,
         ]);
 
         return redirect()->back()->with('success', 'Diagnóstico adicionado com sucesso.');

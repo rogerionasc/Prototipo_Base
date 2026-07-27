@@ -30,6 +30,6 @@ class PepPrescricao extends Model
 
     public function profissional()
     {
-        return $this->belongsTo(ProfissionalSaude::class, 'profissional_id');
+        return $this->belongsTo(Pessoa::class, 'profissional_id');
     }
 }

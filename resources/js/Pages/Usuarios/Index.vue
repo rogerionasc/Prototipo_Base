@@ -31,7 +31,7 @@ const usuariosFormatados = computed(() => {
     return props.usuarios.map(u => ({
         ...u,
         nome_completo: `${u.nome} ${u.sobrenome || ''}`.trim(),
-        medico_vinculado: u.profissional_saude ? u.profissional_saude.nome : 'Nenhum'
+        medico_vinculado: u.pessoa ? u.pessoa.nome : 'Nenhum'
     }));
 });
 
@@ -46,7 +46,7 @@ const form = useForm({
     email: '',
     password: '',
     password_confirmation: '',
-    profissional_saude_id: null
+    pessoa_id: null
 });
 
 // Opções para o Multiselect
@@ -58,7 +58,7 @@ const profissionaisOptions = computed(() => {
 });
 
 // Preencher automaticamente quando selecionar o profissional
-watch(() => form.profissional_saude_id, (newId) => {
+watch(() => form.pessoa_id, (newId) => {
     if (newId) {
         const prof = props.profissionais.find(p => p.id === newId);
         if (prof) {
@@ -108,12 +108,12 @@ function submit() {
                 <div class="col-md-12">
                     <label class="form-label">Vincular a Médico/Pessoa (Busca)</label>
                     <Multiselect
-                        v-model="form.profissional_saude_id"
+                        v-model="form.pessoa_id"
                         :options="profissionaisOptions"
                         :searchable="true"
                         placeholder="Pesquise por um profissional (Opcional)"
                     />
-                    <div v-if="form.errors.profissional_saude_id" class="text-danger mt-1">{{ form.errors.profissional_saude_id }}</div>
+                    <div v-if="form.errors.pessoa_id" class="text-danger mt-1">{{ form.errors.pessoa_id }}</div>
                 </div>
 
                 <div class="col-md-12">

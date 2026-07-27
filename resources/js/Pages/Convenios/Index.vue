@@ -140,7 +140,7 @@ async function onSaveConvenio() {
       const mId = Number(m.id);
       // c.medico_tuss is eager loaded in ConvenioController as medico_tuss or medicoTuss
       const tList = c.medicoTuss || c.medico_tuss || [];
-      const tussIds = tList.filter(mt => Number(mt.pivot.profissional_saude_id) === mId).map(mt => mt.id);
+      const tussIds = tList.filter(mt => Number(mt.pivot.pessoa_id) === mId).map(mt => mt.id);
       return { ...m, tuss_ids: tussIds };
     });
      convenioFormRef.value.form.medicos = medicosMap.map(m => ({ id: m.id, tuss_ids: m.tuss_ids }));
