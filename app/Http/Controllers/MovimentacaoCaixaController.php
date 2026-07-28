@@ -75,7 +75,7 @@ class MovimentacaoCaixaController extends Controller
             ->orderByDesc('m.updated_at')
             ->limit(100)
             ->get();
-        $pagamentosPendentes = $this->getPagamentosPendentes(request('data_pendentes'));
+        $pagamentosPendentes = $this->getPagamentosPendentes(request('data_pendentes'), request('search_pendentes'));
         $ultimosPagamentos = DB::table('pagamentos as p')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
@@ -90,7 +90,7 @@ class MovimentacaoCaixaController extends Controller
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
                 DB::raw("COALESCE(c.descricao,'') AS caixa")
             )
-            ->where('p.status', 'CONFIRMADO')
+            ->where('p.status', 'PAGO')
             ->where('f.tipo_pagador', 'PARTICULAR')
             ->orderByDesc('p.data_pagamento')
             ->orderByDesc('p.created_at')
@@ -124,7 +124,7 @@ class MovimentacaoCaixaController extends Controller
         ]);
     }
 
-    private function getPagamentosPendentes($date = null)
+    private function getPagamentosPendentes($date = null, $search = null)
     {
         $date = $date ?: now()->toDateString();
         $pendIds = DB::table('pagamentos as pg')
@@ -132,7 +132,7 @@ class MovimentacaoCaixaController extends Controller
             ->where('pg.status', 'PENDENTE')
             ->groupBy('pg.faturamento_id');
 
-        return DB::table('faturamentos as f')
+        $query = DB::table('faturamentos as f')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->leftJoin('contas_receber as cr', 'cr.faturamento_id', '=', 'f.id')
             ->joinSub($pendIds, 'pp', function ($join) {
@@ -151,9 +151,19 @@ class MovimentacaoCaixaController extends Controller
                 'p.forma_pagamento',
                 'p.status as pagamento_status'
             )
-            ->where('f.tipo_pagador', 'PARTICULAR')
-            ->whereDate('p.created_at', $date)
-            ->orderByDesc('f.updated_at')
+            ->where('f.tipo_pagador', 'PARTICULAR');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('pa.nome', 'like', "%{$search}%")
+                  ->orWhere('pa.cpf', 'like', "%{$search}%")
+                  ->orWhere('p.nu_pagamento', 'like', "%{$search}%");
+            });
+        } else {
+            $query->whereDate('p.created_at', $date);
+        }
+
+        return $query->orderByDesc('f.updated_at')
             ->orderByDesc('f.id')
             ->get();
     }

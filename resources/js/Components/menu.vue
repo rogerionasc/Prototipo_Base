@@ -47,7 +47,7 @@ export default {
                     type: "link",
                     target: "#caixa",
                     children: [
-                        { href: "/movimentacoes-caixa", label: "Abertura" },
+                        { href: "/movimentacoes-caixa", label: "Movimentações" },
                         { href: "/cadastro-caixa", label: "Cadastro" },
                         { href: "/pagamentos-recusados", label: "Pagamentos Recusados" },
                         { href: "#", label: "Sangria" },

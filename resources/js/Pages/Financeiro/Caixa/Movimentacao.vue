@@ -657,7 +657,14 @@ const ultimosPagamentosFiltered = computed(() => {
   if (!cid || !movId) return [];
   return (ultimosPagamentosLocal.value || []).filter(p => String(p.movimentacao_id) === String(movId));
 });
-const pendentesQuery = ref("");
+const pendentesQuery = ref(new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('search_pendentes') || "");
+let pendentesSearchTimeout = null;
+watch(pendentesQuery, (nv) => {
+  if (pendentesSearchTimeout) clearTimeout(pendentesSearchTimeout);
+  pendentesSearchTimeout = setTimeout(() => {
+    fetchPendentes();
+  }, 400);
+});
 function filterRow(row, q) {
   const s = String(q || "").toLowerCase();
   if (!s) return true;
@@ -720,7 +727,7 @@ const pendentesData = ref(urlParams.get('data_pendentes') || todayYMD());
 function fetchPendentes() {
   router.get(
     window.location.pathname,
-    { data_pendentes: pendentesData.value },
+    { data_pendentes: pendentesData.value, search_pendentes: pendentesQuery.value },
     { preserveState: true, replace: true, preserveScroll: true }
   );
 }
@@ -808,7 +815,7 @@ function formatCurrency(n) {
 function pagamentoStatusLabel(row) {
   const raw = String(row?.status ?? row?.pagamento_status ?? '').trim();
   const s = raw.toUpperCase();
-  if (s === 'CONFIRMADO') return 'Pago';
+  if (s === 'PAGO') return 'Pago';
   if (s === 'PENDENTE') return 'Pendente';
   if (s === 'RECUSADO') return 'Recusado';
   if (s === 'CANCELADO') return 'Cancelado';
@@ -1155,6 +1162,7 @@ function isSelectedDateToday() {
 
 async function fetchPendentesNow() {
   if (!isSelectedDateToday()) return;
+  if (pendentesQuery.value) return; // Não atualiza (polling) enquanto houver busca ativa
   try {
     const response = await axios.get('/movimentacoes-caixa/pendentes');
     if (response.data && response.data.pagamentosPendentes) {

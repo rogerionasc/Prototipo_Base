@@ -10,14 +10,37 @@ class ConvenioSeeder extends Seeder
     public function run(): void
     {
         $items = [
-            ['descricao' => 'Particular', 'tipo' => 'PARTICULAR', 'empresa_id' => null, 'ans' => null, 'dias_recebimento' => 0, 'dias_retorno' => 0],
-            ['descricao' => 'Amil', 'tipo' => 'CONVENIO', 'empresa_id' => null, 'ans' => 123456, 'dias_recebimento' => 30, 'dias_retorno' => 15],
-            ['descricao' => 'Unimed', 'tipo' => 'CONVENIO', 'empresa_id' => null, 'ans' => 654321, 'dias_recebimento' => 30, 'dias_retorno' => 15],
-            ['descricao' => 'SulAmérica', 'tipo' => 'CONVENIO', 'empresa_id' => null, 'ans' => 111222, 'dias_recebimento' => 30, 'dias_retorno' => 15],
+            [
+                'descricao' => 'Unimed',
+                'tipo' => 'CONVENIO',
+                'empresa_id' => null,
+                'ans' => 320498,
+                'dias_recebimento' => 30,
+                'dias_retorno' => 15,
+                'logo_path' => 'convenios/logo1.png'
+            ],
+            [
+                'descricao' => 'Humana Saúde',
+                'tipo' => 'CONVENIO',
+                'empresa_id' => null,
+                'ans' => 318043,
+                'dias_recebimento' => 30,
+                'dias_retorno' => 15,
+                'logo_path' => 'convenios/logo2.png'
+            ],
+            [
+                'descricao' => 'Amil',
+                'tipo' => 'CONVENIO',
+                'empresa_id' => null,
+                'ans' => 326305,
+                'dias_recebimento' => 30,
+                'dias_retorno' => 15,
+                'logo_path' => 'convenios/logo3.png'
+            ],
         ];
+
         foreach ($items as $data) {
-            Convenio::firstOrCreate(['descricao' => $data['descricao']], $data);
+            Convenio::updateOrCreate(['descricao' => $data['descricao']], $data);
         }
     }
 }
-

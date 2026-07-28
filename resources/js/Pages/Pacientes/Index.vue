@@ -6,7 +6,7 @@
         <TableGrid :columns="columns" :data="pacientesLocal" :tableTitle="'Todos os Pacientes'" :showStatus="false"
             :searchPlaceholder="'Buscar por paciente'" @modalDdeletarMultiplos="openModalDeleteMulti"
             @delete="openModalDelete" @edit="openModalEdit" @show="openModalShow" @add="openModalAdd" />
-        <Modal v-model="showModal" :title="modalTitle" size="xl" :name-button="saveButtonText"
+        <Modal v-model="showModal" :title="modalTitle" size="xxl" custom-width="95vw" :name-button="saveButtonText"
             :processing="saveProcessing" @save="onSavePaciente">
             <PacienteForm ref="pacienteFormRef" :key="formKey" :estados-civis="props.estadosCivis"
                 :tipos-sanguineos="props.tiposSanguineos" :canais-aviso="props.canaisAviso" :convenios="props.convenios"
@@ -16,14 +16,14 @@
             :item-delete="pacienteToDelete" @save="confirmDelete" />
         <ModalDelete v-model="bulkDeleteModal" :title="'Excluir Pacientes'" :subTitle="bulkDeleteSubTitle"
             :item-delete="bulkDeleteSummary" @save="confirmBulkDelete" />
-        <Modal v-model="showViewModal" :title="'Paciente'" size="xl" :name-button="'Fechar'" :processing="false"
-            @save="fecharViewModal">
+        <Modal v-model="showViewModal" :title="'Paciente'" size="xxl" custom-width="95vw" :name-button="'Fechar'"
+            :processing="false" @save="fecharViewModal">
             <BTabs nav-class="nav-tabs-custom text-muted">
                 <BTab title="Informações">
                     <div class="row g-3 mt-2" v-if="selectedPaciente">
                         <h6 class="fs-14 mb-0 text-primary">Dados Pessoais</h6>
                         <hr class="mt-2 mb-0 border-primary" style="opacity: 0.1;" />
-                        
+
                         <div class="col-md-6">
                             <label class="form-label text-muted mb-1">Nome</label>
                             <div class="fw-medium fs-14">{{ selectedPaciente.nome }}</div>
@@ -34,7 +34,8 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label text-muted mb-1">Nascimento</label>
-                            <div class="fw-medium fs-14">{{ formatDateTimeBR(selectedPaciente.data_nascimento) || '-' }}</div>
+                            <div class="fw-medium fs-14">{{ formatDateTimeBR(selectedPaciente.data_nascimento) || '-' }}
+                            </div>
                         </div>
 
                         <div class="col-md-6">
@@ -48,7 +49,7 @@
 
                         <h6 class="fs-14 mb-0 mt-4 text-primary">Contato e Endereço</h6>
                         <hr class="mt-2 mb-0 border-primary" style="opacity: 0.1;" />
-                        
+
                         <div class="col-md-6">
                             <label class="form-label text-muted mb-1">Celular</label>
                             <div class="fw-medium fs-14">{{ selectedPaciente.celular || '-' }}</div>
@@ -93,24 +94,23 @@
                     <div class="mt-2">
                         <SimpleTable variant="borderless" compact tableClass="table-sm align-middle"
                             :items="agendamentosPaciente"
-                            :columns="[{ key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }]"
-                            has-actions
-                            :searchable="true"
-                            searchPlaceholder="Buscar agendamento..."
-                            :searchFields="['procedimento', 'profissional', 'status']"
+                            :columns="[{ key: 'nu_pagamento', label: 'Nº Pgto' }, { key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }, { key: 'status_pagamento', label: 'Pagamento' }]"
+                            has-actions :searchable="true" searchPlaceholder="Buscar agendamento..."
+                            :searchFields="['procedimento', 'profissional', 'status', 'nu_pagamento', 'status_pagamento']"
                             emptyTitle="Nenhum agendamento encontrado">
 
                             <template #cell(data)="{ item }">
                                 {{ item.data ? formatDateTimeBR(item.data).split(' ')[0] : 'A Agendar' }}
                             </template>
-                            
+
                             <template #cell(hora)="{ item }">
                                 {{ item.hora || '--:--' }}
                             </template>
 
+
                             <template #actions="{ item }">
-                                <button v-if="!item.atendido" type="button" class="btn btn-sm btn-light" title="Reagendar"
-                                    @click="abrirModalReagendar(item)">
+                                <button v-if="!item.atendido" type="button" class="btn btn-sm btn-light"
+                                    title="Reagendar" @click="abrirModalReagendar(item)">
                                     <i class="ri-edit-line me-1"></i> Reagendar
                                 </button>
                                 <span v-else class="text-muted small">—</span>
@@ -122,14 +122,14 @@
         </Modal>
 
         <!-- Modal de Reagendamento Rápido -->
-        <Modal v-model="reagendarModal" title="Reagendar Agendamento" size="xl" name-button="Confirmar"
-            :processing="reagendarProcessing" @save="confirmarReagendamento">
+        <Modal v-model="reagendarModal" title="Reagendar Agendamento" size="xl" name-button="Confirmar" :zIndex="1070"
+            :backdropZIndex="1065" :processing="reagendarProcessing" @save="confirmarReagendamento">
             <div class="mb-4 p-3 bg-light rounded border" v-if="reagendarAgendamentoData">
                 <h6 class="mb-2 text-primary"><i class="ri-calendar-event-line me-1"></i> Agendamento Atual</h6>
                 <div class="row text-muted small">
                     <div class="col-sm-6">
                         <strong>Data:</strong> {{ formatDateTimeBR(reagendarAgendamentoData.data).split(' ')[0] }} às {{
-                        reagendarAgendamentoData.hora }}<br>
+                            reagendarAgendamentoData.hora }}<br>
                         <strong>Médico:</strong> {{ reagendarAgendamentoData.profissional || 'Não definido' }}
                     </div>
                     <div class="col-sm-6">
@@ -295,7 +295,7 @@ async function abrirModalReagendar(ag) {
                     if (el._choicesInstance && targetPessoaId) {
                         try {
                             el._choicesInstance.setChoiceByValue(targetPessoaId);
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                     if (window.syncChoiceValue) {
                         window.syncChoiceValue(el, targetPessoaId);

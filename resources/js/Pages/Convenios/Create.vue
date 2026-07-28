@@ -990,6 +990,9 @@ defineExpose({ form, submit, submitUpdate, processingRef: toRef(form, "processin
 .choices {
   margin-bottom: 0 !important;
 }
+:deep(.nav-tabs-custom .nav-link.active) {
+  background-color: transparent !important;
+}
 .tuss-panel {
   box-shadow: 0 .125rem .25rem rgba(0,0,0,.04);
 }

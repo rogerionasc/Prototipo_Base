@@ -707,6 +707,8 @@ class AgendamentoController extends Controller
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
             ->leftJoin('orcamentos as orc', 'orc.id', '=', 'a.orcamento_id')
+            ->leftJoin('faturamentos as f', 'f.agendamento_id', '=', 'a.id')
+            ->leftJoin('pagamentos as pag', 'pag.faturamento_id', '=', 'f.id')
             ->where('a.paciente_id', $paciente_id)
             ->select(
                 'a.id',
@@ -718,7 +720,9 @@ class AgendamentoController extends Controller
                 'am.pessoa_id',
                 DB::raw('COALESCE(CONCAT(pr.nome, CASE WHEN st.numero_sessao IS NOT NULL AND pr.quantidade_sessoes IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, "/", pr.quantidade_sessoes, ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END), t.descricao, "") AS procedimento_nome'),
                 DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),
-                DB::raw('COALESCE(s.descricao, "") AS status')
+                DB::raw('COALESCE(s.descricao, "") AS status'),
+                'pag.nu_pagamento',
+                DB::raw('COALESCE(pag.status, "N/A") AS status_pagamento')
             )
             ->orderByRaw("CASE WHEN LOWER(COALESCE(s.descricao, '')) LIKE '%atendido%' OR LOWER(COALESCE(s.descricao, '')) LIKE '%cancelado%' THEN 1 ELSE 0 END ASC")
             ->orderByRaw("CASE WHEN LOWER(COALESCE(s.descricao, '')) LIKE '%atendido%' OR LOWER(COALESCE(s.descricao, '')) LIKE '%cancelado%' THEN a.data END DESC")
@@ -739,6 +743,8 @@ class AgendamentoController extends Controller
                 'procedimento' => $ag->procedimento_nome ?: 'Procedimento',
                 'profissional' => $ag->profissional_nome ?: 'Profissional',
                 'status' => $ag->status ?: 'Agendado',
+                'nu_pagamento' => $ag->nu_pagamento,
+                'status_pagamento' => $ag->status_pagamento,
                 'atendido' => $atendido,
                 'procedimento_id' => $ag->procedimento_id,
                 'tuss_id' => $ag->tuss_id,

@@ -103,7 +103,7 @@ class PagamentoController extends Controller
             'caixa_id' => ['required','integer','exists:caixas,id'],
         ]);
         $pag = Pagamento::findOrFail($id);
-        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
+        if (strtoupper((string)$pag->status) === 'PAGO') {
             return back()->withErrors([
                 'pagamento' => 'Pagamento já confirmado.',
             ], 422);
@@ -119,7 +119,7 @@ class PagamentoController extends Controller
     public function cancelPix(Request $request, string $id)
     {
         $pag = Pagamento::findOrFail($id);
-        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
+        if (strtoupper((string)$pag->status) === 'PAGO') {
             return back()->withErrors([
                 'pagamento' => 'Pagamento já confirmado.',
             ], 422);
@@ -142,7 +142,7 @@ class PagamentoController extends Controller
             'pagamento_id' => ['required','integer','exists:pagamentos,id'],
         ]);
         $pag = Pagamento::findOrFail((int)$data['pagamento_id']);
-        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
+        if (strtoupper((string)$pag->status) === 'PAGO') {
             return response()->json(['error' => 'Pagamento já confirmado'], 422);
         }
         if (($pag->forma_pagamento ?? '') !== 'PIX') {
@@ -202,43 +202,15 @@ class PagamentoController extends Controller
         $simulate = filter_var($request->input('simulate', false), FILTER_VALIDATE_BOOLEAN);
         $mpPaymentId = $request->input('mp_payment_id');
         $pag = Pagamento::findOrFail((int)$data['pagamento_id']);
-        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
+        if (strtoupper((string)$pag->status) === 'PAGO') {
             return response()->json(['success' => true, 'message' => 'Pagamento já confirmado']);
         }
         if (($pag->forma_pagamento ?? '') !== 'PIX') {
             return response()->json(['error' => 'Forma de pagamento inválida'], 422);
         }
         if ($simulate && filter_var(env('PIX_LOCAL_SIMULATION', false), FILTER_VALIDATE_BOOLEAN)) {
-            $caixaId = (int)($pag->caixa_id ?? 0);
-            if (!$caixaId) {
-                return response()->json(['error' => 'Pagamento não vinculado a caixa'], 422);
-            }
-            $caixa = Caixa::select('id','ativo','bloquear_receber')->find($caixaId);
-            if (!$caixa || !$caixa->ativo || $caixa->bloquear_receber) {
-                return response()->json(['error' => 'Caixa indisponível'], 422);
-            }
-            $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
-                ->whereNull('fechado_em')
-                ->first();
-            if (!$mov) {
-                return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
-            }
-            DB::transaction(function () use ($pag, $mov) {
-                $pag->update([
-                    'movimentacao_id' => $mov->id,
-                    'data_pagamento' => \Carbon\Carbon::now(),
-                    'status' => 'CONFIRMADO',
-                ]);
-                $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
-                $totSaidas = (float)($mov->total_saidas ?? 0);
-                $saldoInicial = (float)($mov->saldo_caixa ?? 0);
-                $saldoMov = $saldoInicial + $totEntradas - $totSaidas;
-                $mov->update([
-                    'total_entradas' => $totEntradas,
-                    'saldo_movimento' => $saldoMov,
-                ]);
-                $this->syncFaturamentoFromPagamento($pag);
-            });
+            $err = $this->processarPagamento($pag);
+            if ($err) return $err;
             return response()->json(['success' => true, 'simulated' => true]);
         }
         $token = env('MERCADO_PAGO_ACCESS_TOKEN');
@@ -260,36 +232,8 @@ class PagamentoController extends Controller
                         if (number_format((float)$pag->valor, 2, '.', '') !== number_format($amount, 2, '.', '')) {
                             return response()->json(['error' => 'Valor divergente'], 422);
                         }
-                        $caixaId = (int)($pag->caixa_id ?? 0);
-                        if (!$caixaId) {
-                            return response()->json(['error' => 'Pagamento não vinculado a caixa'], 422);
-                        }
-                        $caixa = Caixa::select('id','ativo','bloquear_receber')->find($caixaId);
-                        if (!$caixa || !$caixa->ativo || $caixa->bloquear_receber) {
-                            return response()->json(['error' => 'Caixa indisponível'], 422);
-                        }
-                        $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
-                            ->whereNull('fechado_em')
-                            ->first();
-                        if (!$mov) {
-                            return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
-                        }
-                        DB::transaction(function () use ($pag, $mov) {
-                            $pag->update([
-                                'movimentacao_id' => $mov->id,
-                                'data_pagamento' => \Carbon\Carbon::now(),
-                                'status' => 'CONFIRMADO',
-                            ]);
-                            $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
-                            $totSaidas = (float)($mov->total_saidas ?? 0);
-                            $saldoInicial = (float)($mov->saldo_caixa ?? 0);
-                            $saldoMov = $saldoInicial + $totEntradas - $totSaidas;
-                            $mov->update([
-                                'total_entradas' => $totEntradas,
-                                'saldo_movimento' => $saldoMov,
-                            ]);
-                            $this->syncFaturamentoFromPagamento($pag);
-                        });
+                        $err = $this->processarPagamento($pag);
+                        if ($err) return $err;
                         try { Log::info('MP status approved by id', ['mp_payment_id' => $mpPaymentId, 'pagamento_id' => $pag->id]); } catch (\Throwable $e) {}
                         return response()->json(['success' => true]);
                     } else {
@@ -329,36 +273,8 @@ class PagamentoController extends Controller
         if (number_format((float)$pag->valor, 2, '.', '') !== number_format($amount, 2, '.', '')) {
             return response()->json(['error' => 'Valor divergente'], 422);
         }
-        $caixaId = (int)($pag->caixa_id ?? 0);
-        if (!$caixaId) {
-            return response()->json(['error' => 'Pagamento não vinculado a caixa'], 422);
-        }
-        $caixa = Caixa::select('id','ativo','bloquear_receber')->find($caixaId);
-        if (!$caixa || !$caixa->ativo || $caixa->bloquear_receber) {
-            return response()->json(['error' => 'Caixa indisponível'], 422);
-        }
-        $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
-            ->whereNull('fechado_em')
-            ->first();
-        if (!$mov) {
-            return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
-        }
-        DB::transaction(function () use ($pag, $mov) {
-            $pag->update([
-                'movimentacao_id' => $mov->id,
-                'data_pagamento' => \Carbon\Carbon::now(),
-                'status' => 'CONFIRMADO',
-            ]);
-            $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
-            $totSaidas = (float)($mov->total_saidas ?? 0);
-            $saldoInicial = (float)($mov->saldo_caixa ?? 0);
-            $saldoMov = $saldoInicial + $totEntradas - $totSaidas;
-            $mov->update([
-                'total_entradas' => $totEntradas,
-                'saldo_movimento' => $saldoMov,
-            ]);
-            $this->syncFaturamentoFromPagamento($pag);
-        });
+        $err = $this->processarPagamento($pag);
+        if ($err) return $err;
         return response()->json(['success' => true]);
     }
 
@@ -396,36 +312,8 @@ class PagamentoController extends Controller
         if (number_format((float)$pag->valor, 2, '.', '') !== number_format($amount, 2, '.', '')) {
             return response()->json(['error' => 'Valor divergente'], 422);
         }
-        $caixaId = (int)($pag->caixa_id ?? 0);
-        if (!$caixaId) {
-            return response()->json(['error' => 'Pagamento não vinculado a caixa'], 422);
-        }
-        $caixa = Caixa::select('id','ativo','bloquear_receber')->find($caixaId);
-        if (!$caixa || !$caixa->ativo || $caixa->bloquear_receber) {
-            return response()->json(['error' => 'Caixa indisponível'], 422);
-        }
-        $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
-            ->whereNull('fechado_em')
-            ->first();
-        if (!$mov) {
-            return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
-        }
-        DB::transaction(function () use ($pag, $mov) {
-            $pag->update([
-                'movimentacao_id' => $mov->id,
-                'data_pagamento' => \Carbon\Carbon::now(),
-                'status' => 'CONFIRMADO',
-            ]);
-            $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
-            $totSaidas = (float)($mov->total_saidas ?? 0);
-            $saldoInicial = (float)($mov->saldo_caixa ?? 0);
-            $saldoMov = $saldoInicial + $totEntradas - $totSaidas;
-            $mov->update([
-                'total_entradas' => $totEntradas,
-                'saldo_movimento' => $saldoMov,
-            ]);
-            $this->syncFaturamentoFromPagamento($pag);
-        });
+        $err = $this->processarPagamento($pag);
+        if ($err) return $err;
         return response()->json(['success' => true]);
     }
 
@@ -482,7 +370,7 @@ class PagamentoController extends Controller
                 return response()->json(['error' => 'Pagamento não localizado'], 404);
             }
         }
-        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
+        if (strtoupper((string)$pag->status) === 'PAGO') {
             return response()->json(['success' => true, 'message' => 'Pagamento já confirmado'], 200);
         }
         if ($pag->forma_pagamento !== 'PIX') {
@@ -509,7 +397,7 @@ class PagamentoController extends Controller
             $pag->update([
                 'movimentacao_id' => $mov->id,
                 'data_pagamento' => \Carbon\Carbon::now(),
-                'status' => 'CONFIRMADO',
+                'status' => 'PAGO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
             $totSaidas = (float)($mov->total_saidas ?? 0);
@@ -531,7 +419,7 @@ class PagamentoController extends Controller
             'forma_pagamento' => ['nullable','string'],
         ]);
         $pag = Pagamento::findOrFail($id);
-        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
+        if (strtoupper((string)$pag->status) === 'PAGO') {
             return back()->with('success', 'Pagamento já confirmado');
         }
         // Verificar disponibilidade do caixa
@@ -553,7 +441,7 @@ class PagamentoController extends Controller
                 'movimentacao_id' => $mov->id,
                 'forma_pagamento' => $data['forma_pagamento'] ?? $pag->forma_pagamento,
                 'data_pagamento' => \Carbon\Carbon::now(),
-                'status' => 'CONFIRMADO',
+                'status' => 'PAGO',
             ]);
             $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
             $totSaidas = (float)($mov->total_saidas ?? 0);
@@ -574,8 +462,8 @@ class PagamentoController extends Controller
             'recusa_justificativa' => ['required','string','max:1000'],
         ]);
         $pag = Pagamento::findOrFail($id);
-        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
-            return back()->with('error', 'Pagamento já confirmado, não é possível recusar.');
+        if (strtoupper((string)$pag->status) === 'PAGO') {
+            return back()->with('error', 'Pagamento já pago, não é possível recusar.');
         }
         if (strtoupper((string)$pag->status) === 'RECUSADO') {
             return back()->with('success', 'Pagamento já recusado');
@@ -630,8 +518,8 @@ class PagamentoController extends Controller
     public function unrefuse(Request $request, string $id)
     {
         $pag = Pagamento::findOrFail($id);
-        if (strtoupper((string)$pag->status) === 'CONFIRMADO') {
-            return back()->with('error', 'Pagamento confirmado não pode ser alterado.');
+        if (strtoupper((string)$pag->status) === 'PAGO') {
+            return back()->with('error', 'Pagamento pago não pode ser alterado.');
         }
         if (strtoupper((string)$pag->status) !== 'RECUSADO') {
             return back()->with('success', 'Pagamento não está recusado');
@@ -678,7 +566,7 @@ class PagamentoController extends Controller
         $alvo = $tipo === 'CONVENIO'
             ? (($valorAprovado > 0 ? $valorAprovado : ($valorCobrado > 0 ? $valorCobrado : $valorFinal)))
             : $valorFinal;
-        $recebido = (float)DB::table('pagamentos')->where('faturamento_id', $fatId)->where('status', 'CONFIRMADO')->sum('valor');
+        $recebido = (float)DB::table('pagamentos')->where('faturamento_id', $fatId)->where('status', 'PAGO')->sum('valor');
         $quitado = ($alvo > 0 && ($recebido + 0.00001) >= $alvo);
 
         $novoStatusCR = $quitado ? 'RECEBIDO' : 'ABERTO';
@@ -769,5 +657,41 @@ class PagamentoController extends Controller
                 'criado_por' => auth()->id(),
             ]);
         }
+    }
+
+    private function processarPagamento(Pagamento $pag)
+    {
+        $caixaId = (int)($pag->caixa_id ?? 0);
+        if (!$caixaId) {
+            return response()->json(['error' => 'Pagamento não vinculado a caixa'], 422);
+        }
+        $caixa = Caixa::select('id','ativo','bloquear_receber')->find($caixaId);
+        if (!$caixa || !$caixa->ativo || $caixa->bloquear_receber) {
+            return response()->json(['error' => 'Caixa indisponível'], 422);
+        }
+        $mov = MovimentacaoCaixa::where('caixa_id', $caixaId)
+            ->whereNull('fechado_em')
+            ->first();
+        if (!$mov) {
+            return response()->json(['error' => 'Caixa sem movimentação aberta'], 422);
+        }
+        DB::transaction(function () use ($pag, $mov) {
+            $pag->update([
+                'movimentacao_id' => $mov->id,
+                'data_pagamento' => \Carbon\Carbon::now(),
+                'status' => 'PAGO',
+            ]);
+            $totEntradas = (float)($mov->total_entradas ?? 0) + (float)($pag->valor ?? 0);
+            $totSaidas = (float)($mov->total_saidas ?? 0);
+            $saldoInicial = (float)($mov->saldo_caixa ?? 0);
+            $saldoMov = $saldoInicial + $totEntradas - $totSaidas;
+            $mov->update([
+                'total_entradas' => $totEntradas,
+                'saldo_movimento' => $saldoMov,
+            ]);
+            $this->syncFaturamentoFromPagamento($pag);
+        });
+
+        return null;
     }
 }
