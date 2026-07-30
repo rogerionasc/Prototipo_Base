@@ -14,7 +14,6 @@ class PreCadastro extends Model
 
     protected $fillable = [
         'nome',
-        'sobrenome',
         'cpf',
         'telefone',
         'data_nascimento',

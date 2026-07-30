@@ -1,16 +1,9 @@
 <template>
 
     <form class="row g-3 needs-validation" novalidate>
-        <div class="col-md-4">
+        <div class="col-md-8">
             <label for="nome" class="form-label">Nome</label>
-            <input type="text" class="form-control" id="nome" placeholder="Seu primeiro nome" required>
-            <div class="valid-feedback">
-                Looks good!
-            </div>
-        </div>
-        <div class="col-md-4">
-            <label for="sobrenome" class="form-label">Sobrenome</label>
-            <input type="text" class="form-control" id="sobrenome" placeholder="Seu sobrenome" required>
+            <input type="text" class="form-control" id="nome" placeholder="Seu nome completo" required>
             <div class="valid-feedback">
                 Looks good!
             </div>

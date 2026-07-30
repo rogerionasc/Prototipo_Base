@@ -12,7 +12,6 @@ import ModalDelete from '@/Components/ModalDelete.vue';
 
 // Dados para geração aleatória
 const nomes = ["LucasNascimentoSantosNascimentos", "Maria", "João", "Ana", "Pedro", "Julia", "Carlos", "Fernanda", "Bruno", "Amanda", "Rafael", "Camila", "Diego", "Patricia", "Gabriel", "Laura"];
-const sobrenomes = ["Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes", "Costa", "Ribeiro", "Martins", "Carvalho"];
 const cargos = ["Analista de Dados", "Gerente de Projetos", "Desenvolvedor", "Arquiteto de Software", "Designer UI/UX", "Analista de Sistemas", "Engenheiro DevOps", "Product Owner", "Scrum Master", "Tech Lead"];
 const empresas = ["Empresa Alpha", "Empresa Beta", "Empresa Gamma", "Empresa Delta", "Empresa Epsilon", "Empresa Zeta", "Empresa Theta", "Empresa Lambda", "Empresa Sigma", "Empresa Omega"];
 const paises = ["Brasil", "Portugal", "Espanha", "Argentina", "Chile", "Canadá", "México", "Colômbia", "Peru", "Uruguai"];
@@ -22,7 +21,7 @@ const status = ["ativo", "inativo", "pendente", "suspenso"];
 function gerarUsuarios(quantidade) {
     return Array.from({ length: quantidade }, (_, index) => ({
         id: index + 1,
-        nome: `${nomes[Math.floor(Math.random() * nomes.length)]} ${sobrenomes[Math.floor(Math.random() * sobrenomes.length)]}`,
+        nome: `${nomes[Math.floor(Math.random() * nomes.length)]}`,
         email: `usuario${index + 1}@exampleeeeeeeeeeeeeeeee.com`,
         cargo: cargos[Math.floor(Math.random() * cargos.length)],
         empresa: empresas[Math.floor(Math.random() * empresas.length)],

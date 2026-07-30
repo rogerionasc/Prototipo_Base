@@ -12,7 +12,7 @@ const props = defineProps({
 
 const form = useForm({
     _method: 'PUT',
-    name: (props.user.name ?? `${props.user.nome ?? ''} ${props.user.sobrenome ?? ''}`).trim(),
+    name: (props.user.name ?? props.user.nome ?? '').trim(),
     email: props.user.email,
     photo: null,
 });
@@ -23,9 +23,8 @@ const photoInput = ref(null);
 
 const initials = computed(() => {
     const u = props.user || {};
-    const parts = u.name
-        ? String(u.name).trim().split(/\s+/)
-        : [u.nome, u.sobrenome].filter(Boolean).map(s => String(s).trim());
+    const name = u.name || u.nome || '';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
     return parts
         .filter(Boolean)
         .map(p => p[0])

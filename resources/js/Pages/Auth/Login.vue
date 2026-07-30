@@ -61,7 +61,7 @@ export default {
                                         <div class="mb-3">
                                             <InputLabel for="email" value="Email" />
                                             <TextInput id="email" v-model="form.email" type="email" class="form-control"
-                                                autofocus placeholder="Insira seu email" autocomplete="email" required
+                                                placeholder="Insira seu email" autocomplete="email" required
                                                 :class="{ 'is-invalid': form.errors.email }" />
                                             <InputError :message="form.errors.email" />
                                         </div>

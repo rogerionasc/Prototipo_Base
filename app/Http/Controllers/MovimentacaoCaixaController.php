@@ -268,14 +268,16 @@ class MovimentacaoCaixaController extends Controller
         $mov = DB::table('movimentacoes_caixa as m')
             ->leftJoin('caixas as c', 'c.id', '=', 'm.caixa_id')
             ->leftJoin('users as ua', 'ua.id', '=', 'm.aberto_por_id')
+            ->leftJoin('pessoas as pa_ua', 'pa_ua.id', '=', 'ua.pessoa_id')
             ->leftJoin('users as uf', 'uf.id', '=', 'm.fechado_por_id')
+            ->leftJoin('pessoas as pa_uf', 'pa_uf.id', '=', 'uf.pessoa_id')
             ->select(
                 'm.id',
                 'm.numero',
                 'm.aberto_por_id',
                 'm.fechado_por_id',
-                DB::raw("NULLIF(TRIM(CONCAT(COALESCE(ua.nome,''),' ',COALESCE(ua.sobrenome,''))), '') AS aberto_por"),
-                DB::raw("NULLIF(TRIM(CONCAT(COALESCE(uf.nome,''),' ',COALESCE(uf.sobrenome,''))), '') AS fechado_por"),
+                DB::raw("NULLIF(TRIM(COALESCE(pa_ua.nome,'')), '') AS aberto_por"),
+                DB::raw("NULLIF(TRIM(COALESCE(pa_uf.nome,'')), '') AS fechado_por"),
                 DB::raw("DATE_FORMAT(m.data_movimento, '%d-%m-%Y') AS data_movimento"),
                 DB::raw("DATE_FORMAT(m.created_at, '%d-%m-%Y') AS data_abertura"),
                 DB::raw("DATE_FORMAT(m.created_at, '%H:%i') AS hora_abertura"),

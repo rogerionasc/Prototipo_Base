@@ -31,13 +31,9 @@ class User extends Authenticatable implements MustVerifyEmail
         // 'name',
         // 'email',
         // 'password',
-        'nome',
-        'sobrenome',
         'conta_id',
         'pessoa_id',
-        'cpf',
-        'telefone',
-        'data_nascimento',
+        'is_active',
         'email',
         'password',
     ];
@@ -49,7 +45,22 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function profissionalSaude()
     {
-        return $this->belongsTo(Pessoa::class, 'pessoa_id');
+        return $this->belongsTo(Pessoa::class, 'pessoa_id', 'id');
+    }
+
+    public function pessoa()
+    {
+        return $this->belongsTo(Pessoa::class, 'pessoa_id', 'id');
+    }
+
+    public function getNomeAttribute()
+    {
+        return $this->pessoa ? $this->pessoa->nome : null;
+    }
+
+    public function getNameAttribute()
+    {
+        return $this->nome;
     }
 
     /**
@@ -73,19 +84,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'data_nascimento' => 'date', // Adicionar cast para data
     ];
-
-    // Adicionar mutator para converter o formato da data
-    public function setDataNascimentoAttribute($value)
-    {
-        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $value)) {
-            $date = \DateTime::createFromFormat('d/m/Y', $value);
-            $this->attributes['data_nascimento'] = $date->format('Y-m-d');
-        } else {
-            $this->attributes['data_nascimento'] = $value;
-        }
-    }
 
     /**
      * The accessors to append to the model's array form.
@@ -94,5 +93,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $appends = [
         'profile_photo_url',
+        'nome',
+        'name'
     ];
 }

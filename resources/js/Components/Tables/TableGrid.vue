@@ -56,7 +56,8 @@ const emit = defineEmits([
     'restore',
     'receive',
     'procedure',
-    'selectionChange'
+    'selectionChange',
+    'toggle'
 ]);
 
 // -------------------- REFS E VARIÁVEIS REATIVAS --------------------
@@ -428,6 +429,7 @@ function initGrid() {
         gridColumns.push({
             id: 'status',
             name: 'Status',
+            width: '120px',
             formatter: (cell) => getStatusBadge(cell)
         });
     }
@@ -436,6 +438,7 @@ function initGrid() {
         gridColumns.push({
             id: 'actions',
             name: 'Ações',
+            width: '140px',
             formatter: (cell, row) => {
                 if (!row || !row.cells || !Array.isArray(row.cells)) {
                     return html(`<div class="d-flex gap-2"></div>`);
@@ -492,7 +495,8 @@ function initGrid() {
                     can(ac.download) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('download') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('download')) ? 'disabled' : ''} title="${al.download ?? 'Baixar'}">${isLoadingAction('download') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.download ?? 'ri-download-line'} align-bottom"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
                     can(ac.receive) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('receive') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('receive')) ? 'disabled' : ''} title="${al.receive ?? 'Receber'}">${isLoadingAction('receive') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.receive ?? 'ri-money-dollar-box-line'} align-bottom"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
                     can(ac.procedure) ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="procedure" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('procedure') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('procedure')) ? 'disabled' : ''} title="${al.procedure ?? 'Procedimentos'}">${isLoadingAction('procedure') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.procedure ?? 'ri-list-check'} align-bottom"></i>${bt.procedure ? `<span class="d-none d-sm-inline ms-1">${bt.procedure}</span>` : ''}</button>` : ``,
-                    (props.showDiaryButton && can(ac.diary)) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('diary') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('diary')) ? 'disabled' : ''} title="${al.diary ?? 'Agenda'}">${isLoadingAction('diary') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.diary ?? 'ri-calendar-2-line'} align-bottom"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``
+                    (props.showDiaryButton && can(ac.diary)) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('diary') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('diary')) ? 'disabled' : ''} title="${al.diary ?? 'Agenda'}">${isLoadingAction('diary') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.diary ?? 'ri-calendar-2-line'} align-bottom"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``,
+                    can(ac.toggle) ? `<button class="btn btn-sm ${rowData.is_active ? 'btn-soft-danger' : 'btn-soft-success'}" type="button" data-action="toggle" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('toggle') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('toggle')) ? 'disabled' : ''} title="${al.toggle ?? (rowData.is_active ? 'Bloquear' : 'Desbloquear')}">${isLoadingAction('toggle') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.toggle ?? (rowData.is_active ? 'ri-lock-fill' : 'ri-lock-unlock-fill')} align-bottom"></i>${bt.toggle ? `<span class="d-none d-sm-inline ms-1">${bt.toggle}</span>` : ''}</button>` : ``
                 ].join('');
                 return html(`<div class="d-flex gap-2">${buttons}</div>`);
             }
@@ -541,6 +545,12 @@ function initGrid() {
             ...languageBase,
             noRecordsFound: localNoRecords,
             error: props.serverUrl ? () => html(`<div class="py-4 text-center text-danger">Erro ao carregar os dados.</div>`) : undefined,
+        },
+        autoWidth: true,
+        style: {
+            table: {
+                'table-layout': 'auto'
+            }
         }
     };
 

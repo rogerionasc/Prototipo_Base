@@ -36,6 +36,8 @@ use App\Http\Controllers\UserController;
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',])->group(function () {
 
+    Route::get('/usuarios/pessoas-disponiveis', [UserController::class, 'pessoasDisponiveis'])->name('usuarios.pessoas_disponiveis');
+    Route::put('/usuarios/{usuario}/toggle-status', [UserController::class, 'toggleStatus'])->name('usuarios.toggle_status');
     Route::resource('usuarios', UserController::class)->names('usuarios');
     Route::get('/atendimentos', [AtendimentoController::class, 'index'])->name('atendimentos.index');
     Route::post('/atendimentos/{atendimento}/chamar', [AtendimentoController::class, 'chamar'])->name('atendimentos.chamar');

@@ -12,7 +12,6 @@ class PreCadastroController extends Controller
     {
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
-            'sobrenome' => 'required|string|max:255',
             'cpf' => 'required|string|max:14|unique:pre_cadastro,cpf',
             'telefone' => 'required|string|max:20',
             'data_nascimento' => 'required|date',

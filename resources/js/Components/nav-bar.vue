@@ -231,7 +231,8 @@ export default {
     },
     userInitials() {
       const u = this.$page?.props?.auth?.user || {};
-      const parts = [u.nome, u.sobrenome].filter(Boolean).map(s => String(s).trim()).filter(Boolean);
+      const name = u.name || u.nome || '';
+      const parts = name.trim().split(/\s+/).filter(Boolean);
       return parts.map(p => p[0]).join('').slice(0, 2).toUpperCase();
     }
   },
@@ -733,12 +734,12 @@ export default {
                 <img v-if="$page.props.jetstream.managesProfilePhotos && $page.props.auth.user.profile_photo_path" class="rounded-circle header-profile-user" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.nome" style="width: 32px; height: 32px; object-fit: cover; object-position: center;">
                 <span v-else class="rounded-circle header-profile-user d-inline-flex align-items-center justify-content-center bg-light-subtle text-body border fw-semibold" style="width: 32px; height: 32px;">{{ userInitials }}</span>
                 <span class="text-start ms-xl-2">
-                  <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $page.props.auth.user.nome }} {{ $page.props.auth.user.sobrenome }}</span>
+                  <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $page.props.auth.user.nome || $page.props.auth.user.name }}</span>
                   <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">Dev</span>
                 </span>
               </span>
             </template>
-            <h6 class="dropdown-header">Bem vindo {{ $page.props.auth.user.nome }} {{ $page.props.auth.user.sobrenome }}!</h6>
+            <h6 class="dropdown-header">Bem vindo {{ $page.props.auth.user.nome || $page.props.auth.user.name }}!</h6>
             <Link class="dropdown-item" :href="route('profile.show')"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
             <span class="align-middle">Perfil</span>
             </Link>

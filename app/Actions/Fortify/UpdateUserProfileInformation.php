@@ -33,15 +33,14 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             $this->updateVerifiedUser($user, $input);
         } else {
             $fullName = trim($input['name']);
-            $parts = preg_split('/\s+/', $fullName);
-            $nome = $parts ? array_shift($parts) : '';
-            $sobrenome = $parts ? implode(' ', $parts) : '';
 
             $user->forceFill([
-                'nome' => $nome,
-                'sobrenome' => $sobrenome,
                 'email' => $input['email'],
             ])->save();
+            
+            if ($user->pessoa) {
+                $user->pessoa->update(['nome' => $fullName]);
+            }
 
             Session::flash('success', 'Perfil atualizado com sucesso!');
         }
@@ -55,16 +54,15 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
     protected function updateVerifiedUser(User $user, array $input): void
     {
         $fullName = trim($input['name']);
-        $parts = preg_split('/\s+/', $fullName);
-        $nome = $parts ? array_shift($parts) : '';
-        $sobrenome = $parts ? implode(' ', $parts) : '';
 
         $user->forceFill([
-            'nome' => $nome,
-            'sobrenome' => $sobrenome,
             'email' => $input['email'],
             'email_verified_at' => null,
         ])->save();
+        
+        if ($user->pessoa) {
+            $user->pessoa->update(['nome' => $fullName]);
+        }
 
         $user->sendEmailVerificationNotification();
     }

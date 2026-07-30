@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use App\Models\Pessoa;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 
@@ -23,12 +24,16 @@ class CreateSuperUser extends Command
             return;
         }
 
-        $user = User::create([
-            'nome' => 'Super',
-            'sobrenome' => 'Usuário',
+        $pessoa = Pessoa::create([
+            'nome' => 'Super Usuário',
             'cpf' => '000.000.000-00',
             'telefone' => '11999999999',
-            'data_nascimento' => '2000-01-01 00:00:00',
+            'data_nascimento' => '2000-01-01',
+            'email' => $email,
+        ]);
+
+        $user = User::create([
+            'pessoa_id' => $pessoa->id,
             'email' => $email,
             'password' => Hash::make('12345678'),
         ]);

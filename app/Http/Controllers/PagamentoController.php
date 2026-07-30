@@ -494,6 +494,7 @@ class PagamentoController extends Controller
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->leftJoin('users as u', 'u.id', '=', 'p.recusado_por')
+            ->leftJoin('pessoas as p_recusado', 'p_recusado.id', '=', 'u.pessoa_id')
             ->select(
                 'p.id as num_pagamento',
                 'p.faturamento_id',
@@ -503,7 +504,7 @@ class PagamentoController extends Controller
                 'p.recusa_justificativa',
                 DB::raw("DATE_FORMAT(p.updated_at, '%d-%m-%Y %H:%i') AS data_recusa"),
                 DB::raw("COALESCE(pa.nome,'') AS paciente"),
-                DB::raw("COALESCE(CONCAT(u.nome, ' ', u.sobrenome),'') AS recusado_por_nome")
+                DB::raw("COALESCE(p_recusado.nome, '') AS recusado_por_nome")
             )
             ->where('p.status', 'RECUSADO')
             ->where('f.tipo_pagador', 'PARTICULAR')
