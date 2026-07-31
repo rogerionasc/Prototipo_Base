@@ -148,12 +148,13 @@ function openAdd() {
   nextTick(() => { if (window.initChoices) window.initChoices(); });
 }
 const FORM_FIELDS = [
-  "nome","cpf","rg","sexo","data_nascimento","naturalidade","estado_civil_id","cnes","crm","cep","endereco","numero","bairro","cidade","complemento","email","telefone","celular","observacoes"
+  "nome","cpf","rg","sexo","data_nascimento","naturalidade","estado_civil_id","cnes","crm","cep","endereco","numero","bairro","cidade","complemento","email","telefone","celular","observacoes", "is_medico"
 ];
 function buildPayload(src) {
   const o = {};
   FORM_FIELDS.forEach(k => { o[k] = src[k]; });
   o.especialidades = (src.especialidades || []).filter(x => x.id);
+  o.is_medico = true;
   return o;
 }
 function fillForm(targetForm, row) {
@@ -273,8 +274,7 @@ function addEspConfirm() {
   espAddModal.value = false;
 }
 function submitCreate() {
-  const payload = buildPayload(formCreate);
-  useForm(payload).post("/profissionais-saude", {
+  formCreate.transform((data) => buildPayload(data)).post("/profissionais-saude", {
     preserveScroll: true,
     onStart: () => { saveProcessing.value = true; },
     onFinish: () => { saveProcessing.value = false; },
@@ -299,8 +299,7 @@ attachChoiceSync(formEdit, "sexo", sexoSelectEdit, v => v || "");
 attachChoiceSync(formEdit, "estado_civil_id", estadoCivilSelectEdit, v => v != null ? String(v) : "");
 function submitEdit() {
   if (!editingId.value) return;
-  const payload = buildPayload(formEdit);
-  useForm(payload).put(`/profissionais-saude/${editingId.value}`, {
+  formEdit.transform((data) => buildPayload(data)).put(`/profissionais-saude/${editingId.value}`, {
     preserveScroll: true,
     onStart: () => { editProcessing.value = true; },
     onFinish: () => { editProcessing.value = false; },
@@ -521,7 +520,8 @@ function submitAgenda() {
               </div>
               <div class="col-md-3">
                 <label for="psCrm" class="form-label">CRM <span class="text-danger">*</span></label>
-                <input v-mask="'CRM/AA #####'" v-model="formCreate.crm" type="text" id="psCrm" class="form-control" placeholder="CRM/RN #####" maxlength="12" required />
+                <input v-mask="'CRM/AA #####'" v-model="formCreate.crm" type="text" id="psCrm" class="form-control" :class="{ 'is-invalid': formCreate.errors.crm }" placeholder="CRM/RN #####" maxlength="12" required />
+                <div class="invalid-feedback">{{ formCreate.errors.crm }}</div>
               </div>
               <div class="col-md-3">
                 <label for="psCnes" class="form-label">CNES</label>
@@ -660,7 +660,8 @@ function submitAgenda() {
               </div>
               <div class="col-md-3">
                 <label for="psEditCrm" class="form-label">CRM <span class="text-danger">*</span></label>
-                <input v-mask="'CRM/AA #####'" v-model="formEdit.crm" type="text" id="psEditCrm" class="form-control" placeholder="CRM/XX #####" maxlength="12" required />
+                <input v-mask="'CRM/AA #####'" v-model="formEdit.crm" type="text" id="psEditCrm" class="form-control" :class="{ 'is-invalid': formEdit.errors.crm }" placeholder="CRM/XX #####" maxlength="12" required />
+                <div class="invalid-feedback">{{ formEdit.errors.crm }}</div>
               </div>
               <div class="col-md-3">
                 <label for="psEditCnes" class="form-label">CNES</label>

@@ -20,15 +20,13 @@ const columns = [
     { id: "id", name: "ID", width: "70px" },
     { id: "nome_completo", name: "Nome" },
     { id: "email", name: "Email" },
-    { id: "pessoas", name: "Pessoas" },
 ];
 
 const usuariosFormatados = computed(() => {
     return props.usuarios.map(u => ({
         ...u,
         nome_completo: u.pessoa ? u.pessoa.nome : 'Sem Nome (Admin)',
-        pessoas: u.pessoa ? u.pessoa.nome : 'Nenhum',
-        status: u.is_active ? 'Ativo' : 'Inativo'
+        status: u.is_active ? 'Desbloqueado' : 'Bloqueado'
     }));
 });
 
@@ -178,6 +176,7 @@ const toggleSubTitle = ref('');
 const toggleMessage = ref('');
 const toggleButtonText = ref('');
 const toggleButtonClass = ref('');
+const toggleProcessing = ref(false);
 
 function toggleStatus(row) {
     if (typeof row !== 'object') {
@@ -200,9 +199,13 @@ function toggleStatus(row) {
 
 function confirmToggle() {
     if (!toggleUser.value?.id) return;
+    toggleProcessing.value = true;
     router.put(route('usuarios.toggle_status', toggleUser.value.id), {}, {
         onSuccess: () => {
             toggleModal.value = false;
+        },
+        onFinish: () => {
+            toggleProcessing.value = false;
         }
     });
 }
@@ -254,6 +257,6 @@ function confirmToggle() {
 
         <ModalDelete v-model="toggleModal" :title="'Status de Acesso'" :subTitle="toggleSubTitle"
             :message="toggleMessage" :nameButton="toggleButtonText" :buttonClass="toggleButtonClass"
-            :animationData="toggleAnimation" @save="confirmToggle" />
+            :animationData="toggleAnimation" :processing="toggleProcessing" @save="confirmToggle" />
     </Layout>
 </template>

@@ -38,7 +38,10 @@
                         <button type="button" class="btn btn-light"
                             @click="$emit('update:modelValue', false)">Cancelar</button>
                         <!-- Botão de confirmação de exclusão -->
-                        <button type="button" class="btn" :class="buttonClass" @click="$emit('save')">{{ nameButton }}</button>
+                        <button type="button" class="btn" :class="buttonClass" :disabled="processing" @click="$emit('save')">
+                            <span v-if="processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            {{ nameButton }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -90,10 +93,14 @@ const props = defineProps({
         type: String,
         default: 'btn-danger'
     },
-    // Arquivo json do lottie
     animationData: {
         type: Object,
         default: null
+    },
+    // Controle de estado de carregamento
+    processing: {
+        type: Boolean,
+        default: false
     }
 });
 

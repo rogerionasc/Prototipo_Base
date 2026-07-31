@@ -188,8 +188,7 @@ function addCargoConfirm() {
 }
 
 function submitCreate() {
-  const payload = buildPayload(formCreate);
-  useForm(payload).post("/profissionais-saude", {
+  formCreate.transform((data) => buildPayload(data)).post("/profissionais-saude", {
     preserveScroll: true,
     onStart: () => { saveProcessing.value = true; },
     onFinish: () => { saveProcessing.value = false; },
@@ -214,8 +213,7 @@ attachChoiceSync(formEdit, "sexo", sexoSelectEdit, v => v || "");
 attachChoiceSync(formEdit, "estado_civil_id", estadoCivilSelectEdit, v => v != null ? String(v) : "");
 function submitEdit() {
   if (!editingId.value) return;
-  const payload = buildPayload(formEdit);
-  useForm(payload).put(`/profissionais-saude/${editingId.value}`, {
+  formEdit.transform((data) => buildPayload(data)).put(`/profissionais-saude/${editingId.value}`, {
     preserveScroll: true,
     onStart: () => { editProcessing.value = true; },
     onFinish: () => { editProcessing.value = false; },
@@ -310,9 +308,11 @@ function addWeekdays() {
                 <div class="invalid-feedback">{{ formCreate.errors.nome || 'Informe o nome.' }}</div>
               </div>
               <div class="col-md-3">
-                <label for="psCpf" class="form-label">CPF</label>
+                <label for="psCpf" class="form-label">CPF <span class="text-danger">*</span></label>
                 <input v-model="formCreate.cpf" v-mask="'###.###.###-##'" type="text" id="psCpf" class="form-control"
-                  placeholder="000.000.000-00" maxlength="14" />
+                  :class="{ 'is-invalid': formCreate.errors.cpf }"
+                  placeholder="000.000.000-00" maxlength="14" required />
+                <div class="invalid-feedback">{{ formCreate.errors.cpf || 'Informe o CPF.' }}</div>
               </div>
               <div class="col-md-3">
                 <label for="psRg" class="form-label">RG</label>
@@ -457,9 +457,11 @@ function addWeekdays() {
                 <div class="invalid-feedback">{{ formEdit.errors.nome || 'Informe o nome.' }}</div>
               </div>
               <div class="col-md-3">
-                <label for="psEditCpf" class="form-label">CPF</label>
+                <label for="psEditCpf" class="form-label">CPF <span class="text-danger">*</span></label>
                 <input v-model="formEdit.cpf" v-mask="'###.###.###-##'" type="text" id="psEditCpf" class="form-control"
-                  placeholder="000.000.000-00" maxlength="14" />
+                  :class="{ 'is-invalid': formEdit.errors.cpf }"
+                  placeholder="000.000.000-00" maxlength="14" required />
+                <div class="invalid-feedback">{{ formEdit.errors.cpf || 'Informe o CPF.' }}</div>
               </div>
               <div class="col-md-3">
                 <label for="psEditRg" class="form-label">RG</label>

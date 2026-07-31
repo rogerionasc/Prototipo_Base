@@ -14,14 +14,35 @@ class PessoaController extends Controller
     {
         $data = $request->validate([
             'nome' => ['required','string','max:255'],
-            'cpf' => ['nullable','string','max:20'],
+            'cpf' => [
+                !$request->boolean('is_medico') ? 'required' : 'nullable',
+                'string',
+                'max:20',
+                function ($attribute, $value, $fail) use ($request) {
+                    if (!$request->boolean('is_medico')) {
+                        $val = preg_replace('/[^0-9]/', '', $value);
+                        if (strlen($val) !== 11) {
+                            $fail('O CPF é obrigatório e deve conter 11 dígitos.');
+                        }
+                    }
+                }
+            ],
             'rg' => ['nullable','string','max:50'],
             'sexo' => ['nullable','string','max:20'],
             'data_nascimento' => ['nullable','date'],
             'naturalidade' => ['nullable','string','max:255'],
             'estado_civil_id' => ['nullable','integer','exists:estado_civil,id'],
             'cnes' => ['nullable','string','max:255'],
-            'crm' => [$request->boolean('is_medico') ? 'required' : 'nullable','string','max:255'],
+            'crm' => [
+                $request->boolean('is_medico') ? 'required' : 'nullable',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->boolean('is_medico') && trim($value) === 'CRM/') {
+                        $fail('O CRM é obrigatório e deve ser preenchido corretamente.');
+                    }
+                }
+            ],
             'cargo' => ['nullable','string','max:255'],
             'email' => ['nullable','email','max:255'],
             'telefone' => ['nullable','string','max:30'],
@@ -76,14 +97,35 @@ class PessoaController extends Controller
 
         $data = $request->validate([
             'nome' => ['required','string','max:255'],
-            'cpf' => ['nullable','string','max:20'],
+            'cpf' => [
+                !$request->boolean('is_medico') ? 'required' : 'nullable',
+                'string',
+                'max:20',
+                function ($attribute, $value, $fail) use ($request) {
+                    if (!$request->boolean('is_medico')) {
+                        $val = preg_replace('/[^0-9]/', '', $value);
+                        if (strlen($val) !== 11) {
+                            $fail('O CPF é obrigatório e deve conter 11 dígitos.');
+                        }
+                    }
+                }
+            ],
             'rg' => ['nullable','string','max:50'],
             'sexo' => ['nullable','string','max:20'],
             'data_nascimento' => ['nullable','date'],
             'naturalidade' => ['nullable','string','max:255'],
             'estado_civil_id' => ['nullable','integer','exists:estado_civil,id'],
             'cnes' => ['nullable','string','max:255'],
-            'crm' => [$request->boolean('is_medico') ? 'required' : 'nullable','string','max:255'],
+            'crm' => [
+                $request->boolean('is_medico') ? 'required' : 'nullable',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->boolean('is_medico') && trim($value) === 'CRM/') {
+                        $fail('O CRM é obrigatório e deve ser preenchido corretamente.');
+                    }
+                }
+            ],
             'cargo' => ['nullable','string','max:255'],
             'email' => ['nullable','email','max:255'],
             'telefone' => ['nullable','string','max:30'],

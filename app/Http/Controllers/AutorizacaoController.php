@@ -15,7 +15,7 @@ class AutorizacaoController extends Controller
     {
         $autorizacoes = Autorizacao::with(['convenio', 'usuario', 'usuarioValidou'])->latest()->get();
         $convenios = Convenio::select('id', 'descricao')->get();
-        $usuarios = User::select('id', 'nome')->get();
+        $usuarios = User::with('pessoa:id,nome')->select('id', 'pessoa_id')->get();
 
         return Inertia::render('Convenios/Autorizacoes/Index', [
             'autorizacoes' => $autorizacoes,

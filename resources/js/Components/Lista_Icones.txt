@@ -35,4 +35,3 @@
 // import animationData from "@/Components/widgets/xulniijg.json"; // Grafico
 // import animationData from "@/Components/widgets/yeallgsa.json"; // Cofrinho 2
 // import animationData from "@/Components/widgets/zpxybbhl.json"; // Conversa
-// import animationData from "@/Components/widgets/lock.json"; // Trava
