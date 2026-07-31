@@ -631,6 +631,8 @@ function initGrid() {
             emit('receive', rowObj?.id ?? id, rowObj);
         } else if (action === 'procedure') {
             emit('procedure', rowObj?.id ?? id, rowObj);
+        } else if (action === 'toggle') {
+            emit('toggle', rowObj?.id ?? id, rowObj);
         }
     };
     wrapper.value.addEventListener('change', changeListener);

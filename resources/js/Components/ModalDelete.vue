@@ -24,7 +24,8 @@
 
                             <div class="mt-4">
                                 <h4 class="mb-3">{{ subTitle }}</h4>
-                                <p class="text-muted" v-if="itemDelete && itemDelete.nome"> Esta ação não poderá
+                                <p class="text-muted" v-if="message" v-html="message"></p>
+                                <p class="text-muted" v-else-if="itemDelete && itemDelete.nome"> Esta ação não poderá
                                     ser desfeita. "<span class="text-danger fs-5">{{ itemDelete.nome }}</span>" será
                                     removido permanentemente do sistema.</p>
 
@@ -37,7 +38,7 @@
                         <button type="button" class="btn btn-light"
                             @click="$emit('update:modelValue', false)">Cancelar</button>
                         <!-- Botão de confirmação de exclusão -->
-                        <button type="button" class="btn btn-danger" @click="$emit('save')">{{ nameButton }}</button>
+                        <button type="button" class="btn" :class="buttonClass" @click="$emit('save')">{{ nameButton }}</button>
                     </div>
                 </div>
             </div>
@@ -47,10 +48,10 @@
 
 <script setup>
 // Importação de funções do Vue
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, computed } from 'vue';
 // Importação do componente de animação Lottie
 import Lottie from "@/Components/widgets/lottie.vue";
-import animationData from "@/Components/widgets/gsqxdxog.json";
+import defaultAnimationData from "@/Components/widgets/gsqxdxog.json";
 
 // Definição das propriedades recebidas pelo componente
 const props = defineProps({
@@ -78,6 +79,21 @@ const props = defineProps({
     nameButton: {
         type: String,
         default: 'Sim, desejo excluir'
+    },
+    // Mensagem customizada
+    message: {
+        type: String,
+        default: ''
+    },
+    // Classe do botão de confirmação
+    buttonClass: {
+        type: String,
+        default: 'btn-danger'
+    },
+    // Arquivo json do lottie
+    animationData: {
+        type: Object,
+        default: null
     }
 });
 
@@ -104,11 +120,13 @@ watch(() => props.modelValue, async (val) => {
 });
 
 // Opções para animação Lottie
-const lottieOptions = {
-    animationData: animationData,
-    loop: true,
-    autoplay: true
-};
+const lottieOptions = computed(() => {
+    return {
+        animationData: props.animationData || defaultAnimationData,
+        loop: true,
+        autoplay: true
+    };
+});
 </script>
 
 <style scoped>

@@ -1,8 +1,4 @@
 <template>
-  <Layout>
-
-    <Head title="Especialidades" />
-    <PageHeader title="Especialidades" pageTitle="Configurações" />
     <BContainer fluid>
       <BCard class="shadow-sm border-0">
         <BCardHeader class="align-items-center d-flex border-bottom-dashed">
@@ -61,10 +57,9 @@
         </BCardBody>
       </BCard>
     </BContainer>
-  </Layout>
 </template>
 <script setup>
-import { useForm, router, Head } from "@inertiajs/vue3";
+import { useForm, router } from "@inertiajs/vue3";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import { ref, watch, computed, nextTick } from "vue";

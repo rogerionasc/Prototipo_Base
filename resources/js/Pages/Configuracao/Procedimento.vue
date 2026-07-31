@@ -1,8 +1,4 @@
 <template>
-  <Layout>
-
-    <Head title="Procedimentos" />
-    <PageHeader title="Procedimentos" pageTitle="Configurações" />
     <BContainer fluid>
       <BCard class="shadow-sm border-0">
         <BCardHeader class="align-items-center d-flex border-bottom-dashed">
@@ -73,10 +69,9 @@
         </BCardBody>
       </BCard>
     </BContainer>
-  </Layout>
 </template>
 <script setup>
-import { useForm, router, Head } from "@inertiajs/vue3";
+import { useForm, router } from "@inertiajs/vue3";
 import { ref, watch, computed, nextTick } from "vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";

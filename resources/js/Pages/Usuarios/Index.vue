@@ -5,8 +5,9 @@ import PageHeader from "@/Components/page-header.vue";
 import { Head, useForm, router } from '@inertiajs/vue3';
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
+import ModalDelete from "@/Components/ModalDelete.vue";
+import toggleAnimation from "@/Components/widgets/tdrtiskw.json";
 import Choices from "choices.js";
-import Swal from 'sweetalert2';
 
 const props = defineProps({
     usuarios: {
@@ -171,19 +172,37 @@ function submit() {
     }
 }
 
-function toggleStatus(id) {
-    Swal.fire({
-        title: 'Você tem certeza?',
-        text: "Deseja alterar o status de acesso deste usuário?",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Sim, alterar!',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            router.put(route('usuarios.toggle_status', id));
+const toggleModal = ref(false);
+const toggleUser = ref({});
+const toggleSubTitle = ref('');
+const toggleMessage = ref('');
+const toggleButtonText = ref('');
+const toggleButtonClass = ref('');
+
+function toggleStatus(row) {
+    if (typeof row !== 'object') {
+        row = props.usuarios.find(u => String(u.id) === String(row)) || { id: row };
+    }
+    toggleUser.value = row;
+    const isBlocking = row.is_active;
+
+    toggleSubTitle.value = isBlocking ? 'Bloquear Usuário' : 'Desbloquear Usuário';
+    const userName = row.nome_completo || row.email || '';
+    toggleMessage.value = isBlocking
+        ? `Deseja realmente bloquear o acesso de "<span class="text-danger fw-bold">${userName}</span>"?<br>Ele não poderá mais acessar o sistema.`
+        : `Deseja realmente desbloquear o acesso de "<span class="text-success fw-bold">${userName}</span>"?<br>O acesso ao sistema será reestabelecido.`;
+
+    toggleButtonText.value = isBlocking ? 'Sim, bloquear' : 'Sim, desbloquear';
+    toggleButtonClass.value = isBlocking ? 'btn-danger' : 'btn-success';
+
+    toggleModal.value = true;
+}
+
+function confirmToggle() {
+    if (!toggleUser.value?.id) return;
+    router.put(route('usuarios.toggle_status', toggleUser.value.id), {}, {
+        onSuccess: () => {
+            toggleModal.value = false;
         }
     });
 }
@@ -232,5 +251,9 @@ function toggleStatus(id) {
                 </div>
             </div>
         </Modal>
+
+        <ModalDelete v-model="toggleModal" :title="'Status de Acesso'" :subTitle="toggleSubTitle"
+            :message="toggleMessage" :nameButton="toggleButtonText" :buttonClass="toggleButtonClass"
+            :animationData="toggleAnimation" @save="confirmToggle" />
     </Layout>
 </template>
