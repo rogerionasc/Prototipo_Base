@@ -1,5 +1,6 @@
 <template>
   <Layout>
+
     <Head title="Movimentação de Caixa" />
     <PageHeader title="Movimentação" pageTitle="Caixa" />
 
@@ -34,7 +35,8 @@
             </div>
             <div class="vr d-none d-md-block"></div>
             <div class="d-flex align-items-center gap-2">
-              <i :class="currentMovId ? 'ri-checkbox-circle-line text-success' : 'ri-close-circle-line text-secondary'"></i>
+              <i
+                :class="currentMovId ? 'ri-checkbox-circle-line text-success' : 'ri-close-circle-line text-secondary'"></i>
               <span class="text-muted">Status</span>
               <span class="badge rounded-pill px-3" :class="statusClass">{{ statusText }}</span>
             </div>
@@ -46,12 +48,16 @@
             </div>
           </div>
           <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-success" type="button" @click="abrirCaixa" :disabled="!openForm.caixa_id || hasMovHoje || openForm.processing">
-              <span v-if="openForm.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            <button class="btn btn-success" type="button" @click="abrirCaixa"
+              :disabled="!openForm.caixa_id || hasMovHoje || openForm.processing">
+              <span v-if="openForm.processing" class="spinner-border spinner-border-sm me-1" role="status"
+                aria-hidden="true"></span>
               <i class="ri-door-lock-box-line me-1"></i> Abrir
             </button>
-            <button class="btn btn-warning" type="button" @click="fecharCaixa" :disabled="!currentMovId || closeForm.processing">
-              <span v-if="closeForm.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            <button class="btn btn-warning" type="button" @click="fecharCaixa"
+              :disabled="!currentMovId || closeForm.processing">
+              <span v-if="closeForm.processing" class="spinner-border spinner-border-sm me-1" role="status"
+                aria-hidden="true"></span>
               <i class="ri-door-open-line me-1"></i> Fechar
             </button>
 
@@ -79,200 +85,220 @@
           </div>
           <div class="card-body p-0">
             <div class="tab-content text-muted">
-          <!-- Aba: Operação (PDV) -->
-          <div class="tab-pane active" id="pdv-operacao" role="tabpanel">
-            <div class="row g-4 align-items-stretch p-4">
-              <!-- Coluna Esquerda: Fila -->
-              <div class="col-lg-7 col-md-7 col-12">
-                <div class="d-flex flex-column h-100" style="min-height: 65vh;">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                      <h5 class="mb-0 text-primary"><i class="ri-list-check me-2"></i>Pagamentos Pendentes</h5>
-                      <div class="d-flex gap-2 align-items-center">
-                        <div style="width: 130px; flex-shrink: 0;">
-                          <flatPickr v-model="pendentesData" @on-change="fetchPendentes" class="form-control w-100" :config="flatpickrOptions" placeholder="dd/mm/aaaa" />
-                        </div>
-                        <div class="search-box" style="width: 300px; flex-shrink: 0;">
-                          <input v-model="pendentesQuery" type="text" class="form-control search" placeholder="Buscar por paciente, documento ou emissão" />
-                          <i class="ri-search-line search-icon"></i>
+              <!-- Aba: Operação (PDV) -->
+              <div class="tab-pane active" id="pdv-operacao" role="tabpanel">
+                <div class="row g-4 align-items-stretch p-4">
+                  <!-- Coluna Esquerda: Fila -->
+                  <div class="col-lg-7 col-md-7 col-12">
+                    <div class="d-flex flex-column h-100" style="min-height: 65vh;">
+                      <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h5 class="mb-0 text-primary"><i class="ri-list-check me-2"></i>Pagamentos Pendentes</h5>
+                        <div class="d-flex gap-2 align-items-center">
+                          <div style="width: 130px; flex-shrink: 0;">
+                            <flatPickr v-model="pendentesData" @on-change="fetchPendentes" class="form-control w-100"
+                              :config="flatpickrOptions" placeholder="dd/mm/aaaa" />
+                          </div>
+                          <div class="search-box" style="width: 300px; flex-shrink: 0;">
+                            <input v-model="pendentesQuery" type="text" class="form-control search"
+                              placeholder="Buscar por paciente, documento ou emissão" />
+                            <i class="ri-search-line search-icon"></i>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div class="table-responsive flex-grow-1" style="overflow-y: auto;">
-                      <table class="table table-hover table-borderless align-middle mb-0" style="cursor: pointer;">
-                        <thead class="table-light text-muted sticky-top">
-                          <tr class="border-bottom border-light">
-                            <th scope="col" class="py-3">Nº</th>
-                            <th scope="col" class="py-3">Nº Pagamento</th>
-                            <th scope="col" class="py-3">Paciente</th>
-                            <th scope="col" class="py-3">Documento</th>
-                            <th scope="col" class="py-3">Emissão</th>
-                            <th scope="col" class="py-3 text-end">Valor</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="row in pagamentosFiltered" :key="row.faturamento_id" 
+
+                      <div class="table-responsive flex-grow-1" style="overflow-y: auto;">
+                        <table class="table table-hover table-borderless align-middle mb-0" style="cursor: pointer;">
+                          <thead class="table-light text-muted sticky-top">
+                            <tr class="border-bottom border-light">
+                              <th scope="col" class="py-3">Nº</th>
+                              <th scope="col" class="py-3">Nº Pagamento</th>
+                              <th scope="col" class="py-3">Paciente</th>
+                              <th scope="col" class="py-3">Documento</th>
+                              <th scope="col" class="py-3">Emissão</th>
+                              <th scope="col" class="py-3 text-end">Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="row in pagamentosFiltered" :key="row.faturamento_id"
                               @click="selectedPendente = row"
-                              :class="{'table-primary border-primary': selectedPendente?.faturamento_id === row.faturamento_id, 'border-bottom border-bottom-dashed': selectedPendente?.faturamento_id !== row.faturamento_id}">
-                            <td>{{ row.pagamento_id || "—" }}</td>
-                            <td>{{ row.nu_pagamento || "—" }}</td>
-                            <td class="fw-medium text-dark">{{ row.paciente }}</td>
-                            <td class="text-muted">{{ row.paciente_documento || "—" }}</td>
-                            <td>{{ row.data_faturamento || "—" }}</td>
-                            <td class="text-end fw-semibold text-success">{{ formatCurrency(row.valor) }}</td>
-                          </tr>
-                          <tr v-if="!pagamentosFiltered || pagamentosFiltered.length === 0">
-                            <td colspan="6" class="text-center text-muted p-5">
-                              <i class="ri-inbox-line fs-1 mb-3 d-block text-light"></i>
-                              <h5 class="fw-medium">Nenhum pagamento na fila</h5>
-                              <p class="mb-0">Todos os atendimentos foram recebidos ou a data selecionada está vazia.</p>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                              :class="{ 'table-primary border-primary': selectedPendente?.faturamento_id === row.faturamento_id, 'border-bottom border-bottom-dashed': selectedPendente?.faturamento_id !== row.faturamento_id }">
+                              <td>{{ row.pagamento_id || "—" }}</td>
+                              <td>{{ row.nu_pagamento || "—" }}</td>
+                              <td class="fw-medium text-dark">{{ row.paciente }}</td>
+                              <td class="text-muted">{{ row.paciente_documento || "—" }}</td>
+                              <td>{{ row.data_faturamento || "—" }}</td>
+                              <td class="text-end fw-semibold text-success">{{ formatCurrency(row.valor) }}</td>
+                            </tr>
+                            <tr v-if="!pagamentosFiltered || pagamentosFiltered.length === 0">
+                              <td colspan="6" class="text-center text-muted p-5">
+                                <i class="ri-inbox-line fs-1 mb-3 d-block text-light"></i>
+                                <h5 class="fw-medium">Nenhum pagamento na fila</h5>
+                                <p class="mb-0">Todos os atendimentos foram recebidos ou a data selecionada está vazia.
+                                </p>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Coluna Direita: Painel de Controle -->
+                  <div class="col-lg-5 col-md-5 col-12">
+                    <!-- Se há um paciente selecionado, mostra as Ações -->
+                    <div v-if="selectedPendente"
+                      class="card border border-light shadow-sm bg-white h-100 p-4 position-relative">
+                      <div class="text-end mb-2">
+                        <button type="button" class="btn-close" @click="selectedPendente = null"></button>
+                      </div>
+                      <div class="text-center">
+                        <div class="avatar-lg mx-auto mb-3">
+                          <div v-if="!selectedPendente.is_confirmed"
+                            class="avatar-title bg-primary-subtle text-primary rounded-circle fs-24 fw-semibold">
+                            {{ getInitials(selectedPendente.paciente) }}
+                          </div>
+                          <div v-else class="avatar-title bg-success text-white rounded-circle fs-24">
+                            <i class="ri-check-line" style="font-size: 2.5rem;"></i>
+                          </div>
+                        </div>
+                        <h4 v-if="!selectedPendente.is_confirmed" class="mb-1 text-dark">{{ selectedPendente.paciente }}
+                        </h4>
+                        <h4 v-else class="mb-1 text-success fw-bold">PAGAMENTO CONFIRMADO</h4>
+                        <p class="text-muted mb-4">Doc: {{ selectedPendente.paciente_documento || '—' }}</p>
+
+                        <div class="p-3 bg-light rounded mb-4">
+                          <div class="text-muted text-uppercase fw-semibold small mb-1">Total a Receber</div>
+                          <h2 class="text-success mb-0 fw-bold">{{ formatCurrency(selectedPendente.valor) }}</h2>
+                        </div>
+
+                        <div class="d-grid gap-3" v-if="!selectedPendente.is_confirmed">
+                          <button v-if="isAguardandoPix(selectedPendente)" class="btn btn-warning btn-lg shadow-sm"
+                            type="button" :disabled="cancelProcessing[selectedPendente.pagamento_id]"
+                            @click="cancelProcessing[selectedPendente.pagamento_id] ? null : cancelarPix(selectedPendente.pagamento_id)">
+                            <span v-if="cancelProcessing[selectedPendente.pagamento_id]"
+                              class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <i class="ri-close-circle-line align-bottom me-1"></i> Cancelar PIX Pendente
+                          </button>
+                          <button v-else-if="waitingPayment[selectedPendente.faturamento_id]"
+                            class="btn btn-warning btn-lg shadow-sm" type="button">
+                            <span class="spinner-border spinner-border-sm align-middle me-2" role="status"
+                              aria-hidden="true"></span>
+                            Aguardando pagamento
+                          </button>
+                          <button v-else class="btn btn-success btn-lg shadow-sm" type="button"
+                            @click="abrirReceber(selectedPendente.faturamento_id)">
+                            <i class="ri-money-dollar-box-line align-middle me-2 fs-20"></i> RECEBER PAGAMENTO
+                          </button>
+
+                          <div class="d-flex gap-2 mt-2">
+                            <button class="btn btn-soft-info flex-grow-1" type="button"
+                              @click="mostrarDetalhes(selectedPendente.faturamento_id)">
+                              <i class="ri-eye-line align-bottom me-1"></i> Detalhes
+                            </button>
+                            <button class="btn btn-soft-danger flex-grow-1" type="button"
+                              :disabled="!selectedPendente.pagamento_id"
+                              @click="abrirRecusar(selectedPendente.faturamento_id)">
+                              <i class="ri-close-line align-bottom me-1"></i> Recusar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Se NÃO há paciente selecionado, mostra Resumo Geral -->
+                    <div v-else
+                      class="card border-0 shadow-sm h-100 p-4 p-xl-5 d-flex flex-column align-items-center justify-content-center">
+                      <div class="text-center mb-5 mt-4">
+                        <div class="avatar-lg mx-auto mb-4">
+                          <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-1">
+                            <i class="ri-hand-coin-fill"></i>
+                          </div>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-2">Aguardando Seleção</h4>
+                        <p class="text-muted fs-15 mb-0">Selecione um paciente na fila ao lado para iniciar o
+                          recebimento.</p>
+                      </div>
+
+                      <div class="w-100 mt-auto">
+                        <h6 class="text-uppercase text-muted fw-bold mb-3 fs-11" style="letter-spacing: 0.5px;">Resumo
+                          do Caixa Atual</h6>
+                        <div class="row g-3">
+                          <div class="col-6">
+                            <div class="card bg-light border-0 shadow-none mb-0 h-100 p-3 rounded">
+                              <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted fw-semibold fs-12 text-uppercase">Saldo Inicial</span>
+                                <div class="avatar-xs">
+                                  <div class="avatar-title bg-white text-muted rounded shadow-sm"><i
+                                      class="ri-wallet-3-line"></i></div>
+                                </div>
+                              </div>
+                              <h5 class="fw-bold text-dark mb-0 fs-16">{{ formatCurrency(currentMovSummary.saldo_caixa)
+                              }}</h5>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="card bg-info-subtle border-0 shadow-none mb-0 h-100 p-3 rounded">
+                              <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-info fw-semibold fs-12 text-uppercase">Saldo Atual</span>
+                                <div class="avatar-xs">
+                                  <div class="avatar-title bg-white text-info rounded shadow-sm"><i
+                                      class="ri-safe-2-line"></i></div>
+                                </div>
+                              </div>
+                              <h5 class="fw-bold text-info mb-0 fs-16">{{
+                                formatCurrency(currentMovSummary.saldo_movimento) }}</h5>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="card bg-success-subtle border-0 shadow-none mb-0 h-100 p-3 rounded">
+                              <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-success fw-semibold fs-12 text-uppercase">Total Entradas</span>
+                                <div class="avatar-xs">
+                                  <div class="avatar-title bg-white text-success rounded shadow-sm"><i
+                                      class="ri-arrow-right-up-line"></i></div>
+                                </div>
+                              </div>
+                              <h5 class="fw-bold text-success mb-0 fs-16">{{
+                                formatCurrency(currentMovSummary.total_entradas) }}</h5>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="card bg-danger-subtle border-0 shadow-none mb-0 h-100 p-3 rounded">
+                              <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-danger fw-semibold fs-12 text-uppercase">Total Saídas</span>
+                                <div class="avatar-xs">
+                                  <div class="avatar-title bg-white text-danger rounded shadow-sm"><i
+                                      class="ri-arrow-right-down-line"></i></div>
+                                </div>
+                              </div>
+                              <h5 class="fw-bold text-danger mb-0 fs-16">{{
+                                formatCurrency(currentMovSummary.total_saidas) }}</h5>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Coluna Direita: Painel de Controle -->
-              <div class="col-lg-5 col-md-5 col-12">
-                <!-- Se há um paciente selecionado, mostra as Ações -->
-                <div v-if="selectedPendente" class="card border border-light shadow-sm bg-white h-100 p-4 position-relative">
-                  <div class="text-end mb-2">
-                    <button type="button" class="btn-close" @click="selectedPendente = null"></button>
-                  </div>
-                  <div class="text-center">
-                    <div class="avatar-lg mx-auto mb-3">
-                      <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-24">
-                        {{ selectedPendente.paciente ? selectedPendente.paciente.charAt(0) : 'P' }}
-                      </div>
-                    </div>
-                    <h4 class="mb-1">{{ selectedPendente.paciente }}</h4>
-                    <p class="text-muted mb-4">Doc: {{ selectedPendente.paciente_documento || '—' }}</p>
-
-                    <div class="p-3 bg-light rounded mb-4">
-                      <div class="text-muted text-uppercase fw-semibold small mb-1">Total a Receber</div>
-                      <h2 class="text-success mb-0 fw-bold">{{ formatCurrency(selectedPendente.valor) }}</h2>
-                    </div>
-
-                    <div class="d-grid gap-3">
-                      <button v-if="isAguardandoPix(selectedPendente)" class="btn btn-warning btn-lg shadow-sm" type="button" 
-                              :disabled="cancelProcessing[selectedPendente.pagamento_id]"
-                              @click="cancelProcessing[selectedPendente.pagamento_id] ? null : cancelarPix(selectedPendente.pagamento_id)">
-                        <span v-if="cancelProcessing[selectedPendente.pagamento_id]" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        <i class="ri-close-circle-line align-bottom me-1"></i> Cancelar PIX Pendente
-                      </button>
-                      <button v-else-if="waitingPayment[selectedPendente.faturamento_id]" class="btn btn-warning btn-lg shadow-sm" type="button">
-                        <span class="spinner-border spinner-border-sm align-middle me-2" role="status" aria-hidden="true"></span>
-                        Aguardando pagamento
-                      </button>
-                      <button v-else class="btn btn-success btn-lg shadow-sm" type="button" @click="abrirReceber(selectedPendente.faturamento_id)">
-                        <i class="ri-money-dollar-box-line align-middle me-2 fs-20"></i> PROCESSAR RECEBIMENTO
-                      </button>
-
-                      <div class="d-flex gap-2 mt-2">
-                        <button class="btn btn-soft-info flex-grow-1" type="button" @click="mostrarDetalhes(selectedPendente.faturamento_id)">
-                          <i class="ri-eye-line align-bottom me-1"></i> Detalhes
-                        </button>
-                        <button class="btn btn-soft-danger flex-grow-1" type="button" :disabled="!selectedPendente.pagamento_id" @click="abrirRecusar(selectedPendente.faturamento_id)">
-                          <i class="ri-close-line align-bottom me-1"></i> Recusar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Se NÃO há paciente selecionado, mostra Resumo Geral -->
-                <div v-else class="card border-0 shadow-sm h-100 p-4 p-xl-5 d-flex flex-column align-items-center justify-content-center">
-                    <div class="text-center mb-5 mt-4">
-                      <div class="avatar-lg mx-auto mb-4">
-                        <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-1">
-                          <i class="ri-hand-coin-fill"></i>
-                        </div>
-                      </div>
-                      <h4 class="fw-bold text-dark mb-2">Aguardando Seleção</h4>
-                      <p class="text-muted fs-15 mb-0">Selecione um paciente na fila ao lado para iniciar o recebimento.</p>
-                    </div>
-
-                    <div class="w-100 mt-auto">
-                      <h6 class="text-uppercase text-muted fw-bold mb-3 fs-11" style="letter-spacing: 0.5px;">Resumo do Caixa Atual</h6>
-                      <div class="row g-3">
-                        <div class="col-6">
-                          <div class="card bg-light border-0 shadow-none mb-0 h-100 p-3 rounded">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                              <span class="text-muted fw-semibold fs-12 text-uppercase">Saldo Inicial</span>
-                              <div class="avatar-xs">
-                                <div class="avatar-title bg-white text-muted rounded shadow-sm"><i class="ri-wallet-3-line"></i></div>
-                              </div>
-                            </div>
-                            <h5 class="fw-bold text-dark mb-0 fs-16">{{ formatCurrency(currentMovSummary.saldo_caixa) }}</h5>
-                          </div>
-                        </div>
-                        <div class="col-6">
-                          <div class="card bg-info-subtle border-0 shadow-none mb-0 h-100 p-3 rounded">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                              <span class="text-info fw-semibold fs-12 text-uppercase">Saldo Atual</span>
-                              <div class="avatar-xs">
-                                <div class="avatar-title bg-white text-info rounded shadow-sm"><i class="ri-safe-2-line"></i></div>
-                              </div>
-                            </div>
-                            <h5 class="fw-bold text-info mb-0 fs-16">{{ formatCurrency(currentMovSummary.saldo_movimento) }}</h5>
-                          </div>
-                        </div>
-                        <div class="col-6">
-                          <div class="card bg-success-subtle border-0 shadow-none mb-0 h-100 p-3 rounded">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                              <span class="text-success fw-semibold fs-12 text-uppercase">Total Entradas</span>
-                              <div class="avatar-xs">
-                                <div class="avatar-title bg-white text-success rounded shadow-sm"><i class="ri-arrow-right-up-line"></i></div>
-                              </div>
-                            </div>
-                            <h5 class="fw-bold text-success mb-0 fs-16">{{ formatCurrency(currentMovSummary.total_entradas) }}</h5>
-                          </div>
-                        </div>
-                        <div class="col-6">
-                          <div class="card bg-danger-subtle border-0 shadow-none mb-0 h-100 p-3 rounded">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                              <span class="text-danger fw-semibold fs-12 text-uppercase">Total Saídas</span>
-                              <div class="avatar-xs">
-                                <div class="avatar-title bg-white text-danger rounded shadow-sm"><i class="ri-arrow-right-down-line"></i></div>
-                              </div>
-                            </div>
-                            <h5 class="fw-bold text-danger mb-0 fs-16">{{ formatCurrency(currentMovSummary.total_saidas) }}</h5>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              <!-- Aba: Histórico Completo -->
+              <div class="tab-pane" id="pdv-historico" role="tabpanel">
+                <div class="p-4">
+                  <TableGrid :columns="movCols" :data="movsByCaixa" :key="`movs-${openForm.caixa_id ?? 'all'}`"
+                    :tableTitle="'Registros de Movimentações (Histórico Completo)'" :showCheckbox="false" :search="true"
+                    :showAddButton="false" :showStatus="false" :showActions="true"
+                    :actionsConfig="{ delete: false, edit: false, show: true, diary: false, print: false, download: false, restore: true }"
+                    @restore="reabrirMov" @show="mostrarMovimentacao" />
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Aba: Histórico Completo -->
-          <div class="tab-pane" id="pdv-historico" role="tabpanel">
-            <div class="p-4">
-                <TableGrid
-                  :columns="movCols"
-                  :data="movsByCaixa"
-                  :key="`movs-${openForm.caixa_id ?? 'all'}`"
-                  :tableTitle="'Registros de Movimentações (Histórico Completo)'"
-                  :showCheckbox="false"
-                  :search="true"
-                  :showAddButton="false"
-                  :showStatus="false"
-                  :showActions="true"
-                  :actionsConfig="{ delete: false, edit: false, show: true, diary: false, print: false, download: false, restore: true }"
-                  @restore="reabrirMov"
-                  @show="mostrarMovimentacao"
-                />
-            </div>
-          </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <Modal v-model="showDetalhesModal" title="Detalhes do Agendamento" name-button="Fechar" :processing="detalhesLoading" size="xl" @save="showDetalhesModal=false">
+    <Modal v-model="showDetalhesModal" title="Detalhes do Agendamento" name-button="Fechar"
+      :processing="detalhesLoading" size="xl" @save="showDetalhesModal = false">
 
       <!-- Cabeçalho: Paciente + Valor -->
       <div class="bg-primary-subtle rounded p-3 mb-4">
@@ -322,7 +348,8 @@
         </table>
       </div>
     </Modal>
-    <Modal v-model="showPixConfigModal" title="Configurar PIX" name-button="Salvar" :processing="pixConfigProcessing" size="md" @save="salvarPixConfig">
+    <Modal v-model="showPixConfigModal" title="Configurar PIX" name-button="Salvar" :processing="pixConfigProcessing"
+      size="md" @save="salvarPixConfig">
       <div class="vstack gap-4">
 
         <!-- Erro -->
@@ -336,7 +363,8 @@
             <i class="ri-key-2-line me-1 align-middle"></i> Chave de Recebimento
           </p>
           <label class="form-label text-muted fs-13 mb-1">Chave PIX <span class="text-danger">*</span></label>
-          <input v-model.trim="pixConfig.chave" type="text" class="form-control" placeholder="E-mail, CPF/CNPJ, celular ou chave aleatória" />
+          <input v-model.trim="pixConfig.chave" type="text" class="form-control"
+            placeholder="E-mail, CPF/CNPJ, celular ou chave aleatória" />
         </div>
 
         <hr class="my-0 border-light" />
@@ -348,12 +376,15 @@
           </p>
           <div class="row g-3">
             <div class="col-md-7">
-              <label class="form-label text-muted fs-13 mb-1">Nome do Estabelecimento <span class="text-danger">*</span></label>
-              <input v-model.trim="pixConfig.recebedor_nome" type="text" class="form-control" placeholder="Nome exibido ao pagador" />
+              <label class="form-label text-muted fs-13 mb-1">Nome do Estabelecimento <span
+                  class="text-danger">*</span></label>
+              <input v-model.trim="pixConfig.recebedor_nome" type="text" class="form-control"
+                placeholder="Nome exibido ao pagador" />
             </div>
             <div class="col-md-5">
               <label class="form-label text-muted fs-13 mb-1">Cidade <span class="text-danger">*</span></label>
-              <input v-model.trim="pixConfig.recebedor_cidade" type="text" class="form-control" placeholder="Ex: São Paulo" />
+              <input v-model.trim="pixConfig.recebedor_cidade" type="text" class="form-control"
+                placeholder="Ex: São Paulo" />
             </div>
           </div>
         </div>
@@ -365,14 +396,18 @@
           <p class="text-uppercase text-muted fw-bold fs-11 mb-2 letter-spacing-1">
             <i class="ri-file-text-line me-1 align-middle"></i> Identificação da Cobrança
           </p>
-          <label class="form-label text-muted fs-13 mb-1">Descrição <span class="text-muted fw-normal">(opcional)</span></label>
-          <input v-model.trim="pixConfig.descricao" type="text" class="form-control" placeholder="Ex: Consulta Médica" />
+          <label class="form-label text-muted fs-13 mb-1">Descrição <span
+              class="text-muted fw-normal">(opcional)</span></label>
+          <input v-model.trim="pixConfig.descricao" type="text" class="form-control"
+            placeholder="Ex: Consulta Médica" />
           <p class="text-muted mt-1 mb-0 fs-12">Texto visível no comprovante do cliente.</p>
         </div>
 
       </div>
     </Modal>
-    <Modal v-model="showReceberModal" :title="'Receber Pagamento'" :name-button="formaRecebimento === 'PIX' ? 'Prosseguir' : 'Receber Pagamento'" :processing="receberForm.processing" size="md" @save="prosseguirRecebimento">
+    <Modal v-model="showReceberModal" :title="'Receber Pagamento'"
+      :name-button="formaRecebimento === 'PIX' ? 'Prosseguir' : 'Receber Pagamento'"
+      :processing="receberForm.processing" size="md" @save="prosseguirRecebimento">
       <div class="vstack gap-3">
         <div class="row g-2">
           <div class="col-6">
@@ -414,7 +449,8 @@
         </div>
       </div>
     </Modal>
-    <Modal v-model="showCaixaModal" :title="'Caixa indisponível'" :name-button="'Fechar'" :processing="false" size="md" @save="showCaixaModal=false">
+    <Modal v-model="showCaixaModal" :title="'Caixa indisponível'" :name-button="'Fechar'" :processing="false" size="md"
+      @save="showCaixaModal = false">
       <div class="vstack gap-2">
         <div class="alert alert-warning" role="alert">
           {{ caixaIndMsg }}
@@ -429,7 +465,8 @@
         </div>
       </div>
     </Modal>
-    <Modal v-model="showRecusarModal" :title="'Recusar Pagamento'" :name-button="'Recusar'" :processing="false" size="md" @save="confirmarRecusa">
+    <Modal v-model="showRecusarModal" :title="'Recusar Pagamento'" :name-button="'Recusar'" :processing="false"
+      size="md" @save="confirmarRecusa">
       <div class="vstack gap-3">
         <div class="alert alert-danger" role="alert">
           Esta ação marcará o pagamento como recusado e ele não aparecerá em pendentes.
@@ -456,12 +493,14 @@
         </div>
         <div class="mt-3">
           <label class="form-label">Justificativa da recusa</label>
-          <textarea v-model.trim="recusaJustificativa" class="form-control" rows="3" placeholder="Descreva o motivo da recusa"></textarea>
+          <textarea v-model.trim="recusaJustificativa" class="form-control" rows="3"
+            placeholder="Descreva o motivo da recusa"></textarea>
           <div class="invalid-feedback d-block" v-if="recusaError">{{ recusaError }}</div>
         </div>
       </div>
     </Modal>
-    <Modal v-model="showSaldoModal" :title="'Saldo Inicial do Caixa'" :name-button="'Abrir Caixa'" :processing="openForm.processing" size="md" @save="confirmarAbertura">
+    <Modal v-model="showSaldoModal" :title="'Saldo Inicial do Caixa'" :name-button="'Abrir Caixa'"
+      :processing="openForm.processing" size="md" @save="confirmarAbertura">
       <div class="vstack gap-3">
         <div class="d-flex flex-column">
           <span class="text-muted">Caixa</span>
@@ -474,7 +513,8 @@
         </div>
       </div>
     </Modal>
-    <Modal v-model="showMovModal" :key="`mov-${movView.id ?? ''}`" :title="'Relatório de Movimentação'" :name-button="'Fechar'" :processing="movLoading" size="xl" @save="showMovModal=false">
+    <Modal v-model="showMovModal" :key="`mov-${movView.id ?? ''}`" :title="'Relatório de Movimentação'"
+      :name-button="'Fechar'" :processing="movLoading" size="xl" @save="showMovModal = false">
       <div class="d-flex justify-content-end mb-2 no-print">
         <button class="btn btn-outline-secondary" type="button" @click="imprimirMov">
           <i class="ri-printer-line me-1"></i>
@@ -489,8 +529,14 @@
           </div>
           <table class="table table-sm table-bordered">
             <tbody>
-              <tr><td style="width:220px;">Caixa</td><td>{{ movView.caixa || "—" }}</td></tr>
-              <tr><td>Número</td><td>{{ movView.numero || "—" }}</td></tr>
+              <tr>
+                <td style="width:220px;">Caixa</td>
+                <td>{{ movView.caixa || "—" }}</td>
+              </tr>
+              <tr>
+                <td>Número</td>
+                <td>{{ movView.numero || "—" }}</td>
+              </tr>
               <tr>
                 <td>Abertura / Fechamento</td>
                 <td>
@@ -507,7 +553,10 @@
                   {{ movView.fechado_por || "—" }}
                 </td>
               </tr>
-              <tr><td>Status</td><td>{{ movView.fechado_em ? "Fechado" : "Aberto" }}</td></tr>
+              <tr>
+                <td>Status</td>
+                <td>{{ movView.fechado_em ? "Fechado" : "Aberto" }}</td>
+              </tr>
             </tbody>
           </table>
           <div class="mb-3">
@@ -516,21 +565,21 @@
               <thead>
                 <tr>
                   <th>Entradas</th>
-                <th>Saídas</th>
-                <th>Saldo Inicial</th>
-                <th>Saldo Movimento</th>
-                <th>Conferência</th>
-                <th>Diferença</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{{ formatCurrency(movView.total_entradas || 0) }}</td>
-                <td>{{ formatCurrency(movView.total_saidas || 0) }}</td>
-                <td>{{ formatCurrency(movView.saldo_caixa || 0) }}</td>
-                <td>{{ formatCurrency(movView.saldo_movimento || 0) }}</td>
-                <td>{{ formatCurrency(movView.total_conferencia || 0) }}</td>
-                <td>{{ formatCurrency(movView.valor_diferenca || 0) }}</td>
+                  <th>Saídas</th>
+                  <th>Saldo Inicial</th>
+                  <th>Saldo Movimento</th>
+                  <th>Conferência</th>
+                  <th>Diferença</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ formatCurrency(movView.total_entradas || 0) }}</td>
+                  <td>{{ formatCurrency(movView.total_saidas || 0) }}</td>
+                  <td>{{ formatCurrency(movView.saldo_caixa || 0) }}</td>
+                  <td>{{ formatCurrency(movView.saldo_movimento || 0) }}</td>
+                  <td>{{ formatCurrency(movView.total_conferencia || 0) }}</td>
+                  <td>{{ formatCurrency(movView.valor_diferenca || 0) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -541,16 +590,9 @@
           </div>
           <div>
             <h6 class="mb-2">Pagamentos</h6>
-            <SimpleTable
-                variant="borderless"
-                compact
-                tableClass="table-bordered"
-                :items="movPagamentosView"
-                :columns="pagamentosModalColumns"
-                emptyTitle="Sem pagamentos"
-                emptyMessage="Sem pagamentos nesta movimentação"
-                emptyIcon="ri-inbox-line"
-            >
+            <SimpleTable variant="borderless" compact tableClass="table-bordered" :items="movPagamentosView"
+              :columns="pagamentosModalColumns" emptyTitle="Sem pagamentos"
+              emptyMessage="Sem pagamentos nesta movimentação" emptyIcon="ri-inbox-line">
               <template #body="{ items, columns }">
                 <tr v-for="row in items" :key="row.id">
                   <td>{{ row.paciente }}</td>
@@ -576,9 +618,11 @@
   box-shadow: none !important;
   margin-bottom: 0 !important;
 }
+
 #pdv-historico :deep(.row) {
   margin: 0 !important;
 }
+
 #pdv-historico :deep(.card-body) {
   padding-left: 0 !important;
   padding-right: 0 !important;
@@ -619,18 +663,62 @@ const caixasLocal = toRef(props, "caixas");
 const ultimosLocal = toRef(props, "ultimos");
 const movsLocal = toRef(props, "movs");
 const pagamentosLocal = ref([...(props.pagamentosPendentes || [])]);
+const animatingConfirmed = ref([]);
 const selectedPendente = ref(null);
+
+function getInitials(name) {
+  if (!name) return "—";
+  const parts = name.trim().split(' ').filter(p => p.length > 0);
+  if (parts.length === 0) return "—";
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function triggerPaymentConfirmedAnimation(pid) {
+  // Encontra a linha antes dela sumir da tabela
+  let row = pagamentosLocal.value.find(r => String(r.pagamento_id) === String(pid));
+  if (!row && selectedPendente.value && String(selectedPendente.value.pagamento_id) === String(pid)) {
+    row = selectedPendente.value;
+  }
+
+  if (row && !animatingConfirmed.value.find(x => String(x.pagamento_id) === String(pid))) {
+    row.is_confirmed = true;
+    animatingConfirmed.value.push(row);
+
+    // Se esse item for o que está selecionado no card, mante-lo visível por 3 segundos
+    if (selectedPendente.value && String(selectedPendente.value.pagamento_id) === String(pid)) {
+      selectedPendente.value = row;
+    }
+
+    // Remove imediatamente da tabela
+    pagamentosLocal.value = pagamentosLocal.value.filter(x => String(x.pagamento_id) !== String(pid));
+
+    setTimeout(() => {
+      animatingConfirmed.value = animatingConfirmed.value.filter(x => String(x.pagamento_id) !== String(pid));
+      if (selectedPendente.value && String(selectedPendente.value.pagamento_id) === String(pid)) {
+        selectedPendente.value = null;
+      }
+    }, 3000);
+    return row;
+  }
+  return null;
+}
 
 watch(() => props.pagamentosPendentes, (nv) => {
   pagamentosLocal.value = [...(nv || [])];
-  
-  // Atualiza a referência do paciente selecionado para refletir as mudanças do banco
+
   if (selectedPendente.value) {
-    const atualizado = pagamentosLocal.value.find(p => p.faturamento_id === selectedPendente.value.faturamento_id);
+    const isAnimating = animatingConfirmed.value.find(x => String(x.pagamento_id) === String(selectedPendente.value.pagamento_id));
+    if (isAnimating) {
+      // Se estiver animando, mantenha o objeto que já está em selectedPendente e NÃO o limpe
+      return;
+    }
+
+    const atualizado = pagamentosLocal.value.find(p => String(p.faturamento_id) === String(selectedPendente.value.faturamento_id));
     if (atualizado) {
       selectedPendente.value = atualizado;
     } else {
-      selectedPendente.value = null; // Caso tenha sido pago e saído da fila
+      selectedPendente.value = null;
     }
   }
 }, { deep: true });
@@ -952,9 +1040,9 @@ function cancelarPix(id) {
       if (selectedPendente.value && selectedPendente.value.faturamento_id) {
         waitingPayment.value[selectedPendente.value.faturamento_id] = false;
       }
-      
+
       await new Promise((resolve) => {
-        router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
+        router.reload({ only: ["pagamentosPendentes", "ultimosPagamentos", "movs"], onFinish: () => resolve() });
       });
     },
     onError: () => { /* noop */ },
@@ -968,7 +1056,7 @@ function prosseguirRecebimento() {
   if (!fatId) { showReceberModal.value = false; return; }
   receberError.value = "";
   waitingPayment.value[fatId] = true; // Ativa o estado amarelo no painel lateral
-  
+
   const run = async () => {
     try {
       let pid = receberPagamentoId.value;
@@ -981,7 +1069,7 @@ function prosseguirRecebimento() {
         waitingPayment.value[fatId] = false;
         return;
       }
-      
+
       receberForm.caixa_id = openForm.caixa_id;
       receberForm.forma_pagamento = formaRecebimento.value;
 
@@ -989,14 +1077,14 @@ function prosseguirRecebimento() {
         if (!isCaixaDisponivelReceber.value) {
           waitingPayment.value[fatId] = false;
           showReceberModal.value = false;
-          showCaixaModal.value = true; 
-          return; 
+          showCaixaModal.value = true;
+          return;
         }
         receberForm.put(`/pagamentos/${pid}/prepare-pix`, {
           onSuccess: async () => {
             showReceberModal.value = false;
             await new Promise((resolve) => {
-              router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
+              router.reload({ only: ["pagamentosPendentes", "ultimosPagamentos", "movs"], onFinish: () => resolve() });
             });
           },
           onError: () => {
@@ -1005,17 +1093,18 @@ function prosseguirRecebimento() {
         });
       } else {
         // Para dinheiro ou cartão
-        if (!isCaixaDisponivelReceber.value) { 
+        if (!isCaixaDisponivelReceber.value) {
           waitingPayment.value[fatId] = false;
           showReceberModal.value = false;
-          showCaixaModal.value = true; 
-          return; 
+          showCaixaModal.value = true;
+          return;
         }
         receberForm.put(`/pagamentos/${pid}/confirm`, {
           onSuccess: async () => {
             showReceberModal.value = false;
+            triggerPaymentConfirmedAnimation(pid);
             await new Promise((resolve) => {
-              router.reload({ only: ["caixas","ultimos","movs","pagamentosPendentes","ultimosPagamentos"], onFinish: () => resolve() });
+              router.reload({ only: ["caixas", "ultimos", "movs", "pagamentosPendentes", "ultimosPagamentos"], onFinish: () => resolve() });
             });
             recomputeCurrentMov();
           },
@@ -1048,7 +1137,7 @@ function confirmarRecusa() {
       recusaJustificativa.value = "";
       recusaError.value = "";
       await new Promise((resolve) => {
-        router.reload({ only: ["pagamentosPendentes","ultimosPagamentos","movs"], onFinish: () => resolve() });
+        router.reload({ only: ["pagamentosPendentes", "ultimosPagamentos", "movs"], onFinish: () => resolve() });
       });
     },
     onError: () => {
@@ -1062,7 +1151,7 @@ function fecharCaixa() {
   closeForm.put(`/movimentacoes-caixa/${currentMovId.value}`, {
     onSuccess: async () => {
       await new Promise((resolve) => {
-        router.reload({ only: ["caixas","ultimos","movs","ultimosPagamentos"], onFinish: () => resolve() });
+        router.reload({ only: ["caixas", "ultimos", "movs", "ultimosPagamentos"], onFinish: () => resolve() });
       });
       closeForm.reset();
       recomputeCurrentMov();
@@ -1077,7 +1166,7 @@ function reabrirMov(id) {
   const f = useForm({});
   f.put(`/movimentacoes-caixa/${id}/reopen`, {
     onSuccess: () => {
-      router.reload({ only: ["caixas","ultimos","movs","ultimosPagamentos"] });
+      router.reload({ only: ["caixas", "ultimos", "movs", "ultimosPagamentos"] });
     },
   });
 }
@@ -1092,8 +1181,9 @@ function confirmarPagamento(id, forma = null) {
   });
   f.put(`/pagamentos/${id}/confirm`, {
     onSuccess: async () => {
+      triggerPaymentConfirmedAnimation(id);
       await new Promise((resolve) => {
-        router.reload({ only: ["caixas","ultimos","movs","pagamentosPendentes","ultimosPagamentos"], onFinish: () => resolve() });
+        router.reload({ only: ["caixas", "ultimos", "movs", "pagamentosPendentes", "ultimosPagamentos"], onFinish: () => resolve() });
       });
       recomputeCurrentMov();
     },
@@ -1145,18 +1235,37 @@ function isSelectedDateToday() {
 }
 
 async function fetchPendentesNow() {
-  if (!isSelectedDateToday()) return;
   if (pendentesQuery.value) return; // Não atualiza (polling) enquanto houver busca ativa
   try {
-    const response = await axios.get('/movimentacoes-caixa/pendentes');
+    const response = await axios.get('/movimentacoes-caixa/pendentes', {
+      params: {
+        data_pendentes: pendentesData.value,
+        search_pendentes: pendentesQuery.value
+      }
+    });
     if (response.data && response.data.pagamentosPendentes) {
-      pagamentosLocal.value = response.data.pagamentosPendentes;
-      
-      // Se o pagamento selecionado não estiver mais na lista (ex: foi pago via PIX), limpa a seleção para fechar o card
+      const newPendentes = response.data.pagamentosPendentes;
+
+      const disappeared = pagamentosLocal.value.filter(p => !newPendentes.find(np => np.pagamento_id === p.pagamento_id));
+      if (disappeared.length > 0) {
+        disappeared.forEach(p => {
+          triggerPaymentConfirmedAnimation(p.pagamento_id);
+        });
+      }
+
+      pagamentosLocal.value = newPendentes;
+
       if (selectedPendente.value && selectedPendente.value.pagamento_id) {
-        const stillExists = pagamentosLocal.value.find(p => p.pagamento_id === selectedPendente.value.pagamento_id);
-        if (!stillExists) {
-          selectedPendente.value = null;
+        const isAnimating = animatingConfirmed.value.find(x => String(x.pagamento_id) === String(selectedPendente.value.pagamento_id));
+        if (isAnimating) {
+          // Mantém no card animando
+        } else {
+          const stillExists = pagamentosLocal.value.find(p => String(p.pagamento_id) === String(selectedPendente.value.pagamento_id));
+          if (stillExists) {
+            selectedPendente.value = stillExists;
+          } else {
+            selectedPendente.value = null;
+          }
         }
       }
     }
@@ -1166,14 +1275,12 @@ async function fetchPendentesNow() {
 }
 
 function startPendentesPolling() {
-  if (!isSelectedDateToday()) return; // Não faz polling em datas passadas
   if (pendTimer) clearInterval(pendTimer);
-  
+
   // Busca imediatamente antes de iniciar o intervalo
   fetchPendentesNow();
-  
+
   pendTimer = setInterval(() => {
-    if (!isSelectedDateToday()) { stopPendentesPolling(); return; }
     fetchPendentesNow();
   }, 5000); // 5 segundos para não sobrecarregar
   pendentesPolling.value = true;
@@ -1189,14 +1296,14 @@ onMounted(() => {
       if (document.hidden) {
         stopPendentesPolling();
       } else {
-        if (isSelectedDateToday()) startPendentesPolling();
+        startPendentesPolling();
       }
     };
     document.addEventListener("visibilitychange", onVis);
     visibilityCleanup = () => document.removeEventListener("visibilitychange", onVis);
 
-    // Inicia o polling apenas se a data for hoje
-    if (isSelectedDateToday()) startPendentesPolling();
+    // Inicia o polling independente da data
+    startPendentesPolling();
   }
 });
 
@@ -1222,7 +1329,7 @@ let visibilityCleanup = null;
 onUnmounted(() => {
   stopPendentesPolling();
   if (typeof visibilityCleanup === "function") {
-    try { visibilityCleanup(); } catch (e) {}
+    try { visibilityCleanup(); } catch (e) { }
     visibilityCleanup = null;
   }
 });
@@ -1276,16 +1383,16 @@ function buildPixPayload({ chave, recebedor_nome, recebedor_cidade, txid, valor 
   const mai = emvField('26', merchantAccountInfo);
   const amount = Number(valor || 0).toFixed(2);
   const payloadSemCRC =
-    emvField('00','01') +
-    emvField('01','11') +
+    emvField('00', '01') +
+    emvField('01', '11') +
     mai +
-    emvField('52','0000') +
-    emvField('53','986') +
+    emvField('52', '0000') +
+    emvField('53', '986') +
     emvField('54', amount) +
-    emvField('58','BR') +
+    emvField('58', 'BR') +
     emvField('59', sanitizeText(recebedor_nome || 'RECEBEDOR', 25)) +
     emvField('60', sanitizeText(recebedor_cidade || 'CIDADE', 15)) +
-    emvField('62', emvField('05', String(txid || 'TX')) ) +
+    emvField('62', emvField('05', String(txid || 'TX'))) +
     '6304';
   const crc = crc16(payloadSemCRC);
   return payloadSemCRC + crc;
@@ -1319,7 +1426,7 @@ async function abrirPixWindow(pagamentoId) {
           <div class="card-body text-center">
             <h5 class="card-title mb-3">Pagamento via PIX</h5>
             <p class="text-muted mb-1">Valor</p>
-            <div class="fs-4 fw-semibold mb-3">${valor.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+            <div class="fs-4 fw-semibold mb-3">${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
             <img src="${qrUrl}" alt="QR Code PIX" class="img-fluid mb-3" style="max-width: 260px;" />
             <div class="text-start">
               <label class="form-label">Copia e Cola</label>
@@ -1348,7 +1455,7 @@ async function abrirPixWindow(pagamentoId) {
     try {
       const resp = await fetch('/pagamentos/' + id + '/confirm', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With':'XMLHttpRequest' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ caixa_id: caixaId, forma_pagamento: 'PIX' })
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -1374,7 +1481,7 @@ function confirmarAbertura() {
     onSuccess: async () => {
       showSaldoModal.value = false;
       await new Promise((resolve) => {
-        router.reload({ only: ["caixas","ultimos","movs","ultimosPagamentos"], onFinish: () => resolve() });
+        router.reload({ only: ["caixas", "ultimos", "movs", "ultimosPagamentos"], onFinish: () => resolve() });
       });
       saldoInicial.value = "";
       recomputeCurrentMov();
@@ -1484,24 +1591,76 @@ onMounted(async () => {
   overflow: visible !important;
   position: relative;
 }
+
 .dropdown-menu {
   z-index: 2000;
 }
+
 .table-responsive {
   overflow: visible !important;
 }
 </style>
 <style scoped>
-:deep(.input-group) { flex-wrap: nowrap; }
-:deep(.input-group .choices) { flex: 1 1 auto; min-width: 0; width: auto; }
-:deep(.input-group .choices__inner) { width: auto; min-width: 0; height: 40px; min-height: 40px; display: flex; align-items: center; border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
-:deep(.input-group .choices.is-open .choices__inner) { border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
-:deep(.input-group .choices.is-focused .choices__inner) { border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
-:deep(.input-group .form-select) { border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
-:deep(.input-group .input-group-text) { height: 40px; border-top-right-radius: 0; border-bottom-right-radius: 0; }
-:deep(.input-group .choices__list--single) { padding: 0 !important; }
-:deep(.input-group) { flex-wrap: nowrap; }
-.table-clean thead th { border-bottom: 1px solid var(--bs-border-color); }
-.table-clean tbody tr:not(:last-child) td { border-bottom: 1px solid var(--bs-border-color); }
-.table-clean td, .table-clean th { vertical-align: middle; }
+:deep(.input-group) {
+  flex-wrap: nowrap;
+}
+
+:deep(.input-group .choices) {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+:deep(.input-group .choices__inner) {
+  width: auto;
+  min-width: 0;
+  height: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+:deep(.input-group .choices.is-open .choices__inner) {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+:deep(.input-group .choices.is-focused .choices__inner) {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+:deep(.input-group .form-select) {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+:deep(.input-group .input-group-text) {
+  height: 40px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+:deep(.input-group .choices__list--single) {
+  padding: 0 !important;
+}
+
+:deep(.input-group) {
+  flex-wrap: nowrap;
+}
+
+.table-clean thead th {
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.table-clean tbody tr:not(:last-child) td {
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.table-clean td,
+.table-clean th {
+  vertical-align: middle;
+}
 </style>

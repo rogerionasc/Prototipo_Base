@@ -168,10 +168,10 @@ class MovimentacaoCaixaController extends Controller
             ->get();
     }
 
-    public function pendentes()
+    public function pendentes(Request $request)
     {
         return response()->json([
-            'pagamentosPendentes' => $this->getPagamentosPendentes()
+            'pagamentosPendentes' => $this->getPagamentosPendentes($request->input('data_pendentes'), $request->input('search_pendentes'))
         ]);
     }
 
