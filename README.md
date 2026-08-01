@@ -217,444 +217,955 @@ config:
   layout: elk
 ---
 erDiagram
-	direction TB
-	CONTAS {
-		INT id PK ""  
-		VARCHAR nome  ""  
-		VARCHAR cnpj  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
-   
-	CAIXAS {
-		INT id PK
-		VARCHAR descricao
-		VARCHAR tipo
-		BOOLEAN bloquear_receber
-		BOOLEAN bloquear_pagar
-		BOOLEAN ativo
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    direction TB
+    AGENDA_MEDICA {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pessoa_id "" FK ""
+        TINYINT UNSIGNED dia_semana "" ""
+        TIME hora_inicio "" ""
+        TIME hora_fim "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	PAGAMENTOS {
-		INT id PK
-		INT orcamento_id FK
-		INT faturamento_id FK
-		INT caixa_id FK
-		INT movimentacao_id FK
-		DECIMAL valor
-		VARCHAR forma_pagamento
-		DATETIME data_pagamento
-		BOOLEAN confirmado
-		VARCHAR status
-		TEXT recusa_justificativa
-		INT recusado_por FK
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    AGENDAMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED agenda_medica_id "" FK ""
+        DATE data "" ""
+        TIME hora "" ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        BIGINT UNSIGNED procedimento_id "" FK ""
+        BIGINT UNSIGNED tuss_id "" FK ""
+        BIGINT UNSIGNED orcamento_id "" FK ""
+        BIGINT UNSIGNED sessao_tratamento_id "" FK ""
+        BIGINT UNSIGNED status_id "" FK ""
+        BIGINT UNSIGNED agendamento_origem_id "" FK ""
+        DECIMAL valor_cobrado "" ""
+        TEXT observacoes "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	MOVIMENTACOES_CAIXA {
-		INT id PK
-		INT caixa_id FK
-		INT aberto_por_id FK
-		VARCHAR numero
-		DATETIME data_movimento
-		DECIMAL total_entradas
-		DECIMAL total_saidas
-		DECIMAL saldo_caixa
-		DECIMAL total_entrada_prazo
-		DECIMAL total_saida_prazo
-		DECIMAL total_transferencia
-		DECIMAL total_conferencia
-		DECIMAL saldo_movimento
-		DECIMAL valor_diferenca
-		DATETIME fechado_em
-		INT fechado_por_id FK
-		INT reaberto_por_id FK
-		TEXT observacoes_fechamento
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    ATENDIMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        BIGINT UNSIGNED convenio_id "" FK ""
+        BIGINT UNSIGNED medico_id "" FK ""
+        BIGINT UNSIGNED agendamento_id "" FK ""
+        BIGINT UNSIGNED autorizacao_id "" FK ""
+        BIGINT UNSIGNED guia_id "" FK ""
+        BIGINT UNSIGNED caixa_pagamento_id "" FK ""
+        BIGINT UNSIGNED procedimento_id "" FK ""
+        BIGINT UNSIGNED categoria_procedimento_id "" FK ""
+        VARCHAR tipo_atendimento "" ""
+        DATE data_atendimento "" ""
+        DATETIME hora_prevista "" ""
+        DATETIME hora_inicio "" ""
+        DATETIME hora_fim "" ""
+        VARCHAR prioridade "" ""
+        VARCHAR status "" ""
+        TEXT observacao "" ""
+        TEXT motivo_cancelamento "" ""
+        BIGINT UNSIGNED criado_por "" ""
+        BIGINT UNSIGNED atualizado_por "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	CONFERENCIAS {
-		INT id PK
-		INT movimentacao_caixa_id FK
-		INT caixa_id FK
-		INT usuario_id FK
-		DECIMAL valor_credito
-        DECIMAL valor_debito
-        DECIMAL valor_pix
-        DECIMAL valor_dinheiro
-		DATETIME conferido_em
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    AUTORIZACOES {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED convenio_id "" FK ""
+        VARCHAR carteira "" ""
+        VARCHAR numero_autorizacao "" ""
+        ENUM status "" ""
+        DATE validade "" ""
+        TIMESTAMP data_solicitacao "" ""
+        TIMESTAMP data_resposta "" ""
+        TEXT observacao "" ""
+        BIGINT UNSIGNED usuario_id "" FK ""
+        BIGINT UNSIGNED usuario_id_validou "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	USUARIOS {
-		INT id PK ""  
-		VARCHAR nome  ""  
-		VARCHAR email  ""  
-		VARCHAR senha_hash  ""  
-		INT conta_id FK ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    CAIXAS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR descricao "" ""
+        VARCHAR tipo "" ""
+        TINYINT bloquear_receber "" ""
+        TINYINT bloquear_pagar "" ""
+        VARCHAR link_display "" ""
+        TINYINT ativo "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	ENDERECOS {
-		INT id PK ""  
-		VARCHAR cep  ""  
-		VARCHAR endereco  ""  
-		VARCHAR numero  ""  
-		VARCHAR bairro  ""  
-		VARCHAR cidade  ""  
-		VARCHAR complemento  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    CANAIS_AVISO {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	CONVENIO {
-		INT id PK ""  
-		VARCHAR descricao  ""  
-		VARCHAR tipo  ""  
-		VARCHAR empresa_id  ""  
-		INT ans  ""  
-		INT dias_recebimento  ""  
-		INT dias_retorno  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    CATEGORIAS_PROCEDIMENTO {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	CATEGORIAS_PROCEDIMENTO {
-		INT id PK ""  
-		VARCHAR nome  ""  
-		TEXT descricao  ""  
-		BOOLEAN ativo  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    CIDS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR codigo "" ""
+        TEXT descricao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	PROCEDIMENTOS {
-		INT id PK ""  
-		VARCHAR nome  ""  
-		VARCHAR descricao  ""  
-		INT categoria_id FK ""  
-		INT especialidade_id FK ""  
-		BOOLEAN eh_tratamento  ""  
-		INT quantidade_sessoes  ""  
-		DECIMAL valor  ""  
-		DECIMAL comissao_percentual  ""  
-		BOOLEAN ativo  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    CONTAS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        VARCHAR cnpj "" ""
+        VARCHAR pix_chave "" ""
+        VARCHAR pix_nome "" ""
+        VARCHAR pix_cidade "" ""
+        VARCHAR pix_descricao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	PROCEDIMENTO_CONVENIO {
-		INT id PK ""  
-		INT procedimento_id FK ""  
-		INT convenio_id FK ""  
-		DECIMAL valor_convenio  ""  
-		BOOLEAN ativo  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    CONTAS_RECEBER {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED faturamento_id "" FK ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        BIGINT UNSIGNED convenio_id "" FK ""
+        DECIMAL valor "" ""
+        DATE vencimento "" ""
+        VARCHAR status "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	PACIENTES {
-		INT id PK ""  
-		VARCHAR nome  ""  
-		VARCHAR cpf  ""  
-		VARCHAR rg  ""  
-		VARCHAR sexo  ""  
-		DATE data_nascimento  ""  
-		VARCHAR naturalidade  ""  
-		INT estado_civil_id FK ""  
-		DECIMAL altura  ""  
-		DECIMAL peso  ""  
-		VARCHAR cor_pele  ""  
-		INT endereco_id FK ""  
-		BOOLEAN receber_avisos  ""  
-		VARCHAR celular  ""  
-		VARCHAR telefone  ""  
-		VARCHAR email  ""  
-		INT canal_aviso_id FK ""  
-		VARCHAR profissao  ""  
-		VARCHAR escolaridade  ""  
-		VARCHAR nome_mae  ""  
-		VARCHAR nome_pai  ""  
-		INT tipo_sanguineo_id FK ""  
-		TEXT observacoes  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    CONVENIO_MEDICO_TUSS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED convenio_id "" FK ""
+        BIGINT UNSIGNED pessoa_id "" FK ""
+        BIGINT UNSIGNED tuss_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	PACIENTE_CONVENIO {
-		INT id PK ""  
-		INT paciente_id FK ""  
-		INT convenio_id FK ""  
-		VARCHAR numero_carteira  ""  
-		VARCHAR plano  ""  
-		DATE validade  ""  
-		BOOLEAN ativo  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    CONVENIO_TUSS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED convenio_id "" FK ""
+        BIGINT UNSIGNED tuss_id "" FK ""
+        TINYINT requer_autorizacao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	TIPO_SANGUINEO {
-		INT id PK ""  
-		VARCHAR descricao  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    CONVENIOS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR descricao "" ""
+        VARCHAR logo_path "" ""
+        VARCHAR tuss_tabela "" ""
+        VARCHAR tipo "" ""
+        BIGINT UNSIGNED empresa_id "" FK ""
+        INT UNSIGNED ans "" ""
+        INT UNSIGNED dias_recebimento "" ""
+        INT UNSIGNED dias_retorno "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	CANAIS_AVISO {
-		INT id PK ""  
-		VARCHAR nome  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    DOCUMENTOS_PRONTUARIO {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED prontuario_id "" FK ""
+        BIGINT UNSIGNED modelo_documento_id "" FK ""
+        BIGINT UNSIGNED pessoa_id "" FK ""
+        DATETIME data_emissao "" ""
+        TEXT conteudo_final "" ""
+        TINYINT assinado "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	PARENTESCOS {
-		INT id PK ""  
-		VARCHAR descricao  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    ENDERECOS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR cep "" ""
+        VARCHAR endereco "" ""
+        VARCHAR numero "" ""
+        VARCHAR bairro "" ""
+        VARCHAR cidade "" ""
+        VARCHAR complemento "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	RESPONSAVEIS {
-		INT id PK ""  
-		VARCHAR nome  ""  
-		INT parentesco_id FK ""  
-		VARCHAR cpf  ""  
-		VARCHAR rg  ""  
-		DATE data_nascimento  ""  
-		INT endereco_id FK ""  
-		VARCHAR celular  ""  
-		VARCHAR telefone  ""  
-		VARCHAR email  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    ESPECIALIDADE_PROCEDIMENTO {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED especialidade_id "" FK ""
+        BIGINT UNSIGNED procedimento_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	PACIENTE_RESPONSAVEL {
-		INT paciente_id FK ""  
-		INT responsavel_id FK ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    ESPECIALIDADES {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        VARCHAR codigo "" ""
+        TEXT descricao "" ""
+        TINYINT ativo "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	PRONTUARIOS {
-		INT id PK ""  
-		INT paciente_id FK ""  
-		VARCHAR codigo  ""  
-		DATE data_abertura  ""  
-		BOOLEAN ativo  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    ESTADO_CIVIL {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR descricao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	ESPECIALIDADES {
-		INT id PK ""  
-		VARCHAR nome  ""  
-		VARCHAR codigo  ""  
-		TEXT descricao  ""  
-		BOOLEAN ativo  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    FATURAMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        BIGINT UNSIGNED agendamento_id "" FK ""
+        VARCHAR tipo_pagador "" ""
+        BIGINT UNSIGNED convenio_id "" FK ""
+        DECIMAL valor_total "" ""
+        DECIMAL valor_final "" ""
+        DECIMAL valor_cobrado "" ""
+        DECIMAL valor_aprovado "" ""
+        DECIMAL valor_glosado "" ""
+        VARCHAR status "" ""
+        DATETIME data_faturamento "" ""
+        DATE vencimento "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	PROFISSIONAIS_SAUDE {
-		INT id PK ""  
-		VARCHAR nome  ""  
-		VARCHAR cpf  ""  
-		VARCHAR rg  ""  
-		VARCHAR sexo  ""  
-		DATE data_nascimento  ""  
-		VARCHAR naturalidade  ""  
-		INT estado_civil_id FK ""  
-		VARCHAR cnes  ""  
-		VARCHAR crm  ""  
-		INT endereco_id FK ""  
-		VARCHAR celular  ""  
-		VARCHAR telefone  ""  
-		VARCHAR email  ""  
-		TEXT observacoes  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    GUIAS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED faturamento_id "" FK ""
+        VARCHAR ans_registro "" ""
+        VARCHAR numero_guia_prestador "" ""
+        VARCHAR numero_guia_principal "" ""
+        DATE data_autorizacao "" ""
+        VARCHAR senha "" ""
+        DATE data_validade_senha "" ""
+        VARCHAR numero_guia_operadora "" ""
+        VARCHAR numero_carteira "" ""
+        DATE validade_carteira "" ""
+        VARCHAR beneficiario_nome "" ""
+        VARCHAR cns "" ""
+        TINYINT atendimento_rn "" ""
+        VARCHAR contratado_solicitante_codigo "" ""
+        VARCHAR contratado_solicitante_nome "" ""
+        VARCHAR profissional_solicitante_nome "" ""
+        VARCHAR conselho_solicitante "" ""
+        VARCHAR numero_conselho_solicitante "" ""
+        VARCHAR uf_conselho_solicitante "" ""
+        VARCHAR cbo_solicitante "" ""
+        TEXT assinatura_profissional_solicitante "" ""
+        VARCHAR carater_atendimento "" ""
+        DATE data_solicitacao "" ""
+        TEXT indicacao_clinica "" ""
+        VARCHAR tabela_procedimento_solicitado "" ""
+        VARCHAR procedimento_solicitado_codigo "" ""
+        VARCHAR procedimento_solicitado_descricao "" ""
+        TINYINT UNSIGNED quantidade_solicitada "" ""
+        TINYINT UNSIGNED quantidade_autorizada "" ""
+        VARCHAR contratado_executante_codigo "" ""
+        VARCHAR contratado_executante_nome "" ""
+        VARCHAR cnes_executante "" ""
+        VARCHAR tipo_atendimento "" ""
+        VARCHAR indicacao_acidente "" ""
+        VARCHAR tipo_consulta "" ""
+        VARCHAR motivo_encerramento "" ""
+        DATE data_realizacao "" ""
+        TIME hora_inicial "" ""
+        TIME hora_final "" ""
+        VARCHAR tabela_procedimento_realizado "" ""
+        VARCHAR procedimento_realizado_codigo "" ""
+        VARCHAR procedimento_realizado_descricao "" ""
+        TINYINT UNSIGNED quantidade_realizada "" ""
+        VARCHAR via_acesso "" ""
+        VARCHAR tecnica_utilizada "" ""
+        DECIMAL fator_reducao_acrescimo "" ""
+        DECIMAL valor_unitario "" ""
+        DECIMAL valor_total "" ""
+        VARCHAR sequencial_referencia "" ""
+        VARCHAR grau_participacao "" ""
+        VARCHAR profissional_executante_codigo "" ""
+        VARCHAR profissional_executante_nome "" ""
+        VARCHAR conselho_executante "" ""
+        VARCHAR numero_conselho_executante "" ""
+        VARCHAR uf_conselho_executante "" ""
+        VARCHAR cbo_executante "" ""
+        DATE data_realizacao_serie "" ""
+        TEXT assinatura_beneficiario_serie "" ""
+        TEXT observacao_justificativa "" ""
+        DECIMAL total_procedimentos "" ""
+        DECIMAL total_taxas_alugueis "" ""
+        DECIMAL total_materiais "" ""
+        DECIMAL total_opme "" ""
+        DECIMAL total_medicamentos "" ""
+        DECIMAL total_gases_medicinais "" ""
+        DECIMAL valor_total_geral "" ""
+        TEXT assinatura_responsavel_autorizacao "" ""
+        TEXT assinatura_beneficiario "" ""
+        TEXT assinatura_contratado "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	PROFISSIONAL_ESPECIALIDADE {
-		INT profissional_saude_id FK ""  
-		INT especialidade_id FK ""  
-		VARCHAR qre  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    GUICHES {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        VARCHAR hostname "" ""
+        TINYINT status "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	AGENDA_MEDICA {
-		INT id PK ""  
-		INT profissional_saude_id FK ""  
-		INT dia_semana  ""  
-		TIME hora_inicio  ""  
-		TIME hora_fim  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    HISTORICO_PRONTUARIO {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED atendimento_id "" FK ""
+        DATETIME data_registro "" ""
+        TEXT descricao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	STATUS_AGENDAMENTO {
-		INT id PK ""  
-		VARCHAR descricao  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    MODEL_HAS_PERMISSIONS {
+        BIGINT UNSIGNED permission_id PK "" ""
+        VARCHAR model_type PK "" ""
+        BIGINT UNSIGNED model_id PK "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	SESSOES_TRATAMENTO {
-		INT id PK ""  
-		INT procedimento_id FK ""  
-		INT paciente_id FK ""  
-		INT numero_sessao  ""  
-		DATE data_prevista  ""  
-		BOOLEAN realizada  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    MODEL_HAS_ROLES {
+        BIGINT UNSIGNED role_id PK "" ""
+        VARCHAR model_type PK "" ""
+        BIGINT UNSIGNED model_id PK "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	AGENDAMENTOS {
-		INT id PK ""  
-		INT agenda_medica_id FK ""  
-		DATE data  ""  
-		TIME hora  ""  
-		INT paciente_id FK ""  
-		INT procedimento_id FK ""  
-		INT orcamento_id FK ""  
-		INT sessao_tratamento_id FK ""  
-		INT status_id FK ""  
-		INT agendamento_origem_id FK ""  
-		DECIMAL valor_cobrado  ""  
-		TEXT observacoes  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    MODELOS_DOCUMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR tipo "" ""
+        VARCHAR nome "" ""
+        TEXT conteudo_template "" ""
+        TINYINT ativo "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	ATENDIMENTOS {
-		INT id PK ""  
-		INT agendamento_id FK ""  
-		INT prontuario_id FK ""  
-		INT profissional_saude_id FK ""  
-		INT especialidade_id FK ""  
-		DATE data  ""  
-		DATETIME inicio_atendimento  ""  
-		DATETIME fim_atendimento  ""  
-		TEXT evolucao  ""  
-		VARCHAR cid  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    MOVIMENTACOES_CAIXA {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED caixa_id "" FK ""
+        BIGINT UNSIGNED aberto_por_id "" FK ""
+        VARCHAR numero "" ""
+        DATETIME data_movimento "" ""
+        DECIMAL total_entradas "" ""
+        DECIMAL total_saidas "" ""
+        DECIMAL saldo_caixa "" ""
+        DECIMAL total_entrada_prazo "" ""
+        DECIMAL total_saida_prazo "" ""
+        DECIMAL total_transferencia "" ""
+        DECIMAL total_conferencia "" ""
+        DECIMAL saldo_movimento "" ""
+        DECIMAL valor_diferenca "" ""
+        DATETIME fechado_em "" ""
+        BIGINT UNSIGNED fechado_por_id "" FK ""
+        BIGINT UNSIGNED reaberto_por_id "" FK ""
+        TEXT observacoes_fechamento "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	HISTORICO_PRONTUARIO {
-		INT id PK ""  
-		INT atendimento_id FK ""  
-		DATETIME data_registro  ""  
-		TEXT descricao  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    ORCAMENTO_PROCEDIMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED orcamento_id "" FK ""
+        BIGINT UNSIGNED procedimento_id "" FK ""
+        BIGINT UNSIGNED tuss_id "" FK ""
+        INT UNSIGNED quantidade "" ""
+        DECIMAL valor_unitario "" ""
+        DECIMAL valor_total "" ""
+        TEXT observacoes "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	MODELOS_DOCUMENTOS {
-		INT id PK ""  
-		VARCHAR tipo  ""  
-		VARCHAR nome  ""  
-		TEXT conteudo_template  ""  
-		BOOLEAN ativo  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    ORCAMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR numero "" ""
+        DATETIME data_emissao "" ""
+        DATETIME validade "" ""
+        BIGINT UNSIGNED convenio_id "" FK ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        DECIMAL valor_bruto "" ""
+        DECIMAL desconto "" ""
+        DECIMAL valor_total "" ""
+        DECIMAL valor_avista "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	DOCUMENTOS_PRONTUARIO {
-		INT id PK ""  
-		INT prontuario_id FK ""  
-		INT modelo_documento_id FK ""  
-		INT profissional_saude_id FK ""  
-		DATETIME data_emissao  ""  
-		TEXT conteudo_final  ""  
-		BOOLEAN assinado  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    PACIENTE_CONVENIO {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        BIGINT UNSIGNED convenio_id "" FK ""
+        VARCHAR numero_carteira "" ""
+        VARCHAR plano "" ""
+        DATE validade "" ""
+        TINYINT ativo "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	PRESCRICOES {
-		INT id PK ""  
-		INT prontuario_id FK ""  
-		INT profissional_saude_id FK ""  
-		DATETIME data_prescricao  ""  
-		TEXT prescricao  ""  
-		TEXT observacoes  ""  
-		BOOLEAN ativa  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    PACIENTE_RESPONSAVEL {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        BIGINT UNSIGNED responsavel_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	SOLICITACAO_EXAMES {
-		INT id PK ""  
-		INT prontuario_id FK ""  
-		INT profissional_saude_id FK ""  
-		TEXT prescricao  ""  
-		TEXT observacoes  ""  
-		BOOLEAN ativa  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    PACIENTES {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        VARCHAR cpf "" ""
+        VARCHAR cns "" ""
+        VARCHAR rg "" ""
+        VARCHAR sexo "" ""
+        DATE data_nascimento "" ""
+        VARCHAR naturalidade "" ""
+        BIGINT UNSIGNED estado_civil_id "" FK ""
+        DECIMAL altura "" ""
+        DECIMAL peso "" ""
+        VARCHAR cor_pele "" ""
+        BIGINT UNSIGNED endereco_id "" FK ""
+        TINYINT receber_avisos "" ""
+        VARCHAR celular "" ""
+        VARCHAR telefone "" ""
+        VARCHAR email "" ""
+        BIGINT UNSIGNED canal_aviso_id "" FK ""
+        VARCHAR profissao "" ""
+        VARCHAR escolaridade "" ""
+        VARCHAR nome_mae "" ""
+        VARCHAR nome_pai "" ""
+        BIGINT UNSIGNED tipo_sanguineo_id "" FK ""
+        TEXT observacoes "" ""
+        TINYINT tem_responsavel "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	ORCAMENTOS {
-		INT id PK ""  
-		VARCHAR numero  ""  
-		DATETIME data_emissao  ""  
-		DATETIME validade  ""  
-		INT convenio_id FK ""  
-		INT paciente_id FK ""  
-		DECIMAL valor_bruto  ""  
-		DECIMAL desconto  ""  
-		DECIMAL valor_total  ""  
-		DECIMAL valor_avista  ""  
-		BOOLEAN faturamento_previsto  ""  
-		BOOLEAN aprovado  ""  
-		VARCHAR status  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    PAGAMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nu_pagamento "" ""
+        BIGINT UNSIGNED faturamento_id "" FK ""
+        BIGINT UNSIGNED caixa_id "" FK ""
+        BIGINT UNSIGNED movimentacao_id "" FK ""
+        DECIMAL valor "" ""
+        VARCHAR forma_pagamento "" ""
+        DATETIME data_pagamento "" ""
+        VARCHAR status "" ""
+        TEXT recusa_justificativa "" ""
+        BIGINT UNSIGNED recusado_por "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	ORCAMENTO_PROCEDIMENTOS {
-		INT id PK ""  
-		INT orcamento_id FK ""  
-		INT procedimento_id FK ""  
-		INT quantidade  ""  
-		DECIMAL valor_unitario  ""  
-		DECIMAL valor_total  ""  
-		DATETIME created_at  ""  
-		DATETIME updated_at  ""  
-	}
+    PAINEIS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        TINYINT status "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
 
-	FATURAMENTOS {
-		INT id PK
-		INT paciente_id FK
-		INT orcamento_id FK
-		DECIMAL valor_total
-		DECIMAL desconto
-		DECIMAL valor_final
-		VARCHAR status
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PARENTESCOS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR descricao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
 
-	CONTAS_RECEBER {
-		INT id PK
-		INT faturamento_id FK
-		INT paciente_id FK
-		DECIMAL valor
-		DATE vencimento
-		VARCHAR status
-		DATETIME created_at
-		DATETIME updated_at
-	}
+    PEP_ANAMNESES {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        TEXT queixa_principal "" ""
+        TEXT historia_doenca_atual "" ""
+        TEXT antecedentes_pessoais "" ""
+        TEXT antecedentes_familiares "" ""
+        TEXT historico_social "" ""
+        TEXT alergias "" ""
+        TEXT medicamentos_uso "" ""
+        TEXT habitos_vida "" ""
+        TEXT observacao "" ""
+        BIGINT UNSIGNED created_by "" ""
+        BIGINT UNSIGNED updated_by "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_ARQUIVOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        VARCHAR nome "" ""
+        VARCHAR arquivo "" ""
+        VARCHAR mime_type "" ""
+        INT tamanho "" ""
+        TEXT observacao "" ""
+        VARCHAR enviado_por "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_ASSINATURAS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        BIGINT UNSIGNED documento_id "" FK ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        VARCHAR tipo_documento "" ""
+        TEXT hash_documento "" ""
+        TEXT certificado "" ""
+        DATETIME assinado_em "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_ATESTADOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        INT dias "" ""
+        BIGINT UNSIGNED cid_id "" FK ""
+        TEXT texto "" ""
+        DATETIME emitido_em "" ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_DIAGNOSTICOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        BIGINT UNSIGNED cid_id "" FK ""
+        TINYINT principal "" ""
+        TEXT descricao "" ""
+        TINYINT confirmado "" ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_DOCUMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        VARCHAR tipo "" ""
+        VARCHAR titulo "" ""
+        LONGTEXT conteudo "" ""
+        DATETIME emitido_em "" ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_ENCAMINHAMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        VARCHAR especialidade_destino "" ""
+        VARCHAR profissional_destino "" ""
+        TEXT motivo "" ""
+        TEXT observacao "" ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_EVOLUCOES {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        VARCHAR tipo "" ""
+        TEXT descricao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_EXAMES_FISICOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        TEXT descricao "" ""
+        TEXT observacao "" ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_PRESCRICAO_ITENS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED prescricao_id "" FK ""
+        BIGINT UNSIGNED medicamento_id "" FK ""
+        VARCHAR dosagem "" ""
+        VARCHAR frequencia "" ""
+        VARCHAR via "" ""
+        VARCHAR duracao "" ""
+        INT quantidade "" ""
+        TEXT observacao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_PRESCRICOES {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        TEXT observacao "" ""
+        DATE validade "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_PROCEDIMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        BIGINT UNSIGNED procedimento_id "" FK ""
+        INT quantidade "" ""
+        TEXT observacao "" ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        DATETIME realizado_em "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_RECEITAS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        BIGINT UNSIGNED prescricao_id "" FK ""
+        TEXT texto "" ""
+        DATETIME emitido_em "" ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_SINAIS_VITAIS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        VARCHAR pressao_sistolica "" ""
+        VARCHAR pressao_diastolica "" ""
+        VARCHAR frequencia_cardiaca "" ""
+        VARCHAR frequencia_respiratoria "" ""
+        VARCHAR temperatura "" ""
+        VARCHAR saturacao "" ""
+        DECIMAL peso "" ""
+        DECIMAL altura "" ""
+        DECIMAL imc "" ""
+        VARCHAR glicemia "" ""
+        VARCHAR circunferencia_abdominal "" ""
+        TEXT observacao "" ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEP_SOLICITACOES_EXAMES {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pep_id "" FK ""
+        BIGINT UNSIGNED procedimento_id "" FK ""
+        TEXT justificativa "" ""
+        TINYINT urgente "" ""
+        VARCHAR status "" ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PEPS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED atendimento_id "" FK ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        BIGINT UNSIGNED profissional_id "" FK ""
+        DATETIME aberto_em "" ""
+        DATETIME encerrado_em "" ""
+        VARCHAR status "" ""
+        TEXT observacao "" ""
+        BIGINT UNSIGNED created_by "" ""
+        BIGINT UNSIGNED updated_by "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    PERMISSIONS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR name "" ""
+        VARCHAR guard_name "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    PESSOAS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        VARCHAR cpf "" ""
+        VARCHAR rg "" ""
+        VARCHAR sexo "" ""
+        DATE data_nascimento "" ""
+        VARCHAR naturalidade "" ""
+        BIGINT UNSIGNED estado_civil_id "" FK ""
+        VARCHAR cnes "" ""
+        VARCHAR cargo "" ""
+        VARCHAR crm "" ""
+        BIGINT UNSIGNED endereco_id "" FK ""
+        VARCHAR celular "" ""
+        VARCHAR telefone "" ""
+        VARCHAR email "" ""
+        TEXT observacoes "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    PRE_CADASTRO {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        VARCHAR sobrenome "" ""
+        VARCHAR cpf "" ""
+        VARCHAR telefone "" ""
+        DATE data_nascimento "" ""
+        VARCHAR email "" ""
+        VARCHAR password "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    PRESCRICOES {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED prontuario_id "" FK ""
+        BIGINT UNSIGNED pessoa_id "" FK ""
+        DATETIME data_prescricao "" ""
+        TEXT prescricao "" ""
+        TEXT observacoes "" ""
+        TINYINT ativa "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    PROCEDIMENTOS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        VARCHAR descricao "" ""
+        BIGINT UNSIGNED categoria_id "" FK ""
+        TINYINT eh_tratamento "" ""
+        INT UNSIGNED quantidade_sessoes "" ""
+        DECIMAL valor "" ""
+        DECIMAL comissao_percentual "" ""
+        TINYINT ativo "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    PROFISSIONAL_ESPECIALIDADE {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED pessoa_id "" FK ""
+        BIGINT UNSIGNED especialidade_id "" FK ""
+        VARCHAR qre "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    PRONTUARIOS {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        VARCHAR codigo "" ""
+        DATE data_abertura "" ""
+        TINYINT ativo "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    RESPONSAVEIS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        BIGINT UNSIGNED parentesco_id "" FK ""
+        VARCHAR cpf "" ""
+        VARCHAR rg "" ""
+        DATE data_nascimento "" ""
+        BIGINT UNSIGNED endereco_id "" FK ""
+        VARCHAR celular "" ""
+        VARCHAR telefone "" ""
+        VARCHAR email "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    ROLE_HAS_PERMISSIONS {
+        BIGINT UNSIGNED permission_id PK "" ""
+        BIGINT UNSIGNED role_id PK "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    ROLES {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR name "" ""
+        VARCHAR guard_name "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    SALAS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        TINYINT status "" ""
+        BIGINT UNSIGNED pessoa_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    SESSIONS {
+        VARCHAR id PK "" ""
+        BIGINT UNSIGNED user_id "" FK ""
+        VARCHAR ip_address "" ""
+        TEXT user_agent "" ""
+        LONGTEXT payload "" ""
+        INT last_activity "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    SESSOES_TRATAMENTO {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED procedimento_id "" FK ""
+        BIGINT UNSIGNED tuss_id "" FK ""
+        BIGINT UNSIGNED paciente_id "" FK ""
+        INT UNSIGNED numero_sessao "" ""
+        DATE data_prevista "" ""
+        TINYINT realizada "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    SOLICITACAO_EXAMES {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED prontuario_id "" FK ""
+        BIGINT UNSIGNED pessoa_id "" FK ""
+        TEXT prescricao "" ""
+        TEXT observacoes "" ""
+        TINYINT ativa "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    STATUS_AGENDAMENTO {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR descricao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    TIPO_SANGUINEO {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR descricao "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    TOTEM_OPCOES {
+        BIGINT UNSIGNED id PK "" ""
+        BIGINT UNSIGNED totem_id "" FK ""
+        VARCHAR nome "" ""
+        VARCHAR codigo "" ""
+        TINYINT status "" ""
+        VARCHAR icone "" ""
+        VARCHAR cor "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    TOTENS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR nome "" ""
+        TINYINT status "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+    }
+
+    TUSS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR tabela "" ""
+        VARCHAR codigo "" ""
+        VARCHAR descricao "" ""
+        DECIMAL m2_filme "" ""
+        DECIMAL auxiliares "" ""
+        DECIMAL incidencia "" ""
+        VARCHAR porte "" ""
+        DECIMAL ch "" ""
+        DECIMAL co "" ""
+        DECIMAL total "" ""
+        TINYINT eh_tratamento "" ""
+        INT UNSIGNED quantidade_sessoes "" ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
+    USERS {
+        BIGINT UNSIGNED id PK "" ""
+        VARCHAR email "" ""
+        VARCHAR password "" ""
+        TINYINT is_active "" ""
+        TEXT two_factor_secret "" ""
+        TEXT two_factor_recovery_codes "" ""
+        TIMESTAMP two_factor_confirmed_at "" ""
+        BIGINT UNSIGNED pessoa_id "" FK ""
+        TIMESTAMP email_verified_at "" ""
+        VARCHAR remember_token "" ""
+        BIGINT UNSIGNED current_team_id "" FK ""
+        VARCHAR profile_photo_path "" ""
+        BIGINT UNSIGNED conta_id "" FK ""
+        TIMESTAMP created_at "" ""
+        TIMESTAMP updated_at "" ""
+        TIMESTAMP deleted_at "" ""
+    }
+
 
 	CONTAS||--o{USUARIOS:"possui"
 	ENDERECOS||--o{PACIENTES:"reside_em"
@@ -714,7 +1225,6 @@ erDiagram
 	USUARIOS||--o{MOVIMENTACOES_CAIXA:"abre"
 	USUARIOS||--o{MOVIMENTACOES_CAIXA:"fecha"
 	USUARIOS||--o{MOVIMENTACOES_CAIXA:"reabre"
-                    
 ```
 
 # Licença
