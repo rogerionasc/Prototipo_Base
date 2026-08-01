@@ -20,7 +20,7 @@ class Agendamento extends Model
         'procedimento_id',
         'tuss_id',
         'sessao_tratamento_id',
-        'orcamento_id',
+
         'status_id',
         'agendamento_origem_id',
         'valor_cobrado',
@@ -62,10 +62,7 @@ class Agendamento extends Model
         return $this->hasMany(Atendimento::class, 'agendamento_id');
     }
 
-    public function orcamento()
-    {
-        return $this->belongsTo(Orcamento::class, 'orcamento_id');
-    }
+
 
     public function tuss()
     {

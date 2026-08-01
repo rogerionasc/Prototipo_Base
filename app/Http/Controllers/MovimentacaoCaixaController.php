@@ -114,7 +114,7 @@ class MovimentacaoCaixaController extends Controller
             ->limit(100)
             ->get();
 
-        return Inertia::render('Financeiro/Caixa/Movimentacao', [
+        return Inertia::render('Caixa/Movimentacoes/Index', [
             'caixas' => $caixas,
             'ultimos' => $ultimos,
             'movs' => $movs,

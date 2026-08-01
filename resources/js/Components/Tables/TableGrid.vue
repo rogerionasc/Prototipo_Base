@@ -78,7 +78,7 @@ let tableObserverTimer = null;
 function observeTableSelectionPersistence() {
     if (!wrapper.value) return;
     if (tableObserver) {
-        try { tableObserver.disconnect(); } catch (_) {}
+        try { tableObserver.disconnect(); } catch (_) { }
         tableObserver = null;
     }
     tableObserver = new MutationObserver(() => {
@@ -94,7 +94,7 @@ function observeTableSelectionPersistence() {
 // Função debounce para atrasar a execução de uma função
 function useDebounce(fn, delay) {
     let timeoutId;
-    return function(...args) {
+    return function (...args) {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
             fn.apply(this, args);
@@ -318,7 +318,7 @@ function initGrid() {
         wrapper.value.removeEventListener('click', clickListener);
     }
     if (tableObserver) {
-        try { tableObserver.disconnect(); } catch (_) {}
+        try { tableObserver.disconnect(); } catch (_) { }
         tableObserver = null;
     }
     if (tableObserverTimer) {
@@ -562,7 +562,7 @@ function initGrid() {
             handle: async (res) => {
                 if (!res || !res.ok) {
                     let details = '';
-                    try { details = await res.text(); } catch (_) {}
+                    try { details = await res.text(); } catch (_) { }
                     isLoading.value = false;
                     throw new Error(details || `HTTP ${res?.status || 0}`);
                 }
@@ -614,7 +614,7 @@ function initGrid() {
         const action = target.getAttribute('data-action');
         const id = target.getAttribute('data-id');
         let rowObj = {};
-        try { rowObj = JSON.parse(target.getAttribute('data-row')); } catch (e) {}
+        try { rowObj = JSON.parse(target.getAttribute('data-row')); } catch (e) { }
         if (action === 'delete') {
             emit('delete', rowObj);
         } else if (action === 'edit') {
@@ -675,7 +675,7 @@ onBeforeUnmount(() => {
         wrapper.value.removeEventListener('change', changeListener);
     }
     if (tableObserver) {
-        try { tableObserver.disconnect(); } catch (_) {}
+        try { tableObserver.disconnect(); } catch (_) { }
         tableObserver = null;
     }
     if (tableObserverTimer) {
@@ -704,40 +704,38 @@ onMounted(async () => {
     <div class="row">
         <div :class="props.compactSpacing ? 'card' : 'card card-body'">
             <div :class="['card-body', props.compactSpacing ? 'px-0 pt-0' : 'px-0']">
-                <h5 v-if="props.showTitle" :class="['card-title','mb-0','flex-grow-1', props.compactSpacing ? 'mb-1' : 'mb-3']">{{ props.tableTitle }}</h5>
+                <h5 v-if="props.showTitle"
+                    :class="['card-title', 'mb-0', 'flex-grow-1', props.compactSpacing ? 'mb-1' : 'mb-3']">{{
+                    props.tableTitle }}</h5>
                 <!-- Filtros -->
-                <BCardBody class="border border-dashed border-end-0 border-start-0 px-0">
-                    <div class="d-flex justify-content-between align-items-center">
+                <BCardBody class="border border-dashed border-end-0 border-start-0 px-0 pt-3 pb-3 mb-4">
+                    <div class="d-flex justify-content-between align-items-center px-3 pb-3">
                         <div class="search-box" style="width: 300px;" v-if="props.search">
-                            <input type="text" name="table_search" autocomplete="on" class="form-control search" :placeholder="searchPlaceholder" v-model="searchQuery" />
+                            <input type="text" name="table_search" autocomplete="on" class="form-control search"
+                                :placeholder="searchPlaceholder" v-model="searchQuery" />
                             <i class="ri-search-line search-icon"></i>
                         </div>
                         <div class="d-flex align-items-center gap-3">
-                            <button id="deleteMulti" @click="emit('modalDdeletarMultiplos', selectedRows)" v-if="props.showMultiDelete && selectedRows.length > 0 && props.showCheckbox"
-                                type="button"
-                                class="btn btn-danger btn-icon waves-effect waves-light"
-                            >
+                            <button id="deleteMulti" @click="emit('modalDdeletarMultiplos', selectedRows)"
+                                v-if="props.showMultiDelete && selectedRows.length > 0 && props.showCheckbox"
+                                type="button" class="btn btn-danger btn-icon waves-effect waves-light">
                                 <i class="ri-delete-bin-5-line"></i>
                             </button>
                             <div v-if="showPerPagination" class="d-flex align-items-center">
                                 <span class="text-muted text-nowrap me-2">Exibir:</span>
-                                <Multiselect
-                                    style="width: 100px;"
-                                    name="perPagination"
-                                    id="perPagination"
-                                    v-model="limit"
-                                    :options="[
+                                <Multiselect style="width: 100px;" name="perPagination" id="perPagination"
+                                    v-model="limit" :options="[
                                         { value: 10, label: '10' },
                                         { value: 20, label: '20' },
                                         { value: 50, label: '50' },
                                         { value: 100, label: '100' }
-                                    ]"
-                                    :canClear="false"
-                                    :searchable="false"
-                                />
+                                    ]" :canClear="false" :searchable="false" />
                             </div>
-                            <button v-if="props.showAddButton" type="button" class="btn btn-success btn-label waves-effect waves-light" @click="emit('add')" :disabled="props.addButtonDisabled">
-                                <i :class="`${props.addButtonIconClass} label-icon align-middle fs-16 me-2`"></i> {{ props.addButtonText }}
+                            <button v-if="props.showAddButton" type="button"
+                                class="btn btn-success btn-label waves-effect waves-light" @click="emit('add')"
+                                :disabled="props.addButtonDisabled">
+                                <i :class="`${props.addButtonIconClass} label-icon align-middle fs-16 me-2`"></i> {{
+                                props.addButtonText }}
                             </button>
                         </div>
                     </div>
@@ -746,7 +744,8 @@ onMounted(async () => {
                 <!-- Loader enquanto a tabela está sendo construída -->
                 <div v-if="isLoading" class="d-flex justify-content-center align-items-center py-5">
                     <div class="text-center">
-                        <LottieComponent :options="{ animationData: animationCube, loop: true, autoplay: true }" :height="75" :width="75" />
+                        <LottieComponent :options="{ animationData: animationCube, loop: true, autoplay: true }"
+                            :height="75" :width="75" />
                         <h5 class="mt-2">Aguarde! Carregando...</h5>
                         <p class="text-muted mb-0">
                             Estamos trabalhando para trazer os dados.
@@ -755,7 +754,9 @@ onMounted(async () => {
                 </div>
 
                 <!-- Container da tabela -->
-                <div v-show="!isLoading" ref="wrapper" :class="['table-card','table-responsive', props.compactSpacing ? 'mt-2' : 'mt-3','px-3']"></div>
+                <div v-show="!isLoading" ref="wrapper"
+                    :class="['table-card', 'table-responsive', props.compactSpacing ? 'mt-2' : 'mt-0', 'px-3']"
+                    style="padding-top: 10px;"></div>
             </div>
         </div>
     </div>
@@ -763,28 +764,31 @@ onMounted(async () => {
 
 <style>
 .gridjs-loading {
-  display: none !important;
+    display: none !important;
 }
 
 .table-responsive table {
-  table-layout: auto !important;
-  width: 100% !important;
+    table-layout: auto !important;
+    width: 100% !important;
 }
 
-.table th, .table td {
-  max-width: 192px !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  vertical-align: middle !important;
-}
+.table th,
 .table td {
-  padding: 0.25rem 0.5rem !important;
+    max-width: 192px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
 }
+
+.table td {
+    padding: 0.25rem 0.5rem !important;
+}
+
 .table tbody td:last-child {
-  width: 1%;
-  max-width: none !important;
-  overflow: visible !important;
-  text-overflow: initial !important;
+    width: 1%;
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: initial !important;
 }
 </style>

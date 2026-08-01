@@ -31,7 +31,7 @@ class ContasReceberController extends Controller
                 'cr.valor',
                 'cr.status',
                 'f.tipo_pagador',
-                DB::raw("(SELECT p.nu_pagamento FROM pagamentos p WHERE p.faturamento_id = cr.faturamento_id AND p.status = 'PAGO' ORDER BY p.id DESC LIMIT 1) as nu_pagamento"),
+                DB::raw("(SELECT p.nu_pagamento FROM pagamentos p WHERE p.faturamento_id = cr.faturamento_id ORDER BY p.id DESC LIMIT 1) as nu_pagamento"),
                 DB::raw("(SELECT DATE_FORMAT(MAX(p.data_pagamento), '%d/%m/%Y %H:%i') FROM pagamentos p WHERE p.faturamento_id = cr.faturamento_id AND p.status = 'PAGO') as data_pagamento")
             )
             ->orderByDesc('cr.updated_at')
@@ -39,7 +39,7 @@ class ContasReceberController extends Controller
             ->limit(1000)
             ->get();
 
-        return Inertia::render('Financeiro/ContasReceber', [
+        return Inertia::render('Financeiro/ContasReceber/Index', [
             'contas' => $rows,
         ]);
     }

@@ -34,7 +34,6 @@ const columns = [
   { id: "id", name: "ID" },
   { id: "convenio", name: "Convênio" },
   { id: "paciente", name: "Paciente" },
-  { id: "numero_orcamento", name: "Orçamento" },
   { id: "data_faturamento", name: "Faturado em" },
   { id: "vencimento", name: "Vencimento" },
   { id: "valor_cobrado", name: "Cobrado", formatter: (cell) => formatCurrency(cell) },

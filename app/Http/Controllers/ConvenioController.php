@@ -60,7 +60,7 @@ class ConvenioController extends Controller
             ->pluck('tabela')
             ->values()
             ->all();
-        return Inertia::render('Convenios/Index', [
+        return Inertia::render('Convenio/Cadastros/Index', [
             'convenios' => $convenios,
             'contas' => $contas,
             'profissionaisSaude' => $profissionaisSaude,

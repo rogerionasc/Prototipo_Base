@@ -18,7 +18,7 @@ class PagamentoController extends Controller
     {
         $caixas = \App\Models\Caixa::select('id','descricao','ativo')->orderBy('descricao')->get();
         $selected = (int)$request->query('caixa_id', 0);
-        return Inertia::render('Financeiro/Caixa/PixDisplay', [
+        return Inertia::render('Caixa/PixDisplay', [
             'caixas' => $caixas,
             'selectedCaixaId' => $selected > 0 ? $selected : null,
         ]);
@@ -511,7 +511,7 @@ class PagamentoController extends Controller
             ->orderByDesc('p.updated_at')
             ->limit(100)
             ->get();
-        return Inertia::render('Financeiro/Caixa/Recusados', [
+        return Inertia::render('Caixa/PagamentosRecusados/Index', [
             'pagamentosRecusados' => $pagamentosRecusados,
         ]);
     }

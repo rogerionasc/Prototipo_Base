@@ -13,8 +13,6 @@ use App\Models\Pessoa;
 use App\Models\Procedimento;
 use App\Models\AgendaMedica;
 use App\Models\StatusAgendamento;
-use App\Models\Orcamento;
-use App\Models\OrcamentoProcedimento;
 use App\Models\Pagamento;
 use App\Models\Autorizacao;
 use App\Models\Convenio;
@@ -46,7 +44,7 @@ class AgendamentoController extends Controller
             ->groupBy('a.pessoa_id','ps.nome','a.hora_inicio','a.hora_fim')
             ->orderBy('ps.nome')
             ->get();
-        return Inertia::render('Atendimento/Agendamentos/Index', [
+        return Inertia::render('Recepcao/Agendamentos/Index', [
             'pacientes' => $pacientes,
             'profissionais' => $profissionais,
             'procedimentos' => $procedimentos,
@@ -311,7 +309,7 @@ class AgendamentoController extends Controller
                     'procedimento_id' => $isConvenio ? null : $procId,
                     'tuss_id' => $isConvenio ? $procId : null,
                     'sessao_tratamento_id' => $sessaoId,
-                    'orcamento_id' => null,
+
                     'status_id' => $agendamentoStatusId,
                     'agendamento_origem_id' => $agendamentoOrigemId,
                     'valor_cobrado' => $valorCobrado,
@@ -706,7 +704,7 @@ class AgendamentoController extends Controller
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
-            ->leftJoin('orcamentos as orc', 'orc.id', '=', 'a.orcamento_id')
+
             ->leftJoin('faturamentos as f', 'f.agendamento_id', '=', 'a.id')
             ->leftJoin('pagamentos as pag', 'pag.faturamento_id', '=', 'f.id')
             ->where('a.paciente_id', $paciente_id)
@@ -716,7 +714,7 @@ class AgendamentoController extends Controller
                 'a.hora',
                 'a.procedimento_id',
                 'a.tuss_id',
-                'orc.convenio_id',
+                'f.convenio_id',
                 'am.pessoa_id',
                 DB::raw('COALESCE(CONCAT(pr.nome, CASE WHEN st.numero_sessao IS NOT NULL AND pr.quantidade_sessoes IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, "/", pr.quantidade_sessoes, ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END), t.descricao, "") AS procedimento_nome'),
                 DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),

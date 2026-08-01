@@ -11,7 +11,7 @@ class CaixaController extends Controller
     public function create()
     {
         $caixas = Caixa::select('id','descricao','tipo','bloquear_receber','bloquear_pagar','ativo')->get();
-        return Inertia::render('Financeiro/Caixa/Index', [
+        return Inertia::render('Caixa/Cadastro/Index', [
             'caixas' => $caixas,
         ]);
     }

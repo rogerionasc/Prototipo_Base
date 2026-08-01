@@ -15,10 +15,7 @@ use App\Models\Procedimento;
 
 class VelzonRoutesController extends Controller
 {
-    // tesrt function
-    public function test_func(){
-        return Inertia::render('NewPage/index');
-    }
+
 
     public function componentes() {
         return Inertia::render('Componentes/Index');
@@ -49,7 +46,7 @@ class VelzonRoutesController extends Controller
         $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
         $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
         $categoriasProcedimento = CategoriaProcedimento::select('id','nome')->orderBy('nome')->get();
-        return Inertia::render('Configuracao/ParametrizacaoPage', [
+        return Inertia::render('Parametrizacoes/Index', [
             'estadosCivis' => $estados,
             'tiposSanguineos' => $tipos,
             'canaisAviso' => $canais,
@@ -62,7 +59,7 @@ class VelzonRoutesController extends Controller
         $especialidades = Especialidade::with(['procedimentos:id,nome'])->select('id','nome','codigo','descricao','ativo')->orderBy('nome')->get();
         $procedimentos = Procedimento::select('id','nome','descricao','categoria_id','eh_tratamento','quantidade_sessoes','valor','comissao_percentual','ativo')->orderBy('nome')->get();
         $tuss = \App\Models\Tuss::select('id','tabela','codigo','descricao')->orderBy('descricao')->get();
-        return Inertia::render('Configuracao/EspecialidadePage', [
+        return Inertia::render('Especialidades/Index', [
             'especialidades' => $especialidades,
             'procedimentos' => $procedimentos,
             'tuss' => $tuss,
@@ -70,11 +67,11 @@ class VelzonRoutesController extends Controller
     }
 
     public function configuracaoTuss() {
-        return Inertia::render('Configuracao/TussPage');
+        return Inertia::render('Tuss/Index');
     }
 
     public function configuracaoCid() {
-        return Inertia::render('Configuracao/CidPage');
+        return Inertia::render('Cids/Index');
     }
 
     public function configuracaoProcedimentos() {
@@ -82,7 +79,7 @@ class VelzonRoutesController extends Controller
         $procedimentos = Procedimento::select('id','nome','descricao','categoria_id','eh_tratamento','quantidade_sessoes','valor','comissao_percentual','ativo')
             ->orderBy('nome')
             ->get();
-        return Inertia::render('Configuracao/ProcedimentoPage', [
+        return Inertia::render('Procedimentos/Index', [
             'categoriasProcedimento' => $categoriasProcedimento,
             'procedimentos' => $procedimentos,
         ]);
@@ -128,7 +125,7 @@ class VelzonRoutesController extends Controller
             ->get();
         $especialidades = \App\Models\Especialidade::select('id','nome','codigo','descricao','ativo')->orderBy('nome')->get();
         $estadosCivis = \App\Models\EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
-        return Inertia::render('Doctor/Index', [
+        return Inertia::render('Medicos/Index', [
             'profissionais' => $profissionais,
             'especialidades' => $especialidades,
             'estadosCivis' => $estadosCivis,
@@ -174,104 +171,9 @@ class VelzonRoutesController extends Controller
 
     public function dashboard()
     {
-        return Inertia::render('dashboards/ecommerce/Index');
+        return Inertia::render('Dashboards/Index');
     }
 
-    public function pages_starter() {
-        return Inertia::render('pages/starter');
-    }
-
-    public function pages_maintenance() {
-        return Inertia::render('pages/maintenance');
-    }
-
-    public function pages_coming_soon() {
-        return Inertia::render('pages/coming-soon');
-    }
-
-    public function auth_signin_basic() {
-        return Inertia::render('auth-pages/signin/basic');
-    }
-
-    public function auth_signin_cover() {
-        return Inertia::render('auth-pages/signin/cover');
-    }
-
-    public function auth_signup_basic() {
-        return Inertia::render('auth-pages/signup/basic');
-    }
-
-    public function auth_signup_cover() {
-        return Inertia::render('auth-pages/signup/cover');
-    }
-
-    public function auth_reset_pwd_basic() {
-        return Inertia::render('auth-pages/reset/basic');
-    }
-
-    public function auth_reset_pwd_cover() {
-        return Inertia::render('auth-pages/reset/cover');
-    }
-
-    public function auth_create_pwd_basic() {
-        return Inertia::render('auth-pages/create/basic');
-    }
-
-    public function auth_create_pwd_cover() {
-        return Inertia::render('auth-pages/create/cover');
-    }
-
-    public function auth_lockscreen_basic() {
-        return Inertia::render('auth-pages/lockscreen/basic');
-    }
-
-    public function auth_lockscreen_cover() {
-        return Inertia::render('auth-pages/lockscreen/cover');
-    }
-
-    public function auth_twostep_basic() {
-        return Inertia::render('auth-pages/twostep/basic');
-    }
-
-    public function auth_twostep_cover() {
-        return Inertia::render('auth-pages/twostep/cover');
-    }
-
-    public function auth_404() {
-        return Inertia::render('auth-pages/errors/404');
-    }
-
-    public function auth_500() {
-        return Inertia::render('auth-pages/errors/500');
-    }
-
-    public function auth_404_basic() {
-        return Inertia::render('auth-pages/errors/404-basic');
-    }
-
-    public function auth_404_cover() {
-        return Inertia::render('auth-pages/errors/404-cover');
-    }
-
-    public function auth_ofline() {
-        return Inertia::render('auth-pages/errors/ofline');
-    }
-
-    public function auth_logout_basic() {
-        return Inertia::render('auth-pages/logout/basic');
-    }
-
-    public function auth_logout_cover() {
-        return Inertia::render('auth-pages/logout/cover');
-    }
-
-    public function auth_success_msg_basic() {
-        return Inertia::render('auth-pages/success-msg/basic');
-    }
-
-    public function auth_success_msg_cover() {
-        return Inertia::render('auth-pages/success-msg/cover');
-    }
 
     public function parametros_index() {
         $estados = EstadoCivil::select('id','descricao')->orderBy('descricao')->get();

@@ -263,7 +263,7 @@ class OrcamentoController extends Controller
             ->limit(10)
             ->get();
 
-        return Inertia::render('Atendimento/Orcamentos/Index', [
+        return Inertia::render('Recepcao/Orcamentos/Index', [
             'pacientes' => $pacientes,
             'convenios' => $convenios,
             'procedimentos' => $procedimentos,
@@ -418,9 +418,13 @@ class OrcamentoController extends Controller
             ->where('op.orcamento_id', $id)
             ->whereNull('op.deleted_at');
         $itens = $itensQuery->get();
+
+        $agendamentos = [];
+
         return response()->json([
             'orcamento' => $o,
             'itens' => $itens,
+            'agendamentos' => $agendamentos,
         ]);
     }
 
@@ -641,7 +645,7 @@ public function searchPaid(Request $request)
             ->where('op.orcamento_id', $id)
             ->whereNull('op.deleted_at')
             ->get();
-        return Inertia::render('Atendimento/Orcamentos/OrcamentoPrint', [
+        return Inertia::render('Recepcao/Orcamentos/OrcamentoPrint', [
             'orcamento' => $o,
             'itens' => $itens,
         ]);
