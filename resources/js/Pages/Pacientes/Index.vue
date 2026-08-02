@@ -140,7 +140,31 @@
             </div>
 
             <h6 class="mb-3 border-bottom pb-2">Detalhes do Reagendamento</h6>
-            <div class="row g-3">
+            <div v-if="reagendarCarregando" key="skeleton" class="placeholder-wave">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-medium">Nova Data</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-medium">Nova Hora</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Convênio</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Procedimento</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Médico / Profissional</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                </div>
+            </div>
+            <div v-else class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label fw-medium">Nova Data</label>
                     <flatPickr v-model="reagendarForm.data" class="form-control" :config="opcoesFlatpickrData"
@@ -153,7 +177,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-medium">Convênio</label>
-                    <select v-model="reagendarForm.convenio_id" data-choices class="form-select"
+                    <select v-model="reagendarForm.convenio_id" data-choices class="form-select" :disabled="reagendarAgendamentoEstaPago"
                         ref="reagendarConvenioSelect" @change="reagendarForm.convenio_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarReagendarConvenio()">
                         <option :value="null">Selecione um convênio</option>
                         <option v-for="c in reagendarConvenios" :key="c.id" :value="c.id">{{ c.descricao || c.nome }}</option>
@@ -161,7 +185,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-medium">Procedimento</label>
-                    <select v-model="reagendarForm.procedimento_id" data-choices class="form-select"
+                    <select v-model="reagendarForm.procedimento_id" data-choices class="form-select" :disabled="reagendarAgendamentoEstaPago"
                         ref="reagendarProcedimentoSelect" @change="reagendarForm.procedimento_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarReagendarProcedimento()">
                         <option :value="null">Selecione um procedimento</option>
                         <option v-for="p in reagendarProcedimentos" :key="p.id" :value="p.id">{{ p.nome }}</option>
@@ -169,7 +193,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-medium">Médico / Profissional</label>
-                    <select v-model="reagendarForm.pessoa_id" data-choices class="form-select"
+                    <select v-model="reagendarForm.pessoa_id" data-choices class="form-select" :disabled="reagendarAgendamentoEstaPago"
                         ref="reagendarProfissionalSelect" @change="reagendarForm.pessoa_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione um médico</option>
                         <option v-for="prof in reagendarProfissionais" :key="prof.id" :value="prof.id">
@@ -268,7 +292,9 @@ const agendamentosPaciente = ref([]);
 const reagendarModal = ref(false);
 const reagendarAgendamentoId = ref(null);
 const reagendarAgendamentoData = ref(null);
+const reagendarAgendamentoEstaPago = ref(false);
 const reagendarForm = ref({ data: '', hora: '', pessoa_id: null, convenio_id: null, procedimento_id: null });
+const reagendarCarregando = ref(false);
 const reagendarProcessing = ref(false);
 const reagendarProfissionais = ref([]);
 const reagendarProcedimentos = ref([]);
@@ -284,6 +310,9 @@ function atualizarChoices(el, targetValue) {
         el._choicesInstance = null;
         el.dataset.choicesInitialized = 'false';
     }
+    
+    el.disabled = reagendarAgendamentoEstaPago.value;
+    
     if (window.initChoiceEl) {
         window.initChoiceEl(el);
     } else if (window.initChoices) {
@@ -293,7 +322,14 @@ function atualizarChoices(el, targetValue) {
         try { el._choicesInstance.setChoiceByValue(String(targetValue)); } catch (e) {}
     }
     if (window.syncChoiceValue && targetValue !== null && targetValue !== '') {
-        window.syncChoiceValue(el, String(targetValue));
+        try { window.syncChoiceValue(el, String(targetValue)); } catch (e) {}
+    }
+    if (el._choicesInstance) {
+        if (reagendarAgendamentoEstaPago.value) {
+            el._choicesInstance.disable();
+        } else {
+            el._choicesInstance.enable();
+        }
     }
 }
 
@@ -354,6 +390,8 @@ let isOpeningModal = false;
 
 async function abrirModalReagendar(ag) {
     isOpeningModal = true;
+    reagendarCarregando.value = true;
+    reagendarAgendamentoEstaPago.value = (ag.status_pagamento === 'PAGO');
     reagendarAgendamentoId.value = ag.id;
     reagendarAgendamentoData.value = ag;
     reagendarForm.value.id = ag.id;
@@ -410,6 +448,8 @@ async function abrirModalReagendar(ag) {
         atualizarChoices(reagendarConvenioSelect.value, reagendarForm.value.convenio_id);
         atualizarChoices(reagendarProcedimentoSelect.value, reagendarForm.value.procedimento_id);
         atualizarChoices(reagendarProfissionalSelect.value, reagendarForm.value.pessoa_id);
+
+        reagendarCarregando.value = false;
         setTimeout(() => { isOpeningModal = false; }, 200);
     }, 100);
 }

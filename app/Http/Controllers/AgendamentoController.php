@@ -445,6 +445,7 @@ class AgendamentoController extends Controller
             ->leftJoin('sessoes_tratamento as st', 'st.id', '=', 'a.sessao_tratamento_id')
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('faturamentos as f', 'f.agendamento_id', '=', 'a.id')
+            ->leftJoin('pagamentos as pag', 'pag.faturamento_id', '=', 'f.id')
             ->where('a.id', (int)$id)
             ->whereNull('a.deleted_at')
             ->select(
@@ -463,7 +464,8 @@ class AgendamentoController extends Controller
                 DB::raw("COALESCE(p.nome,'') AS paciente_nome"),
                 DB::raw("COALESCE(pr.nome, t.descricao, '') AS procedimento_nome"),
                 DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
-                DB::raw('COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes, NULL) AS sessao_total')
+                DB::raw('COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes, NULL) AS sessao_total'),
+                DB::raw('COALESCE(pag.status, "") AS status_pagamento')
             )
             ->first();
 

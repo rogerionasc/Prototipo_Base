@@ -48,13 +48,17 @@ const disableScroll = () => { document.body.style.overflow = 'hidden'; };
 const enableScroll = () => { document.body.style.overflow = ''; };
 
 watch(() => props.modelValue, async (val) => {
-    if (val) {
-        disableScroll();
-        await nextTick();
-        setTimeout(() => { showClass.value = true; }, 10);
-    } else {
-        enableScroll();
-        showClass.value = false;
+    try {
+        if (val) {
+            disableScroll();
+            await nextTick();
+            setTimeout(() => { showClass.value = true; }, 10);
+        } else {
+            enableScroll();
+            showClass.value = false;
+        }
+    } catch (e) {
+        console.error("Erro no watcher do Offcanvas", e);
     }
 });
 

@@ -169,13 +169,16 @@ export default {
                 { bg: "bg-lime-subtle", text: "text-lime" },
                 { bg: "bg-sky-subtle", text: "text-sky" },
             ],
-            dataAgendaSelecionada: null,
+            carregandoConveniosPacienteCriacao: false,
             carregandoAgendas: false,
+            carregandoDadosOffcanvas: false,
+            dataAgendaSelecionada: null,
             classeFundoDataSelecionada: null,
             coresDataSelecionada: [],
             mapaDiasSemanaSelecionados: {},
             mapaAgendasSemana: {},
             processandoEdicao: false,
+            agendamentoEstaPago: false,
             editAgendamentoForm: {
                 id: null,
                 paciente_id: null,
@@ -569,12 +572,16 @@ export default {
                     hs = start && start.isValid() ? start.format("HH:mm") : "";
                 } catch (_) { }
 
+                this.carregandoDadosOffcanvas = true;
+                this.modalEditarVisivel = true;
+
                 let ag = null;
                 try {
                     const resp = await window.axios.get(`/agendamentos/${id}`);
                     ag = resp?.data?.agendamento ?? null;
                 } catch (_) { }
 
+                this.agendamentoEstaPago = (ag?.status_pagamento === 'PAGO');
                 this.editAgendamentoForm.id = (ag?.id ?? ev?.id ?? id);
                 this.editAgendamentoForm.data = String(ag?.data || ds || "");
                 this.editAgendamentoForm.hora = String(ag?.hora || hs || "").slice(0, 5);
@@ -626,19 +633,33 @@ export default {
                 try { await this.carregarConveniosPacienteEdicao(); } catch (_) { }
                 try { await this.aoAlterarProcedimentoEdicao(); } catch (_) { }
 
-                this.modalEditarVisivel = true;
+                this.carregandoDadosOffcanvas = false;
                 
                 this.$nextTick(() => {
                     try {
-                        const el0 = this.$refs.selConvenioEdicao;
-                        if (el0) {
-                            window.destroyChoiceEl(el0);
-                            window.initChoiceEl(el0);
-                            const cv = this.editAgendamentoForm.convenio_id;
-                            if (cv != null && cv !== '') {
-                                window.syncChoiceValue(el0, String(cv));
+                        const initChoice = (refName, val) => {
+                            const el = this.$refs[refName];
+                            if (el) {
+                                el.disabled = this.agendamentoEstaPago;
+                                window.destroyChoiceEl(el);
+                                window.initChoiceEl(el);
+                                if (val != null && val !== '') window.syncChoiceValue(el, String(val));
                             }
-                        }
+                        };
+
+                        initChoice('selConvenioEdicao', this.editAgendamentoForm.convenio_id);
+                        initChoice('selProcedimentoEdicao', this.editAgendamentoForm.procedimento_id);
+                        initChoice('selProfissionalEdicao', this.editAgendamentoForm.pessoa_id);
+
+                        setTimeout(() => {
+                            ['selConvenioEdicao', 'selProcedimentoEdicao', 'selProfissionalEdicao'].forEach(ref => {
+                                const el = this.$refs[ref];
+                                if (el && el._choicesInstance) {
+                                    if (this.agendamentoEstaPago) el._choicesInstance.disable();
+                                    else el._choicesInstance.enable();
+                                }
+                            });
+                        }, 250);
                     } catch (_) { }
                 });
             } catch (e) {
@@ -902,6 +923,9 @@ export default {
             // Ativar flag para impedir que watchers limpem os valores durante restauração
             this._restaurandoEdicao = true;
 
+            this.carregandoDadosOffcanvas = true;
+            this.modalAgendarVisivel = true;
+
             let ag = null;
             if (this.eventoSelecionado.id) {
                 try {
@@ -910,6 +934,7 @@ export default {
                 } catch (_) { }
             }
 
+            this.agendamentoEstaPago = (ag?.status_pagamento === 'PAGO');
             this.editAgendamentoForm.id = this.eventoSelecionado.id || null;
             this.editAgendamentoForm.data = ds;
             this.editAgendamentoForm.hora = hs;
@@ -994,9 +1019,6 @@ export default {
             // Aguardar que watchers assíncronos iniciais terminem
             await this.$nextTick();
 
-            // Mostrar modal imediatamente para feedback visual rápido (evita sensação de lentidão)
-            this.modalAgendarVisivel = true;
-
             // Carregar dados em paralelo para ser mais rápido (agora incluindo procedimentos)
             const promessas = [
                 this.carregarConveniosPacienteCriacao(),
@@ -1011,6 +1033,8 @@ export default {
             if (savedConvenioId != null) this.agendamentoForm.convenio_id = savedConvenioId;
             this.agendamentoForm.pessoa_id = savedPessoaId || this.editAgendamentoForm.pessoa_id;
             this.agendamentoForm.procedimento_id = procIdFromEP || this.editAgendamentoForm.procedimento_id;
+
+            this.carregandoDadosOffcanvas = false;
             
             // Sincronizar Choices.js robustamente
             // Devido à reatividade do Vue e ao tempo de resposta das APIs, os `<option>` podem demorar
@@ -1020,6 +1044,7 @@ export default {
                 try {
                     const el0 = this.$refs.selConvenioCriacao;
                     if (el0) {
+                        el0.disabled = !this.agendamentoForm.paciente_id || this.agendamentoEstaPago;
                         window.destroyChoiceEl(el0);
                         window.initChoiceEl(el0);
                         const cvId = this.agendamentoForm.convenio_id;
@@ -1027,6 +1052,7 @@ export default {
                     }
                     const el1 = this.$refs.selProfissionalCriacao;
                     if (el1) {
+                        el1.disabled = this.agendamentoEstaPago;
                         window.destroyChoiceEl(el1);
                         window.initChoiceEl(el1);
                         const pId = savedPessoaId || this.editAgendamentoForm.pessoa_id;
@@ -1034,6 +1060,7 @@ export default {
                     }
                     const el2 = this.$refs.selProcedimentoCriacao;
                     if (el2) {
+                        el2.disabled = this.agendamentoEstaPago;
                         window.destroyChoiceEl(el2);
                         window.initChoiceEl(el2);
                         const procId = procIdFromEP || this.editAgendamentoForm.procedimento_id;
@@ -2031,11 +2058,47 @@ export default {
             :nameButton="editandoNoModalDeCriacao ? 'Salvar' : 'Agendar'"
             :processing="editandoNoModalDeCriacao ? processandoEdicao : processandoCriacao"
             @update:modelValue="modalAgendarVisivel = $event" @save="salvarAgendarOuEditar">
-            <div :key="chaveRenderizacaoModalEvento" class="row g-3">
+            <div v-if="carregandoDadosOffcanvas" key="skeleton" class="placeholder-wave">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Paciente</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Convênio</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Procedimento</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Profissional</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Data *</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Hora</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Valor Cobrado</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Observações</label>
+                        <div class="placeholder col-12 rounded " style="height: 86px; background-color: #adb5bd;"></div>
+                    </div>
+                </div>
+            </div>
+            <div v-else :key="chaveRenderizacaoModalEvento" class="row g-3">
                 <div class="col-md-12">
                     <label class="form-label">Paciente</label>
                     <SuggestInput v-model="termoBuscaPaciente" :suggestions="pacientesSugestoesCriacao" :loading="false"
-                        :show="mostrarSugestoesPaciente" placeholder="Buscar paciente por nome ou CPF"
+                        :show="mostrarSugestoesPaciente" :disabled="agendamentoEstaPago" placeholder="Buscar paciente por nome ou CPF"
                         keyPrefix="sug-pac" primaryTextProp="nome" secondaryTextProp="cpf"
                         @focus="mostrarSugestoesPaciente = true" @blur="onBlurSugestoesPaciente"
                         @select="selecionarSugestaoPaciente" />
@@ -2044,7 +2107,7 @@ export default {
                 <div class="col-md-12">
                     <label class="form-label">Convênio</label>
                     <select ref="selConvenioCriacao" v-model="agendamentoForm.convenio_id" class="form-select"
-                        :disabled="!agendamentoForm.paciente_id"
+                        :disabled="!agendamentoForm.paciente_id || agendamentoEstaPago"
                         @change="agendamentoForm.convenio_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="c in conveniosPacienteCriacao" :key="c.id" :value="c.id">{{ c.descricao }}
@@ -2058,6 +2121,7 @@ export default {
                 <div class="col-md-6">
                     <label class="form-label">Procedimento</label>
                     <select ref="selProcedimentoCriacao" v-model="agendamentoForm.procedimento_id" class="form-select"
+                        :disabled="agendamentoEstaPago"
                         @change="agendamentoForm.procedimento_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarProcedimento()">
                         <option :value="null">Selecione</option>
                         <option v-for="p in procedimentosFiltrados" :key="p.id" :value="p.id">{{ p.nome }}</option>
@@ -2066,6 +2130,7 @@ export default {
                 <div class="col-md-6">
                     <label class="form-label">Profissional</label>
                     <select ref="selProfissionalCriacao" v-model="agendamentoForm.pessoa_id" class="form-select"
+                        :disabled="agendamentoEstaPago"
                         @change="agendamentoForm.pessoa_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="d in listaProfissionaisCriacao" :key="d.id" :value="d.id">{{ d.nome }}</option>
@@ -2091,7 +2156,7 @@ export default {
                     <label class="form-label">Valor Cobrado</label>
                     <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao"
                         @blur="onBlurInputValorCobrado" @focus="$event.target.select()" type="text" class="form-control"
-                        placeholder="0,00" :disabled="agendamentoForm.is_retorno" />
+                        placeholder="0,00" :disabled="agendamentoForm.is_retorno || agendamentoEstaPago" />
                     <div class="form-check mt-2">
                         <input class="form-check-input" type="checkbox" id="isRetornoCheckbox"
                             v-model="agendamentoForm.is_retorno">
@@ -2170,11 +2235,47 @@ export default {
             :nameButton="podeReagendarAgendamentoCancelado() ? 'Reagendar' : 'Salvar'" :processing="processandoEdicao"
             :z-index="2000" :backdrop-z-index="1990" @update:modelValue="modalEditarVisivel = $event"
             @save="podeReagendarAgendamentoCancelado() ? reagendarSessaoTratamento() : salvarEdicaoAgendamento()">
-            <div :key="chaveRenderizacaoModalEvento" class="row g-3">
+            <div v-if="carregandoDadosOffcanvas" key="skeleton" class="placeholder-wave">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Paciente</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Convênio</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Profissional</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Procedimento</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Data</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Hora</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Valor Cobrado</label>
+                        <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Observações</label>
+                        <div class="placeholder col-12 rounded " style="height: 86px; background-color: #adb5bd;"></div>
+                    </div>
+                </div>
+            </div>
+            <div v-else :key="chaveRenderizacaoModalEvento" class="row g-3">
                 <div class="col-md-12">
                     <label class="form-label">Paciente</label>
                     <SuggestInput v-model="termoBuscaPacienteEdicao" :suggestions="pacientesSugestoesEdicao"
-                        :loading="false" :show="mostrarSugestoesPacienteEdicao" :disabled="true"
+                        :loading="false" :show="mostrarSugestoesPacienteEdicao" :disabled="agendamentoEstaPago"
                         placeholder="Buscar paciente por nome ou CPF" keyPrefix="sug-pac-edit" primaryTextProp="nome"
                         secondaryTextProp="cpf" @focus="mostrarSugestoesPacienteEdicao = true"
                         @blur="onBlurSugestoesPacienteEdicao" @select="selecionarSugestaoPacienteEdicao" />
@@ -2183,7 +2284,7 @@ export default {
                 <div class="col-md-12">
                     <label class="form-label">Convênio</label>
                     <select ref="selConvenioEdicao" v-model="editAgendamentoForm.convenio_id" class="form-select"
-                        :disabled="true"
+                        :disabled="agendamentoEstaPago"
                         @change="editAgendamentoForm.convenio_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="c in conveniosPacienteEdicao" :key="c.id" :value="c.id">{{ c.descricao }}
@@ -2194,6 +2295,7 @@ export default {
                 <div class="col-md-6">
                     <label class="form-label">Profissional</label>
                     <select ref="selProfissionalEdicao" v-model="editAgendamentoForm.pessoa_id" class="form-select"
+                        :disabled="agendamentoEstaPago"
                         @change="editAgendamentoForm.pessoa_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="d in listaProfissionaisEdicao" :key="d.id" :value="d.id">{{ d.nome }}</option>
@@ -2204,7 +2306,7 @@ export default {
                     <select v-if="renderProcedimentoEdicao" ref="selProcedimentoEdicao"
                         v-model="editAgendamentoForm.procedimento_id" class="form-select"
                         @change="editAgendamentoForm.procedimento_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarProcedimentoEdicao()"
-                        :disabled="true">
+                        :disabled="agendamentoEstaPago">
                         <option :value="null">Selecione</option>
                         <option v-for="p in procedimentosFiltradosEdicao" :key="p.id" :value="p.id">{{ p.nome }}
                         </option>
@@ -2232,7 +2334,7 @@ export default {
                     <label class="form-label">Valor Cobrado</label>
                     <input v-model="editAgendamentoForm.valor_cobrado" type="text" class="form-control"
                         placeholder="0,00" @blur="onBlurInputValorCobradoEdicao" @focus="$event.target.select()"
-                        :disabled="true" />
+                        :disabled="agendamentoEstaPago" />
                 </div>
                 <div class="col-md-12">
                     <label class="form-label">Observações</label>
