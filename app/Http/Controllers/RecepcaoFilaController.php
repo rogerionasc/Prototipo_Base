@@ -16,7 +16,7 @@ class RecepcaoFilaController extends Controller
         $hoje = Carbon::today()->format('Y-m-d');
         
         $agendamentos = Agendamento::with([
-            'paciente',
+            'paciente.comorbidades',
             'agendaMedica.profissionalSaude',
             'procedimento',
             'status',
@@ -32,24 +32,73 @@ class RecepcaoFilaController extends Controller
         ->orderBy('hora', 'asc')
         ->get()
         ->map(function($ag) {
-            // Se já tem atendimento hoje para este agendamento, consideramos que já chegou
             $atendimento = $ag->atendimentos->first();
             $jaChegou = $atendimento ? true : false;
-            
+            $emergencia = $atendimento ? (bool) $atendimento->emergencia : false;
+
+            $idade = 0;
+            if ($ag->paciente && $ag->paciente->data_nascimento) {
+                $idade = Carbon::parse($ag->paciente->data_nascimento)->age;
+            }
+
+            $status = $atendimento ? $atendimento->status : 'Não chegou';
+            $statusScore = match($status) {
+                'EM ATENDIMENTO' => 1,
+                'CHAMADO' => 2,
+                'AGUARDANDO' => 3,
+                'Não chegou' => 4,
+                default => 5
+            };
+
             return [
                 'id' => $ag->id,
                 'hora' => date('H:i', strtotime($ag->hora)),
                 'paciente' => $ag->paciente ? $ag->paciente->nome : 'N/A',
+                'paciente_id' => $ag->paciente ? $ag->paciente->id : null,
                 'cpf' => $ag->paciente ? $ag->paciente->cpf : null,
+                'idade' => $idade,
+                'tem_comorbidade' => $ag->paciente && $ag->paciente->comorbidades->count() > 0,
+                'super_prioridade' => $idade >= 80,
+                'prioridade_idade' => $idade >= 60 && $idade < 80,
+                'emergencia' => $emergencia,
                 'procedimento' => $ag->procedimento ? $ag->procedimento->nome : 'N/A',
                 'medico' => $ag->agendaMedica && $ag->agendaMedica->profissionalSaude 
                             ? $ag->agendaMedica->profissionalSaude->nome 
                             : 'N/A',
                 'medico_id' => $ag->agendaMedica ? $ag->agendaMedica->pessoa_id : null,
-                'status' => $atendimento ? $atendimento->status : 'Não chegou',
+                'status' => $status,
+                'status_score' => $statusScore,
                 'ja_chegou' => $jaChegou,
+                'raw_hora' => $ag->hora,
+                'updated_at' => $atendimento ? $atendimento->updated_at : $ag->updated_at,
             ];
-        });
+        })
+        ->sort(function ($a, $b) {
+            // Primeiro agrupa pelo status
+            if ($a['status_score'] !== $b['status_score']) {
+                return $a['status_score'] <=> $b['status_score'];
+            }
+
+            // Primeiro, verifica se alguém é emergência (absoluto)
+            if ($a['emergencia'] !== $b['emergencia']) return $a['emergencia'] ? -1 : 1;
+            // Se ambos são emergência, desempata IMEDIATAMENTE pela ordem que virou emergência
+            // Ignorando idade, comorbidade, etc.
+            if ($a['emergencia'] && $b['emergencia']) {
+                return $a['updated_at'] <=> $b['updated_at'];
+            }
+
+            // Depois verifica super prioridade (80+)
+            if ($a['super_prioridade'] !== $b['super_prioridade']) return $a['super_prioridade'] ? -1 : 1;
+
+            // Depois verifica comorbidade
+            if ($a['tem_comorbidade'] !== $b['tem_comorbidade']) return $a['tem_comorbidade'] ? -1 : 1;
+
+            // Depois verifica prioridade idade (60+)
+            if ($a['prioridade_idade'] !== $b['prioridade_idade']) return $a['prioridade_idade'] ? -1 : 1;
+
+            // Se empatou em TUDO acima, usamos o desempate
+            return $a['raw_hora'] <=> $b['raw_hora'];
+        })->values();
 
         return Inertia::render('Recepcao/Fila/Index', [
             'fila' => $agendamentos
@@ -63,14 +112,15 @@ class RecepcaoFilaController extends Controller
         $existe = Atendimento::where('agendamento_id', $id)->exists();
 
         if (!$existe) {
-            $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : 1; // Default fallback
+            $defaultCategoria = \App\Models\CategoriaProcedimento::firstOrCreate(['nome' => 'Geral']);
+            $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : $defaultCategoria->id;
 
             Atendimento::create([
                 'paciente_id' => $agendamento->paciente_id,
                 'medico_id' => $agendamento->agendaMedica->pessoa_id ?? null,
                 'agendamento_id' => $agendamento->id,
                 'procedimento_id' => $agendamento->procedimento_id ?? $agendamento->tuss_id,
-                'categoria_procedimento_id' => $catId ?: 1,
+                'categoria_procedimento_id' => $catId ?: $defaultCategoria->id,
                 'data_atendimento' => Carbon::today()->format('Y-m-d'),
                 'hora_prevista' => Carbon::today()->format('Y-m-d') . ' ' . $agendamento->hora,
                 'status' => 'AGUARDANDO',
@@ -93,5 +143,39 @@ class RecepcaoFilaController extends Controller
         }
 
         return redirect()->back()->with('success', 'Presença cancelada com sucesso.');
+    }
+
+    public function toggleEmergencia(Request $request, $id)
+    {
+        $agendamento = Agendamento::with('agendaMedica')->findOrFail($id);
+        
+        $atendimento = Atendimento::where('agendamento_id', $id)->first();
+
+        if (!$atendimento) {
+            // Se ainda não confirmou presença, a ação de marcar emergência
+            // implicitamente confirma a presença e cria o atendimento como emergência
+            $defaultCategoria = \App\Models\CategoriaProcedimento::firstOrCreate(['nome' => 'Geral']);
+            $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : $defaultCategoria->id;
+
+            $atendimento = Atendimento::create([
+                'paciente_id' => $agendamento->paciente_id,
+                'medico_id' => $agendamento->agendaMedica->pessoa_id ?? null,
+                'agendamento_id' => $agendamento->id,
+                'procedimento_id' => $agendamento->procedimento_id ?? $agendamento->tuss_id,
+                'categoria_procedimento_id' => $catId ?: $defaultCategoria->id,
+                'data_atendimento' => Carbon::today()->format('Y-m-d'),
+                'hora_prevista' => Carbon::today()->format('Y-m-d') . ' ' . $agendamento->hora,
+                'status' => 'AGUARDANDO',
+                'emergencia' => true
+            ]);
+            
+            return redirect()->back()->with('success', 'Presença confirmada e paciente marcado como emergência.');
+        }
+
+        // Se já existia, apenas alterna a flag de emergência
+        $atendimento->emergencia = !$atendimento->emergencia;
+        $atendimento->save();
+
+        return redirect()->back()->with('success', 'Status de emergência atualizado com sucesso.');
     }
 }

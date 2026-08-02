@@ -443,11 +443,15 @@ class AgendamentoController extends Controller
             ->leftJoin('tuss as t', 't.id', '=', 'a.tuss_id')
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
             ->leftJoin('sessoes_tratamento as st', 'st.id', '=', 'a.sessao_tratamento_id')
+            ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
+            ->leftJoin('faturamentos as f', 'f.agendamento_id', '=', 'a.id')
             ->where('a.id', (int)$id)
             ->whereNull('a.deleted_at')
             ->select(
                 'a.id',
                 'a.paciente_id',
+                'am.pessoa_id',
+                DB::raw('COALESCE(a.convenio_id, f.convenio_id) AS convenio_id'),
                 DB::raw('COALESCE(a.procedimento_id, a.tuss_id) AS procedimento_id'),
                 'a.sessao_tratamento_id',
                 'a.data',
@@ -480,9 +484,13 @@ class AgendamentoController extends Controller
     {
         $agendamento = Agendamento::findOrFail($id);
 
+        $convenioIdInput = $request->input('convenio_id', $agendamento->convenio_id);
         $isConvenio = false;
-        if (!empty($agendamento->tuss_id)) {
-            $isConvenio = true;
+        if (!empty($convenioIdInput)) {
+            $conv = Convenio::select('tipo')->find($convenioIdInput);
+            if ($conv && strtoupper((string)$conv->tipo) !== 'PARTICULAR') {
+                $isConvenio = true;
+            }
         }
 
         $procRule = $isConvenio ? ['nullable', 'integer', 'exists:tuss,id'] : ['nullable', 'integer', 'exists:procedimentos,id'];
@@ -496,9 +504,10 @@ class AgendamentoController extends Controller
             'status_id' => ['nullable','integer','exists:status_agendamento,id'],
             'valor_cobrado' => ['nullable','numeric','min:0'],
             'observacoes' => ['nullable','string'],
+            'convenio_id' => ['nullable','integer','exists:convenios,id'],
         ]);
         $payload = [];
-        foreach (['paciente_id','pessoa_id','data','hora','status_id','valor_cobrado','observacoes'] as $k) {
+        foreach (['paciente_id','pessoa_id','data','hora','status_id','valor_cobrado','observacoes', 'convenio_id'] as $k) {
             if (array_key_exists($k, $data) && $data[$k] !== null) {
                 $payload[$k] = $data[$k];
             }
@@ -714,7 +723,7 @@ class AgendamentoController extends Controller
                 'a.hora',
                 'a.procedimento_id',
                 'a.tuss_id',
-                'f.convenio_id',
+                DB::raw('COALESCE(a.convenio_id, f.convenio_id) AS convenio_id'),
                 'am.pessoa_id',
                 DB::raw('COALESCE(CONCAT(pr.nome, CASE WHEN st.numero_sessao IS NOT NULL AND pr.quantidade_sessoes IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, "/", pr.quantidade_sessoes, ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END), t.descricao, "") AS procedimento_nome'),
                 DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),

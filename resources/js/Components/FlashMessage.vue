@@ -89,6 +89,7 @@
       currentMessage.value = msg
       triggerShow()
       shown.value.add(key)
+      page.props.flash.success = null
       return
     }
     if (page.props.flash.error) {
@@ -100,6 +101,7 @@
       currentMessage.value = msg
       triggerShow()
       shown.value.add(key)
+      page.props.flash.error = null
       return
     }
     if (page.props.flash.warning) {
@@ -111,6 +113,7 @@
       currentMessage.value = msg
       triggerShow()
       shown.value.add(key)
+      page.props.flash.warning = null
       return
     }
     if (page.props.flash.info) {
@@ -122,6 +125,7 @@
       currentMessage.value = msg
       triggerShow()
       shown.value.add(key)
+      page.props.flash.info = null
       return
     }
   }

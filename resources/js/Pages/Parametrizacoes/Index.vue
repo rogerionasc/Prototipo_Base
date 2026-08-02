@@ -8,6 +8,7 @@
       :canaisAviso="props.canaisAviso"
       :parentescos="props.parentescos"
       :categoriasProcedimento="props.categoriasProcedimento"
+      :comorbidades="props.comorbidades"
     />
   </Layout>
 </template>
@@ -22,5 +23,6 @@ const props = defineProps({
   canaisAviso: { type: Array, default: () => [] },
   parentescos: { type: Array, default: () => [] },
   categoriasProcedimento: { type: Array, default: () => [] },
+  comorbidades: { type: Array, default: () => [] },
 });
 </script>

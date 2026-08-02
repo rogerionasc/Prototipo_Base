@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('agendamentos', function (Blueprint $table) {
-            $table->dropForeign(['orcamento_id']);
-            $table->dropColumn('orcamento_id');
+            //
         });
     }
 
@@ -23,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('agendamentos', function (Blueprint $table) {
-            $table->foreignId('orcamento_id')->nullable()->constrained('orcamentos')->nullOnDelete();
+            //
         });
     }
 };

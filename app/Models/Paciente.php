@@ -78,4 +78,9 @@ class Paciente extends Model
     {
         return $this->belongsToMany(Responsavel::class, 'paciente_responsavel', 'paciente_id', 'responsavel_id');
     }
+
+    public function comorbidades()
+    {
+        return $this->belongsToMany(Comorbidade::class, 'comorbidade_paciente', 'paciente_id', 'comorbidade_id');
+    }
 }

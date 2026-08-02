@@ -3,7 +3,7 @@
 
         <Head title="Pacientes" />
         <PageHeader title="Pacientes" pageTitle="Menu" />
-        <TableGrid :columns="columns" :data="pacientesLocal" :tableTitle="'Todos os Pacientes'" :showStatus="false"
+        <TableGrid ref="tableGridRef" :columns="columns" :serverUrl="'/api/pacientes'" :tableTitle="'Todos os Pacientes'" :showStatus="false"
             :searchPlaceholder="'Buscar por paciente'" @modalDdeletarMultiplos="openModalDeleteMulti"
             @delete="openModalDelete" @edit="openModalEdit" @show="openModalShow" @add="openModalAdd" />
         <Modal v-model="showModal" :title="modalTitle" size="xxl" custom-width="95vw" :name-button="saveButtonText"
@@ -141,20 +141,36 @@
 
             <h6 class="mb-3 border-bottom pb-2">Detalhes do Reagendamento</h6>
             <div class="row g-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label fw-medium">Nova Data</label>
                     <flatPickr v-model="reagendarForm.data" class="form-control" :config="opcoesFlatpickrData"
                         placeholder="Selecione a data" />
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label fw-medium">Nova Hora</label>
                     <flatPickr v-model="reagendarForm.hora" class="form-control" :config="opcoesFlatpickrHora"
                         placeholder="Selecione a hora" />
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
+                    <label class="form-label fw-medium">Convênio</label>
+                    <select v-model="reagendarForm.convenio_id" data-choices class="form-select"
+                        ref="reagendarConvenioSelect" @change="reagendarForm.convenio_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarReagendarConvenio()">
+                        <option :value="null">Selecione um convênio</option>
+                        <option v-for="c in reagendarConvenios" :key="c.id" :value="c.id">{{ c.descricao || c.nome }}</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium">Procedimento</label>
+                    <select v-model="reagendarForm.procedimento_id" data-choices class="form-select"
+                        ref="reagendarProcedimentoSelect" @change="reagendarForm.procedimento_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarReagendarProcedimento()">
+                        <option :value="null">Selecione um procedimento</option>
+                        <option v-for="p in reagendarProcedimentos" :key="p.id" :value="p.id">{{ p.nome }}</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
                     <label class="form-label fw-medium">Médico / Profissional</label>
                     <select v-model="reagendarForm.pessoa_id" data-choices class="form-select"
-                        ref="reagendarProfissionalSelect">
+                        ref="reagendarProfissionalSelect" @change="reagendarForm.pessoa_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione um médico</option>
                         <option v-for="prof in reagendarProfissionais" :key="prof.id" :value="prof.id">
                             {{ prof.nome }}
@@ -169,7 +185,7 @@
 import "gridjs/dist/theme/mermaid.css";
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
@@ -177,15 +193,14 @@ import PacienteForm from "@/Pages/Pacientes/Create.vue";
 import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.css";
-import "flatpickr/dist/l10n/pt.js";
+import { Portuguese } from "flatpickr/dist/l10n/pt.js";
 import { ref, nextTick, watch, computed, watchEffect } from "vue";
 
 const opcoesFlatpickrData = {
     altInput: true,
     altFormat: "d M, Y",
     dateFormat: "Y-m-d",
-    locale: "pt",
-    minDate: "today",
+    locale: Portuguese,
 };
 const opcoesFlatpickrHora = {
     enableTime: true,
@@ -194,7 +209,7 @@ const opcoesFlatpickrHora = {
     altFormat: "H:i",
     dateFormat: "H:i",
     time_24hr: true,
-    locale: "pt",
+    locale: Portuguese,
 };
 
 const orcamentosColumns = [
@@ -213,6 +228,7 @@ const props = defineProps({
     canaisAviso: { type: Array, default: () => [] },
     convenios: { type: Array, default: () => [] },
     parentescos: { type: Array, default: () => [] },
+    procedimentos: { type: Array, default: () => [] },
 });
 const pacientesLocal = ref([...(props.pacientes || [])]);
 watch(() => props.pacientes, (v) => { pacientesLocal.value = [...(v || [])]; });
@@ -230,6 +246,7 @@ const columns = [
 const showModal = ref(false);
 const modalTitle = ref('Adicionar Paciente');
 const formKey = ref(0);
+const tableGridRef = ref(null);
 function openModalAdd() {
     modalTitle.value = 'Adicionar Paciente';
     showModal.value = true;
@@ -251,69 +268,165 @@ const agendamentosPaciente = ref([]);
 const reagendarModal = ref(false);
 const reagendarAgendamentoId = ref(null);
 const reagendarAgendamentoData = ref(null);
-const reagendarForm = ref({ data: '', hora: '', pessoa_id: null });
+const reagendarForm = ref({ data: '', hora: '', pessoa_id: null, convenio_id: null, procedimento_id: null });
 const reagendarProcessing = ref(false);
 const reagendarProfissionais = ref([]);
+const reagendarProcedimentos = ref([]);
+const reagendarConvenios = ref([]);
 const reagendarProfissionalSelect = ref(null);
+const reagendarProcedimentoSelect = ref(null);
+const reagendarConvenioSelect = ref(null);
+
+function atualizarChoices(el, targetValue) {
+    if (!el) return;
+    if (el._choicesInstance) {
+        el._choicesInstance.destroy();
+        el._choicesInstance = null;
+        el.dataset.choicesInitialized = 'false';
+    }
+    if (window.initChoiceEl) {
+        window.initChoiceEl(el);
+    } else if (window.initChoices) {
+        window.initChoices();
+    }
+    if (el._choicesInstance && targetValue !== null && targetValue !== '') {
+        try { el._choicesInstance.setChoiceByValue(String(targetValue)); } catch (e) {}
+    }
+    if (window.syncChoiceValue && targetValue !== null && targetValue !== '') {
+        window.syncChoiceValue(el, String(targetValue));
+    }
+}
+
+async function aoAlterarReagendarConvenio() {
+    if (isOpeningModal) return;
+    
+    reagendarForm.value.procedimento_id = null;
+    reagendarForm.value.pessoa_id = null;
+    reagendarProcedimentos.value = [];
+    reagendarProfissionais.value = [];
+    
+    if (reagendarForm.value.convenio_id) {
+        try {
+            const res = await window.axios.get(`/convenios/${reagendarForm.value.convenio_id}/procedimentos-orcamento`);
+            reagendarProcedimentos.value = Array.isArray(res?.data?.procedimentos) ? res.data.procedimentos : [];
+        } catch (e) {
+            reagendarProcedimentos.value = [];
+        }
+    } else {
+        reagendarProcedimentos.value = props.procedimentos || [];
+    }
+    await nextTick();
+    atualizarChoices(reagendarProcedimentoSelect.value, null);
+    atualizarChoices(reagendarProfissionalSelect.value, null);
+}
+
+async function aoAlterarReagendarProcedimento() {
+    if (isOpeningModal) return;
+    
+    reagendarForm.value.pessoa_id = null;
+    reagendarProfissionais.value = [];
+    
+    if (!reagendarForm.value.procedimento_id) {
+        await nextTick();
+        atualizarChoices(reagendarProfissionalSelect.value, null);
+        return;
+    }
+    
+    try {
+        const pIdStr = String(reagendarForm.value.procedimento_id || "");
+        const parsedProcId = pIdStr.startsWith('tuss_') ? parseInt(pIdStr.replace('tuss_', ''), 10) : (pIdStr ? parseInt(pIdStr, 10) : null);
+
+        const res = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
+            params: {
+                procedimento_id: parsedProcId,
+                convenio_id: reagendarForm.value.convenio_id || null
+            }
+        });
+        reagendarProfissionais.value = Array.isArray(res?.data?.profissionais) ? res.data.profissionais : [];
+    } catch (e) {
+        reagendarProfissionais.value = [];
+    }
+    await nextTick();
+    atualizarChoices(reagendarProfissionalSelect.value, null);
+}
+
+let isOpeningModal = false;
 
 async function abrirModalReagendar(ag) {
+    isOpeningModal = true;
     reagendarAgendamentoId.value = ag.id;
     reagendarAgendamentoData.value = ag;
+    reagendarForm.value.id = ag.id;
     reagendarForm.value.data = ag.data || '';
     reagendarForm.value.hora = ag.hora || '';
     reagendarForm.value.pessoa_id = ag.pessoa_id || null;
+    reagendarForm.value.convenio_id = ag.convenio_id || null;
+    reagendarForm.value.procedimento_id = ag.procedimento_id || (ag.tuss_id ? 'tuss_' + ag.tuss_id : null) || null;
+    
     reagendarProfissionais.value = [];
+    reagendarProcedimentos.value = [];
+    reagendarConvenios.value = [];
     reagendarModal.value = true;
 
-    // Fetch professionals
-    const procId = ag.procedimento_id || ag.tuss_id;
-    if (procId) {
+    // Load patient convenios
+    if (selectedPaciente.value) {
         try {
-            const targetPessoaId = ag.pessoa_id ? String(ag.pessoa_id) : '';
-            const res = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
+            const resConv = await window.axios.get(`/pacientes/${selectedPaciente.value.id}/convenios`);
+            reagendarConvenios.value = Array.isArray(resConv?.data?.convenios) ? resConv.data.convenios : [];
+        } catch (e) { reagendarConvenios.value = []; }
+    } else {
+        reagendarConvenios.value = props.convenios || [];
+    }
+
+    const cId = reagendarForm.value.convenio_id;
+    if (cId) {
+        try {
+            const resProc = await window.axios.get(`/convenios/${cId}/procedimentos-orcamento`);
+            reagendarProcedimentos.value = Array.isArray(resProc?.data?.procedimentos) ? resProc.data.procedimentos : [];
+        } catch (e) { reagendarProcedimentos.value = []; }
+    } else {
+        reagendarProcedimentos.value = props.procedimentos || [];
+    }
+
+    const pId = reagendarForm.value.procedimento_id;
+    if (pId) {
+        try {
+            const pIdStr = String(pId || "");
+            const parsedProcId = pIdStr.startsWith('tuss_') ? parseInt(pIdStr.replace('tuss_', ''), 10) : (pIdStr ? parseInt(pIdStr, 10) : null);
+
+            const targetPessoaId = reagendarForm.value.pessoa_id ? String(reagendarForm.value.pessoa_id) : '';
+            const resProf = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
                 params: {
-                    procedimento_id: procId,
-                    convenio_id: ag.convenio_id || null
+                    procedimento_id: parsedProcId,
+                    convenio_id: cId || null
                 }
             });
-            reagendarProfissionais.value = Array.isArray(res?.data?.profissionais) ? res.data.profissionais : [];
-            await nextTick();
-
-            setTimeout(() => {
-                const el = reagendarProfissionalSelect.value;
-                if (el) {
-                    if (el._choicesInstance) {
-                        el._choicesInstance.destroy();
-                        el._choicesInstance = null;
-                        el.dataset.choicesInitialized = 'false';
-                    }
-                    if (window.initChoiceEl) {
-                        window.initChoiceEl(el);
-                    } else if (window.initChoices) {
-                        window.initChoices();
-                    }
-                    if (el._choicesInstance && targetPessoaId) {
-                        try {
-                            el._choicesInstance.setChoiceByValue(targetPessoaId);
-                        } catch (e) { }
-                    }
-                    if (window.syncChoiceValue) {
-                        window.syncChoiceValue(el, targetPessoaId);
-                    }
-                }
-            }, 100);
-        } catch (e) { }
+            reagendarProfissionais.value = Array.isArray(resProf?.data?.profissionais) ? resProf.data.profissionais : [];
+        } catch (e) { reagendarProfissionais.value = []; }
     }
+
+    await nextTick();
+    setTimeout(() => {
+        atualizarChoices(reagendarConvenioSelect.value, reagendarForm.value.convenio_id);
+        atualizarChoices(reagendarProcedimentoSelect.value, reagendarForm.value.procedimento_id);
+        atualizarChoices(reagendarProfissionalSelect.value, reagendarForm.value.pessoa_id);
+        setTimeout(() => { isOpeningModal = false; }, 200);
+    }, 100);
 }
 
 async function confirmarReagendamento() {
     if (!reagendarAgendamentoId.value) return;
     reagendarProcessing.value = true;
     try {
+        const pIdStr = String(reagendarForm.value.procedimento_id || "");
+        const parsedProcId = pIdStr.startsWith('tuss_') ? parseInt(pIdStr.replace('tuss_', ''), 10) : (pIdStr ? parseInt(pIdStr, 10) : null);
+
         await window.axios.put(`/agendamentos/${reagendarAgendamentoId.value}`, {
             data: reagendarForm.value.data,
             hora: reagendarForm.value.hora,
-            pessoa_id: reagendarForm.value.pessoa_id
+            pessoa_id: reagendarForm.value.pessoa_id,
+            convenio_id: reagendarForm.value.convenio_id,
+            procedimento_id: parsedProcId
         });
         reagendarModal.value = false;
         // Recarregar os agendamentos do paciente aberto
@@ -352,54 +465,10 @@ function onSavePaciente() {
     if (isEditing.value && editingId.value) {
         const id = editingId.value;
         pacienteFormRef.value?.submitUpdate(id, () => {
-            const f = pacienteFormRef.value?.form;
-            if (f) {
-                const idx = pacientesLocal.value.findIndex(px => String(px.id) === String(id));
-                if (idx !== -1) {
-                    const existing = pacientesLocal.value[idx];
-                    const selectedConvenioDesc = (() => {
-                        const convs = Array.isArray(f.convenios) ? f.convenios : [];
-                        if (!convs.length) return '';
-                        const descs = convs.map((c) => (props.convenios || []).find(cv => String(cv.id) === String(c.convenio_id))?.descricao).filter(Boolean);
-                        return descs.join(', ');
-                    })();
-                    pacientesLocal.value[idx] = {
-                        ...existing,
-                        nome: f.nome || '',
-                        cpf: f.cpf || '',
-                        email: f.email || '',
-                        celular: f.celular || '',
-                        sexo: f.sexo || '',
-                        estado_civil_id: f.estado_civil_id ?? '',
-                        tipo_sanguineo_id: f.tipo_sanguineo_id ?? '',
-                        canal_aviso_id: f.canal_aviso_id ?? '',
-                        receber_avisos: !!f.receber_avisos,
-                        tem_responsavel: !!f.tem_responsavel,
-                        convenio_ids: Array.isArray(f.convenios) ? f.convenios.map(c => c.convenio_id).join(',') : '',
-                        convenio: selectedConvenioDesc,
-                        rg: f.rg || '',
-                        naturalidade: f.naturalidade || '',
-                        altura: f.altura ?? null,
-                        peso: f.peso ?? null,
-                        cor_pele: f.cor_pele || '',
-                        telefone: f.telefone || '',
-                        profissao: f.profissao || '',
-                        escolaridade: f.escolaridade || '',
-                        nome_mae: f.nome_mae || '',
-                        nome_pai: f.nome_pai || '',
-                        observacoes: f.observacoes || '',
-                        cep: f.cep || '',
-                        endereco: f.endereco || '',
-                        numero: f.numero || '',
-                        bairro: f.bairro || '',
-                        cidade: f.cidade || '',
-                        complemento: f.complemento || '',
-                    };
-                }
-            }
             showModal.value = false;
             isEditing.value = false;
             editingId.value = null;
+            try { tableGridRef.value?.reload?.(); } catch (e) { console.error('Grid reload error', e); }
         }, {
             onStart: () => { saveProcessing.value = true; },
             onFinish: () => { saveProcessing.value = false; },
@@ -407,6 +476,7 @@ function onSavePaciente() {
     } else {
         pacienteFormRef.value?.submit(() => {
             showModal.value = false;
+            try { tableGridRef.value?.reload?.(); } catch (e) { console.error('Grid reload error', e); }
         }, {
             onStart: () => { saveProcessing.value = true; },
             onFinish: () => { saveProcessing.value = false; },
@@ -430,6 +500,7 @@ function confirmDelete() {
         onSuccess: () => {
             deleteModal.value = false;
             pacienteToDelete.value = {};
+            try { tableGridRef.value?.reload?.(); } catch (e) { console.error(e); }
         }
     });
 }
@@ -448,14 +519,16 @@ function confirmBulkDelete() {
     const ids = selectedIdsForDelete.value;
     if (!ids || ids.length === 0) { bulkDeleteModal.value = false; return; }
     const f = useForm({ ids });
-    f.delete(`/pacientes/bulk`, {
+    f.delete('/pacientes/bulk', {
         preserveScroll: true,
         onSuccess: () => {
             bulkDeleteModal.value = false;
             selectedIdsForDelete.value = [];
+            try { tableGridRef.value?.reload?.(); } catch (e) { console.error(e); }
         }
     });
 }
+
 const editingId = ref(null);
 watch(showModal, async (v) => {
     if (!v) {
@@ -472,22 +545,27 @@ watch(showModal, async (v) => {
     }
 });
 async function openModalEdit(id) {
-    const p = pacientesLocal.value.find(px => String(px.id) === String(id));
+    let p;
+    let conveniosData = [];
+    try {
+        // Busca os dados básicos e os convênios paralelamente para agilizar a abertura do modal
+        const [resPaciente, resConvenios] = await Promise.all([
+            window.axios.get(`/pacientes/${id}`),
+            window.axios.get(`/pacientes/${id}/convenios`)
+        ]);
+        p = resPaciente.data;
+        conveniosData = resConvenios?.data?.convenios || [];
+    } catch (e) {
+        console.error('Error fetching paciente/convenios:', e);
+        return;
+    }
     if (!p) return;
+    
     isEditing.value = true;
     editingId.value = p.id;
     modalTitle.value = 'Editar Paciente';
     showModal.value = true;
     await nextTick();
-
-    // Load convenios with details
-    let conveniosData = [];
-    try {
-        const res = await window.axios.get(`/pacientes/${p.id}/convenios`);
-        conveniosData = res?.data?.convenios || [];
-    } catch (e) {
-        console.error('Error loading convenios:', e);
-    }
 
     if (pacienteFormRef.value?.form) {
         const f = pacienteFormRef.value.form;
@@ -541,9 +619,17 @@ async function openModalEdit(id) {
         pacienteFormRef.value.syncChoices();
     }
 }
-function openModalShow(id) {
-    const p = pacientesLocal.value.find(px => String(px.id) === String(id));
+async function openModalShow(id) {
+    let p;
+    try {
+        const res = await window.axios.get(`/pacientes/${id}`);
+        p = res.data;
+    } catch (e) {
+        console.error('Error fetching paciente:', e);
+        return;
+    }
     if (!p) return;
+    
     selectedPaciente.value = { ...p };
     showViewModal.value = true;
     orcamentosPaciente.value = [];

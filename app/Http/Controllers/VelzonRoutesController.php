@@ -12,6 +12,7 @@ use App\Models\Parentesco;
 use App\Models\Especialidade;
 use App\Models\CategoriaProcedimento;
 use App\Models\Procedimento;
+use App\Models\Comorbidade;
 
 class VelzonRoutesController extends Controller
 {
@@ -46,12 +47,14 @@ class VelzonRoutesController extends Controller
         $canais = CanalAviso::select('id','nome')->orderBy('nome')->get();
         $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
         $categoriasProcedimento = CategoriaProcedimento::select('id','nome')->orderBy('nome')->get();
+        $comorbidades = Comorbidade::select('id','nome')->orderBy('nome')->get();
         return Inertia::render('Parametrizacoes/Index', [
             'estadosCivis' => $estados,
             'tiposSanguineos' => $tipos,
             'canaisAviso' => $canais,
             'parentescos' => $parentescos,
             'categoriasProcedimento' => $categoriasProcedimento,
+            'comorbidades' => $comorbidades,
         ]);
     }
 
@@ -171,7 +174,7 @@ class VelzonRoutesController extends Controller
 
     public function dashboard()
     {
-        return Inertia::render('Dashboards/Index');
+        return Inertia::render('dashboards/Index');
     }
 
 
@@ -327,9 +330,32 @@ class VelzonRoutesController extends Controller
         return back()->with('success','Categoria atualizada');
     }
 
-    public function parametros_destroy_categoria_procedimento(int $id) {
-        $cat = CategoriaProcedimento::findOrFail($id);
-        $cat->delete();
-        return back()->with('success','Categoria removida');
+    public function parametros_destroy_categoria_procedimento($id)
+    {
+        $categoria = CategoriaProcedimento::findOrFail($id);
+        $categoria->delete();
+        return redirect()->back()->with('success', 'Categoria de Procedimento removida com sucesso!');
+    }
+
+    public function parametros_store_comorbidade(Request $request)
+    {
+        $request->validate(['nome' => 'required|string|max:255']);
+        Comorbidade::create($request->only('nome'));
+        return redirect()->back()->with('success', 'Comorbidade criada com sucesso!');
+    }
+
+    public function parametros_update_comorbidade(Request $request, $id)
+    {
+        $request->validate(['nome' => 'required|string|max:255']);
+        $comorbidade = Comorbidade::findOrFail($id);
+        $comorbidade->update($request->only('nome'));
+        return redirect()->back()->with('success', 'Comorbidade atualizada com sucesso!');
+    }
+
+    public function parametros_destroy_comorbidade($id)
+    {
+        $comorbidade = Comorbidade::findOrFail($id);
+        $comorbidade->delete();
+        return redirect()->back()->with('success', 'Comorbidade removida com sucesso!');
     }
 }

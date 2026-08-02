@@ -10,13 +10,12 @@ return new class extends Migration
     {
         Schema::create('agendamentos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('agenda_medica_id')->constrained('agenda_medica');
-            $table->date('data');
-            $table->time('hora');
+            $table->date('data')->nullable();
+            $table->time('hora')->nullable();
+            $table->foreignId('agenda_medica_id')->nullable()->constrained('agenda_medica');
             $table->foreignId('paciente_id')->constrained('pacientes');
             $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos')->nullOnDelete();
             $table->foreignId('tuss_id')->nullable()->constrained('tuss')->nullOnDelete();
-            $table->foreignId('orcamento_id')->nullable()->constrained('orcamentos')->nullOnDelete();
             $table->foreignId('sessao_tratamento_id')->nullable()->constrained('sessoes_tratamento')->nullOnDelete();
             $table->foreignId('status_id')->nullable()->constrained('status_agendamento')->nullOnDelete();
             $table->unsignedBigInteger('agendamento_origem_id')->nullable();

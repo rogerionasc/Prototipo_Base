@@ -63,12 +63,9 @@ class PacienteController extends Controller
             ->get();
     }
 
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function apiIndex(Request $request)
     {
-        $pacientes = Paciente::select(
+        $query = Paciente::select(
             'pacientes.id',
             'nome',
             'cpf',
@@ -187,21 +184,49 @@ class PacienteController extends Controller
               ->orderByDesc('pr.created_at')
               ->limit(1)
               ->select('r.email');
-        }, 'responsavel_email')
-        ->get();
+        }, 'responsavel_email');
+
+        $search = $request->input('q', $request->input('search', ''));
+        if (!empty($search)) {
+            $qDigits = preg_replace('/\D/', '', $search);
+            $qId = ctype_digit($search) ? (int)$search : 0;
+            
+            $query->where(function ($w) use ($search, $qDigits, $qId) {
+                if ($qId > 0) {
+                    $w->orWhere('pacientes.id', $qId);
+                }
+                $w->orWhere('pacientes.nome', 'like', '%' . $search . '%');
+                if ($qDigits !== '') {
+                    $w->orWhereRaw("REPLACE(REPLACE(pacientes.cpf, '.', ''), '-', '') LIKE ?", ['%' . $qDigits . '%']);
+                } else {
+                    $w->orWhere('pacientes.cpf', 'like', '%' . $search . '%');
+                }
+            });
+        }
+
+        return $query->paginate($request->input('limit', 10));
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
         $estadosCivis = EstadoCivil::select('id', 'descricao')->orderBy('descricao')->get();
         $tiposSanguineos = TipoSanguineo::select('id', 'descricao')->orderBy('descricao')->get();
         $canaisAviso = CanalAviso::select('id', 'nome')->orderBy('nome')->get();
         $convenios = Convenio::select('id','descricao','tipo')->orderBy('descricao')->get();
         $parentescos = Parentesco::select('id', 'descricao')->orderBy('descricao')->get();
+        $procedimentos = \App\Models\Procedimento::select('id','nome','valor','eh_tratamento','quantidade_sessoes')->where('ativo', 1)->orderBy('nome')->get();
 
         return Inertia::render("Pacientes/Index", [
-            'pacientes' => $pacientes,
+            'pacientes' => [],
             'estadosCivis' => $estadosCivis,
             'tiposSanguineos' => $tiposSanguineos,
             'canaisAviso' => $canaisAviso,
             'convenios' => $convenios,
             'parentescos' => $parentescos,
+            'procedimentos' => $procedimentos,
         ]);
     }
 
@@ -355,12 +380,94 @@ class PacienteController extends Controller
         return back()->with('success', 'Paciente salvo com sucesso');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
-        //
+        $paciente = Paciente::select(
+            'pacientes.*',
+            DB::raw("DATE_FORMAT(pacientes.data_nascimento, '%Y-%m-%d') AS data_nascimento"),
+            DB::raw("COALESCE(e.cep,'') AS cep"),
+            DB::raw("COALESCE(e.endereco,'') AS endereco"),
+            DB::raw("COALESCE(e.numero,'') AS numero"),
+            DB::raw("COALESCE(e.bairro,'') AS bairro"),
+            DB::raw("COALESCE(e.cidade,'') AS cidade"),
+            DB::raw("COALESCE(e.complemento,'') AS complemento"),
+        )
+        ->leftJoin('enderecos as e', 'e.id', '=', 'pacientes.endereco_id')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.nome');
+        }, 'responsavel_nome')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.parentesco_id');
+        }, 'responsavel_parentesco_id')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.cpf');
+        }, 'responsavel_cpf')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.rg');
+        }, 'responsavel_rg')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select(DB::raw("DATE_FORMAT(r.data_nascimento, '%Y-%m-%d')"));
+        }, 'responsavel_data_nascimento')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.celular');
+        }, 'responsavel_celular')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.telefone');
+        }, 'responsavel_telefone')
+        ->selectSub(function ($q) {
+            $q->from('paciente_responsavel as pr')
+              ->join('responsaveis as r', 'r.id', '=', 'pr.responsavel_id')
+              ->whereColumn('pr.paciente_id', 'pacientes.id')
+              ->whereNull('r.deleted_at')
+              ->orderByDesc('pr.created_at')
+              ->limit(1)
+              ->select('r.email');
+        }, 'responsavel_email')
+        ->findOrFail($id);
+
+        return response()->json($paciente);
     }
 
     /**

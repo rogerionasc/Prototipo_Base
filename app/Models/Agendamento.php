@@ -25,6 +25,7 @@ class Agendamento extends Model
         'agendamento_origem_id',
         'valor_cobrado',
         'observacoes',
+        'emergencia',
     ];
 
     public function agendaMedica()

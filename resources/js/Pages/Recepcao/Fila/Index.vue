@@ -63,6 +63,13 @@ const confirmarCancelamento = () => {
     });
 };
 
+const toggleEmergencia = (agendamentoId) => {
+    const form = useForm({});
+    form.post(route('recepcao.fila.emergencia', agendamentoId), {
+        preserveScroll: true
+    });
+};
+
 const searchQuery = ref('');
 
 const filteredFila = computed(() => {
@@ -90,12 +97,16 @@ onUnmounted(() => {
 const tableColumns = [
     { key: 'hora', label: 'Horário', thClass: 'px-3', tdClass: 'px-3', width: '1%' },
     { key: 'paciente', label: 'Paciente' },
+    { key: 'idade', label: 'Idade', width: '1%' },
     { key: 'procedimento', label: 'Profissional / Procedimento' },
     { key: 'status', label: 'Status Atual' }
 ];
 
 const getRowClass = (item) => {
-    return { 'bg-success-subtle': item.ja_chegou };
+    if (item.ja_chegou) return { 'bg-success-subtle': true };
+    if (item.emergencia) return { 'bg-danger-subtle': true };
+    if (item.tem_comorbidade) return { 'bg-warning-subtle': true };
+    return {};
 };
 
 </script>
@@ -108,8 +119,7 @@ const getRowClass = (item) => {
 
         <div class="row">
             <div class="col-lg-12">
-                <SimpleTable title="Pacientes Agendados para Hoje" :items="fila" :columns="tableColumns"
-                    has-actions
+                <SimpleTable title="Pacientes Agendados para Hoje" :items="fila" :columns="tableColumns" has-actions
                     :searchable="true" searchPlaceholder="Buscar paciente, cpf ou médico..."
                     :searchFields="['paciente', 'cpf', 'medico']" emptyTitle="Nenhum paciente encontrado"
                     emptyMessage="Não há pacientes agendados para hoje ou com pagamentos confirmados."
@@ -130,15 +140,28 @@ const getRowClass = (item) => {
                                 </div>
                             </div>
                             <div class="flex-grow-1 ms-2 name">
-                                <h5 class="fs-14 mb-0 text-dark">{{ item.paciente }}</h5>
+                                <h5 class="fs-14 mb-0 text-dark">
+                                    {{ item.paciente }}
+                                    <span v-if="item.emergencia" class="badge bg-danger ms-2"><i
+                                            class="ri-alarm-warning-line align-middle"></i> EMERGÊNCIA</span>
+                                    <span v-if="item.tem_comorbidade"
+                                        class="badge bg-warning text-dark ms-1">COMORBIDADE</span>
+                                </h5>
                                 <p class="text-muted mb-0 fs-12" v-if="item.cpf">CPF: {{ item.cpf }}</p>
                             </div>
                         </div>
                     </template>
 
+                    <template #cell(idade)="{ item }">
+                        <div class="d-flex align-items-center">
+                            <span v-if="item.idade">{{ item.idade }} anos</span>
+                            <span v-else class="text-muted">-</span>
+                        </div>
+                    </template>
+
                     <template #cell(procedimento)="{ item }">
                         <div class="d-flex flex-column">
-                            <span class="fw-medium text-dark">Dr(a). {{ item.medico }}</span>
+                            <span class="fw-medium text-dark"> {{ item.medico }}</span>
                             <span class="text-muted fs-12">{{ item.procedimento }}</span>
                         </div>
                     </template>
@@ -146,20 +169,28 @@ const getRowClass = (item) => {
 
 
                     <template #actions="{ item }">
-                        <button v-if="!item.ja_chegou" @click="confirmarPresenca(item.id)"
-                            class="btn btn-sm btn-primary shadow-sm" :disabled="processingIds.includes(item.id)">
-                            <span v-if="processingIds.includes(item.id)" class="spinner-border spinner-border-sm me-1"
-                                role="status" aria-hidden="true"></span>
-                            <i v-else class="ri-check-line align-bottom me-1"></i> Confirmar Presença
-                        </button>
-                        <div v-else class="d-flex align-items-center justify-content-end gap-2">
-                            <span class="text-success fw-medium fs-13">
-                                <i class="ri-checkbox-circle-fill align-middle me-1"></i> Presente
-                            </span>
-                            <button @click="openCancelModal(item.id)" class="btn btn-sm btn-soft-danger shadow-sm"
-                                title="Cancelar presença">
-                                <i class="ri-close-line align-bottom"></i>
+                        <div class="d-flex align-items-center justify-content-end gap-2">
+                            <button @click="toggleEmergencia(item.id)" class="btn btn-sm shadow-sm"
+                                :class="item.emergencia ? 'btn-danger' : 'btn-outline-danger'"
+                                title="Marcar/Desmarcar Emergência">
+                                <i class="ri-alarm-warning-fill align-bottom"></i>
                             </button>
+                            <button v-if="!item.ja_chegou" @click="confirmarPresenca(item.id)"
+                                class="btn btn-sm btn-primary shadow-sm" :disabled="processingIds.includes(item.id)">
+                                <span v-if="processingIds.includes(item.id)"
+                                    class="spinner-border spinner-border-sm me-1" role="status"
+                                    aria-hidden="true"></span>
+                                <i v-else class="ri-check-line align-bottom me-1"></i> Confirmar Presença
+                            </button>
+                            <div v-else class="d-flex align-items-center justify-content-end gap-2">
+                                <span class="text-success fw-medium fs-13">
+                                    <i class="ri-checkbox-circle-fill align-middle me-1"></i> Presente
+                                </span>
+                                <button @click="openCancelModal(item.id)" class="btn btn-sm btn-soft-danger shadow-sm"
+                                    title="Cancelar presença">
+                                    <i class="ri-close-line align-bottom"></i>
+                                </button>
+                            </div>
                         </div>
                     </template>
                 </SimpleTable>

@@ -74,6 +74,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         // Pacientes routes
         Route::get("/pacientes", [PacienteController::class, "index"]);
         Route::get("/pacientes/search", [PacienteController::class, "search"])->name('pacientes.search');
+        Route::get("/pacientes/{id}", [PacienteController::class, "show"])->whereNumber('id')->name('pacientes.show');
         Route::post("/pacientes", [PacienteController::class, "store"])->name('pacientes.store');
         Route::put("/pacientes/{id}", [PacienteController::class, "update"])->name('pacientes.update');
         Route::delete("/pacientes/{id}", [PacienteController::class, "destroy"])->name('pacientes.destroy');
@@ -164,6 +165,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get("/recepcao/fila", [\App\Http\Controllers\RecepcaoFilaController::class, "index"])->name('recepcao.fila.index');
         Route::post("/recepcao/fila/{agendamento}/confirmar", [\App\Http\Controllers\RecepcaoFilaController::class, "confirmar"])->name('recepcao.fila.confirmar');
         Route::post("/recepcao/fila/{agendamento}/cancelar", [\App\Http\Controllers\RecepcaoFilaController::class, "cancelar"])->name('recepcao.fila.cancelar');
+        Route::post("/recepcao/fila/{agendamento}/emergencia", [\App\Http\Controllers\RecepcaoFilaController::class, "toggleEmergencia"])->name('recepcao.fila.emergencia');
 
         Route::get("/agendamentos/{id}", [AgendamentoController::class, "show"])->whereNumber('id')->name('agendamentos.show');
         Route::post("/agendamentos", [AgendamentoController::class, "store"])->name('agendamentos.store');
@@ -210,6 +212,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/parametros/categoria-procedimento", [VelzonRoutesController::class, "parametros_store_categoria_procedimento"])->name('parametros.categoria_procedimento.store');
         Route::put("/parametros/categoria-procedimento/{id}", [VelzonRoutesController::class, "parametros_update_categoria_procedimento"])->name('parametros.categoria_procedimento.update');
         Route::delete("/parametros/categoria-procedimento/{id}", [VelzonRoutesController::class, "parametros_destroy_categoria_procedimento"])->name('parametros.categoria_procedimento.destroy');
+
+        Route::post("/parametros/comorbidade", [VelzonRoutesController::class, "parametros_store_comorbidade"])->name('parametros.comorbidade.store');
+        Route::put("/parametros/comorbidade/{id}", [VelzonRoutesController::class, "parametros_update_comorbidade"])->name('parametros.comorbidade.update');
+        Route::delete("/parametros/comorbidade/{id}", [VelzonRoutesController::class, "parametros_destroy_comorbidade"])->name('parametros.comorbidade.destroy');
         Route::put("/parametros/tipo-sanguineo/{id}", [VelzonRoutesController::class, "parametros_update_tipo_sanguineo"])->name('parametros.tipo_sanguineo.update');
         Route::delete("/parametros/tipo-sanguineo/{id}", [VelzonRoutesController::class, "parametros_destroy_tipo_sanguineo"])->name('parametros.tipo_sanguineo.destroy');
         Route::post("/parametros/canal-aviso", [VelzonRoutesController::class, "parametros_store_canal_aviso"])->name('parametros.canal_aviso.store');

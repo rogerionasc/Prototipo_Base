@@ -295,6 +295,62 @@
                                 </template>
                             </SimpleTable>
                         </BTab>
+                        <!-- COMORBIDADES -->
+                        <BTab title="Comorbidades">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Lista de Comorbidades</h6>
+                            </div>
+                            <div class="border rounded p-3 bg-light-subtle mb-4">
+                                <form @submit.prevent="saveComorbidade">
+                                    <BRow class="g-3 align-items-end">
+                                        <BCol md="8">
+                                            <label class="form-label">Nome da Comorbidade</label>
+                                            <input v-model="formComorbidade.nome" type="text" class="form-control"
+                                                :class="{ 'is-invalid': formComorbidade.errors.nome }"
+                                                placeholder="Ex.: Diabetes, Hipertensão..." />
+                                            <div class="invalid-feedback">{{ formComorbidade.errors.nome }}</div>
+                                        </BCol>
+                                        <BCol md="4">
+                                            <button type="submit" class="btn btn-primary w-100"
+                                                :disabled="formComorbidade.processing"><i
+                                                    class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                        </BCol>
+                                    </BRow>
+                                </form>
+                            </div>
+                            <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                                :items="comorbidadesLocal" :columns="parametrosColumns" emptyTitle=""
+                                emptyMessage="Nenhum registro encontrado.">
+                                <template #body="{ items }">
+                                    <tr v-for="c in items" :key="c.id">
+                                        <template v-if="editingComorbidadeId !== c.id">
+                                            <td style="width:80px">#{{ c.id }}</td>
+                                            <td>{{ c.nome }}</td>
+                                            <td class="text-end" style="width:150px">
+                                                <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                    @click="startEditComorbidade(c)" title="Editar"><i
+                                                        class="ri-pencil-line"></i></button>
+                                                <button type="button" class="btn btn-sm btn-soft-danger"
+                                                    @click="destroyComorbidade(c.id)" title="Excluir"><i
+                                                        class="ri-delete-bin-line"></i></button>
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td colspan="3">
+                                                <div class="d-flex gap-2">
+                                                    <input v-model="editComorbidade.nome" type="text"
+                                                        class="form-control" />
+                                                    <button type="button" class="btn btn-success"
+                                                        @click="updateComorbidade">Salvar</button>
+                                                    <button type="button" class="btn btn-light"
+                                                        @click="cancelEditComorbidade">Cancelar</button>
+                                                </div>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </SimpleTable>
+                        </BTab>
                     </BTabs>
 
 
@@ -302,7 +358,7 @@
                 </BCardBody>
             </BCard>
 
-            <ModalDelete v-model="deleteModal" :title="deleteTitle" :message="deleteMessage" @confirm="confirmDelete" />
+            <ModalDelete v-model="deleteModal" :title="deleteTitle" :message="deleteSubTitleComputed" @confirm="confirmDelete" />
         </BContainer>
     </Layout>
 </template>
@@ -325,6 +381,7 @@ const props = defineProps({
     canaisAviso: { type: Array, default: () => [] },
     parentescos: { type: Array, default: () => [] },
     categoriasProcedimento: { type: Array, default: () => [] },
+    comorbidades: { type: Array, default: () => [] },
 });
 
 const estadosCivisLocal = ref([...(props.estadosCivis || [])]);
@@ -332,12 +389,14 @@ const tiposSanguineosLocal = ref([...(props.tiposSanguineos || [])]);
 const canaisAvisoLocal = ref([...(props.canaisAviso || [])]);
 const parentescosLocal = ref([...(props.parentescos || [])]);
 const categoriasLocal = ref([...(props.categoriasProcedimento || [])]);
+const comorbidadesLocal = ref([...(props.comorbidades || [])]);
 
 watch(() => props.estadosCivis, (v) => { estadosCivisLocal.value = [...(v || [])]; });
 watch(() => props.tiposSanguineos, (v) => { tiposSanguineosLocal.value = [...(v || [])]; });
 watch(() => props.canaisAviso, (v) => { canaisAvisoLocal.value = [...(v || [])]; });
 watch(() => props.parentescos, (v) => { parentescosLocal.value = [...(v || [])]; });
 watch(() => props.categoriasProcedimento, (v) => { categoriasLocal.value = [...(v || [])]; });
+watch(() => props.comorbidades, (v) => { comorbidadesLocal.value = [...(v || [])]; });
 
 const formEstadoCivil = useForm({ descricao: "" });
 const editEstadoCivil = useForm({ descricao: "" });
@@ -359,6 +418,10 @@ const formCategoria = useForm({ nome: "" });
 const editCategoria = useForm({ nome: "" });
 const editingCategoriaId = ref(null);
 
+const formComorbidade = useForm({ nome: "" });
+const editComorbidade = useForm({ nome: "" });
+const editingComorbidadeId = ref(null);
+
 const deleteModal = ref(false);
 const deleteContext = ref({ type: '', id: null, nome: '' });
 const deleteTitle = computed(() => {
@@ -368,6 +431,7 @@ const deleteTitle = computed(() => {
     if (t === 'canal_aviso') return 'Excluir Canal de Aviso';
     if (t === 'parentesco') return 'Excluir Parentesco';
     if (t === 'categoria_procedimento') return 'Excluir Categoria de Procedimento';
+    if (t === 'comorbidade') return 'Excluir Comorbidade';
     return 'Excluir';
 });
 const deleteSubTitleComputed = computed(() => {
@@ -533,6 +597,39 @@ const destroyCategoria = (id) => {
     deleteModal.value = true;
 };
 
+const saveComorbidade = () => {
+    formComorbidade.post("/parametros/comorbidade", {
+        onSuccess: () => {
+            formComorbidade.reset();
+            router.reload({ only: ['comorbidades'] });
+        },
+        preserveScroll: true,
+    });
+};
+const startEditComorbidade = (c) => {
+    editingComorbidadeId.value = c.id;
+    editComorbidade.nome = c.nome || "";
+};
+const cancelEditComorbidade = () => {
+    editingComorbidadeId.value = null;
+    editComorbidade.reset();
+};
+const updateComorbidade = () => {
+    editComorbidade.put(`/parametros/comorbidade/${editingComorbidadeId.value}`, {
+        onSuccess: () => {
+            editingComorbidadeId.value = null;
+            editComorbidade.reset();
+            router.reload({ only: ['comorbidades'] });
+        },
+        preserveScroll: true,
+    });
+};
+const destroyComorbidade = (id) => {
+    const item = (props.comorbidades || []).find(c => c.id === id);
+    deleteContext.value = { type: 'comorbidade', id, nome: item?.nome || '' };
+    deleteModal.value = true;
+};
+
 const confirmDelete = () => {
     const ctx = deleteContext.value || {};
     const f = useForm({});
@@ -570,6 +667,14 @@ const confirmDelete = () => {
             onSuccess: () => {
                 categoriasLocal.value = (categoriasLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
                 router.reload({ only: ['categoriasProcedimento'] });
+            }
+        });
+    } else if (ctx.type === 'comorbidade') {
+        f.delete(`/parametros/comorbidade/${ctx.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                comorbidadesLocal.value = (comorbidadesLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
+                router.reload({ only: ['comorbidades'] });
             }
         });
     }

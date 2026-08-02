@@ -50,10 +50,10 @@ const slots = useSlots();
                 <div class="col-sm" v-if="title">
                     <h5 :class="{ 'card-title mb-0': variant === 'card', 'fs-15 mb-0 fw-semibold text-dark': variant === 'borderless' }">{{ title }}</h5>
                 </div>
-                <div class="col-sm-auto" v-if="searchable || slots['header-actions']">
-                    <div class="d-flex flex-wrap align-items-start gap-2">
-                        <div class="search-box ms-2" v-if="searchable">
-                            <input type="text" class="form-control" :class="{ 'form-control-sm': compact }" :placeholder="searchPlaceholder" v-model="searchQuery">
+                <div class="col-sm-auto ms-auto" v-if="searchable || slots['header-actions']">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <div class="search-box" v-if="searchable" style="width: 300px;">
+                            <input type="text" autocomplete="on" class="form-control search" :placeholder="searchPlaceholder" v-model="searchQuery">
                             <i class="ri-search-line search-icon"></i>
                         </div>
                         <slot name="header-actions"></slot>

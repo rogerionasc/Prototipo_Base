@@ -12,18 +12,52 @@ class AtendimentoController extends Controller
     {
         $hoje = \Carbon\Carbon::today()->format('Y-m-d');
 
-        $atendimentos = Atendimento::with(['paciente', 'medico', 'procedimento'])
+        $atendimentos = Atendimento::with(['paciente.comorbidades', 'medico', 'procedimento', 'agendamento'])
             ->whereDate('data_atendimento', $hoje)
-            ->orderByRaw("
-                CASE status 
-                    WHEN 'EM ATENDIMENTO' THEN 1 
-                    WHEN 'CHAMADO' THEN 2 
-                    WHEN 'AGUARDANDO' THEN 3 
-                    ELSE 4 
-                END ASC
-            ")
-            ->orderBy('created_at', 'asc')
-            ->get();
+            ->get()
+            ->map(function($atendimento) {
+                $statusScore = match($atendimento->status) {
+                    'EM ATENDIMENTO' => 1,
+                    'CHAMADO' => 2,
+                    'AGUARDANDO' => 3,
+                    default => 4
+                };
+
+                $idade = 0;
+                if ($atendimento->paciente && $atendimento->paciente->data_nascimento) {
+                    $idade = \Carbon\Carbon::parse($atendimento->paciente->data_nascimento)->age;
+                }
+
+                $atendimento->status_score = $statusScore;
+                $atendimento->emergencia = (bool) $atendimento->emergencia;
+                $atendimento->super_prioridade = $idade >= 80;
+                $atendimento->tem_comorbidade = $atendimento->paciente && $atendimento->paciente->comorbidades->count() > 0;
+                $atendimento->prioridade_idade = $idade >= 60 && $idade < 80;
+                
+                return $atendimento;
+            })
+        ->sort(function ($a, $b) {
+            // Primeiro agrupa pelo status
+            if ($a->status_score !== $b->status_score) {
+                return $a->status_score <=> $b->status_score;
+            }
+
+            // Emergência tem prioridade absoluta
+            if ($a->emergencia !== $b->emergencia) return $a->emergencia ? -1 : 1;
+            if ($a->emergencia && $b->emergencia) return $a->created_at <=> $b->created_at;
+
+            // Super prioridade (80+)
+            if ($a->super_prioridade !== $b->super_prioridade) return $a->super_prioridade ? -1 : 1;
+
+            // Comorbidade
+            if ($a->tem_comorbidade !== $b->tem_comorbidade) return $a->tem_comorbidade ? -1 : 1;
+
+            // Prioridade Idade (60+)
+            if ($a->prioridade_idade !== $b->prioridade_idade) return $a->prioridade_idade ? -1 : 1;
+
+            // Sem prioridade (ou todos empatados), desempata pela hora que foi confirmado (created_at)
+            return $a->created_at <=> $b->created_at;
+        })->values();
             
         return Inertia::render('Consultorio/Atendimentos/Index', [
             'atendimentos' => $atendimentos

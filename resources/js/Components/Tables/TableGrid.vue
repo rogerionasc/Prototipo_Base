@@ -157,6 +157,7 @@ function buildServerUrl(offset, limitValue, searchValue) {
         if (!s) return;
         params.set(String(k), s);
     });
+    params.set('_t', String(Date.now()));
     return base.includes('?') ? `${base}&${params.toString()}` : `${base}?${params.toString()}`;
 }
 
@@ -648,7 +649,11 @@ function initGrid() {
     setTimeout(observeLottieContainer, 0);
 }
 
-defineExpose({ getSelectedRowIds, getSelectedRowObjects, clearSelection, setSelectedRowIds });
+function reload() {
+    initGrid();
+}
+
+defineExpose({ getSelectedRowIds, getSelectedRowObjects, clearSelection, setSelectedRowIds, reload });
 
 watch(filteredData, () => {
     nextTick(initGrid);
