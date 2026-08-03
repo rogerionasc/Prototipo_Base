@@ -29,6 +29,7 @@ class Atendimento extends Model
         'hora_fim',
         'prioridade',
         'status',
+        'emergencia',
         'observacao',
         'motivo_cancelamento',
         'criado_por',

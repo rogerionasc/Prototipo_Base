@@ -69,6 +69,7 @@ onUnmounted(() => {
 const tableColumns = [
     { key: 'id', label: '#', width: '40px' },
     { key: 'paciente', label: 'Paciente' },
+    { key: 'idade', label: 'Idade', width: '90px' },
     { key: 'detalhes', label: 'Detalhes' },
     { key: 'chegada', label: 'Chegada / Agendamento' },
     { key: 'status', label: 'Status' }
@@ -148,6 +149,11 @@ const tableColumns = [
                                 </p>
                             </div>
                         </div>
+                    </template>
+
+                    <template #cell(idade)="{ item }">
+                        <span v-if="item.idade_paciente !== undefined">{{ item.idade_paciente }} anos</span>
+                        <span v-else class="text-muted">-</span>
                     </template>
 
                     <template #cell(detalhes)="{ item }">

@@ -67,23 +67,26 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<style scoped>
+<style>
 .offcanvas-backdrop {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: #000;
+    background-color: rgba(0, 0, 0, 0.5);
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
+    z-index: 9990 !important;
 }
 .offcanvas-backdrop.show {
-    opacity: 0.5;
+    opacity: 1 !important;
+    backdrop-filter: blur(5px);
 }
 .offcanvas {
     transition: transform 0.3s ease-in-out;
     background-color: #fff;
+    z-index: 9999 !important;
 }
 .offcanvas-footer {
     position: sticky;

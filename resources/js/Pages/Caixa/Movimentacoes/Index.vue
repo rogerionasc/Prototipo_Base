@@ -674,28 +674,32 @@ function getInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function triggerPaymentConfirmedAnimation(pid) {
+function triggerPaymentConfirmedAnimation(pid, fatId = null) {
   // Encontra a linha antes dela sumir da tabela
   let row = pagamentosLocal.value.find(r => String(r.pagamento_id) === String(pid));
-  if (!row && selectedPendente.value && String(selectedPendente.value.pagamento_id) === String(pid)) {
+  if (!row && fatId) {
+    row = pagamentosLocal.value.find(r => String(r.faturamento_id) === String(fatId));
+  }
+  if (!row && selectedPendente.value && (String(selectedPendente.value.pagamento_id) === String(pid) || (fatId && String(selectedPendente.value.faturamento_id) === String(fatId)))) {
     row = selectedPendente.value;
   }
 
-  if (row && !animatingConfirmed.value.find(x => String(x.pagamento_id) === String(pid))) {
+  if (row && !animatingConfirmed.value.find(x => String(x.faturamento_id) === String(row.faturamento_id))) {
+    row.pagamento_id = pid;
     row.is_confirmed = true;
     animatingConfirmed.value.push(row);
 
     // Se esse item for o que está selecionado no card, mante-lo visível por 3 segundos
-    if (selectedPendente.value && String(selectedPendente.value.pagamento_id) === String(pid)) {
+    if (selectedPendente.value && String(selectedPendente.value.faturamento_id) === String(row.faturamento_id)) {
       selectedPendente.value = row;
     }
 
-    // Remove imediatamente da tabela
-    pagamentosLocal.value = pagamentosLocal.value.filter(x => String(x.pagamento_id) !== String(pid));
+    // Remove imediatamente da tabela (usando faturamento_id para garantir)
+    pagamentosLocal.value = pagamentosLocal.value.filter(x => String(x.faturamento_id) !== String(row.faturamento_id));
 
     setTimeout(() => {
-      animatingConfirmed.value = animatingConfirmed.value.filter(x => String(x.pagamento_id) !== String(pid));
-      if (selectedPendente.value && String(selectedPendente.value.pagamento_id) === String(pid)) {
+      animatingConfirmed.value = animatingConfirmed.value.filter(x => String(x.faturamento_id) !== String(row.faturamento_id));
+      if (selectedPendente.value && String(selectedPendente.value.faturamento_id) === String(row.faturamento_id)) {
         selectedPendente.value = null;
       }
     }, 3000);
@@ -1102,7 +1106,7 @@ function prosseguirRecebimento() {
         receberForm.put(`/pagamentos/${pid}/confirm`, {
           onSuccess: async () => {
             showReceberModal.value = false;
-            triggerPaymentConfirmedAnimation(pid);
+            triggerPaymentConfirmedAnimation(pid, fatId);
             await new Promise((resolve) => {
               router.reload({ only: ["caixas", "ultimos", "movs", "pagamentosPendentes", "ultimosPagamentos"], onFinish: () => resolve() });
             });

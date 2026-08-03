@@ -314,6 +314,7 @@ class AgendamentoController extends Controller
                     'agendamento_origem_id' => $agendamentoOrigemId,
                     'valor_cobrado' => $valorCobrado,
                     'observacoes' => $data['observacoes'] ?? null,
+                    'convenio_id' => $convenioIdInput,
                 ]);
 
                 // Se for agendamento de convênio, verificar fluxo de autorização vs atendimento
@@ -411,6 +412,12 @@ class AgendamentoController extends Controller
             ->leftJoin('procedimentos as pr', 'pr.id', '=', 'a.procedimento_id')
             ->leftJoin('tuss as t', 't.id', '=', 'a.tuss_id')
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
+            ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
+            ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
+            ->where(function ($q) {
+                $q->where('s.descricao', 'NOT LIKE', '%Atendido%')
+                  ->orWhereNull('s.descricao');
+            })
             ->select(
                 'a.id',
                 'a.data',
@@ -423,6 +430,8 @@ class AgendamentoController extends Controller
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE(pr.nome, t.descricao, '') AS procedimento"),
                 DB::raw("COALESCE(s.descricao,'') AS status"),
+                'prof.id AS pessoa_id',
+                'prof.nome AS medico',
                 'a.observacoes',
                 DB::raw("DATE_FORMAT(a.created_at, '%d/%m %H:%i') AS criado_em")
             )
@@ -566,6 +575,12 @@ class AgendamentoController extends Controller
         }
 
         if (!empty($payload)) {
+            if (isset($payload['data']) && $payload['data'] !== $agendamento->data) {
+                $atendimento = \App\Models\Atendimento::where('agendamento_id', $agendamento->id)->first();
+                if ($atendimento && $atendimento->status === 'AGUARDANDO') {
+                    $atendimento->delete();
+                }
+            }
             $agendamento->update($payload);
         }
         return response()->json([
@@ -646,6 +661,13 @@ class AgendamentoController extends Controller
         }
 
         // Sem validação de limite de orçamentos
+
+        if ($dt->toDateString() !== $agendamento->data) {
+            $atendimento = \App\Models\Atendimento::where('agendamento_id', $agendamento->id)->first();
+            if ($atendimento && $atendimento->status === 'AGUARDANDO') {
+                $atendimento->delete();
+            }
+        }
 
         $agendamento->update([
             'agenda_medica_id' => $agenda->id,
