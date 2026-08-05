@@ -61,7 +61,7 @@ const columns = [
     { name: 'Nome', id: 'nome' },
     { 
         name: 'Médico', 
-        id: 'pessoa', 
+        id: 'profissional_saude', 
         formatter: (val) => val ? val.nome : 'Sem médico' 
     },
     { 

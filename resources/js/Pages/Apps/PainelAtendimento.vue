@@ -1,6 +1,6 @@
 <template>
     <Head title="Painel de Senhas" />
-    <div class="painel-wrapper vh-100 d-flex flex-column bg-light">
+    <div class="painel-wrapper vh-100 d-flex flex-column bg-light overflow-hidden">
         
         <!-- HEADER -->
         <header class="d-flex justify-content-between align-items-center p-4 bg-white border-bottom shadow-sm">
@@ -163,6 +163,8 @@ const fetchPainelData = async () => {
 let clockInterval = null;
 
 onMounted(() => {
+    document.body.style.overflow = 'hidden';
+    
     updateTime();
     clockInterval = setInterval(updateTime, 1000);
 
@@ -171,6 +173,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    document.body.style.overflow = 'auto';
     if (clockInterval) clearInterval(clockInterval);
     if (pollInterval) clearInterval(pollInterval);
 });
