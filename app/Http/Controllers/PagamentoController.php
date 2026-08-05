@@ -654,7 +654,7 @@ class PagamentoController extends Controller
                 'tipo_atendimento' => $fat->tipo_pagador,
                 'data_atendimento' => $ag->data ?? today(),
                 'hora_prevista' => ($ag->data && $ag->hora) ? ($ag->data . ' ' . $ag->hora) : now(),
-                'status' => 'AGUARDANDO',
+                'status' => 'NÃO ATENDIDO',
                 'criado_por' => auth()->id(),
             ]);
         }

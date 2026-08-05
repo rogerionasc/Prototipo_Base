@@ -314,7 +314,7 @@ class AgendamentoController extends Controller
                     'agendamento_origem_id' => $agendamentoOrigemId,
                     'valor_cobrado' => $valorCobrado,
                     'observacoes' => $data['observacoes'] ?? null,
-                    'convenio_id' => $convenioIdInput,
+                    'convenio_id' => $convenioId,
                 ]);
 
                 // Se for agendamento de convênio, verificar fluxo de autorização vs atendimento
@@ -564,11 +564,11 @@ class AgendamentoController extends Controller
             unset($payload['pessoa_id']);
         }
 
-        // Se estiver atribuindo data para uma sessão pendente ou cancelada, muda o status para 'Agendado'
+        // Se estiver atribuindo data para uma sessão pendente, cancelada ou reagendada, muda o status para 'Agendado'
         if (isset($payload['data']) && isset($payload['hora']) && !isset($payload['status_id'])) {
             $statusAtual = $agendamento->status_id ? \App\Models\StatusAgendamento::find($agendamento->status_id) : null;
             $desc = $statusAtual ? strtolower(trim((string)$statusAtual->descricao)) : '';
-            if (empty($desc) || $desc === 'a agendar' || str_contains($desc, 'cancel')) {
+            if (empty($desc) || $desc === 'a agendar' || str_contains($desc, 'cancel') || str_contains($desc, 'reagend')) {
                 $statusAgendado = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Agendado']);
                 $payload['status_id'] = $statusAgendado->id;
             }
@@ -577,8 +577,15 @@ class AgendamentoController extends Controller
         if (!empty($payload)) {
             if (isset($payload['data']) && $payload['data'] !== $agendamento->data) {
                 $atendimento = \App\Models\Atendimento::where('agendamento_id', $agendamento->id)->first();
-                if ($atendimento && $atendimento->status === 'AGUARDANDO') {
-                    $atendimento->delete();
+                if ($atendimento) {
+                    if ($atendimento->status === 'AGUARDANDO') {
+                        $atendimento->delete();
+                    } elseif ($atendimento->status === 'NÃO ATENDIDO') {
+                        $atendimento->update([
+                            'data_atendimento' => $payload['data'],
+                            'hora_prevista'    => $payload['data'] . ' ' . ($payload['hora'] ?? $agendamento->hora),
+                        ]);
+                    }
                 }
             }
             $agendamento->update($payload);
@@ -664,16 +671,27 @@ class AgendamentoController extends Controller
 
         if ($dt->toDateString() !== $agendamento->data) {
             $atendimento = \App\Models\Atendimento::where('agendamento_id', $agendamento->id)->first();
-            if ($atendimento && $atendimento->status === 'AGUARDANDO') {
-                $atendimento->delete();
+            if ($atendimento) {
+                if ($atendimento->status === 'AGUARDANDO') {
+                    // Check-in já feito mas data mudou: cancela presença
+                    $atendimento->delete();
+                } elseif ($atendimento->status === 'NÃO ATENDIDO') {
+                    // Pagamento já feito: apenas atualiza a data do atendimento
+                    $atendimento->update([
+                        'data_atendimento' => $dt->toDateString(),
+                        'hora_prevista'    => $dt->toDateString() . ' ' . $data['hora'],
+                    ]);
+                }
             }
         }
 
+        $statusAgendado = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Agendado']);
+
         $agendamento->update([
             'agenda_medica_id' => $agenda->id,
-            'data' => $dt->toDateString(),
-            'hora' => $hora,
-            'status_id' => 1,
+            'data'             => $dt->toDateString(),
+            'hora'             => $hora,
+            'status_id'        => $statusAgendado->id,
         ]);
 
         return response()->json([

@@ -42,6 +42,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::get('/atendimentos', [AtendimentoController::class, 'index'])->name('atendimentos.index');
     Route::post('/atendimentos/{atendimento}/chamar', [AtendimentoController::class, 'chamar'])->name('atendimentos.chamar');
     Route::post('/atendimentos/{atendimento}/iniciar', [AtendimentoController::class, 'iniciar'])->name('atendimentos.iniciar');
+    Route::post('/atendimentos/{atendimento}/ausente', [AtendimentoController::class, 'ausente'])->name('atendimentos.ausente');
     Route::post('/atendimentos/{atendimento}/finalizar', [AtendimentoController::class, 'finalizar'])->name('atendimentos.finalizar');
     Route::get('/atendimentos/{atendimento}/pep', [PepController::class, 'show'])->name('atendimentos.pep');
     Route::post('/atendimentos/{atendimento}/pep/anamnese', [PepController::class, 'saveAnamnese'])->name('atendimentos.pep.anamnese.save');
@@ -258,6 +259,31 @@ Route::get('/app/totem/{totem?}', function ($totem = null) {
     ]);
 })->name('apps.totem');
 
-Route::get('/app/painel', function () {
-    return Inertia\Inertia::render('Apps/Painel');
-})->name('apps.painel');
+Route::get('/app/painel-senha', function () {
+    return Inertia\Inertia::render('Apps/PainelSenha');
+})->name('apps.painel_senha');
+
+Route::get('/app/painel-atendimento', function () {
+    return Inertia\Inertia::render('Apps/PainelAtendimento');
+})->name('apps.painel_atendimento');
+
+Route::get('/app/painel/data', function () {
+    // Pega os últimos 5 atendimentos chamados
+    $atendimentos = \App\Models\Atendimento::with(['paciente', 'medico.salas'])
+        ->whereIn('status', ['CHAMADO', 'EM ATENDIMENTO'])
+        ->orderBy('updated_at', 'desc')
+        ->take(5)
+        ->get()
+        ->map(function ($atendimento) {
+            $sala = $atendimento->medico->salas->first();
+            return [
+                'id' => $atendimento->id,
+                'paciente' => $atendimento->paciente->nome,
+                'medico' => $atendimento->medico->nome,
+                'local' => $sala ? $sala->nome : 'Consultório',
+                'updated_at' => $atendimento->updated_at
+            ];
+        });
+
+    return response()->json($atendimentos);
+})->name('apps.painel.data');

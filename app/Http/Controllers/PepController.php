@@ -17,6 +17,12 @@ class PepController extends Controller
 {
     public function show(Atendimento $atendimento)
     {
+        if (auth()->id() !== 1 && auth()->user()->pessoa_id != $atendimento->medico_id) {
+            return redirect()->route('atendimentos.index')->with('error', 'Apenas o médico responsável pode acessar este prontuário.');
+        }
+
+
+
         $atendimento->load(['paciente', 'medico', 'procedimento']);
         $paciente = $atendimento->paciente;
         $user = auth()->user();
@@ -42,12 +48,18 @@ class PepController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Verifica se o médico possui algum atendimento em andamento
+        $hasAtendimentoEmAndamento = Atendimento::where('medico_id', $user->pessoa_id)
+            ->where('status', 'EM ATENDIMENTO')
+            ->exists();
+
         return Inertia::render('Consultorio/Pep/Show', [
             'atendimento' => $atendimento,
             'paciente' => $paciente,
             'pep' => $pep,
             'historico' => $historico,
-            'auth_profissional_id' => $user->pessoa_id
+            'auth_profissional_id' => $user->pessoa_id,
+            'has_atendimento_em_andamento' => $hasAtendimentoEmAndamento
         ]);
     }
 

@@ -186,14 +186,10 @@ const tableColumns = [
                                     <i class="ri-volume-up-line align-bottom"></i>
                                 </button>
 
-                                <Link v-if="!hasAtendimentoEmAndamento(item.medico_id)"
-                                    :href="route('atendimentos.iniciar', item.id)" method="post" as="button"
-                                    class="btn btn-sm btn-success" preserve-scroll title="Iniciar Atendimento">
-                                    <i class="ri-play-fill align-bottom me-1"></i> Iniciar
+                                <Link :href="route('atendimentos.pep', item.id)" class="btn btn-sm btn-success w-100"
+                                    preserve-scroll title="Abrir Prontuário">
+                                    <i class="ri-folder-open-line align-bottom me-1"></i> Prontuário
                                 </Link>
-                                <button v-else class="btn btn-sm btn-success" disabled title="Médico em atendimento">
-                                    <i class="ri-play-fill align-bottom me-1"></i> Iniciar
-                                </button>
                             </template>
 
                             <template v-else-if="item.status === 'EM ATENDIMENTO'">
@@ -203,7 +199,7 @@ const tableColumns = [
                                 </Link>
                             </template>
 
-                            <template v-else>
+                            <template v-else-if="item.status === 'ATENDIDO'">
                                 <Link :href="route('atendimentos.pep', item.id)"
                                     class="btn btn-sm btn-soft-secondary w-100" preserve-scroll title="Ver PEP">
                                     <i class="ri-eye-line align-bottom me-1"></i> Prontuário

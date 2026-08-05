@@ -429,14 +429,19 @@ export default {
                   </BLink>
                 </BCol>
                 <BCol cols="6" class="text-center">
-                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.painel')" target="_blank">
+                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.painel_senha')" target="_blank">
                     <i class="ri-tv-2-line text-success" style="font-size: 32px;"></i>
                     <span class="mt-2 fw-medium">Painel de Senhas</span>
                   </BLink>
                 </BCol>
                 <BCol cols="6" class="text-center">
-                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.painel')" target="_blank">
-                    <i class="ri-tv-2-line text-success" style="font-size: 32px;"></i>
+                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.painel_atendimento')" target="_blank">
+                    <div class="position-relative d-inline-block mt-1 mb-1">
+                      <i class="ri-macbook-line text-primary" style="font-size: 32px;"></i>
+                      <div class="position-absolute d-flex align-items-center justify-content-center" style="width: 22px; height: 22px; top: -2px; right: -8px;">
+                          <i class="ri-stethoscope-line text-danger fw-bold" style="font-size: 16px; text-shadow: -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff;"></i>
+                      </div>
+                    </div>
                     <span class="mt-2 fw-medium">Painel do Atendimento</span>
                   </BLink>
                 </BCol>

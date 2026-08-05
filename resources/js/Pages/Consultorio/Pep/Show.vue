@@ -14,6 +14,7 @@ const props = defineProps({
     pep: Object,
     historico: Array,
     auth_profissional_id: Number,
+    has_atendimento_em_andamento: Boolean,
 });
 
 // Utilities
@@ -297,10 +298,30 @@ const finalizarAtendimento = () => {
                             </div>
                             <div class="col-md-auto">
                                 <div class="d-flex gap-2">
-                                    <button v-if="canEditPep && pep?.status !== 'Encerrado'" @click="openFinalizarModal"
-                                        class="btn btn-success shadow-sm">
-                                        <i class="ri-check-double-line align-bottom me-1"></i> Finalizar Atendimento
-                                    </button>
+                                    <template v-if="atendimento.status === 'AGUARDANDO' || atendimento.status === 'CHAMADO'">
+                                        <Link v-if="canEditPep && !has_atendimento_em_andamento" :href="route('atendimentos.chamar', atendimento.id)" method="post" as="button" class="btn btn-soft-info shadow-sm" preserve-scroll title="Chamar no Painel">
+                                            <i class="ri-volume-up-line align-bottom me-1"></i> Chamar
+                                        </Link>
+                                        <button v-else-if="canEditPep && has_atendimento_em_andamento" class="btn btn-soft-info shadow-sm" disabled title="Você já possui um paciente em atendimento.">
+                                            <i class="ri-volume-up-line align-bottom me-1"></i> Chamar
+                                        </button>
+
+                                        <Link v-if="canEditPep && !has_atendimento_em_andamento" :href="route('atendimentos.iniciar', atendimento.id)" method="post" as="button" class="btn btn-success shadow-sm" preserve-scroll title="Iniciar Atendimento">
+                                            <i class="ri-play-fill align-bottom me-1"></i> Iniciar
+                                        </Link>
+                                        <button v-else-if="canEditPep && has_atendimento_em_andamento" class="btn btn-success shadow-sm" disabled title="Você já possui um paciente em atendimento.">
+                                            <i class="ri-play-fill align-bottom me-1"></i> Iniciar
+                                        </button>
+
+                                        <Link v-if="canEditPep && atendimento.status === 'CHAMADO' && !has_atendimento_em_andamento" :href="route('atendimentos.ausente', atendimento.id)" method="post" as="button" class="btn btn-soft-danger shadow-sm" preserve-scroll title="Paciente Não Compareceu">
+                                            <i class="ri-user-unfollow-line align-bottom me-1"></i> Ausente
+                                        </Link>
+                                    </template>
+                                    <template v-else-if="atendimento.status === 'EM ATENDIMENTO'">
+                                        <button v-if="canEditPep && pep?.status !== 'Encerrado'" @click="openFinalizarModal" class="btn btn-success shadow-sm">
+                                            <i class="ri-check-double-line align-bottom me-1"></i> Finalizar Atendimento
+                                        </button>
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -310,43 +331,50 @@ const finalizarAtendimento = () => {
         </div>
 
         <div class="row">
-            <div class="col-lg-3">
+            <div class="col-lg-12">
                 <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div class="nav flex-column nav-pills custom-hover-nav-tabs" id="v-pills-tab" role="tablist"
-                            aria-orientation="vertical">
-                            <a class="nav-link active mb-2" id="v-pills-resumo-tab" data-bs-toggle="pill"
-                                href="#v-pills-resumo" role="tab" aria-selected="true">
-                                <i class="ri-history-line d-inline-block text-center me-2 fs-16"></i> Histórico / Resumo
-                            </a>
-                            <a class="nav-link mb-2" id="v-pills-triagem-tab" data-bs-toggle="pill"
-                                href="#v-pills-triagem" role="tab" aria-selected="false">
-                                <i class="ri-heart-pulse-line d-inline-block text-center me-2 fs-16"></i> Triagem
-                            </a>
-                            <a class="nav-link mb-2" id="v-pills-anamnese-tab" data-bs-toggle="pill"
-                                href="#v-pills-anamnese" role="tab" aria-selected="false">
-                                <i class="ri-file-list-3-line d-inline-block text-center me-2 fs-16"></i> Anamnese
-                            </a>
-                            <a class="nav-link mb-2" id="v-pills-evolucao-tab" data-bs-toggle="pill"
-                                href="#v-pills-evolucao" role="tab" aria-selected="false">
-                                <i class="ri-pulse-line d-inline-block text-center me-2 fs-16"></i> Evolução
-                            </a>
-                            <a class="nav-link mb-2" id="v-pills-diagnosticos-tab" data-bs-toggle="pill"
-                                href="#v-pills-diagnosticos" role="tab" aria-selected="false">
-                                <i class="ri-stethoscope-line d-inline-block text-center me-2 fs-16"></i> Diagnósticos
-                            </a>
-                            <a class="nav-link mb-2" id="v-pills-prescricao-tab" data-bs-toggle="pill"
-                                href="#v-pills-prescricao" role="tab" aria-selected="false">
-                                <i class="ri-medicine-bottle-line d-inline-block text-center me-2 fs-16"></i>
-                                Prescrições
-                            </a>
-                        </div>
+                    <div class="card-header border-0 pb-0">
+                        <ul class="nav nav-tabs nav-tabs-custom nav-success nav-justified mb-0" id="v-pills-tab" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" id="v-pills-resumo-tab" data-bs-toggle="tab"
+                                    href="#v-pills-resumo" role="tab" aria-selected="true">
+                                    <i class="ri-history-line d-inline-block text-center me-1"></i> Histórico / Resumo
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="v-pills-triagem-tab" data-bs-toggle="tab"
+                                    href="#v-pills-triagem" role="tab" aria-selected="false">
+                                    <i class="ri-heart-pulse-line d-inline-block text-center me-1"></i> Triagem
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="v-pills-anamnese-tab" data-bs-toggle="tab"
+                                    href="#v-pills-anamnese" role="tab" aria-selected="false">
+                                    <i class="ri-file-list-3-line d-inline-block text-center me-1"></i> Anamnese
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="v-pills-evolucao-tab" data-bs-toggle="tab"
+                                    href="#v-pills-evolucao" role="tab" aria-selected="false">
+                                    <i class="ri-pulse-line d-inline-block text-center me-1"></i> Evolução
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="v-pills-diagnosticos-tab" data-bs-toggle="tab"
+                                    href="#v-pills-diagnosticos" role="tab" aria-selected="false">
+                                    <i class="ri-stethoscope-line d-inline-block text-center me-1"></i> Diagnósticos
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="v-pills-prescricao-tab" data-bs-toggle="tab"
+                                    href="#v-pills-prescricao" role="tab" aria-selected="false">
+                                    <i class="ri-medicine-bottle-line d-inline-block text-center me-1"></i> Prescrições
+                                </a>
+                            </li>
+                        </ul>
                     </div>
-                </div>
-            </div>
-
-            <div class="col-lg-9">
-                <div class="tab-content text-muted mt-4 mt-md-0" id="v-pills-tabContent">
+                    <div class="card-body">
+                        <div class="tab-content text-muted" id="v-pills-tabContent">
 
                     <!-- RESUMO E HISTÓRICO -->
                     <div class="tab-pane fade show active" id="v-pills-resumo" role="tabpanel">
@@ -1100,6 +1128,8 @@ const finalizarAtendimento = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
                         </div>
                     </div>
                 </div>

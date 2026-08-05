@@ -81,6 +81,16 @@ class AtendimentoController extends Controller
 
     public function chamar(Atendimento $atendimento)
     {
+        if (auth()->id() !== 1 && auth()->user()->pessoa_id != $atendimento->medico_id) {
+            return redirect()->back()->with('error', 'Apenas o médico responsável pode realizar esta ação.');
+        }
+
+        // Verifica se o médico está alocado em alguma sala
+        $sala = \App\Models\Sala::where('pessoa_id', $atendimento->medico_id)->first();
+        if (!$sala) {
+            return redirect()->back()->with('error', 'Você precisa estar alocado em um consultório/sala para chamar o paciente.');
+        }
+
         // Verifica se o médico já possui um atendimento em andamento
         $emAndamento = Atendimento::where('medico_id', $atendimento->medico_id)
             ->where('status', 'EM ATENDIMENTO')
@@ -90,12 +100,10 @@ class AtendimentoController extends Controller
             return redirect()->back()->with('error', 'O médico já possui um paciente em atendimento.');
         }
 
-        // Altera o status para CHAMADO, caso ainda esteja AGUARDANDO
-        if ($atendimento->status === 'AGUARDANDO') {
-            $atendimento->update([
-                'status' => 'CHAMADO'
-            ]);
-        }
+        // Altera o status para CHAMADO e atualiza o timestamp para o Painel detectar
+        $atendimento->status = 'CHAMADO';
+        $atendimento->touch();
+        $atendimento->save();
 
         // Aqui também iria o código para disparar o evento no painel (broadcast)
         
@@ -104,6 +112,16 @@ class AtendimentoController extends Controller
 
     public function iniciar(Atendimento $atendimento)
     {
+        if (auth()->id() !== 1 && auth()->user()->pessoa_id != $atendimento->medico_id) {
+            return redirect()->back()->with('error', 'Apenas o médico responsável pode realizar esta ação.');
+        }
+
+        // Verifica se o médico está alocado em alguma sala
+        $sala = \App\Models\Sala::where('pessoa_id', $atendimento->medico_id)->first();
+        if (!$sala) {
+            return redirect()->back()->with('error', 'Você precisa estar alocado em um consultório/sala para iniciar o atendimento.');
+        }
+
         // Verifica se o médico já possui um atendimento em andamento
         $emAndamento = Atendimento::where('medico_id', $atendimento->medico_id)
             ->where('status', 'EM ATENDIMENTO')
@@ -114,28 +132,57 @@ class AtendimentoController extends Controller
         }
 
         $atendimento->update([
-            'status' => 'EM ATENDIMENTO'
+            'status'      => 'EM ATENDIMENTO',
+            'hora_inicio' => now(),
         ]);
 
         return redirect()->route('atendimentos.pep', $atendimento->id)->with('success', 'Atendimento iniciado.');
     }
 
-    public function finalizar(Atendimento $atendimento)
+    public function ausente(Atendimento $atendimento)
     {
-        // Verifica se o médico responsável é o mesmo que está finalizando
-        // No momento assumimos que o médico pode finalizar seu próprio atendimento
-        
+        if (auth()->id() !== 1 && auth()->user()->pessoa_id != $atendimento->medico_id) {
+            return redirect()->back()->with('error', 'Apenas o médico responsável pode realizar esta ação.');
+        }
+
         $atendimento->update([
-            'status' => 'FINALIZADO'
+            'status' => 'NÃO ATENDIDO'
         ]);
 
-        // Também encerrar o PEP associado se existir
+        if ($atendimento->agendamento_id) {
+            $statusReagendar = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Reagendar']);
+            \App\Models\Agendamento::where('id', $atendimento->agendamento_id)
+                ->update(['status_id' => $statusReagendar->id]);
+        }
+
+        return redirect()->back()->with('success', 'Paciente marcado como ausente e retornado para a recepção.');
+    }
+
+    public function finalizar(Atendimento $atendimento)
+    {
+        if (auth()->id() !== 1 && auth()->user()->pessoa_id != $atendimento->medico_id) {
+            return redirect()->back()->with('error', 'Apenas o médico responsável pode realizar esta ação.');
+        }
+
+        $atendimento->update([
+            'status' => 'ATENDIDO',
+            'hora_fim' => now(),
+        ]);
+
+        // Encerrar o PEP associado se existir
         $pep = \App\Models\Pep::where('atendimento_id', $atendimento->id)->where('status', 'Aberto')->first();
         if ($pep) {
             $pep->update([
                 'status' => 'Encerrado',
                 'encerrado_em' => now(),
             ]);
+        }
+
+        // Marcar o agendamento como Concluído
+        if ($atendimento->agendamento_id) {
+            $statusConcluido = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Concluído']);
+            \App\Models\Agendamento::where('id', $atendimento->agendamento_id)
+                ->update(['status_id' => $statusConcluido->id]);
         }
 
         return redirect()->route('atendimentos.index')->with('success', 'Atendimento finalizado com sucesso.');

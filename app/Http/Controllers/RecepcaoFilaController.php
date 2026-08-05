@@ -33,7 +33,7 @@ class RecepcaoFilaController extends Controller
         ->get()
         ->map(function($ag) {
             $atendimento = $ag->atendimentos->first();
-            $jaChegou = $atendimento ? true : false;
+            $jaChegou = $atendimento && in_array($atendimento->status, ['AGUARDANDO', 'CHAMADO', 'EM ATENDIMENTO', 'ATENDIDO']);
             $emergencia = $atendimento ? (bool) $atendimento->emergencia : false;
 
             $idade = 0;
@@ -41,13 +41,14 @@ class RecepcaoFilaController extends Controller
                 $idade = Carbon::parse($ag->paciente->data_nascimento)->age;
             }
 
-            $status = $atendimento ? $atendimento->status : 'Não chegou';
+            $status = $atendimento ? $atendimento->status : 'NÃO ATENDIDO';
             $statusScore = match($status) {
                 'EM ATENDIMENTO' => 1,
-                'CHAMADO' => 2,
-                'AGUARDANDO' => 3,
-                'Não chegou' => 4,
-                default => 5
+                'CHAMADO'        => 2,
+                'AGUARDANDO'     => 3,
+                'NÃO ATENDIDO'   => 4,
+                'ATENDIDO'       => 5,
+                default          => 6
             };
 
             return [
@@ -109,21 +110,27 @@ class RecepcaoFilaController extends Controller
     {
         $agendamento = Agendamento::with('agendaMedica')->findOrFail($id);
 
-        $existe = Atendimento::where('agendamento_id', $id)->exists();
+        $atendimento = Atendimento::where('agendamento_id', $id)->first();
 
-        if (!$existe) {
+        if ($atendimento) {
+            // Atualiza para AGUARDANDO se ainda estiver em estado pré-check-in
+            if (in_array($atendimento->status, ['NÃO ATENDIDO', 'AGUARDANDO'])) {
+                $atendimento->update(['status' => 'AGUARDANDO']);
+            }
+        } else {
+            // Sem atendimento (sem pagamento ou fluxo direto): cria o atendimento
             $defaultCategoria = \App\Models\CategoriaProcedimento::firstOrCreate(['nome' => 'Geral']);
             $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : $defaultCategoria->id;
 
             Atendimento::create([
-                'paciente_id' => $agendamento->paciente_id,
-                'medico_id' => $agendamento->agendaMedica->pessoa_id ?? null,
-                'agendamento_id' => $agendamento->id,
-                'procedimento_id' => $agendamento->procedimento_id ?? $agendamento->tuss_id,
+                'paciente_id'               => $agendamento->paciente_id,
+                'medico_id'                => $agendamento->agendaMedica->pessoa_id ?? null,
+                'agendamento_id'           => $agendamento->id,
+                'procedimento_id'          => $agendamento->procedimento_id ?? $agendamento->tuss_id,
                 'categoria_procedimento_id' => $catId ?: $defaultCategoria->id,
-                'data_atendimento' => Carbon::today()->format('Y-m-d'),
-                'hora_prevista' => Carbon::today()->format('Y-m-d') . ' ' . $agendamento->hora,
-                'status' => 'AGUARDANDO',
+                'data_atendimento'         => Carbon::today()->format('Y-m-d'),
+                'hora_prevista'            => Carbon::today()->format('Y-m-d') . ' ' . $agendamento->hora,
+                'status'                   => 'AGUARDANDO',
             ]);
         }
 
@@ -135,11 +142,12 @@ class RecepcaoFilaController extends Controller
         $atendimento = Atendimento::where('agendamento_id', $id)->first();
 
         if ($atendimento) {
-            if ($atendimento->status !== 'AGUARDANDO') {
+            // Bloqueia apenas se o médico já iniciou o processo
+            if (in_array($atendimento->status, ['CHAMADO', 'EM ATENDIMENTO', 'ATENDIDO'])) {
                 return redirect()->back()->with('error', 'Não é possível cancelar a presença de um paciente que já foi chamado pelo médico.');
             }
-            // Deleta fisicamente para sumir da fila do médico e permitir confirmar novamente depois
-            $atendimento->forceDelete();
+            // Reverte para NÃO ATENDIDO (preservando o registro de pagamento)
+            $atendimento->update(['status' => 'NÃO ATENDIDO']);
         }
 
         return redirect()->back()->with('success', 'Presença cancelada com sucesso.');

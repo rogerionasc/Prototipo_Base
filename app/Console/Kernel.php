@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('payments:cancel-pending')->dailyAt('00:00');
+        $schedule->command('atendimentos:marcar-nao-atendidos')->dailyAt('00:01');
     }
 
     /**

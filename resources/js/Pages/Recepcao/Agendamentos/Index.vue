@@ -1279,7 +1279,7 @@ export default {
         podeReagendarAgendamentoCancelado() {
             try {
                 const st = String(this.eventoSelecionado?.extendedProps?.status || "").toLowerCase();
-                return st.includes("cancel");
+                return st.includes("cancel") || st.includes("reagend");
             } catch (e) {
                 return false;
             }
