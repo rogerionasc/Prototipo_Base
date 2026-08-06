@@ -199,7 +199,7 @@ const tableColumns = [
                                 </Link>
                             </template>
 
-                            <template v-else-if="item.status === 'ATENDIDO'">
+                            <template v-else-if="item.status === 'ATENDIDO' || item.status === 'NÃO ATENDIDO' || item.status === 'CANCELADO'">
                                 <Link :href="route('atendimentos.pep', item.id)"
                                     class="btn btn-sm btn-soft-secondary w-100" preserve-scroll title="Ver PEP">
                                     <i class="ri-eye-line align-bottom me-1"></i> Prontuário

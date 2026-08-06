@@ -41,6 +41,11 @@ class PepController extends Controller
 
         $pep->load(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'diagnosticos.profissional', 'diagnosticos.cid']);
 
+        $tratamentos = \App\Models\PepTratamento::with(['profissional', 'evolucoes'])
+            ->where('paciente_id', $paciente->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         // Carrega o histórico de PEPs do paciente (incluindo o atual caso já esteja finalizado/encerrado)
         $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'atendimento.procedimento', 'diagnosticos.profissional', 'diagnosticos.cid'])
             ->where('paciente_id', $paciente->id)
@@ -62,6 +67,7 @@ class PepController extends Controller
             'paciente' => $paciente,
             'pep' => $pep,
             'historico' => $historico,
+            'tratamentos' => $tratamentos,
             'auth_profissional_id' => $user->pessoa_id,
             'has_atendimento_em_andamento' => $hasAtendimentoEmAndamento
         ]);
@@ -151,17 +157,30 @@ class PepController extends Controller
 
         $request->validate([
             'descricao' => 'required|string',
-            'tipo' => 'nullable|string'
+            'tipo' => 'nullable|string',
+            'tratamento_id' => 'nullable|exists:pep_tratamentos,id'
         ]);
 
         $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
         
-        PepEvolucao::create([
+        $evolucao = PepEvolucao::create([
             'pep_id' => $pep->id,
             'profissional_id' => auth()->user()->pessoa_id,
             'tipo' => $request->tipo ?? 'Evolução Clínica',
-            'descricao' => $request->descricao
+            'descricao' => $request->descricao,
+            'tratamento_id' => $request->tratamento_id
         ]);
+
+        if ($request->tratamento_id) {
+            $tratamento = \App\Models\PepTratamento::find($request->tratamento_id);
+            if ($tratamento) {
+                $tratamento->increment('quantidade_sessoes_realizadas');
+                // Se atingiu o total, marcar como concluído
+                if ($tratamento->quantidade_sessoes_realizadas >= $tratamento->quantidade_sessoes_previstas) {
+                    $tratamento->update(['status' => 'Concluído']);
+                }
+            }
+        }
 
         return redirect()->back()->with('success', 'Evolução adicionada com sucesso.');
     }
@@ -174,8 +193,57 @@ class PepController extends Controller
             abort(403, 'Você não pode excluir uma evolução criada por outro profissional.');
         }
         
+        if ($evolucao->tratamento_id) {
+            $tratamento = \App\Models\PepTratamento::find($evolucao->tratamento_id);
+            if ($tratamento && $tratamento->quantidade_sessoes_realizadas > 0) {
+                $tratamento->decrement('quantidade_sessoes_realizadas');
+                if ($tratamento->status === 'Concluído' && $tratamento->quantidade_sessoes_realizadas < $tratamento->quantidade_sessoes_previstas) {
+                    $tratamento->update(['status' => 'Em andamento']);
+                }
+            }
+        }
+
         $evolucao->delete();
         return redirect()->back()->with('success', 'Evolução removida com sucesso.');
+    }
+
+    public function saveTratamento(Request $request, Atendimento $atendimento)
+    {
+        $this->checkAtendimentoEmAndamento($atendimento);
+
+        $request->validate([
+            'nome_tratamento' => 'required|string|max:255',
+            'quantidade_sessoes_previstas' => 'required|integer|min:1',
+            'observacao' => 'nullable|string'
+        ]);
+
+        $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
+
+        \App\Models\PepTratamento::create([
+            'pep_id' => $pep->id,
+            'paciente_id' => $pep->paciente_id,
+            'profissional_id' => auth()->user()->pessoa_id,
+            'nome_tratamento' => $request->nome_tratamento,
+            'quantidade_sessoes_previstas' => $request->quantidade_sessoes_previstas,
+            'quantidade_sessoes_realizadas' => 0,
+            'status' => 'Em andamento',
+            'data_inicio' => now(),
+            'observacao' => $request->observacao,
+        ]);
+
+        return redirect()->back()->with('success', 'Plano de Tratamento criado com sucesso.');
+    }
+
+    public function deleteTratamento(Atendimento $atendimento, \App\Models\PepTratamento $tratamento)
+    {
+        $this->checkAtendimentoEmAndamento($atendimento);
+
+        if ($tratamento->profissional_id != auth()->user()->pessoa_id) {
+            abort(403, 'Você não pode excluir um tratamento criado por outro profissional.');
+        }
+
+        $tratamento->delete();
+        return redirect()->back()->with('success', 'Plano de Tratamento removido com sucesso.');
     }
 
     public function savePrescricao(Request $request, Atendimento $atendimento)

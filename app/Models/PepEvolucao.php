@@ -13,6 +13,7 @@ class PepEvolucao extends Model
 
     protected $fillable = [
         'pep_id',
+        'tratamento_id',
         'profissional_id',
         'tipo',
         'descricao'
@@ -21,6 +22,11 @@ class PepEvolucao extends Model
     public function pep()
     {
         return $this->belongsTo(Pep::class, 'pep_id');
+    }
+
+    public function tratamento()
+    {
+        return $this->belongsTo(PepTratamento::class, 'tratamento_id');
     }
 
     public function profissional()

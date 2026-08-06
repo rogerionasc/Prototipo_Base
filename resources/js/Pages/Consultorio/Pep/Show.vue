@@ -13,6 +13,7 @@ const props = defineProps({
     paciente: Object,
     pep: Object,
     historico: Array,
+    tratamentos: Array,
     auth_profissional_id: Number,
     has_atendimento_em_andamento: Boolean,
 });
@@ -105,7 +106,8 @@ const saveAnamnese = () => {
 // ----------------------------------------------------------------------
 const evolucaoForm = useForm({
     tipo: 'Evolução Clínica',
-    descricao: ''
+    descricao: '',
+    tratamento_id: null
 });
 
 const saveEvolucao = () => {
@@ -129,6 +131,30 @@ const openDeleteEvolucao = (evolucao) => {
     deleteModal.value = true;
 };
 
+// ----------------------------------------------------------------------
+// PLANOS DE TRATAMENTO
+// ----------------------------------------------------------------------
+const tratamentoForm = useForm({
+    nome_tratamento: '',
+    quantidade_sessoes_previstas: 1,
+    observacao: ''
+});
+
+const saveTratamento = () => {
+    tratamentoForm.post(route('atendimentos.pep.tratamento.save', props.atendimento.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            tratamentoForm.reset();
+        }
+    });
+};
+
+const openDeleteTratamento = (tratamento) => {
+    itemToDelete.value = { ...tratamento, nome: 'Plano de Tratamento' };
+    deleteType.value = 'tratamento';
+    deleteModal.value = true;
+};
+
 const openDeletePrescricao = (prescricao) => {
     itemToDelete.value = { ...prescricao, nome: 'Prescrição Médica' };
     deleteType.value = 'prescricao';
@@ -140,6 +166,16 @@ const confirmDelete = () => {
         useForm({}).delete(route('atendimentos.pep.evolucao.delete', {
             atendimento: props.atendimento.id,
             evolucao: itemToDelete.value.id
+        }), {
+            preserveScroll: true,
+            onSuccess: () => {
+                deleteModal.value = false;
+            }
+        });
+    } else if (deleteType.value === 'tratamento') {
+        useForm({}).delete(route('atendimentos.pep.tratamento.delete', {
+            atendimento: props.atendimento.id,
+            tratamento: itemToDelete.value.id
         }), {
             preserveScroll: true,
             onSuccess: () => {
@@ -417,6 +453,12 @@ const finalizarAtendimento = () => {
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link" id="v-pills-tratamentos-tab" data-bs-toggle="tab"
+                                    href="#v-pills-tratamentos" role="tab" aria-selected="false">
+                                    <i class="ri-survey-line d-inline-block text-center me-1"></i> Planos de Tratamento
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link" id="v-pills-prescricao-tab" data-bs-toggle="tab"
                                     href="#v-pills-prescricao" role="tab" aria-selected="false">
                                     <i class="ri-medicine-bottle-line d-inline-block text-center me-1"></i> Prescrições
@@ -435,13 +477,15 @@ const finalizarAtendimento = () => {
                             </div>
                             <div class="card-body border-top border-top-dashed">
                                 <div class="row">
-                                    <div class="col-sm-6">
+                                    <div class="col-md-4">
                                         <p class="text-muted mb-1">Procedimento:</p>
                                         <h6 class="fs-14 mb-0">{{ atendimento?.procedimento?.nome || 'N/A' }}</h6>
                                     </div>
-                                    <div class="col-sm-6">
+                                    <div class="col-md-4">
                                         <p class="text-muted mb-1">Médico Responsável:</p>
-                                        <h6 class="fs-14 mb-3">{{ atendimento?.medico?.nome || 'N/A' }}</h6>
+                                        <h6 class="fs-14 mb-0">{{ atendimento?.medico?.nome || 'N/A' }}</h6>
+                                    </div>
+                                    <div class="col-md-4">
                                         <p class="text-muted mb-1">Iniciado em:</p>
                                         <h6 class="fs-14 mb-0">{{ formatDate(pep?.aberto_em) }}</h6>
                                     </div>
@@ -961,6 +1005,15 @@ const finalizarAtendimento = () => {
                                                     :options="['Evolução Clínica', 'Nota de Enfermagem', 'Parecer']"
                                                     placeholder="Selecione o tipo" :searchable="false" :can-clear="false" :disabled="!canEditPep" />
                                             </div>
+                                            <div class="col-md-8">
+                                                <label class="form-label">Vincular a um Tratamento Ativo (Opcional)</label>
+                                                <select class="form-select" v-model="evolucaoForm.tratamento_id" :disabled="!canEditPep">
+                                                    <option :value="null">Nenhum (Evolução Avulsa)</option>
+                                                    <option v-for="trat in props.tratamentos?.filter(t => t.status === 'Em andamento')" :key="trat.id" :value="trat.id">
+                                                        {{ trat.nome_tratamento }} (Sessão {{ trat.quantidade_sessoes_realizadas + 1 }} de {{ trat.quantidade_sessoes_previstas }})
+                                                    </option>
+                                                </select>
+                                            </div>
                                             <div class="col-md-12">
                                                 <label class="form-label">Descrição</label>
                                                 <textarea class="form-control" v-model="evolucaoForm.descricao" rows="3"
@@ -1018,6 +1071,86 @@ const finalizarAtendimento = () => {
                     </div>
                     </div>
                     </div> <!-- /v-pills-evolucao -->
+                    <!-- PLANOS DE TRATAMENTO -->
+                    <div class="tab-pane fade" id="v-pills-tratamentos" role="tabpanel">
+                        <!-- Formulário Novo Tratamento -->
+                        <div class="card shadow-sm">
+                            <div class="card-header border-0 bg-soft-light">
+                                <h5 class="card-title mb-0">Novo Plano de Tratamento</h5>
+                            </div>
+                            <div class="card-body">
+                                <form @submit.prevent="saveTratamento">
+                                    <fieldset :disabled="!canEditPep">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Nome do Tratamento / Pacote</label>
+                                                <input type="text" class="form-control" v-model="tratamentoForm.nome_tratamento" placeholder="Ex: Fisioterapia Motora" required>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Quantidade de Sessões Previstas</label>
+                                                <input type="number" class="form-control" v-model="tratamentoForm.quantidade_sessoes_previstas" min="1" required>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label">Observação (Opcional)</label>
+                                                <textarea class="form-control" v-model="tratamentoForm.observacao" rows="2" placeholder="Informações adicionais sobre o plano..."></textarea>
+                                            </div>
+                                            <div class="col-12 text-end">
+                                                <button type="submit" class="btn btn-primary shadow-sm" :disabled="!canEditPep || tratamentoForm.processing">
+                                                    <span v-if="tratamentoForm.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                    <i class="ri-add-line align-bottom me-1" v-else></i> Salvar Tratamento
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Tratamentos -->
+                        <div class="card shadow-sm mt-3">
+                            <div class="card-header border-0 bg-soft-light">
+                                <h5 class="card-title mb-0">
+                                    <i class="ri-survey-line me-2 text-primary"></i> Planos de Tratamento
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div v-if="props.tratamentos && props.tratamentos.length > 0" class="vstack gap-3">
+                                    <div v-for="trat in props.tratamentos" :key="trat.id" class="p-3 border rounded-3 bg-white shadow-xs">
+                                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                            <div>
+                                                <span class="fs-15 fw-bold text-dark">{{ trat.nome_tratamento }}</span>
+                                                <span class="badge ms-2" :class="trat.status === 'Concluído' ? 'bg-success' : 'bg-primary'">{{ trat.status }}</span>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="fs-12 text-muted"><i class="ri-calendar-event-line me-1"></i> Iniciado em {{ formatDate(trat.data_inicio) }}</span>
+                                                <button v-if="props.auth_profissional_id && trat.profissional_id == props.auth_profissional_id && canEditPep"
+                                                    class="btn btn-sm btn-ghost-danger ms-2" @click="openDeleteTratamento(trat)" title="Excluir Tratamento">
+                                                    <i class="ri-delete-bin-line fs-14"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p class="text-secondary fs-13 mb-2" v-if="trat.observacao">{{ trat.observacao }}</p>
+                                        
+                                        <!-- Barra de Progresso -->
+                                        <div class="mt-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="fs-12 fw-medium text-muted">Progresso das Sessões</span>
+                                                <span class="fs-12 fw-medium text-primary">{{ trat.quantidade_sessoes_realizadas }} de {{ trat.quantidade_sessoes_previstas }} Sessões</span>
+                                            </div>
+                                            <div class="progress progress-sm">
+                                                <div class="progress-bar bg-primary" role="progressbar" :style="{ width: ((trat.quantidade_sessoes_realizadas / trat.quantidade_sessoes_previstas) * 100) + '%' }" :aria-valuenow="trat.quantidade_sessoes_realizadas" aria-valuemin="0" :aria-valuemax="trat.quantidade_sessoes_previstas"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else class="text-center py-4 text-muted">
+                                    <i class="ri-survey-line fs-24 mb-1 d-block text-muted opacity-50"></i>
+                                    Nenhum plano de tratamento registrado.
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- /v-pills-tratamentos -->
+
                     <!-- PRESCRIÇÃO -->
                     <div class="tab-pane fade" id="v-pills-prescricao" role="tabpanel">
                         <div class="card shadow-sm">

@@ -53,6 +53,11 @@ class Pep extends Model
         return $this->hasMany(PepEvolucao::class, 'pep_id');
     }
 
+    public function tratamentos()
+    {
+        return $this->hasMany(PepTratamento::class, 'pep_id');
+    }
+
     public function procedimentos()
     {
         return $this->hasMany(PepProcedimento::class, 'pep_id');

@@ -49,6 +49,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::post('/atendimentos/{atendimento}/pep/sinais-vitais', [PepController::class, 'saveSinaisVitais'])->name('atendimentos.pep.sinais-vitais.save');
     Route::post('/atendimentos/{atendimento}/pep/evolucao', [PepController::class, 'saveEvolucao'])->name('atendimentos.pep.evolucao.save');
     Route::delete('/atendimentos/{atendimento}/pep/evolucao/{evolucao}', [PepController::class, 'deleteEvolucao'])->name('atendimentos.pep.evolucao.delete');
+    
+    Route::post('/atendimentos/{atendimento}/pep/tratamento', [PepController::class, 'saveTratamento'])->name('atendimentos.pep.tratamento.save');
+    Route::delete('/atendimentos/{atendimento}/pep/tratamento/{tratamento}', [PepController::class, 'deleteTratamento'])->name('atendimentos.pep.tratamento.delete');
+
     Route::post('/atendimentos/{atendimento}/pep/prescricao', [PepController::class, 'savePrescricao'])->name('atendimentos.pep.prescricao.save');
     Route::delete('/atendimentos/{atendimento}/pep/prescricao/{prescricao}', [PepController::class, 'deletePrescricao'])->name('atendimentos.pep.prescricao.delete');
     

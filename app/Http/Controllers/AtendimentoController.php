@@ -66,7 +66,7 @@ class AtendimentoController extends Controller
             }
         }
 
-        $outros = $atendimentos->whereNotIn('status', ['EM ATENDIMENTO', 'CHAMADO', 'AGUARDANDO'])->sortBy('created_at')->values();
+        $outros = $atendimentos->whereNotIn('status', ['EM ATENDIMENTO', 'CHAMADO', 'AGUARDANDO', 'NÃO ATENDIDO', 'CANCELADO'])->sortBy('created_at')->values();
 
         $finalList = $emAtendimento->concat($chamados)
                                    ->concat($emergencias)
