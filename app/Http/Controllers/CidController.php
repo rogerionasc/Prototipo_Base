@@ -26,9 +26,12 @@ class CidController extends Controller
 
         $results = [];
         foreach ($cids as $cid) {
+            $label = str_starts_with($cid->descricao, $cid->codigo) 
+                ? $cid->descricao 
+                : $cid->codigo . ' - ' . $cid->descricao;
             $results[] = [
                 'value' => $cid->id,
-                'label' => $cid->codigo . ' - ' . $cid->descricao
+                'label' => $label
             ];
         }
 

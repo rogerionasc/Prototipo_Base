@@ -18,7 +18,7 @@ class PacienteController extends Controller
 {
     private function getConveniosAtivosDoPaciente(int $pacienteId)
     {
-        return DB::table('paciente_convenio as pc')
+        $convenios = DB::table('paciente_convenio as pc')
             ->join('convenios as c', 'c.id', '=', 'pc.convenio_id')
             ->select(
                 'c.id',
@@ -34,6 +34,21 @@ class PacienteController extends Controller
             ->whereNull('c.deleted_at')
             ->orderBy('c.descricao')
             ->get();
+
+        $particular = DB::table('convenios')
+            ->select('id', 'descricao', 'tipo', DB::raw("'' AS numero_carteira"), DB::raw("'' AS plano"), DB::raw("NULL AS validade"))
+            ->whereNull('deleted_at')
+            ->where(function($q) {
+                $q->whereRaw('UPPER(tipo) = ?', ['PARTICULAR'])
+                  ->orWhereRaw('UPPER(descricao) = ?', ['PARTICULAR']);
+            })
+            ->first();
+
+        if ($particular && !$convenios->contains('id', $particular->id)) {
+            $convenios->push($particular);
+        }
+
+        return $convenios;
     }
 
     private function pacientesSearchRows(string $q)

@@ -746,6 +746,7 @@ class AgendamentoController extends Controller
             'profissionais' => $profissionais
         ]);
     }
+
     public function byPaciente(string $paciente_id)
     {
         $agendamentos = DB::table('agendamentos as a')
@@ -758,6 +759,7 @@ class AgendamentoController extends Controller
 
             ->leftJoin('faturamentos as f', 'f.agendamento_id', '=', 'a.id')
             ->leftJoin('pagamentos as pag', 'pag.faturamento_id', '=', 'f.id')
+            ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
             ->where('a.paciente_id', $paciente_id)
             ->select(
                 'a.id',
@@ -765,7 +767,7 @@ class AgendamentoController extends Controller
                 'a.hora',
                 'a.procedimento_id',
                 'a.tuss_id',
-                DB::raw('COALESCE(a.convenio_id, f.convenio_id) AS convenio_id'),
+                DB::raw('at.convenio_id AS convenio_id'),
                 'am.pessoa_id',
                 DB::raw('COALESCE(CONCAT(pr.nome, CASE WHEN st.numero_sessao IS NOT NULL AND pr.quantidade_sessoes IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, "/", pr.quantidade_sessoes, ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END), t.descricao, "") AS procedimento_nome'),
                 DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),
@@ -781,9 +783,22 @@ class AgendamentoController extends Controller
             ->orderBy('a.hora', 'asc')
             ->get();
 
-        $result = $agendamentos->map(function ($ag) {
+        $convenioParticularId = DB::table('convenios')
+            ->whereNull('deleted_at')
+            ->where(function($q) {
+                $q->whereRaw('UPPER(tipo) = ?', ['PARTICULAR'])
+                  ->orWhereRaw('UPPER(descricao) = ?', ['PARTICULAR']);
+            })
+            ->value('id');
+
+        $result = $agendamentos->map(function ($ag) use ($convenioParticularId) {
             $stRaw = strtolower(trim((string)$ag->status));
             $atendido = str_contains($stRaw, 'atendido');
+
+            $convenioId = $ag->convenio_id;
+            if (!$convenioId && ($ag->procedimento_id || !$ag->tuss_id)) {
+                $convenioId = $convenioParticularId;
+            }
 
             return [
                 'id' => $ag->id,
@@ -797,7 +812,7 @@ class AgendamentoController extends Controller
                 'atendido' => $atendido,
                 'procedimento_id' => $ag->procedimento_id,
                 'tuss_id' => $ag->tuss_id,
-                'convenio_id' => $ag->convenio_id,
+                'convenio_id' => $convenioId,
                 'pessoa_id' => $ag->pessoa_id,
             ];
         });

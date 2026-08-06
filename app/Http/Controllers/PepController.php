@@ -41,10 +41,14 @@ class PepController extends Controller
 
         $pep->load(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'diagnosticos.profissional', 'diagnosticos.cid']);
 
-        // Carrega o histórico de PEPs anteriores do paciente
-        $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'diagnosticos.profissional', 'diagnosticos.cid'])
+        // Carrega o histórico de PEPs do paciente (incluindo o atual caso já esteja finalizado/encerrado)
+        $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'atendimento.procedimento', 'diagnosticos.profissional', 'diagnosticos.cid'])
             ->where('paciente_id', $paciente->id)
-            ->where('id', '!=', $pep->id)
+            ->where(function($q) use ($pep) {
+                if ($pep->status === 'Aberto') {
+                    $q->where('id', '!=', $pep->id);
+                }
+            })
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -63,8 +67,17 @@ class PepController extends Controller
         ]);
     }
 
+    private function checkAtendimentoEmAndamento(Atendimento $atendimento)
+    {
+        if ($atendimento->status !== 'EM ATENDIMENTO') {
+            abort(403, 'Só é possível inserir ou alterar informações no PEP após iniciar o atendimento.');
+        }
+    }
+
     public function saveAnamnese(Request $request, Atendimento $atendimento)
     {
+        $this->checkAtendimentoEmAndamento($atendimento);
+
         $request->validate([
             'queixa_principal' => 'nullable|string',
             'historia_doenca_atual' => 'nullable|string',
@@ -99,6 +112,8 @@ class PepController extends Controller
 
     public function saveSinaisVitais(Request $request, Atendimento $atendimento)
     {
+        $this->checkAtendimentoEmAndamento($atendimento);
+
         $validated = $request->validate([
             'pressao_sistolica' => 'nullable|string|max:20',
             'pressao_diastolica' => 'nullable|string|max:20',
@@ -114,6 +129,10 @@ class PepController extends Controller
             'observacao' => 'nullable|string'
         ]);
 
+        if (isset($validated['altura']) && $validated['altura'] > 3) {
+            $validated['altura'] = round($validated['altura'] / 100, 2);
+        }
+
         $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
 
         \App\Models\PepSinaisVitais::updateOrCreate(
@@ -128,6 +147,8 @@ class PepController extends Controller
 
     public function saveEvolucao(Request $request, Atendimento $atendimento)
     {
+        $this->checkAtendimentoEmAndamento($atendimento);
+
         $request->validate([
             'descricao' => 'required|string',
             'tipo' => 'nullable|string'
@@ -147,6 +168,8 @@ class PepController extends Controller
 
     public function deleteEvolucao(Atendimento $atendimento, PepEvolucao $evolucao)
     {
+        $this->checkAtendimentoEmAndamento($atendimento);
+
         if ($evolucao->profissional_id != auth()->user()->pessoa_id) {
             abort(403, 'Você não pode excluir uma evolução criada por outro profissional.');
         }
@@ -157,6 +180,8 @@ class PepController extends Controller
 
     public function savePrescricao(Request $request, Atendimento $atendimento)
     {
+        $this->checkAtendimentoEmAndamento($atendimento);
+
         $request->validate([
             'observacao' => 'nullable|string',
             'itens' => 'required|array|min:1',
@@ -197,6 +222,8 @@ class PepController extends Controller
 
     public function deletePrescricao(Atendimento $atendimento, PepPrescricao $prescricao)
     {
+        $this->checkAtendimentoEmAndamento($atendimento);
+
         if ($prescricao->profissional_id != auth()->user()->pessoa_id) {
             abort(403, 'Você não pode excluir uma prescrição criada por outro profissional.');
         }
@@ -204,8 +231,11 @@ class PepController extends Controller
         $prescricao->delete();
         return redirect()->back()->with('success', 'Prescrição removida com sucesso.');
     }
+
     public function storeDiagnostico(Request $request, Atendimento $atendimento)
     {
+        $this->checkAtendimentoEmAndamento($atendimento);
+
         $request->validate([
             'cid_id' => 'nullable|integer|exists:cids,id',
             'descricao' => 'required|string',

@@ -416,7 +416,20 @@ async function abrirModalReagendar(ag) {
         reagendarConvenios.value = props.convenios || [];
     }
 
-    const cId = reagendarForm.value.convenio_id;
+    let cId = reagendarForm.value.convenio_id;
+    if (!cId) {
+        const convPart = reagendarConvenios.value.find(c => 
+            (c.descricao && c.descricao.toUpperCase() === 'PARTICULAR') || 
+            (c.tipo && c.tipo.toUpperCase() === 'PARTICULAR')
+        ) || (props.convenios || []).find(c => 
+            (c.descricao && c.descricao.toUpperCase() === 'PARTICULAR') || 
+            (c.tipo && c.tipo.toUpperCase() === 'PARTICULAR')
+        );
+        if (convPart) {
+            cId = convPart.id;
+            reagendarForm.value.convenio_id = cId;
+        }
+    }
     if (cId) {
         try {
             const resProc = await window.axios.get(`/convenios/${cId}/procedimentos-orcamento`);

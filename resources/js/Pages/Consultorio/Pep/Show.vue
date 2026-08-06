@@ -18,8 +18,14 @@ const props = defineProps({
 });
 
 // Utilities
+const isMedicoResponsavel = computed(() => {
+    const page = usePage();
+    if (page.props.auth?.user?.id === 1) return true;
+    return props.pep?.profissional_id === props.auth_profissional_id || props.atendimento?.medico_id === props.auth_profissional_id;
+});
+
 const canEditPep = computed(() => {
-    return props.pep?.profissional_id === props.auth_profissional_id;
+    return isMedicoResponsavel.value && props.atendimento?.status === 'EM ATENDIMENTO';
 });
 
 const formatDate = (dateString) => {
@@ -39,14 +45,14 @@ const formatDate = (dateString) => {
 // ANAMNESE
 // ----------------------------------------------------------------------
 const anamneseForm = useForm({
-    queixa_principal: props.pep?.anamnese?.queixa_principal || '',
-    historia_doenca_atual: props.pep?.anamnese?.historia_doenca_atual || '',
-    antecedentes_pessoais: props.pep?.anamnese?.antecedentes_pessoais || '',
-    alergias: props.pep?.anamnese?.alergias || '',
-    medicamentos_uso: props.pep?.anamnese?.medicamentos_uso || '',
+    queixa_principal: props.atendimento?.status === 'EM ATENDIMENTO' ? (props.pep?.anamnese?.queixa_principal || '') : '',
+    historia_doenca_atual: props.atendimento?.status === 'EM ATENDIMENTO' ? (props.pep?.anamnese?.historia_doenca_atual || '') : '',
+    antecedentes_pessoais: props.atendimento?.status === 'EM ATENDIMENTO' ? (props.pep?.anamnese?.antecedentes_pessoais || '') : '',
+    alergias: props.atendimento?.status === 'EM ATENDIMENTO' ? (props.pep?.anamnese?.alergias || '') : '',
+    medicamentos_uso: props.atendimento?.status === 'EM ATENDIMENTO' ? (props.pep?.anamnese?.medicamentos_uso || '') : '',
 });
 
-const sinaisVitaisAtuais = props.pep?.sinais_vitais && props.pep.sinais_vitais.length > 0 ? props.pep.sinais_vitais[0] : {};
+const sinaisVitaisAtuais = (props.atendimento?.status === 'EM ATENDIMENTO' && props.pep?.sinais_vitais && props.pep.sinais_vitais.length > 0) ? props.pep.sinais_vitais[0] : {};
 
 const sinaisForm = useForm({
     pressao_sistolica: sinaisVitaisAtuais.pressao_sistolica || '',
@@ -156,13 +162,67 @@ const confirmDelete = () => {
 const deleteEvolucao = (evolucao) => openDeleteEvolucao(evolucao);
 const deletePrescricao = (prescricao) => openDeletePrescricao(prescricao);
 
-// Consolida evoluções do atendimento atual + histórico
-const todasEvolucoes = computed(() => {
-    let ev = [...(props.pep?.evolucoes || [])];
-    props.historico?.forEach(h => {
-        if (h.evolucoes) ev.push(...h.evolucoes);
+const selectedTimelinePepId = ref(null);
+
+const evolucoesPorAtendimento = computed(() => {
+    const list = [];
+    const currentPepId = props.pep?.id;
+    const currentPepEvolucoes = props.pep?.evolucoes || [];
+
+    const rawDateStr = formatDate(props.pep?.aberto_em || props.atendimento?.created_at);
+    const cleanDateStr = rawDateStr.replace(',', '');
+    const parts = cleanDateStr.split(' ');
+
+    list.push({
+        id: currentPepId || 'current',
+        atendimento_id: props.atendimento?.id,
+        data: props.pep?.aberto_em || props.atendimento?.created_at || new Date().toISOString(),
+        data_formatada: parts[0] || 'N/A',
+        hora_formatada: parts[1] || '',
+        medico: props.atendimento?.medico?.nome || 'Profissional',
+        procedimento: props.atendimento?.procedimento?.nome || 'Consulta',
+        is_atual: true,
+        evolucoes: currentPepEvolucoes
     });
-    return ev.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    // Histórico de atendimentos anteriores (sem duplicar o atendimento atual)
+    if (props.historico && props.historico.length > 0) {
+        props.historico.forEach(h => {
+            if (h.id !== currentPepId && h.atendimento_id !== props.atendimento?.id) {
+                const hRawDateStr = formatDate(h.aberto_em || h.created_at);
+                const hCleanDateStr = hRawDateStr.replace(',', '');
+                const hParts = hCleanDateStr.split(' ');
+
+                list.push({
+                    id: h.id,
+                    atendimento_id: h.atendimento_id,
+                    data: h.aberto_em || h.created_at,
+                    data_formatada: hParts[0] || 'N/A',
+                    hora_formatada: hParts[1] || '',
+                    medico: h.atendimento?.medico?.nome || h.profissional?.nome || 'Profissional',
+                    procedimento: h.atendimento?.procedimento?.nome || 'Consulta',
+                    is_atual: false,
+                    evolucoes: h.evolucoes || []
+                });
+            }
+        });
+    }
+
+    return list.sort((a, b) => new Date(b.data) - new Date(a.data));
+});
+
+// Ponto selecionado padrão (primeiro da lista)
+watch(evolucoesPorAtendimento, (newList) => {
+    if (newList.length > 0 && !selectedTimelinePepId.value) {
+        selectedTimelinePepId.value = newList[0].id;
+    }
+}, { immediate: true });
+
+const selectedPepGroup = computed(() => {
+    if (!selectedTimelinePepId.value && evolucoesPorAtendimento.value.length > 0) {
+        return evolucoesPorAtendimento.value[0];
+    }
+    return evolucoesPorAtendimento.value.find(item => item.id === selectedTimelinePepId.value) || evolucoesPorAtendimento.value[0];
 });
 
 // ----------------------------------------------------------------------
@@ -199,43 +259,22 @@ const diagnosticoForm = useForm({
     confirmado: false,
 });
 
-const selCid = ref(null);
-const cidChoicesRows = ref([]);
-
-const cidSearch = useChoicesRemoteSearch({
-    selectRef: selCid,
-    refreshChoices: () => {
-        if (window.initChoices) window.initChoices();
-    },
-    getSelectedValue: () => (diagnosticoForm.cid_id != null ? String(diagnosticoForm.cid_id) : ""),
-    getRows: () => cidChoicesRows.value,
-    fetchRows: async (q) => {
-        const query = String(q || "").trim();
-        if (!query) {
-            cidChoicesRows.value = [];
-            return [];
-        }
+const fetchCids = async (query) => {
+    if (!query || query.length < 2) return [];
+    try {
         const resp = await window.axios.get(route('cids.search'), { params: { q: query } });
-        const rows = Array.isArray(resp?.data) ? resp.data : [];
-        cidChoicesRows.value = rows;
-        return rows;
-    },
-    makeLabel: (c) => c.label,
-    placeholderLabel: "Digite o código ou nome da doença para buscar...",
-    placeholderDisabled: true,
-});
-
-onMounted(() => {
-    nextTick(() => {
-        if (window.initChoices) window.initChoices();
-    });
-});
+        return Array.isArray(resp?.data) ? resp.data : [];
+    } catch (e) {
+        console.error(e);
+        return [];
+    }
+};
 
 const saveDiagnostico = () => {
     diagnosticoForm.post(route('atendimentos.pep.diagnostico.save', props.atendimento.id), {
+        preserveScroll: true,
         onSuccess: () => {
             diagnosticoForm.reset();
-            cidSearch.clearSearch(); // Usando o composable para limpar a busca
         }
     });
 };
@@ -262,6 +301,11 @@ const finalizarAtendimento = () => {
     useForm({}).post(route('atendimentos.finalizar', props.atendimento.id), {
         onSuccess: () => {
             showFinalizarModal.value = false;
+            anamneseForm.reset();
+            sinaisForm.reset();
+            evolucaoForm.reset();
+            prescricaoForm.reset();
+            diagnosticoForm.reset();
         }
     });
 };
@@ -299,26 +343,26 @@ const finalizarAtendimento = () => {
                             <div class="col-md-auto">
                                 <div class="d-flex gap-2">
                                     <template v-if="atendimento.status === 'AGUARDANDO' || atendimento.status === 'CHAMADO'">
-                                        <Link v-if="canEditPep && !has_atendimento_em_andamento" :href="route('atendimentos.chamar', atendimento.id)" method="post" as="button" class="btn btn-soft-info shadow-sm" preserve-scroll title="Chamar no Painel">
+                                        <Link v-if="isMedicoResponsavel && !has_atendimento_em_andamento" :href="route('atendimentos.chamar', atendimento.id)" method="post" as="button" class="btn btn-soft-info shadow-sm" preserve-scroll title="Chamar no Painel">
                                             <i class="ri-volume-up-line align-bottom me-1"></i> Chamar
                                         </Link>
-                                        <button v-else-if="canEditPep && has_atendimento_em_andamento" class="btn btn-soft-info shadow-sm" disabled title="Você já possui um paciente em atendimento.">
+                                        <button v-else-if="isMedicoResponsavel && has_atendimento_em_andamento" class="btn btn-soft-info shadow-sm" disabled title="Você já possui um paciente em atendimento.">
                                             <i class="ri-volume-up-line align-bottom me-1"></i> Chamar
                                         </button>
 
-                                        <Link v-if="canEditPep && !has_atendimento_em_andamento" :href="route('atendimentos.iniciar', atendimento.id)" method="post" as="button" class="btn btn-success shadow-sm" preserve-scroll title="Iniciar Atendimento">
+                                        <Link v-if="isMedicoResponsavel && !has_atendimento_em_andamento" :href="route('atendimentos.iniciar', atendimento.id)" method="post" as="button" class="btn btn-success shadow-sm" preserve-scroll title="Iniciar Atendimento">
                                             <i class="ri-play-fill align-bottom me-1"></i> Iniciar
                                         </Link>
-                                        <button v-else-if="canEditPep && has_atendimento_em_andamento" class="btn btn-success shadow-sm" disabled title="Você já possui um paciente em atendimento.">
+                                        <button v-else-if="isMedicoResponsavel && has_atendimento_em_andamento" class="btn btn-success shadow-sm" disabled title="Você já possui um paciente em atendimento.">
                                             <i class="ri-play-fill align-bottom me-1"></i> Iniciar
                                         </button>
 
-                                        <Link v-if="canEditPep && atendimento.status === 'CHAMADO' && !has_atendimento_em_andamento" :href="route('atendimentos.ausente', atendimento.id)" method="post" as="button" class="btn btn-soft-danger shadow-sm" preserve-scroll title="Paciente Não Compareceu">
+                                        <Link v-if="isMedicoResponsavel && atendimento.status === 'CHAMADO' && !has_atendimento_em_andamento" :href="route('atendimentos.ausente', atendimento.id)" method="post" as="button" class="btn btn-soft-danger shadow-sm" preserve-scroll title="Paciente Não Compareceu">
                                             <i class="ri-user-unfollow-line align-bottom me-1"></i> Ausente
                                         </Link>
                                     </template>
                                     <template v-else-if="atendimento.status === 'EM ATENDIMENTO'">
-                                        <button v-if="canEditPep && pep?.status !== 'Encerrado'" @click="openFinalizarModal" class="btn btn-success shadow-sm">
+                                        <button v-if="isMedicoResponsavel && pep?.status !== 'Encerrado'" @click="openFinalizarModal" class="btn btn-success shadow-sm">
                                             <i class="ri-check-double-line align-bottom me-1"></i> Finalizar Atendimento
                                         </button>
                                     </template>
@@ -327,6 +371,13 @@ const finalizarAtendimento = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div v-if="atendimento?.status !== 'EM ATENDIMENTO'" class="alert alert-warning border-0 d-flex align-items-center shadow-sm mb-3" role="alert">
+            <i class="ri-alert-line fs-18 me-2"></i>
+            <div>
+                <strong>Atenção:</strong> É necessário <strong>Iniciar o Atendimento</strong> para poder inserir ou alterar informações no prontuário.
             </div>
         </div>
 
@@ -386,10 +437,7 @@ const finalizarAtendimento = () => {
                                 <div class="row">
                                     <div class="col-sm-6">
                                         <p class="text-muted mb-1">Procedimento:</p>
-                                        <h6 class="fs-14 mb-3">{{ atendimento?.procedimento?.nome || 'N/A' }}</h6>
-                                        <p class="text-muted mb-1">Status do PEP:</p>
-                                        <span class="badge bg-success-subtle text-success fs-12">{{ pep?.status
-                                        }}</span>
+                                        <h6 class="fs-14 mb-0">{{ atendimento?.procedimento?.nome || 'N/A' }}</h6>
                                     </div>
                                     <div class="col-sm-6">
                                         <p class="text-muted mb-1">Médico Responsável:</p>
@@ -400,245 +448,355 @@ const finalizarAtendimento = () => {
                                 </div>
                             </div>
                         </div>
-
+                        <!-- SUB-ABAS DO HISTÓRICO -->
                         <div class="card shadow-sm">
-                            <div class="card-header border-0">
-                                <h5 class="card-title mb-0">Histórico de Prontuários ({{ historico?.length || 0 }})</h5>
+                            <div class="card-header border-0 pb-0">
+                                <ul class="nav nav-tabs nav-tabs-custom nav-success nav-justified mb-0" id="subtabs-historico" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" id="subtab-evolucoes-tab" data-bs-toggle="tab"
+                                            href="#subtab-timeline-evolucoes" role="tab" aria-selected="true">
+                                            <i class="ri-timeline-line me-1 align-middle"></i> Linha do Tempo de Evoluções
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="subtab-historico-tab" data-bs-toggle="tab"
+                                            href="#subtab-historico-completo" role="tab" aria-selected="false">
+                                            <i class="ri-history-line me-1 align-middle"></i> Histórico Completo de Prontuários ({{ historico?.length || 0 }})
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
-                            <div class="card-body">
-                                <div v-if="!historico || historico.length === 0" class="text-center py-4">
-                                    <div class="avatar-md mx-auto mb-3">
-                                        <div class="avatar-title bg-light text-muted rounded-circle fs-24"><i
-                                                class="ri-history-line"></i></div>
+                            <div class="card-body p-3">
+                                <div class="tab-content">
+                                    
+                                    <!-- SUB-ABA 1: LINHA DO TEMPO DE EVOLUÇÕES POR ATENDIMENTO -->
+                                    <div class="tab-pane fade show active" id="subtab-timeline-evolucoes" role="tabpanel">
+                                        <!-- BARRA DA TIMELINE HORIZONTAL -->
+                                        <div v-if="evolucoesPorAtendimento.length > 0" class="py-4 my-2 px-3 bg-light bg-opacity-75 rounded-3 border">
+                                            <div class="d-flex align-items-stretch justify-content-start overflow-auto py-2 position-relative" style="scrollbar-width: thin;">
+                                                <div v-for="(item, index) in evolucoesPorAtendimento" :key="item.id" 
+                                                    @click="selectedTimelinePepId = item.id"
+                                                    class="d-flex flex-column align-items-center cursor-pointer text-center px-3 position-relative user-select-none flex-shrink-0"
+                                                    style="min-width: 150px;">
+
+                                                    <!-- Linha Conectora perfeitamente alinhada no centro dos círculos -->
+                                                    <div v-if="index > 0" class="position-absolute border-top border-2 border-primary-subtle" style="top: 57px; right: 50%; left: -50%; z-index: 1;"></div>
+
+                                                    <!-- 1. Data (Badge Topo) -->
+                                                    <div class="mb-2 position-relative" style="z-index: 2; height: 28px;">
+                                                        <span class="badge shadow-xs transition-all"
+                                                            :class="selectedTimelinePepId === item.id ? 'bg-primary text-white fs-12 px-3 py-1 scale-105' : 'bg-white text-dark border fs-11'">
+                                                            <i class="ri-calendar-event-line me-1"></i> {{ item.data_formatada }}
+                                                        </span>
+                                                    </div>
+
+                                                    <!-- 2. Ponto Círculo (Alinhado exatamente na linha) -->
+                                                    <div class="position-relative d-flex align-items-center justify-content-center my-1" style="z-index: 2; height: 40px;">
+                                                        <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm transition-all"
+                                                            :style="{ width: selectedTimelinePepId === item.id ? '38px' : '30px', height: selectedTimelinePepId === item.id ? '38px' : '30px' }"
+                                                            :class="selectedTimelinePepId === item.id ? 'bg-primary text-white border border-2 border-white ring-2' : 'bg-white text-muted border border-2 border-primary-subtle'">
+                                                            <i class="ri-pulse-fill fs-16"></i>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- 3. Informações (Médico e Quantidade) -->
+                                                    <div class="mt-2 position-relative" style="z-index: 2;">
+                                                        <span class="d-block fw-semibold fs-11 text-truncate mx-auto" :class="selectedTimelinePepId === item.id ? 'text-primary' : 'text-muted'" style="max-width: 130px;">
+                                                            {{ item.medico }}
+                                                        </span>
+                                                        <span class="badge rounded-pill fs-10 mt-1" :class="item.evolucoes.length > 0 ? 'bg-success-subtle text-success' : 'bg-light text-muted border'">
+                                                            {{ item.evolucoes.length }} {{ item.evolucoes.length === 1 ? 'evolução' : 'evoluções' }}
+                                                        </span>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- PAINEL DE DETALHES DAS EVOLUÇÕES DO PONTO SELECIONADO -->
+                                        <div v-if="selectedPepGroup" class="card shadow-none border mt-3 mb-0">
+                                            <div class="card-header bg-soft-primary border-0 d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="ri-calendar-check-line text-primary fs-18 me-2"></i>
+                                                    <div>
+                                                        <h6 class="card-title mb-0 fs-13">
+                                                            Atendimento de <strong>{{ selectedPepGroup.data_formatada }}</strong> 
+                                                            <span v-if="selectedPepGroup.hora_formatada" class="text-muted fs-12 ms-1">({{ selectedPepGroup.hora_formatada }})</span>
+                                                            <span v-if="selectedPepGroup.is_atual" class="badge bg-success-subtle text-success ms-2 fs-11">Consulta Atual</span>
+                                                        </h6>
+                                                    </div>
+                                                </div>
+                                                <span class="text-muted fs-12 fw-medium">
+                                                    <i class="ri-user-md-line me-1 text-primary"></i> {{ selectedPepGroup.medico }} &bull; {{ selectedPepGroup.procedimento }}
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="card-body">
+                                                <!-- Lista de Evoluções deste Atendimento -->
+                                                <div v-if="selectedPepGroup.evolucoes && selectedPepGroup.evolucoes.length > 0" class="vstack gap-3">
+                                                    <div v-for="ev in selectedPepGroup.evolucoes" :key="ev.id" class="p-3 border rounded-3 bg-white shadow-xs">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                                            <span class="badge bg-success-subtle text-success fs-12 fw-medium">
+                                                                <i class="ri-pulse-line me-1"></i> {{ ev.tipo || 'Evolução Clínica' }}
+                                                            </span>
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span class="fs-12 text-muted">
+                                                                    <i class="ri-time-line me-1"></i> {{ formatDate(ev.created_at) }}
+                                                                </span>
+                                                                <span class="fs-12 text-dark fw-medium ms-1">
+                                                                    <i class="ri-user-3-line me-1 text-muted"></i> {{ ev.profissional?.nome || 'Profissional' }}
+                                                                </span>
+                                                                <button v-if="props.auth_profissional_id && ev.profissional_id == props.auth_profissional_id && canEditPep"
+                                                                    class="btn btn-sm btn-ghost-danger ms-2"
+                                                                    @click="deleteEvolucao(ev)" title="Excluir Evolução">
+                                                                    <i class="ri-delete-bin-line fs-14"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <p class="text-secondary fs-13 mb-0 ps-1" style="white-space: pre-line;">{{ ev.descricao }}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div v-else class="text-center py-4 text-muted">
+                                                    <i class="ri-file-text-line fs-24 mb-1 d-block text-muted opacity-50"></i>
+                                                    Nenhuma evolução registrada neste atendimento ({{ selectedPepGroup.data_formatada }}).
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <h5 class="fs-15">Nenhum histórico encontrado</h5>
-                                    <p class="text-muted">Este é o primeiro atendimento registrado em prontuário para
-                                        este paciente.</p>
-                                </div>
-                                <div v-else class="accordion custom-accordionwithicon" id="accordionHistorico">
-                                    <div class="accordion-item" v-for="(hist, index) in historico" :key="hist.id">
-                                        <h2 class="accordion-header" :id="'heading' + index">
-                                            <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" :data-bs-target="'#collapse' + index"
-                                                aria-expanded="false" :aria-controls="'collapse' + index">
-                                                <div
-                                                    class="d-flex w-100 justify-content-between align-items-center me-3">
-                                                    <span>
-                                                        <i class="ri-calendar-event-line me-2 text-primary"></i>
-                                                        Atendimento em {{ formatDate(hist.aberto_em) }}
-                                                    </span>
-                                                    <span class="fw-medium text-dark"><i
-                                                            class="ri-stethoscope-line text-muted me-1 align-bottom"></i>{{
-                                                                hist.atendimento?.medico?.nome }}</span>
-                                                </div>
-                                            </button>
-                                        </h2>
-                                        <div :id="'collapse' + index" class="accordion-collapse collapse"
-                                            :aria-labelledby="'heading' + index" data-bs-parent="#accordionHistorico">
-                                            <div class="accordion-body">
-                                                <div v-if="hist.sinais_vitais && hist.sinais_vitais.length > 0">
-                                                    <h6 class="fs-13 text-primary mb-2">Triagem / Sinais Vitais</h6>
-                                                    <div class="row g-2 mb-3">
-                                                        <div class="col-sm-3 col-6"
-                                                            v-if="hist.sinais_vitais[0].pressao_sistolica || hist.sinais_vitais[0].pressao_diastolica">
-                                                            <div
-                                                                class="p-2 border border-dashed rounded text-center bg-light bg-opacity-50">
-                                                                <p class="text-muted mb-1 fs-11 text-uppercase">Pressão
-                                                                    (PA)</p>
-                                                                <h6 class="fs-13 mb-0">{{
-                                                                    hist.sinais_vitais[0].pressao_sistolica || '-' }} /
-                                                                    {{ hist.sinais_vitais[0].pressao_diastolica || '-'
-                                                                    }}</h6>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-sm-3 col-6"
-                                                            v-if="hist.sinais_vitais[0].frequencia_cardiaca">
-                                                            <div
-                                                                class="p-2 border border-dashed rounded text-center bg-light bg-opacity-50">
-                                                                <p class="text-muted mb-1 fs-11 text-uppercase">Freq.
-                                                                    Card. (FC)</p>
-                                                                <h6 class="fs-13 mb-0">{{
-                                                                    hist.sinais_vitais[0].frequencia_cardiaca }} bpm
-                                                                </h6>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-sm-3 col-6"
-                                                            v-if="hist.sinais_vitais[0].temperatura">
-                                                            <div
-                                                                class="p-2 border border-dashed rounded text-center bg-light bg-opacity-50">
-                                                                <p class="text-muted mb-1 fs-11 text-uppercase">
-                                                                    Temperatura (T)</p>
-                                                                <h6 class="fs-13 mb-0">{{
-                                                                    hist.sinais_vitais[0].temperatura }} °C</h6>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-sm-3 col-6"
-                                                            v-if="hist.sinais_vitais[0].saturacao">
-                                                            <div
-                                                                class="p-2 border border-dashed rounded text-center bg-light bg-opacity-50">
-                                                                <p class="text-muted mb-1 fs-11 text-uppercase">
-                                                                    Saturação (SpO2)</p>
-                                                                <h6 class="fs-13 mb-0">{{
-                                                                    hist.sinais_vitais[0].saturacao }} %</h6>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-sm-3 col-6" v-if="hist.sinais_vitais[0].peso">
-                                                            <div
-                                                                class="p-2 border border-dashed rounded text-center bg-light bg-opacity-50">
-                                                                <p class="text-muted mb-1 fs-11 text-uppercase">Peso</p>
-                                                                <h6 class="fs-13 mb-0">{{ hist.sinais_vitais[0].peso }}
-                                                                    kg</h6>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-sm-3 col-6" v-if="hist.sinais_vitais[0].altura">
-                                                            <div
-                                                                class="p-2 border border-dashed rounded text-center bg-light bg-opacity-50">
-                                                                <p class="text-muted mb-1 fs-11 text-uppercase">Altura
-                                                                </p>
-                                                                <h6 class="fs-13 mb-0">{{ hist.sinais_vitais[0].altura
-                                                                }} m</h6>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-sm-3 col-6" v-if="hist.sinais_vitais[0].imc">
-                                                            <div
-                                                                class="p-2 border border-dashed rounded text-center bg-light bg-opacity-50">
-                                                                <p class="text-muted mb-1 fs-11 text-uppercase">IMC</p>
-                                                                <h6 class="fs-13 mb-0">{{ hist.sinais_vitais[0].imc }}
-                                                                </h6>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-sm-3 col-6"
-                                                            v-if="hist.sinais_vitais[0].glicemia">
-                                                            <div
-                                                                class="p-2 border border-dashed rounded text-center bg-light bg-opacity-50">
-                                                                <p class="text-muted mb-1 fs-11 text-uppercase">Glicemia
-                                                                </p>
-                                                                <h6 class="fs-13 mb-0">{{ hist.sinais_vitais[0].glicemia
-                                                                }}</h6>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div v-if="hist.anamnese">
-                                                    <h6 class="fs-13 text-primary mb-1">Queixa Principal</h6>
-                                                    <p class="text-muted">{{ hist.anamnese.queixa_principal || '-' }}
-                                                    </p>
-                                                </div>
-                                                <div class="mt-3" v-if="hist.evolucoes && hist.evolucoes.length > 0">
-                                                    <h6 class="fs-13 text-primary mb-2">Evoluções ({{
-                                                        hist.evolucoes.length }})</h6>
-                                                    <div class="vstack gap-2">
-                                                        <div v-for="ev in hist.evolucoes" :key="ev.id"
-                                                            class="p-2 border border-dashed rounded bg-light bg-opacity-50">
-                                                            <div
-                                                                class="d-flex justify-content-between align-items-center mb-1">
-                                                                <span class="fs-12 fw-medium text-body"><i
-                                                                        class="mdi mdi-circle-medium text-success"></i>
-                                                                    {{ ev.profissional?.nome || 'Profissional'
-                                                                    }}</span>
-                                                                <span class="fs-12 text-muted">{{
-                                                                    formatDate(ev.created_at) }}</span>
-                                                            </div>
-                                                            <p class="text-muted mb-0 fs-13 ps-3">{{ ev.descricao }}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="mt-3"
-                                                    v-if="hist.prescricoes && hist.prescricoes.length > 0">
-                                                    <h6 class="fs-13 text-primary mb-2"><i
-                                                            class="ri-file-list-3-fill me-1 align-middle"></i>Prescrições
-                                                        ({{ hist.prescricoes.length }})</h6>
-                                                    <div class="vstack gap-3">
-                                                        <div v-for="pres in hist.prescricoes" :key="pres.id"
-                                                            class="p-3 border border-dashed rounded bg-light bg-opacity-50 position-relative">
-                                                            <div class="list-group list-group-flush mb-2"
-                                                                v-if="pres.itens && pres.itens.length > 0">
-                                                                <div class="list-group-item px-0 py-2 bg-transparent border-dashed"
-                                                                    v-for="item in pres.itens" :key="item.id">
-                                                                    <div
-                                                                        class="d-flex justify-content-between align-items-start">
-                                                                        <div>
-                                                                            <h6 class="mb-1 text-primary fs-14"><i
-                                                                                    class="mdi mdi-pill me-1 text-muted"></i>{{
-                                                                                        item.observacao || 'Medicamento' }}</h6>
-                                                                            <p class="mb-0 text-muted fs-13">
-                                                                                <i
-                                                                                    class="ri-time-line align-middle me-1"></i>{{
-                                                                                        item.dosagem }} <span
-                                                                                    class="mx-1">•</span> {{
-                                                                                        item.frequencia }}
-                                                                            </p>
-                                                                        </div>
-                                                                        <div class="text-end">
-                                                                            <span
-                                                                                class="badge bg-info-subtle text-info mb-1">{{
-                                                                                    item.via }}</span>
-                                                                            <div class="fs-12 text-muted fw-medium">Qtd:
-                                                                                {{ item.quantidade }}</div>
+
+                                    <!-- SUB-ABA 2: HISTÓRICO COMPLETO DE ATENDIMENTOS (DETALHAMENTO) -->
+                                    <div class="tab-pane fade" id="subtab-historico-completo" role="tabpanel">
+                                        <div v-if="!historico || historico.length === 0" class="text-center py-4">
+                                            <div class="avatar-md mx-auto mb-3">
+                                                <div class="avatar-title bg-light text-muted rounded-circle fs-24"><i
+                                                        class="ri-history-line"></i></div>
+                                            </div>
+                                            <h5 class="fs-15">Nenhum histórico de atendimento anterior</h5>
+                                            <p class="text-muted">Este é o primeiro atendimento registrado para este paciente.</p>
+                                        </div>
+                                        <div v-else class="profile-timeline">
+                                            <div class="accordion accordion-flush" id="accordionHistoricoTimeline">
+                                                <div v-for="(hist, index) in historico" :key="hist.id" class="accordion-item border rounded shadow-sm mb-3 overflow-hidden">
+                                                    <h2 class="accordion-header" :id="'headingHist' + index">
+                                                        <button class="accordion-button" :class="{ 'collapsed': index !== 0 }" type="button"
+                                                            data-bs-toggle="collapse" :data-bs-target="'#collapseHist' + index"
+                                                            :aria-expanded="index === 0 ? 'true' : 'false'" :aria-controls="'collapseHist' + index">
+                                                            <div class="d-flex w-100 justify-content-between align-items-center me-3 flex-wrap gap-2">
+                                                                <div class="d-flex align-items-center">
+                                                                    <div class="avatar-xs me-2">
+                                                                        <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-14">
+                                                                            <i class="ri-calendar-event-fill"></i>
                                                                         </div>
                                                                     </div>
+                                                                    <div>
+                                                                        <span class="fw-semibold text-dark fs-14">Atendimento em {{ formatDate(hist.aberto_em) }}</span>
+                                                                        <span v-if="hist.atendimento?.procedimento?.nome" class="badge bg-info-subtle text-info ms-2 fs-11">
+                                                                            {{ hist.atendimento.procedimento.nome }}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <span class="fs-13 text-muted">
+                                                                        <i class="ri-stethoscope-line me-1 text-primary align-middle"></i>
+                                                                        {{ hist.atendimento?.medico?.nome || hist.profissional?.nome || 'Profissional' }}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    </h2>
+
+                                                    <div :id="'collapseHist' + index" class="accordion-collapse collapse" :class="{ 'show': index === 0 }"
+                                                        :aria-labelledby="'headingHist' + index" data-bs-parent="#accordionHistoricoTimeline">
+                                                        <div class="accordion-body bg-light bg-opacity-25 p-3">
+                                                            
+                                                            <!-- 1. TRIAGEM / SINAIS VITAIS -->
+                                                            <div class="card shadow-none border mb-3">
+                                                                <div class="card-header bg-soft-primary border-0 py-2">
+                                                                    <h6 class="card-title mb-0 fs-13 text-primary d-flex align-items-center">
+                                                                        <i class="ri-heart-pulse-line me-2 fs-16"></i> 1. Triagem &amp; Sinais Vitais
+                                                                    </h6>
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <div v-if="hist.sinais_vitais && hist.sinais_vitais.length > 0">
+                                                                        <div class="row g-2 mb-2">
+                                                                            <div class="col-md-3 col-6" v-if="hist.sinais_vitais[0].pressao_sistolica || hist.sinais_vitais[0].pressao_diastolica">
+                                                                                <div class="p-2 border border-dashed rounded text-center bg-white">
+                                                                                    <p class="text-muted mb-1 fs-11 text-uppercase fw-medium">Pressão (PA)</p>
+                                                                                    <h6 class="fs-13 mb-0 text-dark">{{ hist.sinais_vitais[0].pressao_sistolica || '-' }} / {{ hist.sinais_vitais[0].pressao_diastolica || '-' }} mmHg</h6>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-md-3 col-6" v-if="hist.sinais_vitais[0].frequencia_cardiaca">
+                                                                                <div class="p-2 border border-dashed rounded text-center bg-white">
+                                                                                    <p class="text-muted mb-1 fs-11 text-uppercase fw-medium">Freq. Cardíaca</p>
+                                                                                    <h6 class="fs-13 mb-0 text-dark">{{ hist.sinais_vitais[0].frequencia_cardiaca }} bpm</h6>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-md-3 col-6" v-if="hist.sinais_vitais[0].temperatura">
+                                                                                <div class="p-2 border border-dashed rounded text-center bg-white">
+                                                                                    <p class="text-muted mb-1 fs-11 text-uppercase fw-medium">Temperatura</p>
+                                                                                    <h6 class="fs-13 mb-0 text-dark">{{ hist.sinais_vitais[0].temperatura }} °C</h6>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-md-3 col-6" v-if="hist.sinais_vitais[0].saturacao">
+                                                                                <div class="p-2 border border-dashed rounded text-center bg-white">
+                                                                                    <p class="text-muted mb-1 fs-11 text-uppercase fw-medium">Saturação O²</p>
+                                                                                    <h6 class="fs-13 mb-0 text-dark">{{ hist.sinais_vitais[0].saturacao }} %</h6>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-md-3 col-6" v-if="hist.sinais_vitais[0].peso">
+                                                                                <div class="p-2 border border-dashed rounded text-center bg-white">
+                                                                                    <p class="text-muted mb-1 fs-11 text-uppercase fw-medium">Peso</p>
+                                                                                    <h6 class="fs-13 mb-0 text-dark">{{ hist.sinais_vitais[0].peso }} kg</h6>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-md-3 col-6" v-if="hist.sinais_vitais[0].altura">
+                                                                                <div class="p-2 border border-dashed rounded text-center bg-white">
+                                                                                    <p class="text-muted mb-1 fs-11 text-uppercase fw-medium">Altura</p>
+                                                                                    <h6 class="fs-13 mb-0 text-dark">{{ hist.sinais_vitais[0].altura }} m</h6>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-md-3 col-6" v-if="hist.sinais_vitais[0].imc">
+                                                                                <div class="p-2 border border-dashed rounded text-center bg-white">
+                                                                                    <p class="text-muted mb-1 fs-11 text-uppercase fw-medium">IMC</p>
+                                                                                    <h6 class="fs-13 mb-0 text-dark">{{ hist.sinais_vitais[0].imc }}</h6>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-md-3 col-6" v-if="hist.sinais_vitais[0].glicemia">
+                                                                                <div class="p-2 border border-dashed rounded text-center bg-white">
+                                                                                    <p class="text-muted mb-1 fs-11 text-uppercase fw-medium">Glicemia</p>
+                                                                                    <h6 class="fs-13 mb-0 text-dark">{{ hist.sinais_vitais[0].glicemia }} mg/dL</h6>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p class="text-muted fs-12 mb-0" v-if="hist.sinais_vitais[0].observacao">
+                                                                            <strong>Obs Triagem:</strong> {{ hist.sinais_vitais[0].observacao }}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhum sinal vital/triagem registrado neste atendimento.</div>
                                                                 </div>
                                                             </div>
 
-                                                            <div class="alert alert-secondary border-0 bg-secondary bg-opacity-10 rounded p-2 mb-2"
-                                                                v-if="pres.observacao">
-                                                                <span
-                                                                    class="fw-semibold text-dark fs-12 d-block mb-1"><i
-                                                                        class="ri-information-line me-1 align-middle text-secondary"></i>Observações
-                                                                    Gerais</span>
-                                                                <p class="mb-0 text-muted fs-13">{{ pres.observacao }}
-                                                                </p>
-                                                            </div>
-
-                                                            <div class="text-end mt-1">
-                                                                <span class="fs-12 text-muted"><i
-                                                                        class="ri-calendar-line me-1"></i>{{
-                                                                            formatDate(pres.created_at) }}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="mt-3"
-                                                    v-if="hist.diagnosticos && hist.diagnosticos.length > 0">
-                                                    <h6 class="fs-13 text-primary mb-2"><i
-                                                            class="ri-stethoscope-fill me-1 align-middle"></i>Diagnósticos
-                                                        ({{ hist.diagnosticos.length }})</h6>
-                                                    <div class="vstack gap-2">
-                                                        <div v-for="diag in hist.diagnosticos" :key="diag.id"
-                                                            class="p-2 border border-dashed rounded bg-light bg-opacity-50">
-                                                            <div
-                                                                class="d-flex justify-content-between align-items-center mb-1">
-                                                                <span class="fs-13 fw-semibold text-dark">{{ diag.cid ?
-                                                                    diag.cid.codigo + ' - ' + diag.cid.descricao :
-                                                                    'Diagnóstico' }}</span>
-                                                                <div>
-                                                                    <span
-                                                                        class="badge bg-danger-subtle text-danger me-1"
-                                                                        v-if="diag.principal">Principal</span>
-                                                                    <span class="badge bg-success-subtle text-success"
-                                                                        v-if="diag.confirmado">Confirmado</span>
+                                                            <!-- 2. ANAMNESE -->
+                                                            <div class="card shadow-none border mb-3">
+                                                                <div class="card-header bg-soft-info border-0 py-2">
+                                                                    <h6 class="card-title mb-0 fs-13 text-info d-flex align-items-center">
+                                                                        <i class="ri-file-text-line me-2 fs-16"></i> 2. Anamnese
+                                                                    </h6>
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <div v-if="hist.anamnese" class="row g-3">
+                                                                        <div class="col-md-12" v-if="hist.anamnese.queixa_principal">
+                                                                            <p class="text-muted mb-1 fs-12 font-bold">Queixa Principal:</p>
+                                                                            <p class="fs-13 mb-0 text-dark">{{ hist.anamnese.queixa_principal }}</p>
+                                                                        </div>
+                                                                        <div class="col-md-12" v-if="hist.anamnese.historia_doenca_atual">
+                                                                            <p class="text-muted mb-1 fs-12 font-bold">História da Doença Atual (HDA):</p>
+                                                                            <p class="fs-13 mb-0 text-dark">{{ hist.anamnese.historia_doenca_atual }}</p>
+                                                                        </div>
+                                                                        <div class="col-md-6" v-if="hist.anamnese.antecedentes_pessoais">
+                                                                            <p class="text-muted mb-1 fs-12 font-bold">Antecedentes Pessoais:</p>
+                                                                            <p class="fs-13 mb-0 text-dark">{{ hist.anamnese.antecedentes_pessoais }}</p>
+                                                                        </div>
+                                                                        <div class="col-md-6" v-if="hist.anamnese.alergias">
+                                                                            <p class="text-muted mb-1 fs-12 font-bold">Alergias:</p>
+                                                                            <p class="fs-13 mb-0 text-danger fw-medium">{{ hist.anamnese.alergias }}</p>
+                                                                        </div>
+                                                                        <div class="col-md-12" v-if="hist.anamnese.medicamentos_uso">
+                                                                            <p class="text-muted mb-1 fs-12 font-bold">Medicamentos em Uso:</p>
+                                                                            <p class="fs-13 mb-0 text-dark">{{ hist.anamnese.medicamentos_uso }}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhuma anamnese registrada neste atendimento.</div>
                                                                 </div>
                                                             </div>
-                                                            <p class="text-muted fs-13 mb-1" v-if="diag.descricao">{{
-                                                                diag.descricao }}</p>
-                                                            <div class="text-end mt-1">
-                                                                <span class="fs-12 text-muted"><i
-                                                                        class="ri-user-line me-1"></i>{{
-                                                                            diag.profissional?.nome || 'Profissional' }} &bull;
-                                                                    {{ formatDate(diag.created_at) }}</span>
+
+                                                            <!-- 3. EVOLUÇÕES -->
+                                                            <div class="card shadow-none border mb-3">
+                                                                <div class="card-header bg-soft-success border-0 py-2">
+                                                                    <h6 class="card-title mb-0 fs-13 text-success d-flex align-items-center">
+                                                                        <i class="ri-pulse-line me-2 fs-16"></i> 3. Evoluções Clínica ({{ hist.evolucoes?.length || 0 }})
+                                                                    </h6>
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <div v-if="hist.evolucoes && hist.evolucoes.length > 0" class="vstack gap-2">
+                                                                        <div v-for="ev in hist.evolucoes" :key="ev.id" class="p-3 border rounded bg-white">
+                                                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                                <span class="badge bg-success-subtle text-success fs-11">{{ ev.tipo || 'Evolução' }}</span>
+                                                                                <span class="fs-12 text-muted">{{ formatDate(ev.created_at) }}</span>
+                                                                            </div>
+                                                                            <p class="text-muted mb-0 fs-13">{{ ev.descricao }}</p>
+                                                                            <small class="text-muted d-block mt-1">Por: {{ ev.profissional?.nome || 'Profissional' }}</small>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhuma evolução registrada neste atendimento.</div>
+                                                                </div>
                                                             </div>
+
+                                                            <!-- 4. DIAGNÓSTICOS -->
+                                                            <div class="card shadow-none border mb-3">
+                                                                <div class="card-header bg-soft-warning border-0 py-2">
+                                                                    <h6 class="card-title mb-0 fs-13 text-warning d-flex align-items-center">
+                                                                        <i class="ri-stethoscope-line me-2 fs-16"></i> 4. Diagnósticos / CID ({{ hist.diagnosticos?.length || 0 }})
+                                                                    </h6>
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <div v-if="hist.diagnosticos && hist.diagnosticos.length > 0" class="vstack gap-2">
+                                                                        <div v-for="diag in hist.diagnosticos" :key="diag.id" class="p-2 px-3 border rounded bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                                            <div>
+                                                                                <span class="badge bg-warning-subtle text-warning me-2" v-if="diag.cid?.codigo">{{ diag.cid.codigo }}</span>
+                                                                                <span class="fw-medium fs-13 text-dark">{{ diag.cid?.descricao || 'Diagnóstico sem CID' }}</span>
+                                                                                <p class="text-muted fs-12 mb-0" v-if="diag.descricao">{{ diag.descricao }}</p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span class="badge bg-danger-subtle text-danger me-1" v-if="diag.principal">Principal</span>
+                                                                                <span class="badge bg-info-subtle text-info" v-if="diag.confirmado">Confirmado</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhum diagnóstico registrado neste atendimento.</div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- 5. PRESCRIÇÕES -->
+                                                            <div class="card shadow-none border mb-0">
+                                                                <div class="card-header bg-soft-danger border-0 py-2">
+                                                                    <h6 class="card-title mb-0 fs-13 text-danger d-flex align-items-center">
+                                                                        <i class="ri-capsule-line me-2 fs-16"></i> 5. Prescrições &amp; Medicamentos ({{ hist.prescricoes?.length || 0 }})
+                                                                    </h6>
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <div v-if="hist.prescricoes && hist.prescricoes.length > 0" class="vstack gap-2">
+                                                                        <div v-for="pres in hist.prescricoes" :key="pres.id" class="p-2 border border-dashed rounded bg-white">
+                                                                            <div v-if="pres.observacao" class="text-muted fs-12 mb-1">
+                                                                                <strong>Obs:</strong> {{ pres.observacao }}
+                                                                            </div>
+                                                                            <ul class="list-unstyled mb-0 ps-1 vstack gap-1" v-if="pres.itens && pres.itens.length > 0">
+                                                                                <li v-for="item in pres.itens" :key="item.id" class="fs-13 text-dark">
+                                                                                    <i class="ri-checkbox-blank-circle-fill fs-6 text-danger me-2 align-middle"></i>
+                                                                                    <strong>{{ item.observacao || 'Medicamento' }}</strong>
+                                                                                    <span v-if="item.dosagem"> - {{ item.dosagem }}</span>
+                                                                                    <span v-if="item.via"> Via {{ item.via }}</span>
+                                                                                    <span v-if="item.frequencia"> de {{ item.frequencia }}</span>
+                                                                                    <span v-if="item.quantidade"> (Qtd: {{ item.quantidade }})</span>
+                                                                                </li>
+                                                                            </ul>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhuma prescrição registrada neste atendimento.</div>
+                                                                </div>
+                                                            </div>
+
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- TRIAGEM (SINAIS VITAIS) -->
+                    </div> <!-- /v-pills-resumo -->
                     <div class="tab-pane fade" id="v-pills-triagem" role="tabpanel">
                         <div class="card shadow-sm">
                             <div class="card-header border-0 bg-soft-light">
@@ -736,9 +894,9 @@ const finalizarAtendimento = () => {
                             </div>
                             <div class="card-body">
                                 <div class="alert alert-info alert-border-left alert-dismissible fade show" role="alert"
-                                    v-if="!canEditPep">
+                                    v-if="!isMedicoResponsavel && atendimento?.medico">
                                     <i class="ri-information-line me-3 align-middle fs-16 text-info"></i>
-                                    Esta anamnese foi iniciada pelo <strong> {{ atendimento?.medico?.nome
+                                    Esta anamnese foi iniciada pelo(a) <strong> {{ atendimento.medico.nome
                                     }}</strong>. Você não pode editá-la.
                                 </div>
 
@@ -795,87 +953,71 @@ const finalizarAtendimento = () => {
                             </div>
                             <div class="card-body">
                                 <form @submit.prevent="saveEvolucao">
-                                    <div class="row g-3">
-                                        <div class="col-md-4">
-                                            <label class="form-label">Tipo de Nota</label>
-                                            <Multiselect v-model="evolucaoForm.tipo"
-                                                :options="['Evolução Clínica', 'Nota de Enfermagem', 'Parecer']"
-                                                placeholder="Selecione o tipo" :searchable="false" :can-clear="false" />
+                                    <fieldset :disabled="!canEditPep">
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Tipo de Nota</label>
+                                                <Multiselect v-model="evolucaoForm.tipo"
+                                                    :options="['Evolução Clínica', 'Nota de Enfermagem', 'Parecer']"
+                                                    placeholder="Selecione o tipo" :searchable="false" :can-clear="false" :disabled="!canEditPep" />
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label">Descrição</label>
+                                                <textarea class="form-control" v-model="evolucaoForm.descricao" rows="3"
+                                                    placeholder="Descreva a evolução do paciente..." required></textarea>
+                                            </div>
+                                            <div class="col-12 text-end">
+                                                <button type="submit" class="btn btn-primary shadow-sm"
+                                                    :disabled="!canEditPep || evolucaoForm.processing">
+                                                    <span v-if="evolucaoForm.processing"
+                                                        class="spinner-border spinner-border-sm me-1" role="status"
+                                                        aria-hidden="true"></span>
+                                                    <i class="ri-add-line align-bottom me-1" v-else></i> Adicionar Evolução
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div class="col-md-12">
-                                            <label class="form-label">Descrição</label>
-                                            <textarea class="form-control" v-model="evolucaoForm.descricao" rows="3"
-                                                placeholder="Descreva a evolução do paciente..." required></textarea>
-                                        </div>
-                                        <div class="col-12 text-end">
-                                            <button type="submit" class="btn btn-primary shadow-sm"
-                                                :disabled="evolucaoForm.processing">
-                                                <span v-if="evolucaoForm.processing"
-                                                    class="spinner-border spinner-border-sm me-1" role="status"
-                                                    aria-hidden="true"></span>
-                                                <i class="ri-add-line align-bottom me-1" v-else></i> Adicionar Evolução
-                                            </button>
-                                        </div>
-                                    </div>
+                                    </fieldset>
                                 </form>
-                            </div>
-                        </div>
-
-                        <!-- Lista de Evoluções -->
-                        <div class="card shadow-sm">
-                            <div class="card-header border-0">
-                                <h5 class="card-title mb-0">Linha do Tempo de Evoluções</h5>
+                        <!-- Lista de Evoluções deste Atendimento -->
+                        <div class="card shadow-sm mt-3">
+                            <div class="card-header border-0 bg-soft-light">
+                                <h5 class="card-title mb-0">
+                                    <i class="ri-list-check me-2 text-primary"></i> Evoluções do Atendimento Atual
+                                </h5>
                             </div>
                             <div class="card-body">
-                                <div v-if="todasEvolucoes.length === 0" class="text-center py-4 text-muted">
-                                    Nenhuma evolução registrada para este paciente.
-                                </div>
-                                <div class="profile-timeline" v-else>
-                                    <div class="accordion accordion-flush" id="accordionEvolucoes">
-                                        <div class="accordion-item border-0" v-for="ev in todasEvolucoes" :key="ev.id">
-                                            <div class="accordion-header" :id="'evHeader' + ev.id">
-                                                <a class="accordion-button p-2 shadow-none" data-bs-toggle="collapse"
-                                                    :href="'#evCollapse' + ev.id" aria-expanded="true">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="flex-shrink-0 avatar-xs">
-                                                            <div class="avatar-title bg-success rounded-circle"><i
-                                                                    class="ri-pulse-line"></i></div>
-                                                        </div>
-                                                        <div class="flex-grow-1 ms-3">
-                                                            <h6 class="fs-14 mb-0">{{ ev.tipo }} <span
-                                                                    class="fw-normal text-muted ms-2 fs-12">{{
-                                                                        formatDate(ev.created_at) }}</span></h6>
-                                                            <p class="text-muted mb-0 fs-12"> {{
-                                                                ev.profissional?.nome || 'Profissional' }}</p>
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            </div>
-                                            <div :id="'evCollapse' + ev.id" class="accordion-collapse collapse show"
-                                                data-bs-parent="#accordionEvolucoes">
-                                                <div class="accordion-body ms-2 ps-5 pt-0">
-                                                    <p class="text-muted mb-0">{{ ev.descricao }}</p>
-                                                    <div class="mt-2"
-                                                        v-if="props.auth_profissional_id && ev.profissional_id == props.auth_profissional_id">
-                                                        <button class="btn btn-sm btn-ghost-danger"
-                                                            @click="deleteEvolucao(ev)" title="Excluir Evolução"><i
-                                                                class="ri-delete-bin-line fs-14"></i></button>
-                                                    </div>
-                                                    <div class="mt-2" v-else>
-                                                        <span class="badge bg-light text-muted border"
-                                                            title="Apenas o autor pode excluir"><i
-                                                                class="ri-lock-line align-bottom"></i> Somente
-                                                            Leitura</span>
-                                                    </div>
-                                                </div>
+                                <div v-if="pep?.evolucoes && pep.evolucoes.length > 0" class="vstack gap-3">
+                                    <div v-for="ev in pep.evolucoes" :key="ev.id" class="p-3 border rounded-3 bg-white shadow-xs">
+                                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                            <span class="badge bg-success-subtle text-success fs-12 fw-medium">
+                                                <i class="ri-pulse-line me-1"></i> {{ ev.tipo || 'Evolução Clínica' }}
+                                            </span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="fs-12 text-muted">
+                                                    <i class="ri-time-line me-1"></i> {{ formatDate(ev.created_at) }}
+                                                </span>
+                                                <span class="fs-12 text-dark fw-medium ms-1">
+                                                    <i class="ri-user-3-line me-1 text-muted"></i> {{ ev.profissional?.nome || 'Profissional' }}
+                                                </span>
+                                                <button v-if="props.auth_profissional_id && ev.profissional_id == props.auth_profissional_id && canEditPep"
+                                                    class="btn btn-sm btn-ghost-danger ms-2"
+                                                    @click="deleteEvolucao(ev)" title="Excluir Evolução">
+                                                    <i class="ri-delete-bin-line fs-14"></i>
+                                                </button>
                                             </div>
                                         </div>
+                                        <p class="text-secondary fs-13 mb-0 ps-1" style="white-space: pre-line;">{{ ev.descricao }}</p>
                                     </div>
+                                </div>
+                                <div v-else class="text-center py-4 text-muted">
+                                    <i class="ri-file-text-line fs-24 mb-1 d-block text-muted opacity-50"></i>
+                                    Nenhuma evolução registrada neste atendimento.
                                 </div>
                             </div>
                         </div>
                     </div>
-
+                    </div>
+                    </div> <!-- /v-pills-evolucao -->
                     <!-- PRESCRIÇÃO -->
                     <div class="tab-pane fade" id="v-pills-prescricao" role="tabpanel">
                         <div class="card shadow-sm">
@@ -884,91 +1026,93 @@ const finalizarAtendimento = () => {
                             </div>
                             <div class="card-body">
                                 <form @submit.prevent="savePrescricao">
-                                    <div class="row g-3">
-                                        <div class="col-12">
-                                            <label class="form-label">Observações Gerais</label>
-                                            <textarea class="form-control" v-model="prescricaoForm.observacao" rows="2"
-                                                placeholder="Dieta, repouso, cuidados..."></textarea>
-                                        </div>
-
-                                        <div class="col-12 mt-4">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <h6 class="fs-14 fw-medium mb-0">Itens da Prescrição</h6>
-                                                <button type="button" class="btn btn-sm btn-soft-primary"
-                                                    @click="addPrescricaoItem"><i class="ri-add-line align-bottom"></i>
-                                                    Adicionar Item</button>
+                                    <fieldset :disabled="!canEditPep">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label">Observações Gerais</label>
+                                                <textarea class="form-control" v-model="prescricaoForm.observacao" rows="2"
+                                                    placeholder="Dieta, repouso, cuidados..."></textarea>
                                             </div>
-                                            <div class="table-responsive">
-                                                <table class="table table-bordered table-nowrap align-middle mb-0">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th>Medicamento / Item</th>
-                                                            <th width="15%">Dose</th>
-                                                            <th width="20%">Via</th>
-                                                            <th width="20%">Frequência</th>
-                                                            <th width="10%">Qtd</th>
-                                                            <th width="5%"></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr v-for="(item, index) in prescricaoForm.itens" :key="index">
-                                                            <td>
-                                                                <input type="text" class="form-control form-control-sm"
-                                                                    v-model="item.medicamento_nome"
-                                                                    placeholder="Ex: Dipirona 500mg" required>
-                                                            </td>
-                                                            <td>
-                                                                <input type="text" class="form-control form-control-sm"
-                                                                    v-model="item.dosagem" placeholder="Ex: 1 comp"
-                                                                    required>
-                                                            </td>
-                                                            <td>
-                                                                <select class="form-select form-select-sm"
-                                                                    v-model="item.via" required>
-                                                                    <option value="">Selecione</option>
-                                                                    <option value="Oral">Oral (VO)</option>
-                                                                    <option value="Intravenosa">Intravenosa (IV)
-                                                                    </option>
-                                                                    <option value="Intramuscular">Intramuscular (IM)
-                                                                    </option>
-                                                                    <option value="Subcutânea">Subcutânea (SC)</option>
-                                                                    <option value="Tópica">Tópica</option>
-                                                                </select>
-                                                            </td>
-                                                            <td>
-                                                                <input type="text" class="form-control form-control-sm"
-                                                                    v-model="item.frequencia" placeholder="Ex: 8/8h"
-                                                                    required>
-                                                            </td>
-                                                            <td>
-                                                                <input type="number"
-                                                                    class="form-control form-control-sm"
-                                                                    v-model="item.quantidade" min="1" required>
-                                                            </td>
-                                                            <td>
-                                                                <button type="button"
-                                                                    class="btn btn-sm btn-ghost-danger"
-                                                                    @click="removePrescricaoItem(index)"
-                                                                    :disabled="prescricaoForm.itens.length === 1">
-                                                                    <i class="ri-delete-bin-line"></i>
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
+
+                                            <div class="col-12 mt-4">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <h6 class="fs-14 fw-medium mb-0">Itens da Prescrição</h6>
+                                                    <button type="button" class="btn btn-sm btn-soft-primary"
+                                                        @click="addPrescricaoItem" :disabled="!canEditPep"><i class="ri-add-line align-bottom"></i>
+                                                        Adicionar Item</button>
+                                                </div>
+                                                <div class="table-responsive">
+                                                    <table class="table table-bordered table-nowrap align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>Medicamento / Item</th>
+                                                                <th width="15%">Dose</th>
+                                                                <th width="20%">Via</th>
+                                                                <th width="20%">Frequência</th>
+                                                                <th width="10%">Qtd</th>
+                                                                <th width="5%"></th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr v-for="(item, index) in prescricaoForm.itens" :key="index">
+                                                                <td>
+                                                                    <input type="text" class="form-control form-control-sm"
+                                                                        v-model="item.medicamento_nome"
+                                                                        placeholder="Ex: Dipirona 500mg" required>
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" class="form-control form-control-sm"
+                                                                        v-model="item.dosagem" placeholder="Ex: 1 comp"
+                                                                        required>
+                                                                </td>
+                                                                <td>
+                                                                    <select class="form-select form-select-sm"
+                                                                        v-model="item.via" required>
+                                                                        <option value="">Selecione</option>
+                                                                        <option value="Oral">Oral (VO)</option>
+                                                                        <option value="Intravenosa">Intravenosa (IV)
+                                                                        </option>
+                                                                        <option value="Intramuscular">Intramuscular (IM)
+                                                                        </option>
+                                                                        <option value="Subcutânea">Subcutânea (SC)</option>
+                                                                        <option value="Tópica">Tópica</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" class="form-control form-control-sm"
+                                                                        v-model="item.frequencia" placeholder="Ex: 8/8h"
+                                                                        required>
+                                                                </td>
+                                                                <td>
+                                                                    <input type="number"
+                                                                        class="form-control form-control-sm"
+                                                                        v-model="item.quantidade" min="1" required>
+                                                                </td>
+                                                                <td>
+                                                                    <button type="button"
+                                                                        class="btn btn-sm btn-ghost-danger"
+                                                                        @click="removePrescricaoItem(index)"
+                                                                        :disabled="!canEditPep || prescricaoForm.itens.length === 1">
+                                                                        <i class="ri-delete-bin-line"></i>
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 text-end mt-3">
+                                                <button type="submit" class="btn btn-primary shadow-sm"
+                                                    :disabled="!canEditPep || prescricaoForm.processing || prescricaoForm.itens.length === 0">
+                                                    <span v-if="prescricaoForm.processing"
+                                                        class="spinner-border spinner-border-sm me-1" role="status"
+                                                        aria-hidden="true"></span>
+                                                    <i class="ri-save-line align-bottom me-1" v-else></i> Salvar Prescrição
+                                                </button>
                                             </div>
                                         </div>
-
-                                        <div class="col-12 text-end mt-3">
-                                            <button type="submit" class="btn btn-primary shadow-sm"
-                                                :disabled="prescricaoForm.processing || prescricaoForm.itens.length === 0">
-                                                <span v-if="prescricaoForm.processing"
-                                                    class="spinner-border spinner-border-sm me-1" role="status"
-                                                    aria-hidden="true"></span>
-                                                <i class="ri-save-line align-bottom me-1" v-else></i> Salvar Prescrição
-                                            </button>
-                                        </div>
-                                    </div>
+                                    </fieldset>
                                 </form>
                             </div>
                         </div>
@@ -1036,8 +1180,7 @@ const finalizarAtendimento = () => {
                             </div>
                         </div>
 
-                    </div>
-
+                    </div> <!-- /v-pills-prescricao -->
                     <!-- DIAGNÓSTICOS -->
                     <div class="tab-pane fade" id="v-pills-diagnosticos" role="tabpanel">
                         <!-- Formulário -->
@@ -1050,11 +1193,18 @@ const finalizarAtendimento = () => {
                                     <div class="row g-3">
                                         <div class="col-md-12">
                                             <label class="form-label">CID (Busca)</label>
-                                            <select class="form-select" ref="selCid" id="cid_id_select" name="cid_id"
-                                                v-model="diagnosticoForm.cid_id" data-choices>
-                                                <option value="">Digite o código ou nome da doença para buscar...
-                                                </option>
-                                            </select>
+                                            <Multiselect
+                                                v-model="diagnosticoForm.cid_id"
+                                                :options="fetchCids"
+                                                :searchable="true"
+                                                :filter-results="false"
+                                                :min-chars="2"
+                                                placeholder="Digite o código ou nome da doença para buscar..."
+                                                no-results-text="Nenhum CID encontrado"
+                                                no-options-text="Digite ao menos 2 caracteres para buscar..."
+                                                :can-clear="true"
+                                                :disabled="!canEditPep"
+                                            />
                                         </div>
                                         <div class="col-md-12">
                                             <label class="form-label">Descrição / Observação do Diagnóstico</label>
@@ -1128,12 +1278,12 @@ const finalizarAtendimento = () => {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    </div> <!-- /v-pills-diagnosticos -->
+                        </div> <!-- /tab-content -->
+                    </div> <!-- /card-body -->
+                </div> <!-- /card -->
+            </div> <!-- /col-lg-12 -->
+        </div> <!-- /row -->
         </div>
         <!-- Modal para Finalizar Atendimento -->
         <Modal v-model="showFinalizarModal" title="Finalizar Atendimento" name-button="Sim, finalizar" size="md"

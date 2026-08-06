@@ -149,13 +149,7 @@ class AtendimentoController extends Controller
             'status' => 'NÃO ATENDIDO'
         ]);
 
-        if ($atendimento->agendamento_id) {
-            $statusReagendar = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Reagendar']);
-            \App\Models\Agendamento::where('id', $atendimento->agendamento_id)
-                ->update(['status_id' => $statusReagendar->id]);
-        }
-
-        return redirect()->back()->with('success', 'Paciente marcado como ausente e retornado para a recepção.');
+        return redirect()->back()->with('success', 'Paciente marcado como ausente.');
     }
 
     public function finalizar(Atendimento $atendimento)
