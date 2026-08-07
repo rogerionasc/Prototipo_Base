@@ -56,7 +56,7 @@ export default {
                 editable: true,
                 selectable: true,
                 selectMirror: true,
-                dayMaxEvents: true,
+                dayMaxEvents: 1,
                 weekends: true,
                 dateClick: this.cliqueNaData,
                 eventClick: this.editarEvento,
@@ -188,6 +188,7 @@ export default {
             nomePacienteEdicao: "",
             eventoSelecionado: null,
             editandoNoModalDeCriacao: false,
+            habilitarCorFundoCalendario: localStorage.getItem("habilitarCorFundoCalendario") === "true",
         };
     },
     components: {
@@ -339,10 +340,34 @@ export default {
             }
             this.buscarMapaDiasSemanaSelecionados();
             this.buscarUltimosAgendamentos();
+
+            // Lógica para abrir modal com dados pré-preenchidos via query params
+            const params = new URLSearchParams(window.location.search);
+            const prePacId = params.get('paciente');
+            const preProcId = params.get('procedimento');
+            const preTussId = params.get('tuss');
+            if (prePacId) {
+                this.abrirNovoAgendamento();
+                setTimeout(() => {
+                    this.agendamentoForm.paciente_id = parseInt(prePacId);
+                    const pac = this.pacientesLocal.find(p => String(p.id) === String(prePacId));
+                    if (pac) this.termoBuscaPaciente = pac.nome;
+                    
+                    if (preProcId) {
+                        this.agendamentoForm.procedimento_id = parseInt(preProcId);
+                    } else if (preTussId) {
+                        this.agendamentoForm.procedimento_id = parseInt(preTussId); // Select de procedimentos lista TUSS também se convênio
+                    }
+                }, 300);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
         } catch (e) { }
     },
     watch: {
-
+        habilitarCorFundoCalendario(nv) {
+            localStorage.setItem("habilitarCorFundoCalendario", nv);
+            this.aplicarTodasListras();
+        },
         "agendamentoForm.paciente_id"(nv) {
             if (this._restaurandoEdicao) return;
             try { this.carregarConveniosPacienteCriacao(); } catch (_) { }
@@ -1395,8 +1420,10 @@ export default {
         },
         aplicarTodasListras() {
             try {
+                this.limparListras();
+                if (!this.habilitarCorFundoCalendario) return;
+                
                 if (!this.agendasHoje || this.agendasHoje.length === 0) {
-                    this.limparListras();
                     return;
                 }
                 const api = this.$refs.fullCalendar?.getApi?.();
@@ -1936,10 +1963,15 @@ export default {
                     <BCol xl="3">
                         <BCard no-body class="card-h-100">
                             <BCardBody>
-                                <BButton variant="primary" class="w-100" id="btn-new-event"
+                                <BButton variant="primary" class="w-100 mb-3" id="btn-new-event"
                                     @click="abrirNovoAgendamento">
                                     <i class="mdi mdi-plus"></i> Novo Agendamento
                                 </BButton>
+                                
+                                <div class="form-check form-switch form-switch-md mb-2" dir="ltr">
+                                    <input type="checkbox" class="form-check-input" id="toggle-bg-calendario" v-model="habilitarCorFundoCalendario">
+                                    <label class="form-check-label" for="toggle-bg-calendario">Exibir listras de fundo do calendário</label>
+                                </div>
 
                                 <div id="external-events">
                                     <br />

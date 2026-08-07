@@ -22,8 +22,7 @@ class PepController extends Controller
         }
 
 
-
-        $atendimento->load(['paciente', 'medico', 'procedimento']);
+        $atendimento->load(['paciente', 'medico', 'procedimento', 'agendamento.sessaoTratamento']);
         $paciente = $atendimento->paciente;
         $user = auth()->user();
         
@@ -39,6 +38,49 @@ class PepController extends Controller
             ]
         );
 
+        // Se o procedimento for um tratamento, auto-gera o plano caso não exista um em andamento
+        if ($atendimento->procedimento && $atendimento->procedimento->eh_tratamento) {
+            $tratamentoExistente = \App\Models\PepTratamento::where('paciente_id', $paciente->id)
+                ->where('nome_tratamento', $atendimento->procedimento->nome)
+                ->where('status', 'Em andamento')
+                ->first();
+
+            $podeCriar = false;
+
+            if (!$tratamentoExistente) {
+                $isSessao1 = true;
+                if ($atendimento->agendamento && $atendimento->agendamento->sessaoTratamento) {
+                    if ($atendimento->agendamento->sessaoTratamento->numero_sessao > 1) {
+                        $isSessao1 = false;
+                    }
+                }
+
+                if ($isSessao1) {
+                    $jaCriouNestePep = \App\Models\PepTratamento::where('pep_id', $pep->id)
+                        ->where('nome_tratamento', $atendimento->procedimento->nome)
+                        ->exists();
+
+                    if (!$jaCriouNestePep) {
+                        $podeCriar = true;
+                    }
+                }
+            }
+
+            if ($podeCriar) {
+                \App\Models\PepTratamento::create([
+                    'pep_id' => $pep->id,
+                    'paciente_id' => $paciente->id,
+                    'profissional_id' => $atendimento->medico_id ?? $user->pessoa_id,
+                    'nome_tratamento' => $atendimento->procedimento->nome,
+                    'quantidade_sessoes_previstas' => $atendimento->procedimento->quantidade_sessoes > 0 ? $atendimento->procedimento->quantidade_sessoes : 1,
+                    'quantidade_sessoes_realizadas' => 0,
+                    'status' => 'Em andamento',
+                    'data_inicio' => now(),
+                    'observacao' => 'Plano de tratamento gerado automaticamente a partir do procedimento.'
+                ]);
+            }
+        }
+
         $pep->load(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'diagnosticos.profissional', 'diagnosticos.cid']);
 
         $tratamentos = \App\Models\PepTratamento::with(['profissional', 'evolucoes'])
@@ -47,7 +89,7 @@ class PepController extends Controller
             ->get();
 
         // Carrega o histórico de PEPs do paciente (incluindo o atual caso já esteja finalizado/encerrado)
-        $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'atendimento.procedimento', 'diagnosticos.profissional', 'diagnosticos.cid'])
+        $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'atendimento.procedimento', 'atendimento.agendamento.sessaoTratamento', 'diagnosticos.profissional', 'diagnosticos.cid'])
             ->where('paciente_id', $paciente->id)
             ->where(function($q) use ($pep) {
                 if ($pep->status === 'Aberto') {
@@ -207,32 +249,6 @@ class PepController extends Controller
         return redirect()->back()->with('success', 'Evolução removida com sucesso.');
     }
 
-    public function saveTratamento(Request $request, Atendimento $atendimento)
-    {
-        $this->checkAtendimentoEmAndamento($atendimento);
-
-        $request->validate([
-            'nome_tratamento' => 'required|string|max:255',
-            'quantidade_sessoes_previstas' => 'required|integer|min:1',
-            'observacao' => 'nullable|string'
-        ]);
-
-        $pep = Pep::where('atendimento_id', $atendimento->id)->firstOrFail();
-
-        \App\Models\PepTratamento::create([
-            'pep_id' => $pep->id,
-            'paciente_id' => $pep->paciente_id,
-            'profissional_id' => auth()->user()->pessoa_id,
-            'nome_tratamento' => $request->nome_tratamento,
-            'quantidade_sessoes_previstas' => $request->quantidade_sessoes_previstas,
-            'quantidade_sessoes_realizadas' => 0,
-            'status' => 'Em andamento',
-            'data_inicio' => now(),
-            'observacao' => $request->observacao,
-        ]);
-
-        return redirect()->back()->with('success', 'Plano de Tratamento criado com sucesso.');
-    }
 
     public function deleteTratamento(Atendimento $atendimento, \App\Models\PepTratamento $tratamento)
     {

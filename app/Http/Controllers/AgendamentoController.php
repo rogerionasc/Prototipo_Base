@@ -262,139 +262,127 @@ class AgendamentoController extends Controller
                 $valorCobrado = (float)($proc->valor ?? 0);
             }
 
-            $quantidade_sessoes = ($proc && (bool)$proc->eh_tratamento && (int)$proc->quantidade_sessoes > 0) ? (int)$proc->quantidade_sessoes : 1;
+            $sessaoId = null;
+            if ($proc && (bool)$proc->eh_tratamento) {
+                $lastNumQuery = DB::table('sessoes_tratamento')->where('paciente_id', $pacId);
 
-            $agendamentos = [];
-
-            for ($i = 1; $i <= $quantidade_sessoes; $i++) {
-                $isFirst = ($i === 1);
-                
-                $sessaoId = null;
-                if ($proc && (bool)$proc->eh_tratamento) {
-                    $lastNumQuery = DB::table('sessoes_tratamento')->where('paciente_id', $pacId);
-
-                    if ($isConvenio) {
-                        $lastNumQuery->where('tuss_id', $procId);
-                    } else {
-                        $lastNumQuery->where('procedimento_id', $procId);
-                    }
-
-                    $lastNum = $lastNumQuery->max('numero_sessao');
-                    $nextNum = (int)($lastNum ?? 0) + 1;
-                    $sessaoId = DB::table('sessoes_tratamento')->insertGetId([
-                        'procedimento_id' => $isConvenio ? null : $procId,
-                        'tuss_id' => $isConvenio ? $procId : null,
-                        'paciente_id' => $pacId,
-                        'numero_sessao' => $nextNum,
-                        'data_prevista' => $isFirst ? $dt->toDateString() : null,
-                        'realizada' => false,
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now(),
-                        'deleted_at' => null,
-                    ]);
+                if ($isConvenio) {
+                    $lastNumQuery->where('tuss_id', $procId);
+                } else {
+                    $lastNumQuery->where('procedimento_id', $procId);
                 }
 
-                $agendamentoStatusId = $data['status_id'] ?? null;
-                if (!$agendamentoStatusId || !$isFirst) {
-                    $statusDesc = $isFirst ? 'Agendado' : 'A Agendar';
-                    $statusAgendado = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => $statusDesc]);
-                    $agendamentoStatusId = $statusAgendado->id;
-                }
-
-                $agendamento = Agendamento::create([
-                    'agenda_medica_id' => $isFirst ? $agenda->id : null,
-                    'data' => $isFirst ? $dt->toDateString() : null,
-                    'hora' => $isFirst ? $hora : null,
-                    'paciente_id' => $pacId,
+                $lastNum = $lastNumQuery->max('numero_sessao');
+                $nextNum = (int)($lastNum ?? 0) + 1;
+                $sessaoId = DB::table('sessoes_tratamento')->insertGetId([
                     'procedimento_id' => $isConvenio ? null : $procId,
                     'tuss_id' => $isConvenio ? $procId : null,
-                    'sessao_tratamento_id' => $sessaoId,
-
-                    'status_id' => $agendamentoStatusId,
-                    'agendamento_origem_id' => $agendamentoOrigemId,
-                    'valor_cobrado' => $valorCobrado,
-                    'observacoes' => $data['observacoes'] ?? null,
-                    'convenio_id' => $convenioId,
+                    'paciente_id' => $pacId,
+                    'numero_sessao' => $nextNum,
+                    'data_prevista' => $dt->toDateString(),
+                    'realizada' => false,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                    'deleted_at' => null,
                 ]);
+            }
 
-                // Se for agendamento de convênio, verificar fluxo de autorização vs atendimento
-                if ($isConvenio && $convenioId) {
-                    $convenioTuss = DB::table('convenio_tuss')
+            $agendamentoStatusId = $data['status_id'] ?? null;
+            if (!$agendamentoStatusId) {
+                $statusAgendado = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Agendado']);
+                $agendamentoStatusId = $statusAgendado->id;
+            }
+
+            $agendamento = Agendamento::create([
+                'agenda_medica_id' => $agenda->id,
+                'data' => $dt->toDateString(),
+                'hora' => $hora,
+                'paciente_id' => $pacId,
+                'procedimento_id' => $isConvenio ? null : $procId,
+                'tuss_id' => $isConvenio ? $procId : null,
+                'sessao_tratamento_id' => $sessaoId,
+                'status_id' => $agendamentoStatusId,
+                'agendamento_origem_id' => $agendamentoOrigemId,
+                'valor_cobrado' => $valorCobrado,
+                'observacoes' => $data['observacoes'] ?? null,
+                'convenio_id' => $convenioId,
+            ]);
+
+            // Se for agendamento de convênio, verificar fluxo de autorização vs atendimento
+            if ($isConvenio && $convenioId) {
+                $convenioTuss = DB::table('convenio_tuss')
+                    ->where('convenio_id', $convenioId)
+                    ->where('tuss_id', $procId)
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                $requerAutorizacao = $convenioTuss && $convenioTuss->requer_autorizacao;
+
+                if ($requerAutorizacao) {
+                    $pacienteConvenio = DB::table('paciente_convenio')
+                        ->where('paciente_id', $pacId)
                         ->where('convenio_id', $convenioId)
-                        ->where('tuss_id', $procId)
+                        ->where('ativo', 1)
                         ->whereNull('deleted_at')
                         ->first();
 
-                    $requerAutorizacao = $convenioTuss && $convenioTuss->requer_autorizacao;
-
-                    if ($requerAutorizacao) {
-                        $pacienteConvenio = DB::table('paciente_convenio')
-                            ->where('paciente_id', $pacId)
-                            ->where('convenio_id', $convenioId)
-                            ->where('ativo', 1)
-                            ->whereNull('deleted_at')
-                            ->first();
-
-                        Autorizacao::create([
-                            'convenio_id' => $convenioId,
-                            'carteira' => $pacienteConvenio->numero_carteira ?? null,
-                            'numero_autorizacao' => null,
-                            'status' => 'Pendente',
-                            'validade' => null,
-                            'data_solicitacao' => Carbon::now(),
-                            'data_resposta' => null,
-                            'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
-                            'usuario_id' => Auth::id() ?? 1,
-                            'usuario_id_validou' => null,
-                        ]);
-                    }
-                }
-
-                // Gerar faturamento + pagamento PENDENTE automaticamente para particulares
-                if (!$isConvenio) {
-                    $fatId = (int)DB::table('faturamentos')->insertGetId([
-                        'paciente_id'      => $pacId,
-                        'agendamento_id'   => $agendamento->id,
-                        'valor_final'      => (float)$valorCobrado,
-                        'tipo_pagador'     => 'PARTICULAR',
-                        'convenio_id'      => null,
-                        'valor_total'      => (float)$valorCobrado,
-                        'valor_cobrado'    => (float)$valorCobrado,
-                        'valor_aprovado'   => 0,
-                        'valor_glosado'    => 0,
-                        'status'           => 'AGUARDANDO_PAGAMENTO',
-                        'data_faturamento' => Carbon::now()->format('Y-m-d H:i:s'),
-                        'vencimento'       => Carbon::today()->toDateString(),
-                        'created_at'       => Carbon::now(),
-                        'updated_at'       => Carbon::now(),
-                    ]);
-
-                    DB::table('contas_receber')->insert([
-                        'faturamento_id' => $fatId,
-                        'paciente_id' => $pacId,
-                        'convenio_id' => null,
-                        'valor' => (float)$valorCobrado,
-                        'vencimento' => Carbon::today()->toDateString(),
-                        'status' => 'ABERTO',
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now(),
-                    ]);
-
-                    Pagamento::create([
-                        'faturamento_id'  => $fatId,
-                        'caixa_id'        => null,
-                        'movimentacao_id' => null,
-                        'valor'           => (float)$valorCobrado,
-                        'forma_pagamento' => null,
-                        'data_pagamento'  => null,
-                        'status'          => 'PENDENTE',
+                    Autorizacao::create([
+                        'convenio_id' => $convenioId,
+                        'carteira' => $pacienteConvenio->numero_carteira ?? null,
+                        'numero_autorizacao' => null,
+                        'status' => 'Pendente',
+                        'validade' => null,
+                        'data_solicitacao' => Carbon::now(),
+                        'data_resposta' => null,
+                        'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
+                        'usuario_id' => Auth::id() ?? 1,
+                        'usuario_id_validou' => null,
                     ]);
                 }
-
-                $agendamentos[] = $agendamento;
             }
 
-            return $agendamentos[0];
+            // Gerar faturamento + pagamento PENDENTE automaticamente para particulares
+            if (!$isConvenio) {
+                $fatId = (int)DB::table('faturamentos')->insertGetId([
+                    'paciente_id'      => $pacId,
+                    'agendamento_id'   => $agendamento->id,
+                    'valor_final'      => (float)$valorCobrado,
+                    'tipo_pagador'     => 'PARTICULAR',
+                    'convenio_id'      => null,
+                    'valor_total'      => (float)$valorCobrado,
+                    'valor_cobrado'    => (float)$valorCobrado,
+                    'valor_aprovado'   => 0,
+                    'valor_glosado'    => 0,
+                    'status'           => 'AGUARDANDO_PAGAMENTO',
+                    'data_faturamento' => Carbon::now()->format('Y-m-d H:i:s'),
+                    'vencimento'       => Carbon::today()->toDateString(),
+                    'created_at'       => Carbon::now(),
+                    'updated_at'       => Carbon::now(),
+                ]);
+
+                DB::table('contas_receber')->insert([
+                    'faturamento_id' => $fatId,
+                    'paciente_id' => $pacId,
+                    'convenio_id' => null,
+                    'valor' => (float)$valorCobrado,
+                    'vencimento' => Carbon::today()->toDateString(),
+                    'status' => 'ABERTO',
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ]);
+
+                Pagamento::create([
+                    'faturamento_id'  => $fatId,
+                    'caixa_id'        => null,
+                    'movimentacao_id' => null,
+                    'valor'           => (float)$valorCobrado,
+                    'forma_pagamento' => null,
+                    'data_pagamento'  => null,
+                    'status'          => 'PENDENTE',
+                ]);
+            }
+
+            return $agendamento;
         });
 
         return response()->json([
@@ -803,7 +791,7 @@ class AgendamentoController extends Controller
             return [
                 'id' => $ag->id,
                 'data' => $ag->data,
-                'hora' => substr($ag->hora, 0, 5),
+                'hora' => substr((string)$ag->hora, 0, 5),
                 'procedimento' => $ag->procedimento_nome ?: 'Procedimento',
                 'profissional' => $ag->profissional_nome ?: 'Profissional',
                 'status' => $ag->status ?: 'Agendado',
@@ -814,8 +802,73 @@ class AgendamentoController extends Controller
                 'tuss_id' => $ag->tuss_id,
                 'convenio_id' => $convenioId,
                 'pessoa_id' => $ag->pessoa_id,
+                'is_virtual' => false,
             ];
-        });
+        })->toArray();
+
+        // Calcular sessões pendentes para tratamentos
+        $maxSessoes = DB::table('sessoes_tratamento')
+            ->select('procedimento_id', 'tuss_id', DB::raw('MAX(numero_sessao) as max_num'))
+            ->where('paciente_id', $paciente_id)
+            ->groupBy('procedimento_id', 'tuss_id')
+            ->get();
+
+        $virtuais = [];
+        foreach ($maxSessoes as $ms) {
+            if ($ms->procedimento_id) {
+                $proc = DB::table('procedimentos')->select('id', 'nome', 'quantidade_sessoes')->find($ms->procedimento_id);
+                if ($proc && $proc->quantidade_sessoes > 0) {
+                    $qtd = (int)$proc->quantidade_sessoes;
+                    $max = (int)$ms->max_num;
+                    $expected = ceil($max / $qtd) * $qtd;
+                    for ($i = $max + 1; $i <= $expected; $i++) {
+                        $virtuais[] = [
+                            'id' => null,
+                            'data' => null,
+                            'hora' => null,
+                            'procedimento' => $proc->nome . " (Sessão $i/$qtd)",
+                            'profissional' => '—',
+                            'status' => 'Pendente de Agendamento',
+                            'nu_pagamento' => null,
+                            'status_pagamento' => '—',
+                            'atendido' => false,
+                            'procedimento_id' => $proc->id,
+                            'tuss_id' => null,
+                            'convenio_id' => null,
+                            'pessoa_id' => null,
+                            'is_virtual' => true,
+                        ];
+                    }
+                }
+            } elseif ($ms->tuss_id) {
+                $tuss = DB::table('tuss')->select('id', 'descricao', 'quantidade_sessoes')->find($ms->tuss_id);
+                if ($tuss && $tuss->quantidade_sessoes > 0) {
+                    $qtd = (int)$tuss->quantidade_sessoes;
+                    $max = (int)$ms->max_num;
+                    $expected = ceil($max / $qtd) * $qtd;
+                    for ($i = $max + 1; $i <= $expected; $i++) {
+                        $virtuais[] = [
+                            'id' => null,
+                            'data' => null,
+                            'hora' => null,
+                            'procedimento' => $tuss->descricao . " (Sessão $i/$qtd)",
+                            'profissional' => '—',
+                            'status' => 'Pendente de Agendamento',
+                            'nu_pagamento' => null,
+                            'status_pagamento' => '—',
+                            'atendido' => false,
+                            'procedimento_id' => null,
+                            'tuss_id' => $tuss->id,
+                            'convenio_id' => null,
+                            'pessoa_id' => null,
+                            'is_virtual' => true,
+                        ];
+                    }
+                }
+            }
+        }
+
+        $result = array_merge($result, $virtuais);
 
         return response()->json([
             'success' => true,

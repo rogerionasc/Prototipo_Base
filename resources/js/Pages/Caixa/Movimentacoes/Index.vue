@@ -153,25 +153,29 @@
                       </div>
                       <div class="text-center">
                         <div class="avatar-lg mx-auto mb-3">
-                          <div v-if="!selectedPendente.is_confirmed"
+                          <div v-if="!selectedPendente.is_confirmed && !selectedPendente.is_refused"
                             class="avatar-title bg-primary-subtle text-primary rounded-circle fs-24 fw-semibold">
                             {{ getInitials(selectedPendente.paciente) }}
                           </div>
-                          <div v-else class="avatar-title bg-success text-white rounded-circle fs-24">
+                          <div v-else-if="selectedPendente.is_confirmed" class="avatar-title bg-success text-white rounded-circle fs-24">
                             <i class="ri-check-line" style="font-size: 2.5rem;"></i>
                           </div>
+                          <div v-else-if="selectedPendente.is_refused" class="avatar-title bg-danger text-white rounded-circle fs-24">
+                            <i class="ri-close-line" style="font-size: 2.5rem;"></i>
+                          </div>
                         </div>
-                        <h4 v-if="!selectedPendente.is_confirmed" class="mb-1 text-dark">{{ selectedPendente.paciente }}
+                        <h4 v-if="!selectedPendente.is_confirmed && !selectedPendente.is_refused" class="mb-1 text-dark">{{ selectedPendente.paciente }}
                         </h4>
-                        <h4 v-else class="mb-1 text-success fw-bold">PAGAMENTO CONFIRMADO</h4>
+                        <h4 v-else-if="selectedPendente.is_confirmed" class="mb-1 text-success fw-bold">PAGAMENTO CONFIRMADO</h4>
+                        <h4 v-else-if="selectedPendente.is_refused" class="mb-1 text-danger fw-bold">PAGAMENTO RECUSADO</h4>
                         <p class="text-muted mb-4">Doc: {{ selectedPendente.paciente_documento || '—' }}</p>
 
                         <div class="p-3 bg-light rounded mb-4">
                           <div class="text-muted text-uppercase fw-semibold small mb-1">Total a Receber</div>
-                          <h2 class="text-success mb-0 fw-bold">{{ formatCurrency(selectedPendente.valor) }}</h2>
+                          <h2 class="mb-0 fw-bold" :class="{'text-success': !selectedPendente.is_refused, 'text-danger': selectedPendente.is_refused}">{{ formatCurrency(selectedPendente.valor) }}</h2>
                         </div>
 
-                        <div class="d-grid gap-3" v-if="!selectedPendente.is_confirmed">
+                        <div class="d-grid gap-3" v-if="!selectedPendente.is_confirmed && !selectedPendente.is_refused">
                           <button v-if="isAguardandoPix(selectedPendente)" class="btn btn-warning btn-lg shadow-sm"
                             type="button" :disabled="cancelProcessing[selectedPendente.pagamento_id]"
                             @click="cancelProcessing[selectedPendente.pagamento_id] ? null : cancelarPix(selectedPendente.pagamento_id)">
@@ -664,6 +668,7 @@ const ultimosLocal = toRef(props, "ultimos");
 const movsLocal = toRef(props, "movs");
 const pagamentosLocal = ref([...(props.pagamentosPendentes || [])]);
 const animatingConfirmed = ref([]);
+const animatingRefused = ref([]);
 const selectedPendente = ref(null);
 
 function getInitials(name) {
@@ -685,8 +690,12 @@ function triggerPaymentConfirmedAnimation(pid, fatId = null) {
   }
 
   if (row && !animatingConfirmed.value.find(x => String(x.faturamento_id) === String(row.faturamento_id))) {
+    // Evita conflito se já estiver recusado
+    if (row.is_refused) return null;
+    
     row.pagamento_id = pid;
     row.is_confirmed = true;
+    row.is_refused = false;
     animatingConfirmed.value.push(row);
 
     // Se esse item for o que está selecionado no card, mante-lo visível por 3 segundos
@@ -708,12 +717,46 @@ function triggerPaymentConfirmedAnimation(pid, fatId = null) {
   return null;
 }
 
+function triggerPaymentRefusedAnimation(fatId, preCapturedRow = null) {
+  let row = preCapturedRow || pagamentosLocal.value.find(r => String(r.faturamento_id) === String(fatId));
+  if (!row && selectedPendente.value && String(selectedPendente.value.faturamento_id) === String(fatId)) {
+    row = selectedPendente.value;
+  }
+
+  if (row && !animatingRefused.value.find(x => String(x.faturamento_id) === String(row.faturamento_id))) {
+    // Sobrepõe qualquer animação de confirmação acidental do polling
+    row.is_confirmed = false;
+    row.is_refused = true;
+    
+    // Remove do array confirmed se estiver lá
+    animatingConfirmed.value = animatingConfirmed.value.filter(x => String(x.faturamento_id) !== String(row.faturamento_id));
+    
+    animatingRefused.value.push(row);
+
+    if (selectedPendente.value && String(selectedPendente.value.faturamento_id) === String(row.faturamento_id)) {
+      selectedPendente.value = row;
+    }
+
+    pagamentosLocal.value = pagamentosLocal.value.filter(x => String(x.faturamento_id) !== String(row.faturamento_id));
+
+    setTimeout(() => {
+      animatingRefused.value = animatingRefused.value.filter(x => String(x.faturamento_id) !== String(row.faturamento_id));
+      if (selectedPendente.value && String(selectedPendente.value.faturamento_id) === String(row.faturamento_id)) {
+        selectedPendente.value = null;
+      }
+    }, 3000);
+    return row;
+  }
+  return null;
+}
+
 watch(() => props.pagamentosPendentes, (nv) => {
   pagamentosLocal.value = [...(nv || [])];
 
   if (selectedPendente.value) {
     const isAnimating = animatingConfirmed.value.find(x => String(x.pagamento_id) === String(selectedPendente.value.pagamento_id));
-    if (isAnimating) {
+    const isAnimatingRefused = animatingRefused.value.find(x => String(x.faturamento_id) === String(selectedPendente.value.faturamento_id));
+    if (isAnimating || isAnimatingRefused) {
       // Se estiver animando, mantenha o objeto que já está em selectedPendente e NÃO o limpe
       return;
     }
@@ -1133,10 +1176,24 @@ function confirmarRecusa() {
     recusaError.value = "Informe a justificativa da recusa.";
     return;
   }
+  
+  // Captura o objeto atual para não perder a referência caso o watch atualize
+  const capturedRow = selectedPendente.value && String(selectedPendente.value.faturamento_id) === String(fatId) 
+    ? selectedPendente.value 
+    : row;
+
   const f = useForm({ recusa_justificativa: recusaJustificativa.value });
   f.put(`/pagamentos/${pid}/refuse`, {
     onSuccess: async () => {
       showRecusarModal.value = false;
+      
+      // Restaura o selecionado se o watch o limpou
+      if (capturedRow && !selectedPendente.value) {
+        selectedPendente.value = capturedRow;
+      }
+      
+      triggerPaymentRefusedAnimation(fatId, capturedRow);
+      
       recusarFaturamentoId.value = null;
       recusaJustificativa.value = "";
       recusaError.value = "";

@@ -109,7 +109,11 @@
 
 
                             <template #actions="{ item }">
-                                <button v-if="!item.atendido" type="button" class="btn btn-sm btn-light"
+                                <button v-if="item.is_virtual" type="button" class="btn btn-sm btn-primary"
+                                    title="Agendar Sessão" @click="agendarSessaoTratamento(item)">
+                                    <i class="ri-calendar-line me-1"></i> Agendar
+                                </button>
+                                <button v-else-if="!(item.status?.toLowerCase().includes('concluído') && item.status_pagamento === 'PAGO')" type="button" class="btn btn-sm btn-light"
                                     title="Reagendar" @click="abrirModalReagendar(item)">
                                     <i class="ri-edit-line me-1"></i> Reagendar
                                 </button>
@@ -387,6 +391,18 @@ async function aoAlterarReagendarProcedimento() {
 }
 
 let isOpeningModal = false;
+
+function agendarSessaoTratamento(item) {
+    if (!selectedPaciente.value) return;
+    let url = `/agendamentos?paciente=${selectedPaciente.value.id}`;
+    if (item.procedimento_id) {
+        url += `&procedimento=${item.procedimento_id}`;
+    }
+    if (item.tuss_id) {
+        url += `&tuss=${item.tuss_id}`;
+    }
+    window.location.href = url;
+}
 
 async function abrirModalReagendar(ag) {
     isOpeningModal = true;

@@ -4,8 +4,6 @@ import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { useChoicesRemoteSearch } from "@/Composables/useChoicesRemoteSearch";
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
-import Multiselect from "@vueform/multiselect";
-import "@vueform/multiselect/themes/default.css";
 import Swal from 'sweetalert2';
 
 const props = defineProps({
@@ -131,23 +129,7 @@ const openDeleteEvolucao = (evolucao) => {
     deleteModal.value = true;
 };
 
-// ----------------------------------------------------------------------
-// PLANOS DE TRATAMENTO
-// ----------------------------------------------------------------------
-const tratamentoForm = useForm({
-    nome_tratamento: '',
-    quantidade_sessoes_previstas: 1,
-    observacao: ''
-});
 
-const saveTratamento = () => {
-    tratamentoForm.post(route('atendimentos.pep.tratamento.save', props.atendimento.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            tratamentoForm.reset();
-        }
-    });
-};
 
 const openDeleteTratamento = (tratamento) => {
     itemToDelete.value = { ...tratamento, nome: 'Plano de Tratamento' };
@@ -216,7 +198,16 @@ const evolucoesPorAtendimento = computed(() => {
         data_formatada: parts[0] || 'N/A',
         hora_formatada: parts[1] || '',
         medico: props.atendimento?.medico?.nome || 'Profissional',
-        procedimento: props.atendimento?.procedimento?.nome || 'Consulta',
+        procedimento: (() => {
+            let nome = props.atendimento?.procedimento?.nome || 'Consulta';
+            const ag = props.atendimento?.agendamento;
+            const st = ag?.sessao_tratamento || ag?.sessaoTratamento;
+            if (st && st.numero_sessao) {
+                const qtd = props.atendimento?.procedimento?.quantidade_sessoes;
+                nome += qtd ? ` (Sessão ${st.numero_sessao}/${qtd})` : ` (Sessão ${st.numero_sessao})`;
+            }
+            return nome;
+        })(),
         is_atual: true,
         evolucoes: currentPepEvolucoes
     });
@@ -236,7 +227,16 @@ const evolucoesPorAtendimento = computed(() => {
                     data_formatada: hParts[0] || 'N/A',
                     hora_formatada: hParts[1] || '',
                     medico: h.atendimento?.medico?.nome || h.profissional?.nome || 'Profissional',
-                    procedimento: h.atendimento?.procedimento?.nome || 'Consulta',
+                    procedimento: (() => {
+                        let nome = h.atendimento?.procedimento?.nome || 'Consulta';
+                        const ag = h.atendimento?.agendamento;
+                        const st = ag?.sessao_tratamento || ag?.sessaoTratamento;
+                        if (st && st.numero_sessao) {
+                            const qtd = h.atendimento?.procedimento?.quantidade_sessoes;
+                            nome += qtd ? ` (Sessão ${st.numero_sessao}/${qtd})` : ` (Sessão ${st.numero_sessao})`;
+                        }
+                        return nome;
+                    })(),
                     is_atual: false,
                     evolucoes: h.evolucoes || []
                 });
@@ -293,6 +293,39 @@ const diagnosticoForm = useForm({
     descricao: '',
     principal: false,
     confirmado: false,
+});
+
+const cidSelect = ref(null);
+let cidTimeout = null;
+
+onMounted(() => {
+    setTimeout(() => {
+        const el = cidSelect.value;
+        if (!el) return;
+        
+        if (window.initChoiceEl) {
+            window.initChoiceEl(el);
+        }
+        
+        const inst = el._choicesInstance || el.choices;
+        if (!inst) return;
+
+        el.addEventListener('search', (e) => {
+            const query = e.detail.value;
+            if (query && query.length >= 2) {
+                clearTimeout(cidTimeout);
+                cidTimeout = setTimeout(() => {
+                    inst.setChoices(async () => {
+                        return await fetchCids(query);
+                    }, 'value', 'label', true);
+                }, 300);
+            }
+        });
+        
+        el.addEventListener('change', (e) => {
+            diagnosticoForm.cid_id = e.target.value;
+        });
+    }, 200);
 });
 
 const fetchCids = async (query) => {
@@ -429,6 +462,12 @@ const finalizarAtendimento = () => {
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link" id="v-pills-tratamentos-tab" data-bs-toggle="tab"
+                                    href="#v-pills-tratamentos" role="tab" aria-selected="false">
+                                    <i class="ri-survey-line d-inline-block text-center me-1"></i> Planos de Tratamento
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link" id="v-pills-triagem-tab" data-bs-toggle="tab"
                                     href="#v-pills-triagem" role="tab" aria-selected="false">
                                     <i class="ri-heart-pulse-line d-inline-block text-center me-1"></i> Triagem
@@ -452,12 +491,7 @@ const finalizarAtendimento = () => {
                                     <i class="ri-stethoscope-line d-inline-block text-center me-1"></i> Diagnósticos
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="v-pills-tratamentos-tab" data-bs-toggle="tab"
-                                    href="#v-pills-tratamentos" role="tab" aria-selected="false">
-                                    <i class="ri-survey-line d-inline-block text-center me-1"></i> Planos de Tratamento
-                                </a>
-                            </li>
+
                             <li class="nav-item">
                                 <a class="nav-link" id="v-pills-prescricao-tab" data-bs-toggle="tab"
                                     href="#v-pills-prescricao" role="tab" aria-selected="false">
@@ -539,7 +573,7 @@ const finalizarAtendimento = () => {
                                                         <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm transition-all"
                                                             :style="{ width: selectedTimelinePepId === item.id ? '38px' : '30px', height: selectedTimelinePepId === item.id ? '38px' : '30px' }"
                                                             :class="selectedTimelinePepId === item.id ? 'bg-primary text-white border border-2 border-white ring-2' : 'bg-white text-muted border border-2 border-primary-subtle'">
-                                                            <i class="ri-pulse-fill fs-16"></i>
+                                                            <i class="fs-16" :class="item.procedimento.includes('Sessão') ? ('ri-hand-heart-fill ' + (selectedTimelinePepId === item.id ? '' : 'text-success')) : 'ri-pulse-fill'"></i>
                                                         </div>
                                                     </div>
 
@@ -1001,15 +1035,18 @@ const finalizarAtendimento = () => {
                                         <div class="row g-3">
                                             <div class="col-md-4">
                                                 <label class="form-label">Tipo de Nota</label>
-                                                <Multiselect v-model="evolucaoForm.tipo"
-                                                    :options="['Evolução Clínica', 'Nota de Enfermagem', 'Parecer']"
-                                                    placeholder="Selecione o tipo" :searchable="false" :can-clear="false" :disabled="!canEditPep" />
+                                                <select class="form-select" v-model="evolucaoForm.tipo" data-choices data-choices-search-false :disabled="!canEditPep">
+                                                    <option value="" disabled>Selecione o tipo</option>
+                                                    <option value="Evolução Clínica">Evolução Clínica</option>
+                                                    <option value="Nota de Enfermagem">Nota de Enfermagem</option>
+                                                    <option value="Parecer">Parecer</option>
+                                                </select>
                                             </div>
                                             <div class="col-md-8">
                                                 <label class="form-label">Vincular a um Tratamento Ativo (Opcional)</label>
-                                                <select class="form-select" v-model="evolucaoForm.tratamento_id" :disabled="!canEditPep">
+                                                <select class="form-select" v-model="evolucaoForm.tratamento_id" data-choices data-choices-search-false :disabled="!canEditPep">
                                                     <option :value="null">Nenhum (Evolução Avulsa)</option>
-                                                    <option v-for="trat in props.tratamentos?.filter(t => t.status === 'Em andamento')" :key="trat.id" :value="trat.id">
+                                                    <option v-for="trat in props.tratamentos?.filter(t => t.status === 'Em andamento' && (t.nome_tratamento || '').trim().toLowerCase() === (props.atendimento?.procedimento?.nome || '').trim().toLowerCase())" :key="trat.id" :value="trat.id">
                                                         {{ trat.nome_tratamento }} (Sessão {{ trat.quantidade_sessoes_realizadas + 1 }} de {{ trat.quantidade_sessoes_previstas }})
                                                     </option>
                                                 </select>
@@ -1073,38 +1110,7 @@ const finalizarAtendimento = () => {
                     </div> <!-- /v-pills-evolucao -->
                     <!-- PLANOS DE TRATAMENTO -->
                     <div class="tab-pane fade" id="v-pills-tratamentos" role="tabpanel">
-                        <!-- Formulário Novo Tratamento -->
-                        <div class="card shadow-sm">
-                            <div class="card-header border-0 bg-soft-light">
-                                <h5 class="card-title mb-0">Novo Plano de Tratamento</h5>
-                            </div>
-                            <div class="card-body">
-                                <form @submit.prevent="saveTratamento">
-                                    <fieldset :disabled="!canEditPep">
-                                        <div class="row g-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label">Nome do Tratamento / Pacote</label>
-                                                <input type="text" class="form-control" v-model="tratamentoForm.nome_tratamento" placeholder="Ex: Fisioterapia Motora" required>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Quantidade de Sessões Previstas</label>
-                                                <input type="number" class="form-control" v-model="tratamentoForm.quantidade_sessoes_previstas" min="1" required>
-                                            </div>
-                                            <div class="col-md-12">
-                                                <label class="form-label">Observação (Opcional)</label>
-                                                <textarea class="form-control" v-model="tratamentoForm.observacao" rows="2" placeholder="Informações adicionais sobre o plano..."></textarea>
-                                            </div>
-                                            <div class="col-12 text-end">
-                                                <button type="submit" class="btn btn-primary shadow-sm" :disabled="!canEditPep || tratamentoForm.processing">
-                                                    <span v-if="tratamentoForm.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                                    <i class="ri-add-line align-bottom me-1" v-else></i> Salvar Tratamento
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </fieldset>
-                                </form>
-                            </div>
-                        </div>
+
 
                         <!-- Lista de Tratamentos -->
                         <div class="card shadow-sm mt-3">
@@ -1326,18 +1332,9 @@ const finalizarAtendimento = () => {
                                     <div class="row g-3">
                                         <div class="col-md-12">
                                             <label class="form-label">CID (Busca)</label>
-                                            <Multiselect
-                                                v-model="diagnosticoForm.cid_id"
-                                                :options="fetchCids"
-                                                :searchable="true"
-                                                :filter-results="false"
-                                                :min-chars="2"
-                                                placeholder="Digite o código ou nome da doença para buscar..."
-                                                no-results-text="Nenhum CID encontrado"
-                                                no-options-text="Digite ao menos 2 caracteres para buscar..."
-                                                :can-clear="true"
-                                                :disabled="!canEditPep"
-                                            />
+                                            <select ref="cidSelect" class="form-select" data-choices data-choices-search-true v-model="diagnosticoForm.cid_id" :disabled="!canEditPep">
+                                                <option value="">Digite o código ou nome da doença para buscar...</option>
+                                            </select>
                                         </div>
                                         <div class="col-md-12">
                                             <label class="form-label">Descrição / Observação do Diagnóstico</label>
