@@ -26,11 +26,17 @@ class Agendamento extends Model
         'valor_cobrado',
         'observacoes',
         'emergencia',
+        'convenio_id',
     ];
 
     public function agendaMedica()
     {
         return $this->belongsTo(AgendaMedica::class, 'agenda_medica_id');
+    }
+
+    public function convenio()
+    {
+        return $this->belongsTo(Convenio::class, 'convenio_id');
     }
 
     public function paciente()

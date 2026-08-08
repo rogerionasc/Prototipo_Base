@@ -55,7 +55,7 @@ return new class extends Migration
             $table->string('temperatura', 20)->nullable();
             $table->string('saturacao', 20)->nullable();
             $table->decimal('peso', 5, 2)->nullable();
-            $table->decimal('altura', 3, 2)->nullable();
+            $table->decimal('altura', 5, 2)->nullable();
             $table->decimal('imc', 5, 2)->nullable();
             $table->string('glicemia', 20)->nullable();
             $table->string('circunferencia_abdominal', 20)->nullable();
@@ -86,11 +86,28 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        // 5.5 pep_tratamentos
+        Schema::create('pep_tratamentos', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
+            $table->foreignId('paciente_id')->constrained('pacientes')->onDelete('cascade');
+            $table->foreignId('profissional_id')->nullable()->constrained('pessoas')->onDelete('set null');
+            $table->string('nome_tratamento', 255);
+            $table->integer('quantidade_sessoes_previstas')->default(1);
+            $table->integer('quantidade_sessoes_realizadas')->default(0);
+            $table->string('status', 50)->default('Em andamento');
+            $table->date('data_inicio')->nullable();
+            $table->date('data_fim')->nullable();
+            $table->text('observacao')->nullable();
+            $table->timestamps();
+        });
+
         // 6. pep_evolucoes
         Schema::create('pep_evolucoes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
+            $table->foreignId('tratamento_id')->nullable()->constrained('pep_tratamentos')->nullOnDelete();
             $table->string('tipo', 100)->nullable();
             $table->text('descricao')->nullable();
             $table->timestamps();
@@ -234,6 +251,7 @@ return new class extends Migration
         Schema::dropIfExists('pep_prescricoes');
         Schema::dropIfExists('pep_procedimentos');
         Schema::dropIfExists('pep_evolucoes');
+        Schema::dropIfExists('pep_tratamentos');
         Schema::dropIfExists('pep_diagnosticos');
         Schema::dropIfExists('pep_exames_fisicos');
         Schema::dropIfExists('pep_sinais_vitais');

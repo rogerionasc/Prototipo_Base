@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('tuss_id')->nullable()->constrained('tuss')->nullOnDelete();
             $table->foreignId('sessao_tratamento_id')->nullable()->constrained('sessoes_tratamento')->nullOnDelete();
             $table->foreignId('status_id')->nullable()->constrained('status_agendamento')->nullOnDelete();
+            $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();
             $table->unsignedBigInteger('agendamento_origem_id')->nullable();
             $table->decimal('valor_cobrado', 10, 2)->nullable();
             $table->text('observacoes')->nullable();

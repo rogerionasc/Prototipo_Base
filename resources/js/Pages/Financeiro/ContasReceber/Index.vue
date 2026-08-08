@@ -83,7 +83,7 @@ function formatCurrency(n) {
 const cols = [
   { id: "id", name: "Faturamento" },
   { id: "nu_pagamento", name: "Nº Pagamento" },
-  { id: "tipo_pagador", name: "Convênio" },
+  { id: "tipo_convenio", name: "Convênio" },
   { id: "paciente", name: "Paciente" },
   { id: "procedimento", name: "Procedimento" },
   { id: "vencimento", name: "Vencimento" },
@@ -93,7 +93,7 @@ const cols = [
 ];
 
 function canReceive(row) {
-  return String(row?.tipo_pagador || "").toUpperCase() === "CONVENIO" && String(row?.status || "").toUpperCase() !== "RECEBIDO";
+  return String(row?.tipo_convenio || "").toUpperCase() === "CONVENIO" && String(row?.status || "").toUpperCase() !== "RECEBIDO";
 }
 
 const showReceive = ref(false);

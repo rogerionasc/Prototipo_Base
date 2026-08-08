@@ -26,11 +26,10 @@ class ContasReceberController extends Controller
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE(proc.nome,'') AS procedimento"),
                 DB::raw("COALESCE(c.descricao,'') AS convenio"),
-                DB::raw("COALESCE(c.tipo,'') AS tipo_convenio"),
+                DB::raw("IFNULL(c.tipo, 'PARTICULAR') AS tipo_convenio"),
                 DB::raw("DATE_FORMAT(cr.vencimento, '%d-%m-%Y') AS vencimento"),
                 'cr.valor',
                 'cr.status',
-                'f.tipo_pagador',
                 DB::raw("(SELECT p.nu_pagamento FROM pagamentos p WHERE p.faturamento_id = cr.faturamento_id ORDER BY p.id DESC LIMIT 1) as nu_pagamento"),
                 DB::raw("(SELECT DATE_FORMAT(MAX(p.data_pagamento), '%d/%m/%Y %H:%i') FROM pagamentos p WHERE p.faturamento_id = cr.faturamento_id AND p.status = 'PAGO') as data_pagamento")
             )
@@ -53,14 +52,16 @@ class ContasReceberController extends Controller
         ]);
 
         $fatId = (int)$id;
-        $fat = DB::table('faturamentos')
-            ->select('id', 'tipo_pagador', 'status')
-            ->where('id', $fatId)
+        $fat = DB::table('faturamentos as f')
+            ->leftJoin('convenios as c', 'c.id', '=', 'f.convenio_id')
+            ->select('f.id', 'c.tipo as tipo_convenio', 'f.status', 'f.convenio_id')
+            ->where('f.id', $fatId)
             ->first();
         if (!$fat) {
             return back()->with('error', 'Faturamento não encontrado.');
         }
-        if (strtoupper((string)$fat->tipo_pagador) !== 'CONVENIO') {
+        $tipo = $fat->convenio_id ? strtoupper((string)$fat->tipo_convenio) : 'PARTICULAR';
+        if ($tipo !== 'CONVENIO') {
             return back()->with('error', 'Este recebimento é apenas para faturamento de CONVÊNIO.');
         }
         if (strtoupper((string)$fat->status) === 'CANCELADO') {

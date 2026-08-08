@@ -11,6 +11,7 @@ return new class extends Migration
         if (!Schema::hasTable('pagamentos')) {
             Schema::create('pagamentos', function (Blueprint $table) {
                 $table->id();
+                $table->string('nu_pagamento', 25)->nullable();
                 $table->foreignId('faturamento_id')->constrained('faturamentos')->cascadeOnDelete();
                 $table->foreignId('caixa_id')->nullable()->constrained('caixas')->nullOnDelete();
                 $table->foreignId('movimentacao_id')->nullable()->constrained('movimentacoes_caixa')->nullOnDelete();

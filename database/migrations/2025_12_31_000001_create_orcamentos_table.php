@@ -28,7 +28,6 @@ return new class extends Migration
                 $table->id();
                 $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
                 $table->unsignedBigInteger('agendamento_id')->nullable()->cascadeOnDelete();
-                $table->string('tipo_pagador', 20)->default('PARTICULAR');
                 $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();
                 $table->decimal('valor_total', 10, 2)->default(0);
                 $table->decimal('valor_final', 10, 2)->default(0);

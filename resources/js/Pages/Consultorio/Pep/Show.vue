@@ -360,6 +360,20 @@ const todasPrescricoes = computed(() => {
 
 import Modal from "@/Components/Modal.vue";
 
+const calcularIdade = (dataNascimento) => {
+    if (!dataNascimento) return 'N/A';
+    const nascimento = new Date(dataNascimento);
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const mes = hoje.getMonth() - nascimento.getMonth();
+    if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+        idade--;
+    }
+    return `${idade} anos`;
+};
+
+// Modals
+const showAnamneseModal = ref(false);
 const showFinalizarModal = ref(false);
 
 const openFinalizarModal = () => {
@@ -404,8 +418,8 @@ const finalizarAtendimento = () => {
                                     </div>
                                     <div class="flex-grow-1 ms-3">
                                         <h4 class="mb-1">{{ paciente?.nome }}</h4>
-                                        <p class="text-muted mb-0">CPF: {{ paciente?.cpf || 'N/A' }} | Nasc: {{
-                                            formatDate(paciente?.data_nascimento).split(' ')[0] || 'N/A' }}</p>
+                                        <p class="text-muted mb-0">CPF: {{ paciente?.cpf || 'N/A' }} | Idade: {{
+                                            calcularIdade(paciente?.data_nascimento) }}</p>
                                     </div>
                                 </div>
                             </div>

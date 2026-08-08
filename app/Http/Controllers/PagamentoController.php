@@ -42,7 +42,11 @@ class PagamentoController extends Controller
             )
             ->where('p.status', 'PENDENTE')
             ->where('p.forma_pagamento', 'PIX')
-            ->where('f.tipo_pagador', 'PARTICULAR')
+            ->leftJoin('convenios as conv_uc', 'conv_uc.id', '=', 'f.convenio_id')
+            ->where(function($q) {
+                $q->where('conv_uc.tipo', 'Particular')
+                  ->orWhereNull('f.convenio_id');
+            })
             ->where('f.status', 'AGUARDANDO_PAGAMENTO')
             ->where('p.caixa_id', (int)$data['caixa_id'])
             ->orderByDesc('p.created_at')
@@ -58,14 +62,15 @@ class PagamentoController extends Controller
             'valor' => ['nullable', 'numeric', 'min:0'],
         ]);
         $fatId = (int)$id;
-        $fat = DB::table('faturamentos')
-            ->select('id', 'tipo_pagador', 'status', 'valor_final', 'valor_cobrado', 'valor_total')
-            ->where('id', $fatId)
+        $fat = DB::table('faturamentos as f')
+            ->leftJoin('convenios as c', 'c.id', '=', 'f.convenio_id')
+            ->select('f.id', 'c.tipo as tipo_convenio', 'f.status', 'f.valor_final', 'f.valor_cobrado', 'f.valor_total', 'f.convenio_id')
+            ->where('f.id', $fatId)
             ->first();
         if (!$fat) {
             return response()->json(['error' => 'Faturamento não encontrado'], 404);
         }
-        $tipo = strtoupper((string)$fat->tipo_pagador);
+        $tipo = $fat->convenio_id ? strtoupper((string)$fat->tipo_convenio) : 'PARTICULAR';
         if ($tipo !== 'PARTICULAR') {
             return response()->json(['error' => 'Faturamento não é do tipo PARTICULAR'], 422);
         }
@@ -507,7 +512,11 @@ class PagamentoController extends Controller
                 DB::raw("COALESCE(p_recusado.nome, '') AS recusado_por_nome")
             )
             ->where('p.status', 'RECUSADO')
-            ->where('f.tipo_pagador', 'PARTICULAR')
+            ->leftJoin('convenios as conv_uc', 'conv_uc.id', '=', 'f.convenio_id')
+            ->where(function($q) {
+                $q->where('conv_uc.tipo', 'Particular')
+                  ->orWhereNull('f.convenio_id');
+            })
             ->orderByDesc('p.updated_at')
             ->limit(100)
             ->get();
@@ -549,18 +558,17 @@ class PagamentoController extends Controller
             return;
         }
 
-        $fat = DB::table('faturamentos')
-            ->select('id', 'tipo_pagador', 'status', 'valor_final', 'valor_cobrado', 'valor_aprovado')
-            ->where('id', $fatId)
+        $fat = DB::table('faturamentos as f')
+            ->leftJoin('convenios as c', 'c.id', '=', 'f.convenio_id')
+            ->select('f.id', 'c.tipo as tipo_convenio', 'f.status', 'f.valor_final', 'f.valor_cobrado', 'f.valor_aprovado', 'f.convenio_id')
+            ->where('f.id', $fatId)
             ->first();
         if (!$fat) {
-            return;
-        }
-        if (strtoupper((string)$fat->status) === 'CANCELADO') {
+            Log::error("PagamentoController::checkAndUpdateStatus - Faturamento {$fatId} não encontrado.");
             return;
         }
 
-        $tipo = strtoupper((string)($fat->tipo_pagador ?? ''));
+        $tipo = $fat->convenio_id ? strtoupper((string)($fat->tipo_convenio ?? '')) : 'PARTICULAR';
         $valorFinal = (float)($fat->valor_final ?? 0);
         $valorCobrado = (float)($fat->valor_cobrado ?? 0);
         $valorAprovado = (float)($fat->valor_aprovado ?? 0);
@@ -651,7 +659,7 @@ class PagamentoController extends Controller
                 'caixa_pagamento_id' => $pag->id,
                 'procedimento_id' => $ag->procedimento_id,
                 'categoria_procedimento_id' => $catProcedimentoId,
-                'tipo_atendimento' => $fat->tipo_pagador,
+                'tipo_atendimento' => $tipo,
                 'data_atendimento' => $ag->data ?? today(),
                 'hora_prevista' => ($ag->data && $ag->hora) ? ($ag->data . ' ' . $ag->hora) : now(),
                 'status' => 'NÃO ATENDIDO',

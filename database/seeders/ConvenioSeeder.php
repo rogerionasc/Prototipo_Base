@@ -11,6 +11,11 @@ class ConvenioSeeder extends Seeder
     {
         $items = [
             [
+                'descricao' => 'Particular',
+                'tipo' => 'PARTICULAR',
+                'empresa_id' => null,
+            ],
+            [
                 'descricao' => 'Unimed',
                 'tipo' => 'CONVENIO',
                 'empresa_id' => null,

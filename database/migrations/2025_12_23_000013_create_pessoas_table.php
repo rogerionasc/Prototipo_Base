@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('naturalidade', 60)->nullable();
             $table->foreignId('estado_civil_id')->nullable()->constrained('estado_civil')->nullOnDelete();
             $table->string('cnes', 7)->nullable();
+            $table->string('cargo')->nullable();
             $table->string('crm', 12)->nullable()->index();
             $table->foreignId('endereco_id')->nullable()->constrained('enderecos')->nullOnDelete();
             $table->string('celular', 15)->nullable();

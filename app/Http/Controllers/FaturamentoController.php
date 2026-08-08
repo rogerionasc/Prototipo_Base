@@ -25,7 +25,11 @@ class FaturamentoController extends Controller
                 'f.valor_final',
                 'f.status'
             )
-            ->where('f.tipo_pagador', 'PARTICULAR')
+            ->leftJoin('convenios as c', 'c.id', '=', 'f.convenio_id')
+            ->where(function($q) {
+                $q->where('c.tipo', 'Particular')
+                  ->orWhereNull('f.convenio_id');
+            })
             ->orderByDesc('f.updated_at')
             ->orderByDesc('f.id')
             ->limit(500)
@@ -56,7 +60,7 @@ class FaturamentoController extends Controller
                 'f.valor_glosado',
                 'f.status'
             )
-            ->where('f.tipo_pagador', 'CONVENIO')
+            ->where('c.tipo', 'CONVENIO')
             ->orderByDesc('f.updated_at')
             ->orderByDesc('f.id')
             ->limit(500)
@@ -78,11 +82,15 @@ class FaturamentoController extends Controller
         ]);
 
         $fatId = (int)$id;
-        $fat = DB::table('faturamentos')->select('id', 'tipo_pagador')->where('id', $fatId)->first();
+        $fat = DB::table('faturamentos as f')
+            ->leftJoin('convenios as c', 'c.id', '=', 'f.convenio_id')
+            ->select('f.id', 'c.tipo')
+            ->where('f.id', $fatId)
+            ->first();
         if (!$fat) {
             return back()->with('error', 'Faturamento não encontrado.');
         }
-        if (strtoupper((string)$fat->tipo_pagador) !== 'CONVENIO') {
+        if (strtoupper((string)$fat->tipo) !== 'CONVENIO') {
             return back()->with('error', 'Faturamento não é do tipo CONVÊNIO.');
         }
 

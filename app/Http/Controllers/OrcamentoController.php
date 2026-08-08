@@ -19,16 +19,13 @@ use Illuminate\Support\Facades\Schema;
 
 class OrcamentoController extends Controller
 {
-    private function resolvePayorByConvenioId(?int $convenioId): array
+    private function isConvenio($convenioId)
     {
         if (empty($convenioId)) {
-            return ['tipo_pagador' => 'PARTICULAR', 'convenio_id' => null];
+            return false;
         }
         $tipo = Convenio::where('id', $convenioId)->value('tipo');
-        if (strtoupper((string)$tipo) === 'PARTICULAR') {
-            return ['tipo_pagador' => 'PARTICULAR', 'convenio_id' => null];
-        }
-        return ['tipo_pagador' => 'CONVENIO', 'convenio_id' => $convenioId];
+        return strtoupper((string)$tipo) === 'CONVENIO';
     }
 
     private function validationRules(): array
@@ -70,8 +67,7 @@ class OrcamentoController extends Controller
         $data = $request->validate($this->validationRules(), $this->validationMessages());
 
         $convenioId = (int)($data['convenio_id'] ?? 0);
-        $payor = $this->resolvePayorByConvenioId($convenioId);
-        $isConvenio = ($payor['tipo_pagador'] ?? '') === 'CONVENIO';
+        $isConvenio = $this->isConvenio($convenioId);
 
         $itens = is_array($data['itens'] ?? null) ? $data['itens'] : [];
         if ($isConvenio) {
@@ -134,8 +130,7 @@ class OrcamentoController extends Controller
 
     private function assertItensPermitidosPorConvenio(int $convenioId, array $itens): void
     {
-        $payor = $this->resolvePayorByConvenioId($convenioId);
-        if (($payor['tipo_pagador'] ?? '') !== 'CONVENIO') {
+        if (!$this->isConvenio($convenioId)) {
             return;
         }
 
@@ -177,8 +172,7 @@ class OrcamentoController extends Controller
     {
         $valorBruto = 0.0;
         $itensValores = [];
-        $payor = $this->resolvePayorByConvenioId($convenioId);
-        $isConvenio = ($payor['tipo_pagador'] ?? '') === 'CONVENIO';
+        $isConvenio = $this->isConvenio($convenioId);
 
         if ($isConvenio) {
             $tussIds = array_values(array_unique(array_map(fn ($i) => (int)($i['tuss_id'] ?? 0), $itens)));
@@ -278,9 +272,7 @@ class OrcamentoController extends Controller
         $convenioId = (int)$data['convenio_id'];
         $this->assertPacienteConvenioAtivo($pacienteId, $convenioId);
         $this->assertItensPermitidosPorConvenio($convenioId, (array)($data['itens'] ?? []));
-        $payor = $this->resolvePayorByConvenioId($convenioId);
-        $isConvenioPayor = $payor['tipo_pagador'] === 'CONVENIO';
-        $faturamentoConvenioId = $payor['convenio_id'];
+        $isConvenioPayor = $this->isConvenio($convenioId);
         [$valorBruto, $itensValores] = $this->calcularItensValores($data['itens'], $convenioId);
 
         $desconto = (float)($data['desconto'] ?? 0);
@@ -295,7 +287,7 @@ class OrcamentoController extends Controller
             ? Carbon::createFromFormat('d-m-Y', $data['validade'])->format('Y-m-d')
             : now()->addDays(30)->toDateString();
         $orcamento = null;
-        DB::transaction(function () use (&$orcamento, $numero, $deYmd, $vaYmd, $data, $convenioId, $valorBruto, $desconto, $valorTotal, $itensValores, $isConvenioPayor, $faturamentoConvenioId) {
+        DB::transaction(function () use (&$orcamento, $numero, $deYmd, $vaYmd, $data, $convenioId, $valorBruto, $desconto, $valorTotal, $itensValores, $isConvenioPayor) {
             $orcamento = Orcamento::create([
                 'numero' => $numero,
                 'data_emissao' => $deYmd,

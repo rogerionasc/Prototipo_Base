@@ -347,8 +347,7 @@ class AgendamentoController extends Controller
                     'paciente_id'      => $pacId,
                     'agendamento_id'   => $agendamento->id,
                     'valor_final'      => (float)$valorCobrado,
-                    'tipo_pagador'     => 'PARTICULAR',
-                    'convenio_id'      => null,
+                    'convenio_id'      => $convenioId,
                     'valor_total'      => (float)$valorCobrado,
                     'valor_cobrado'    => (float)$valorCobrado,
                     'valor_aprovado'   => 0,
@@ -363,7 +362,7 @@ class AgendamentoController extends Controller
                 DB::table('contas_receber')->insert([
                     'faturamento_id' => $fatId,
                     'paciente_id' => $pacId,
-                    'convenio_id' => null,
+                    'convenio_id' => $convenioId,
                     'valor' => (float)$valorCobrado,
                     'vencimento' => Carbon::today()->toDateString(),
                     'status' => 'ABERTO',
@@ -833,8 +832,7 @@ class AgendamentoController extends Controller
                             'status_pagamento' => '—',
                             'atendido' => false,
                             'procedimento_id' => $proc->id,
-                            'tuss_id' => null,
-                            'convenio_id' => null,
+                            'convenio_id'      => $convenioParticularId,
                             'pessoa_id' => null,
                             'is_virtual' => true,
                         ];

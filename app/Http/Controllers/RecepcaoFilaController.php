@@ -131,6 +131,7 @@ class RecepcaoFilaController extends Controller
                 'data_atendimento'         => Carbon::today()->format('Y-m-d'),
                 'hora_prevista'            => Carbon::today()->format('Y-m-d') . ' ' . $agendamento->hora,
                 'status'                   => 'AGUARDANDO',
+                'convenio_id'              => $agendamento->convenio_id,
             ]);
         }
 
@@ -174,7 +175,8 @@ class RecepcaoFilaController extends Controller
                 'data_atendimento' => Carbon::today()->format('Y-m-d'),
                 'hora_prevista' => Carbon::today()->format('Y-m-d') . ' ' . $agendamento->hora,
                 'status' => 'AGUARDANDO',
-                'emergencia' => true
+                'emergencia' => true,
+                'convenio_id' => $agendamento->convenio_id,
             ]);
             
             return redirect()->back()->with('success', 'Presença confirmada e paciente marcado como emergência.');

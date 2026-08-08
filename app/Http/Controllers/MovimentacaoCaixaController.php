@@ -91,7 +91,11 @@ class MovimentacaoCaixaController extends Controller
                 DB::raw("COALESCE(c.descricao,'') AS caixa")
             )
             ->where('p.status', 'PAGO')
-            ->where('f.tipo_pagador', 'PARTICULAR')
+            ->leftJoin('convenios as conv_uc', 'conv_uc.id', '=', 'f.convenio_id')
+            ->where(function($q) {
+                $q->where('conv_uc.tipo', 'Particular')
+                  ->orWhereNull('f.convenio_id');
+            })
             ->orderByDesc('p.data_pagamento')
             ->orderByDesc('p.created_at')
             ->limit(10)
@@ -109,7 +113,11 @@ class MovimentacaoCaixaController extends Controller
                 DB::raw("DATE_FORMAT(f.created_at, '%d-%m-%Y') AS data_faturamento")
             )
             ->where('p.status', 'RECUSADO')
-            ->where('f.tipo_pagador', 'PARTICULAR')
+            ->leftJoin('convenios as conv_uc', 'conv_uc.id', '=', 'f.convenio_id')
+            ->where(function($q) {
+                $q->where('conv_uc.tipo', 'Particular')
+                  ->orWhereNull('f.convenio_id');
+            })
             ->orderByDesc('p.updated_at')
             ->limit(100)
             ->get();
@@ -151,7 +159,11 @@ class MovimentacaoCaixaController extends Controller
                 'p.forma_pagamento',
                 'p.status as pagamento_status'
             )
-            ->where('f.tipo_pagador', 'PARTICULAR');
+            ->leftJoin('convenios as conv_uc', 'conv_uc.id', '=', 'f.convenio_id')
+            ->where(function($q) {
+                $q->where('conv_uc.tipo', 'Particular')
+                  ->orWhereNull('f.convenio_id');
+            });
 
         if ($search) {
             $query->where(function ($q) use ($search) {
