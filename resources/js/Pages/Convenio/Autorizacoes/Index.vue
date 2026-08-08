@@ -37,6 +37,8 @@
         <div class="col-md-6 mb-3">
           <label class="form-label">Status</label>
           <select v-model="form.status" class="form-select" required>
+            <option value="SOLICITADA">Solicitada</option>
+            <option value="AUTORIZADA">Autorizada</option>
             <option value="Pendente">Pendente</option>
             <option value="Aprovada">Aprovada</option>
             <option value="Negada">Negada</option>
@@ -69,6 +71,72 @@
       :item-delete="autorizacaoToDelete"
       @save="confirmDelete"
     />
+    <Modal v-model="showDetailsModal" title="Detalhes da Autorização" size="lg" :show-footer="false">
+      <div v-if="selectedAutorizacao" class="row">
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Convênio</p>
+          <h6 class="fs-14 mb-0">{{ getConvenioNome(selectedAutorizacao.convenio_id) }}</h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Carteirinha</p>
+          <h6 class="fs-14 mb-0">{{ selectedAutorizacao.carteira || '-' }}</h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Número da Autorização</p>
+          <h6 class="fs-14 mb-0">{{ selectedAutorizacao.numero_autorizacao || '-' }}</h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Status</p>
+          <h6 class="fs-14 mb-0">
+            <span class="badge bg-primary-subtle text-primary">{{ selectedAutorizacao.status }}</span>
+          </h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Procedimento TUSS</p>
+          <h6 class="fs-14 mb-0">
+            <span v-if="selectedAutorizacao.tuss">
+              {{ selectedAutorizacao.tuss.codigo }} - {{ selectedAutorizacao.tuss.descricao }}
+            </span>
+            <span v-else-if="selectedAutorizacao.procedimento">
+              {{ selectedAutorizacao.procedimento.nome }}
+            </span>
+            <span v-else>-</span>
+          </h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Agendamento de Origem</p>
+          <h6 class="fs-14 mb-0">
+            {{ selectedAutorizacao.agendamento_id ? '#' + selectedAutorizacao.agendamento_id : '-' }}
+          </h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Valor</p>
+          <h6 class="fs-14 mb-0">
+            {{ selectedAutorizacao.valor ? 'R$ ' + selectedAutorizacao.valor : '-' }}
+          </h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Validade</p>
+          <h6 class="fs-14 mb-0">{{ formatDate(selectedAutorizacao.validade) }}</h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Data da Solicitação</p>
+          <h6 class="fs-14 mb-0">{{ formatDateTime(selectedAutorizacao.data_solicitacao) }}</h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Data da Resposta</p>
+          <h6 class="fs-14 mb-0">{{ formatDateTime(selectedAutorizacao.data_resposta) }}</h6>
+        </div>
+        <div class="col-md-6 mb-3">
+          <p class="text-muted mb-1">Solicitado Por</p>
+          <h6 class="fs-14 mb-0">{{ getUsuarioNome(selectedAutorizacao.usuario_id) }}</h6>
+        </div>
+        <div class="col-md-12 mb-3">
+          <p class="text-muted mb-1">Observação</p>
+          <p class="fs-14 mb-0">{{ selectedAutorizacao.observacao || '-' }}</p>
+        </div>
+      </div>
+    </Modal>
   </Layout>
  </template>
  <script setup>
@@ -111,7 +179,7 @@ const form = useForm({
   convenio_id: '',
   carteira: '',
   numero_autorizacao: '',
-  status: 'Pendente',
+  status: 'SOLICITADA',
   validade: '',
   data_solicitacao: '',
   data_resposta: '',
@@ -193,5 +261,33 @@ async function onSaveAutorizacao() {
    showModal.value = true;
  }
 
- function openModalShow(id) { }
+  const showDetailsModal = ref(false);
+  const selectedAutorizacao = ref(null);
+
+  function getConvenioNome(id) {
+    return convenios.find(c => String(c.id) === String(id))?.descricao || '-';
+  }
+
+  function getUsuarioNome(id) {
+    return usuarios.find(u => String(u.id) === String(id))?.nome || '-';
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  }
+
+  function formatDateTime(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR');
+  }
+
+  function openModalShow(id) {
+    const a = autorizacoes.find(au => String(au.id) === String(id));
+    if (!a) return;
+    selectedAutorizacao.value = a;
+    showDetailsModal.value = true;
+  }
  </script>

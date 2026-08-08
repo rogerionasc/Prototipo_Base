@@ -318,27 +318,29 @@ class AgendamentoController extends Controller
 
                 $requerAutorizacao = $convenioTuss && $convenioTuss->requer_autorizacao;
 
-                if ($requerAutorizacao) {
-                    $pacienteConvenio = DB::table('paciente_convenio')
-                        ->where('paciente_id', $pacId)
-                        ->where('convenio_id', $convenioId)
-                        ->where('ativo', 1)
-                        ->whereNull('deleted_at')
-                        ->first();
+                $pacienteConvenio = DB::table('paciente_convenio')
+                    ->where('paciente_id', $pacId)
+                    ->where('convenio_id', $convenioId)
+                    ->where('ativo', 1)
+                    ->whereNull('deleted_at')
+                    ->first();
 
-                    Autorizacao::create([
-                        'convenio_id' => $convenioId,
-                        'carteira' => $pacienteConvenio->numero_carteira ?? null,
-                        'numero_autorizacao' => null,
-                        'status' => 'Pendente',
-                        'validade' => null,
-                        'data_solicitacao' => Carbon::now(),
-                        'data_resposta' => null,
-                        'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
-                        'usuario_id' => Auth::id() ?? 1,
-                        'usuario_id_validou' => null,
-                    ]);
-                }
+                Autorizacao::create([
+                    'convenio_id' => $convenioId,
+                    'agendamento_id' => $agendamento->id,
+                    'tuss_id' => $isConvenio ? $procId : null,
+                    'procedimento_id' => $isConvenio ? null : $procId,
+                    'valor' => $valorCobrado,
+                    'carteira' => $pacienteConvenio->numero_carteira ?? null,
+                    'numero_autorizacao' => null,
+                    'status' => $requerAutorizacao ? 'SOLICITADA' : 'AUTORIZADA',
+                    'validade' => null,
+                    'data_solicitacao' => Carbon::now(),
+                    'data_resposta' => $requerAutorizacao ? null : Carbon::now(),
+                    'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
+                    'usuario_id' => Auth::id() ?? 1,
+                    'usuario_id_validou' => null,
+                ]);
             }
 
             // Gerar faturamento + pagamento PENDENTE automaticamente para particulares

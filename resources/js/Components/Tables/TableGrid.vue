@@ -779,9 +779,6 @@ onMounted(async () => {
 
 .table th,
 .table td {
-    max-width: 192px !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
     white-space: nowrap !important;
     vertical-align: middle !important;
 }
@@ -792,8 +789,7 @@ onMounted(async () => {
 
 .table tbody td:last-child {
     width: 1%;
-    max-width: none !important;
+    white-space: nowrap !important;
     overflow: visible !important;
-    text-overflow: initial !important;
 }
 </style>

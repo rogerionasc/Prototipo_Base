@@ -45,4 +45,14 @@ class Autorizacao extends Model
     {
         return $this->belongsTo(User::class, 'usuario_id_validou');
     }
+
+    public function tuss()
+    {
+        return $this->belongsTo(Tuss::class, 'tuss_id');
+    }
+
+    public function procedimento()
+    {
+        return $this->belongsTo(Procedimento::class, 'procedimento_id');
+    }
 }

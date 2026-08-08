@@ -394,7 +394,7 @@ export default {
                         }
                     } catch (_) { }
                 }
-                const p = (this.procedimentosLocal || []).find(x => String(x.id) === String(nv));
+                const p = (this.procedimentosFiltrados || []).find(x => String(x.id) === String(nv)) || (this.procedimentosLocal || []).find(x => String(x.id) === String(nv));
                 const isTrat = !!p?.eh_tratamento;
                 const total = isTrat ? Math.max(0, Number(p?.quantidade_sessoes || 0)) : 0;
                 if (isTrat && total > 0) {

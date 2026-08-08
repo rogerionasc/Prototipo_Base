@@ -11,9 +11,13 @@ return new class extends Migration
         Schema::create('autorizacoes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('convenio_id')->constrained()->onDelete('cascade');
+            $table->foreignId('agendamento_id')->nullable()->constrained('agendamentos')->nullOnDelete();
+            $table->foreignId('tuss_id')->nullable()->constrained('tuss')->nullOnDelete();
+            $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos')->nullOnDelete();
+            $table->decimal('valor', 10, 2)->nullable();
             $table->string('carteira', 100)->nullable();
             $table->string('numero_autorizacao', 100)->nullable();
-            $table->enum('status', ['Pendente', 'Aprovada', 'Negada', 'Expirada', 'Cancelada'])->default('Pendente');
+            $table->enum('status', ['SOLICITADA', 'AUTORIZADA', 'Pendente', 'Aprovada', 'Negada', 'Expirada', 'Cancelada'])->default('Pendente');
             $table->date('validade')->nullable();
             $table->timestamp('data_solicitacao')->nullable();
             $table->timestamp('data_resposta')->nullable();

@@ -13,7 +13,7 @@ class AutorizacaoController extends Controller
 {
     public function index()
     {
-        $autorizacoes = Autorizacao::with(['convenio', 'usuario', 'usuarioValidou'])->latest()->get();
+        $autorizacoes = Autorizacao::with(['convenio', 'usuario', 'usuarioValidou', 'tuss', 'procedimento'])->latest()->get();
         $convenios = Convenio::select('id', 'descricao')->get();
         $usuarios = User::with('pessoa:id,nome')->select('id', 'pessoa_id')->get();
 
