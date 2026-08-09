@@ -18,13 +18,13 @@
                 <!-- Espaço para inserir conteúdo personalizado -->
                 <slot></slot>
               </div>
-              <div class="modal-footer">
+              <div class="modal-footer" v-if="showFooter">
                 <div class="me-auto">
                   <slot name="extraFooterLeft"></slot>
                 </div>
                 <div class="d-flex">
-                  <button type="button" class="btn btn-light" :disabled="props.processing || props.disableClose" @click="$emit('update:modelValue', false)">Cancelar</button>
-                  <button type="button" class="btn btn-success ms-2" :disabled="props.processing || props.disableClose" @click="$emit('save')">
+                  <button type="button" class="btn btn-light" :disabled="props.processing || props.disableClose" @click="$emit('update:modelValue', false)">{{ cancelText }}</button>
+                  <button v-if="showSave" type="button" class="btn btn-success ms-2" :disabled="props.processing || props.disableClose" @click="$emit('save')">
                     <span v-if="props.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                     {{ nameButton }}
                   </button>
@@ -81,6 +81,18 @@ const props = defineProps({
         type: Number,
         default: 1040
     },
+    showFooter: {
+        type: Boolean,
+        default: true
+    },
+    showSave: {
+        type: Boolean,
+        default: true
+    },
+    cancelText: {
+        type: String,
+        default: 'Cancelar'
+    }
 });
 
 // Declara os eventos que o componente emite

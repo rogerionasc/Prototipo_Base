@@ -146,6 +146,8 @@ class AgendamentoController extends Controller
             'observacoes' => ['nullable','string'],
             'convenio_id' => ['nullable','integer','exists:convenios,id'],
             'is_retorno' => ['nullable','boolean'],
+            'numero_autorizacao' => ['nullable','string'],
+            'validade_autorizacao' => ['nullable','date'],
         ]);
 
         $isRetorno = $request->input('is_retorno', false);
@@ -329,12 +331,11 @@ class AgendamentoController extends Controller
                     'convenio_id' => $convenioId,
                     'agendamento_id' => $agendamento->id,
                     'tuss_id' => $isConvenio ? $procId : null,
-                    'procedimento_id' => $isConvenio ? null : $procId,
                     'valor' => $valorCobrado,
                     'carteira' => $pacienteConvenio->numero_carteira ?? null,
-                    'numero_autorizacao' => null,
+                    'numero_autorizacao' => $data['numero_autorizacao'] ?? null,
                     'status' => $requerAutorizacao ? 'SOLICITADA' : 'AUTORIZADA',
-                    'validade' => null,
+                    'validade' => $data['validade_autorizacao'] ?? null,
                     'data_solicitacao' => Carbon::now(),
                     'data_resposta' => $requerAutorizacao ? null : Carbon::now(),
                     'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
@@ -403,6 +404,7 @@ class AgendamentoController extends Controller
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
+            ->leftJoin('convenios as c', 'c.id', '=', 'a.convenio_id')
             ->where(function ($q) {
                 $q->where('s.descricao', 'NOT LIKE', '%Atendido%')
                   ->orWhereNull('s.descricao');
@@ -412,6 +414,8 @@ class AgendamentoController extends Controller
                 'a.data',
                 'a.hora',
                 'a.paciente_id',
+                'a.convenio_id',
+                DB::raw("COALESCE(c.tipo, c.descricao, 'Particular') AS convenio_tipo"),
                 DB::raw('COALESCE(a.procedimento_id, a.tuss_id) AS procedimento_id'),
                 'a.sessao_tratamento_id',
                 DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
@@ -444,6 +448,7 @@ class AgendamentoController extends Controller
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('faturamentos as f', 'f.agendamento_id', '=', 'a.id')
             ->leftJoin('pagamentos as pag', 'pag.faturamento_id', '=', 'f.id')
+            ->leftJoin('autorizacoes as au', 'au.agendamento_id', '=', 'a.id')
             ->where('a.id', (int)$id)
             ->whereNull('a.deleted_at')
             ->select(
@@ -463,7 +468,10 @@ class AgendamentoController extends Controller
                 DB::raw("COALESCE(pr.nome, t.descricao, '') AS procedimento_nome"),
                 DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
                 DB::raw('COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes, NULL) AS sessao_total'),
-                DB::raw('COALESCE(pag.status, "") AS status_pagamento')
+                DB::raw('COALESCE(pag.status, "") AS status_pagamento'),
+                'au.id AS autorizacao_id',
+                'au.numero_autorizacao',
+                'au.validade AS validade_autorizacao'
             )
             ->first();
 
@@ -505,6 +513,8 @@ class AgendamentoController extends Controller
             'valor_cobrado' => ['nullable','numeric','min:0'],
             'observacoes' => ['nullable','string'],
             'convenio_id' => ['nullable','integer','exists:convenios,id'],
+            'numero_autorizacao' => ['nullable','string'],
+            'validade_autorizacao' => ['nullable','date'],
         ]);
         $payload = [];
         foreach (['paciente_id','pessoa_id','data','hora','status_id','valor_cobrado','observacoes', 'convenio_id'] as $k) {
@@ -578,6 +588,18 @@ class AgendamentoController extends Controller
                 }
             }
             $agendamento->update($payload);
+
+            if (array_key_exists('numero_autorizacao', $data) || array_key_exists('validade_autorizacao', $data)) {
+                $autorizacao = \App\Models\Autorizacao::where('agendamento_id', $agendamento->id)->first();
+                if ($autorizacao) {
+                    $authPayload = [];
+                    if (array_key_exists('numero_autorizacao', $data)) $authPayload['numero_autorizacao'] = $data['numero_autorizacao'];
+                    if (array_key_exists('validade_autorizacao', $data)) $authPayload['validade'] = $data['validade_autorizacao'];
+                    if (!empty($authPayload)) {
+                        $autorizacao->update($authPayload);
+                    }
+                }
+            }
         }
         return response()->json([
             'success' => true,

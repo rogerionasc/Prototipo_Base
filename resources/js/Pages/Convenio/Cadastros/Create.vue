@@ -367,7 +367,7 @@ const medicosOptions = computed(() => {
     .map((m) => ({
       id: Number(m.id),
       nome: m.nome || "",
-      crm: m.crm || "",
+      crm: m.conselho ? `${m.conselho.sigla}/${m.uf_conselho} ${m.numero_conselho}` : "",
       especialidades: (m.especialidades || []).map(e => ({ id: e.id, nome: e.nome })),
     }));
 });
@@ -459,7 +459,7 @@ const tussGridColumns = [
 const medicosGridColumns = [
   { id: "id", name: "ID", sort: false, attributes: { style: "display:none;" } },
   { id: "nome", name: "Nome" },
-  { id: "crm", name: "CRM" },
+  { id: "crm", name: "Conselho" },
   {
     id: "especialidades",
     name: "Especialidades",
@@ -765,7 +765,7 @@ function openAddMedicoModal() {
 
     const choicesData = medicosOptions.value.map(m => ({
       value: m.id,
-      label: m.crm ? `${m.nome} - CRM ${m.crm}` : m.nome,
+      label: m.crm ? `${m.nome} - ${m.crm}` : m.nome,
     }));
 
     choicesData.unshift({

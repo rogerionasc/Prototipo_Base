@@ -261,8 +261,9 @@
                                     <td>{{ c.id }}</td>
                                     <td>{{ c.descricao }}</td>
                                     <td>{{ c.numero_carteira || '-' }}</td>
+                                    <td>{{ formatDataBR(c.validade_carteira) }}</td>
                                     <td class="text-end">
-                                        <button class="btn btn-sm btn-soft-info me-2" type="button" @click="editConvenio(c)">
+                                        <button class="btn btn-sm btn-soft-info me-2" type="button" @click="editConvenio(c.id, c)">
                                             <i class="ri-pencil-fill"></i>
                                         </button>
                                         <button class="btn btn-sm btn-soft-danger" type="button" @click="removeConvenio(c)">
@@ -293,6 +294,11 @@
                     placeholder="Ex: 123456789" maxlength="30" :disabled="isParticularSelected">
                 <div class="form-text text-muted">Informe o número de identificação da carteirinha.</div>
             </div>
+            <div class="col-md-12 mt-3">
+                <label for="validadeCarteira" class="form-label">Validade da Carteira</label>
+                <flatPickr v-model="selectedConvenio.validade_carteira" class="form-control" id="validadeCarteira"
+                    placeholder="Selecione a data de validade" :config="flatpickrOptions" :disabled="isParticularSelected" />
+            </div>
         </div>
     </Modal>
 </template>
@@ -313,6 +319,13 @@ const { estadosCivis, tiposSanguineos, canaisAviso, convenios, parentescos } = d
     convenios: { type: Array, default: () => [] },
     parentescos: { type: Array, default: () => [] },
 });
+const formatDataBR = (d) => {
+    if(!d) return '-';
+    if(d.includes('T')) d = d.split('T')[0];
+    const parts = d.split('-');
+    if(parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return d;
+};
 const formEl = ref(null);
 const sexoSelect = ref(null);
 const estadoCivilSelect = ref(null);
@@ -329,6 +342,7 @@ const convenioColumns = [
     { key: "id", label: "ID" },
     { key: "descricao", label: "Convênio" },
     { key: "numero_carteira", label: "Número da Carteira" },
+    { key: "validade_carteira", label: "Validade" },
     { key: "acoes", label: "Ações", thClass: "text-end" }
 ];
 const showConvenioModal = ref(false);
@@ -337,6 +351,7 @@ const editingConvenioId = ref(null);
 const selectedConvenio = ref({
     convenio_id: "",
     numero_carteira: "",
+    validade_carteira: "",
 });
 const _isSyncingConvenio = ref(false);
 
@@ -349,6 +364,7 @@ const isParticularSelected = computed(() => {
 watch(() => selectedConvenio.value.convenio_id, (newVal) => {
     if (isParticularSelected.value) {
         selectedConvenio.value.numero_carteira = "";
+        selectedConvenio.value.validade_carteira = "";
     }
 });
 const form = useForm({
@@ -472,6 +488,7 @@ const openConvenioModal = () => {
     convenioModalTitle.value = 'Adicionar Convênio';
     selectedConvenio.value.convenio_id = "";
     selectedConvenio.value.numero_carteira = "";
+    selectedConvenio.value.validade_carteira = "";
     showConvenioModal.value = true;
 };
 const editConvenio = (id, row) => {
@@ -484,7 +501,8 @@ const editConvenio = (id, row) => {
     
     // Set a small timeout for numero_carteira so it doesn't get cleared by the watcher if it's not particular
     setTimeout(() => {
-        selectedConvenio.value.numero_carteira = row.numero_carteira;
+        selectedConvenio.value.numero_carteira = row.numero_carteira || "";
+        selectedConvenio.value.validade_carteira = row.validade_carteira || "";
     }, 10);
     
     showConvenioModal.value = true;
@@ -510,6 +528,7 @@ const saveConvenio = () => {
             conveniosList.value[index].convenio_id = selectedConvenio.value.convenio_id;
             conveniosList.value[index].descricao = convenio ? convenio.descricao : '';
             conveniosList.value[index].numero_carteira = selectedConvenio.value.numero_carteira;
+            conveniosList.value[index].validade_carteira = selectedConvenio.value.validade_carteira;
         }
     } else {
         conveniosList.value.push({
@@ -517,6 +536,7 @@ const saveConvenio = () => {
             convenio_id: selectedConvenio.value.convenio_id,
             descricao: convenio ? convenio.descricao : '',
             numero_carteira: selectedConvenio.value.numero_carteira,
+            validade_carteira: selectedConvenio.value.validade_carteira,
         });
     }
     closeConvenioModal();
@@ -537,6 +557,7 @@ const loadConvenios = (conveniosData) => {
         convenio_id: c.convenio_id,
         descricao: getConvenioDescricao(c.convenio_id),
         numero_carteira: c.numero_carteira || '',
+        validade_carteira: c.validade || '',
     })) : [];
 };
 defineExpose({ submit, submitUpdate, form, syncChoices, processingRef: toRef(form, "processing"), loadConvenios });

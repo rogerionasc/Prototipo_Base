@@ -292,7 +292,7 @@ function addWeekdays() {
       :searchPlaceholder="'Buscar por empregado'" :showCheckbox="true" :showActions="true" :showPerPagination="true"
       :showAddButton="true" :actionsConfig="{ delete: true, edit: true, show: true }" @add="openAdd" @delete="askDelete"
       @edit="startEditById" @show="() => { }" />
-    <Modal v-model="singleModal" :title="isCreating ? 'Adicionar Empregado' : 'Editar Empregado'"
+    <Modal v-model="singleModal" size="xl" :title="isCreating ? 'Adicionar Empregado' : 'Editar Empregado'"
       :name-button="isCreating ? 'Salvar' : 'Atualizar'" :processing="isCreating ? saveProcessing : editProcessing"
       @save="saveSingle">
       <template v-if="isCreating">

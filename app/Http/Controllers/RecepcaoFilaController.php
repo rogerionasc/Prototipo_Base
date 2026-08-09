@@ -19,15 +19,26 @@ class RecepcaoFilaController extends Controller
             'paciente.comorbidades',
             'agendaMedica.profissionalSaude',
             'procedimento',
+            'tuss',
             'status',
             'atendimentos' // Para checar se já virou atendimento
         ])
         ->where('data', $hoje)
-        ->whereExists(function ($query) {
-            $query->select(DB::raw(1))
-                  ->from('faturamentos')
-                  ->whereColumn('faturamentos.agendamento_id', 'agendamentos.id')
-                  ->whereIn('faturamentos.status', ['PAGO', 'RECEBIDO']);
+        ->where(function($q) use ($hoje) {
+            $q->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                      ->from('faturamentos')
+                      ->whereColumn('faturamentos.agendamento_id', 'agendamentos.id')
+                      ->whereIn('faturamentos.status', ['PAGO', 'RECEBIDO']);
+            })
+            ->orWhereExists(function ($query) use ($hoje) {
+                $query->select(DB::raw(1))
+                      ->from('autorizacoes')
+                      ->whereColumn('autorizacoes.agendamento_id', 'agendamentos.id')
+                      ->where('autorizacoes.status', 'AUTORIZADA')
+                      ->whereNotNull('autorizacoes.numero_autorizacao')
+                      ->where('autorizacoes.validade', '>=', $hoje);
+            });
         })
         ->orderBy('hora', 'asc')
         ->get()
@@ -62,7 +73,9 @@ class RecepcaoFilaController extends Controller
                 'super_prioridade' => $idade >= 80,
                 'prioridade_idade' => $idade >= 60 && $idade < 80,
                 'emergencia' => $emergencia,
-                'procedimento' => $ag->procedimento ? $ag->procedimento->nome : 'N/A',
+                'procedimento' => $ag->procedimento 
+                                  ? $ag->procedimento->nome 
+                                  : ($ag->tuss ? $ag->tuss->descricao : 'N/A'),
                 'medico' => $ag->agendaMedica && $ag->agendaMedica->profissionalSaude 
                             ? $ag->agendaMedica->profissionalSaude->nome 
                             : 'N/A',

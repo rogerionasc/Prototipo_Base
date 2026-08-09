@@ -13,7 +13,9 @@ class AutorizacaoController extends Controller
 {
     public function index()
     {
-        $autorizacoes = Autorizacao::with(['convenio', 'usuario', 'usuarioValidou', 'tuss', 'procedimento'])->latest()->get();
+        $autorizacoes = Autorizacao::with(['convenio', 'tuss', 'agendamento', 'agendamento.paciente', 'agendamento.agendaMedica.profissionalSaude', 'agendamento.status', 'usuario', 'usuarioValidou'])
+            ->orderBy('id', 'desc')
+            ->get();
         $convenios = Convenio::select('id', 'descricao')->get();
         $usuarios = User::with('pessoa:id,nome')->select('id', 'pessoa_id')->get();
 
@@ -27,10 +29,11 @@ class AutorizacaoController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'protocolo' => ['nullable', 'string', 'max:100'],
             'convenio_id' => ['required', 'integer', 'exists:convenios,id'],
             'carteira' => ['nullable', 'string', 'max:100'],
             'numero_autorizacao' => ['nullable', 'string', 'max:100'],
-            'status' => ['required', 'in:Pendente,Aprovada,Negada,Expirada,Cancelada'],
+            'status' => ['required', 'in:SOLICITADA,AUTORIZADA,Pendente,Aprovada,Negada,Expirada,Cancelada'],
             'validade' => ['nullable', 'date'],
             'data_solicitacao' => ['nullable', 'date'],
             'data_resposta' => ['nullable', 'date'],
@@ -49,10 +52,11 @@ class AutorizacaoController extends Controller
         $autorizacao = Autorizacao::findOrFail($id);
 
         $data = $request->validate([
+            'protocolo' => ['nullable', 'string', 'max:100'],
             'convenio_id' => ['required', 'integer', 'exists:convenios,id'],
             'carteira' => ['nullable', 'string', 'max:100'],
             'numero_autorizacao' => ['nullable', 'string', 'max:100'],
-            'status' => ['required', 'in:Pendente,Aprovada,Negada,Expirada,Cancelada'],
+            'status' => ['required', 'in:SOLICITADA,AUTORIZADA,Pendente,Aprovada,Negada,Expirada,Cancelada'],
             'validade' => ['nullable', 'date'],
             'data_solicitacao' => ['nullable', 'date'],
             'data_resposta' => ['nullable', 'date'],

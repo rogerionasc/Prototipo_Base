@@ -449,7 +449,7 @@ watch(() => form.convenio_id, async () => {
     procedimentosSelectRows.value = [];
     procedimentosSelectLoading.value = false;
 
-    if (!cid) {
+    if (!cid || isNaN(cid) || String(cid).toLowerCase().includes('selecione')) {
         await syncProcedimentoChoices();
         return;
     }

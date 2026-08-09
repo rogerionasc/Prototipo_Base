@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             // UserAndPreUserSeeder::class,
             EstadoCivilSeeder::class,
             ParentescoSeeder::class,
+            ConselhoSeeder::class,
             TipoSanguineoSeeder::class,
             CanalAvisoSeeder::class,
             CategoriaProcedimentoSeeder::class,

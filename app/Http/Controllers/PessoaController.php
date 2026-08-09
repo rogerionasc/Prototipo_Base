@@ -33,15 +33,20 @@ class PessoaController extends Controller
             'naturalidade' => ['nullable','string','max:255'],
             'estado_civil_id' => ['nullable','integer','exists:estado_civil,id'],
             'cnes' => ['nullable','string','max:255'],
-            'crm' => [
+            'conselho_id' => [
+                $request->boolean('is_medico') ? 'required' : 'nullable',
+                'integer',
+                'exists:conselhos,id'
+            ],
+            'numero_conselho' => [
                 $request->boolean('is_medico') ? 'required' : 'nullable',
                 'string',
-                'max:255',
-                function ($attribute, $value, $fail) use ($request) {
-                    if ($request->boolean('is_medico') && trim($value) === 'CRM/') {
-                        $fail('O CRM é obrigatório e deve ser preenchido corretamente.');
-                    }
-                }
+                'max:20'
+            ],
+            'uf_conselho' => [
+                $request->boolean('is_medico') ? 'required' : 'nullable',
+                'string',
+                'max:2'
             ],
             'cargo' => ['nullable','string','max:255'],
             'email' => ['nullable','email','max:255'],
@@ -116,15 +121,20 @@ class PessoaController extends Controller
             'naturalidade' => ['nullable','string','max:255'],
             'estado_civil_id' => ['nullable','integer','exists:estado_civil,id'],
             'cnes' => ['nullable','string','max:255'],
-            'crm' => [
+            'conselho_id' => [
+                $request->boolean('is_medico') ? 'required' : 'nullable',
+                'integer',
+                'exists:conselhos,id'
+            ],
+            'numero_conselho' => [
                 $request->boolean('is_medico') ? 'required' : 'nullable',
                 'string',
-                'max:255',
-                function ($attribute, $value, $fail) use ($request) {
-                    if ($request->boolean('is_medico') && trim($value) === 'CRM/') {
-                        $fail('O CRM é obrigatório e deve ser preenchido corretamente.');
-                    }
-                }
+                'max:20'
+            ],
+            'uf_conselho' => [
+                $request->boolean('is_medico') ? 'required' : 'nullable',
+                'string',
+                'max:2'
             ],
             'cargo' => ['nullable','string','max:255'],
             'email' => ['nullable','email','max:255'],

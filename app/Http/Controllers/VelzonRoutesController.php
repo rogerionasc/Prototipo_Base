@@ -48,6 +48,8 @@ class VelzonRoutesController extends Controller
         $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
         $categoriasProcedimento = CategoriaProcedimento::select('id','nome')->orderBy('nome')->get();
         $comorbidades = Comorbidade::select('id','nome')->orderBy('nome')->get();
+        $conselhos = \App\Models\Conselho::select('id', 'codigo', 'sigla', 'descricao')->orderBy('sigla')->get();
+        
         return Inertia::render('Parametrizacoes/Index', [
             'estadosCivis' => $estados,
             'tiposSanguineos' => $tipos,
@@ -55,6 +57,7 @@ class VelzonRoutesController extends Controller
             'parentescos' => $parentescos,
             'categoriasProcedimento' => $categoriasProcedimento,
             'comorbidades' => $comorbidades,
+            'conselhos' => $conselhos,
         ]);
     }
 
@@ -106,7 +109,9 @@ class VelzonRoutesController extends Controller
                 'naturalidade',
                 'estado_civil_id',
                 'cnes',
-                'crm',
+                'conselho_id',
+                'numero_conselho',
+                'uf_conselho',
                 'endereco_id',
                 'email',
                 'telefone',
@@ -120,18 +125,20 @@ class VelzonRoutesController extends Controller
                 DB::raw("COALESCE(e.complemento,'') AS complemento"),
             )
             ->leftJoin('enderecos as e', 'e.id', '=', 'pessoas.endereco_id')
-            ->whereNotNull('crm')
-            ->with(['agendas', 'especialidades' => function($q) {
+            ->whereNotNull('conselho_id')
+            ->with(['conselho', 'agendas', 'especialidades' => function($q) {
                 $q->select('especialidades.id','nome')->withPivot('qre');
             }])
             ->orderBy('nome')
             ->get();
         $especialidades = \App\Models\Especialidade::select('id','nome','codigo','descricao','ativo')->orderBy('nome')->get();
         $estadosCivis = \App\Models\EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
+        $conselhos = \App\Models\Conselho::select('id', 'codigo', 'sigla', 'descricao')->orderBy('sigla')->get();
         return Inertia::render('Medicos/Index', [
             'profissionais' => $profissionais,
             'especialidades' => $especialidades,
             'estadosCivis' => $estadosCivis,
+            'conselhos' => $conselhos,
         ]);
     }
 
@@ -147,7 +154,9 @@ class VelzonRoutesController extends Controller
                 'naturalidade',
                 'estado_civil_id',
                 'cnes',
-                'crm',
+                'conselho_id',
+                'numero_conselho',
+                'uf_conselho',
                 'cargo',
                 'endereco_id',
                 'celular',
@@ -162,7 +171,7 @@ class VelzonRoutesController extends Controller
                 DB::raw("COALESCE(e.complemento,'') AS complemento"),
             )
             ->leftJoin('enderecos as e', 'e.id', '=', 'pessoas.endereco_id')
-            ->whereNull('crm')
+            ->whereNull('conselho_id')
             ->orderBy('nome')
             ->get();
         $estadosCivis = \App\Models\EstadoCivil::select('id','descricao')->orderBy('descricao')->get();
@@ -357,5 +366,34 @@ class VelzonRoutesController extends Controller
         $comorbidade = Comorbidade::findOrFail($id);
         $comorbidade->delete();
         return redirect()->back()->with('success', 'Comorbidade removida com sucesso!');
+    }
+    public function parametros_store_conselho(Request $request)
+    {
+        $data = $request->validate([
+            'codigo' => 'nullable|string|max:5',
+            'sigla' => 'required|string|max:10|unique:conselhos,sigla',
+            'descricao' => 'required|string|max:100',
+        ]);
+        \App\Models\Conselho::create($data);
+        return redirect()->back()->with('success', 'Conselho criado com sucesso!');
+    }
+
+    public function parametros_update_conselho(Request $request, $id)
+    {
+        $conselho = \App\Models\Conselho::findOrFail($id);
+        $data = $request->validate([
+            'codigo' => 'nullable|string|max:5',
+            'sigla' => 'required|string|max:10|unique:conselhos,sigla,' . $id,
+            'descricao' => 'required|string|max:100',
+        ]);
+        $conselho->update($data);
+        return redirect()->back()->with('success', 'Conselho atualizado com sucesso!');
+    }
+
+    public function parametros_destroy_conselho($id)
+    {
+        $conselho = \App\Models\Conselho::findOrFail($id);
+        $conselho->delete();
+        return redirect()->back()->with('success', 'Conselho removido com sucesso!');
     }
 }

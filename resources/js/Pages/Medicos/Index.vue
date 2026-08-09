@@ -16,13 +16,14 @@ const props = defineProps({
   profissionais: { type: Array, default: () => [] },
   especialidades: { type: Array, default: () => [] },
   estadosCivis: { type: Array, default: () => [] },
+  conselhos: { type: Array, default: () => [] },
 });
 const profissionaisLocal = ref([...(props.profissionais || [])]);
 watch(() => props.profissionais, (v) => { profissionaisLocal.value = [...(v || [])]; });
 const columns = [
   { id: "id", name: "ID" },
   { id: "nome", name: "Nome" },
-  { id: "crm", name: "CRM" },
+  { id: "conselho", name: "Conselho" },
   { id: "contato", name: "Contato" },
   { id: "especialidades", name: "Especialidades" },
   { id: "dias_atendimento", name: "Dias Atendimento" },
@@ -50,7 +51,8 @@ const tableData = computed(() => {
       const opt = diaSemanaOptions.find(o => o.value === d);
       return opt ? opt.label.substring(0, 3) : '';
     }).filter(Boolean).join(', ');
-    return { id: p.id, nome: p.nome, crm: p.crm || '-', contato: contato || '-', especialidades: esp || '-', dias_atendimento: diasStr || '-' };
+    const cons = p.conselho ? `${p.conselho.sigla} ${p.uf_conselho || ''} ${p.numero_conselho || ''}`.trim() : '-';
+    return { id: p.id, nome: p.nome, conselho: cons, contato: contato || '-', especialidades: esp || '-', dias_atendimento: diasStr || '-' };
   });
 });
 const singleModal = ref(false);
@@ -88,10 +90,15 @@ const sexoOptions = [
   { value: 'Feminino', label: 'Feminino' },
   { value: 'Outro', label: 'Outro' },
 ];
+const ufOptions = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 const sexoSelectCreate = ref(null);
 const estadoCivilSelectCreate = ref(null);
+const conselhoSelectCreate = ref(null);
+const ufSelectCreate = ref(null);
 const sexoSelectEdit = ref(null);
 const estadoCivilSelectEdit = ref(null);
+const conselhoSelectEdit = ref(null);
+const ufSelectEdit = ref(null);
 const formCreate = useForm({
   nome: "",
   cpf: "",
@@ -101,7 +108,9 @@ const formCreate = useForm({
   naturalidade: "",
   estado_civil_id: null,
   cnes: "",
-  crm: "",
+  conselho_id: null,
+  numero_conselho: "",
+  uf_conselho: "",
   cep: "",
   endereco: "",
   numero: "",
@@ -124,7 +133,9 @@ const formEdit = useForm({
   naturalidade: "",
   estado_civil_id: null,
   cnes: "",
-  crm: "",
+  conselho_id: null,
+  numero_conselho: "",
+  uf_conselho: "",
   cep: "",
   endereco: "",
   numero: "",
@@ -148,7 +159,7 @@ function openAdd() {
   nextTick(() => { if (window.initChoices) window.initChoices(); });
 }
 const FORM_FIELDS = [
-  "nome","cpf","rg","sexo","data_nascimento","naturalidade","estado_civil_id","cnes","crm","cep","endereco","numero","bairro","cidade","complemento","email","telefone","celular","observacoes", "is_medico"
+  "nome","cpf","rg","sexo","data_nascimento","naturalidade","estado_civil_id","cnes","conselho_id","numero_conselho","uf_conselho","cep","endereco","numero","bairro","cidade","complemento","email","telefone","celular","observacoes", "is_medico"
 ];
 function buildPayload(src) {
   const o = {};
@@ -182,6 +193,8 @@ function attachChoiceSync(formObj, key, selectRef, mapper) {
 }
 attachChoiceSync(formCreate, "sexo", sexoSelectCreate, v => v || "");
 attachChoiceSync(formCreate, "estado_civil_id", estadoCivilSelectCreate, v => v != null ? String(v) : "");
+attachChoiceSync(formCreate, "conselho_id", conselhoSelectCreate, v => v != null ? String(v) : "");
+attachChoiceSync(formCreate, "uf_conselho", ufSelectCreate, v => v || "");
 function addEspRow(targetForm) {
   const arr = targetForm.especialidades || [];
   arr.push({ id: null, qre: "" });
@@ -297,6 +310,8 @@ function startEditById(id) {
 }
 attachChoiceSync(formEdit, "sexo", sexoSelectEdit, v => v || "");
 attachChoiceSync(formEdit, "estado_civil_id", estadoCivilSelectEdit, v => v != null ? String(v) : "");
+attachChoiceSync(formEdit, "conselho_id", conselhoSelectEdit, v => v != null ? String(v) : "");
+attachChoiceSync(formEdit, "uf_conselho", ufSelectEdit, v => v || "");
 function submitEdit() {
   if (!editingId.value) return;
   formEdit.transform((data) => buildPayload(data)).put(`/profissionais-saude/${editingId.value}`, {
@@ -473,6 +488,7 @@ function submitAgenda() {
     />
     <Modal
       v-model="singleModal"
+      size="xl"
       :title="isCreating ? 'Adicionar Profissional' : 'Editar Profissional'"
       :name-button="isCreating ? 'Salvar' : 'Atualizar'"
       :processing="isCreating ? saveProcessing : editProcessing"
@@ -519,11 +535,27 @@ function submitAgenda() {
                 </select>
               </div>
               <div class="col-md-3">
-                <label for="psCrm" class="form-label">CRM <span class="text-danger">*</span></label>
-                <input v-mask="'CRM/AA #####'" v-model="formCreate.crm" type="text" id="psCrm" class="form-control" :class="{ 'is-invalid': formCreate.errors.crm }" placeholder="CRM/RN #####" maxlength="12" required />
-                <div class="invalid-feedback">{{ formCreate.errors.crm }}</div>
+                <label for="psConselho" class="form-label">Conselho <span class="text-danger">*</span></label>
+                <select v-model="formCreate.conselho_id" class="form-select mb-0" id="psConselho" data-choices ref="conselhoSelectCreate" required>
+                  <option selected disabled :value="null">Selecione...</option>
+                  <option v-for="c in props.conselhos" :key="c.id" :value="c.id">{{ c.sigla }}</option>
+                </select>
+                <div class="invalid-feedback">{{ formCreate.errors.conselho_id }}</div>
+              </div>
+              <div class="col-md-2">
+                <label for="psUfConselho" class="form-label">UF <span class="text-danger">*</span></label>
+                <select v-model="formCreate.uf_conselho" class="form-select mb-0" id="psUfConselho" data-choices ref="ufSelectCreate" required>
+                  <option selected disabled value="">Selecione...</option>
+                  <option v-for="uf in ufOptions" :key="uf" :value="uf">{{ uf }}</option>
+                </select>
+                <div class="invalid-feedback">{{ formCreate.errors.uf_conselho }}</div>
               </div>
               <div class="col-md-3">
+                <label for="psNumConselho" class="form-label">Nº Conselho <span class="text-danger">*</span></label>
+                <input v-model="formCreate.numero_conselho" type="text" id="psNumConselho" class="form-control" :class="{ 'is-invalid': formCreate.errors.numero_conselho }" placeholder="Número" maxlength="20" required />
+                <div class="invalid-feedback">{{ formCreate.errors.numero_conselho }}</div>
+              </div>
+              <div class="col-md-4">
                 <label for="psCnes" class="form-label">CNES</label>
                 <input v-model="formCreate.cnes" type="text" id="psCnes" class="form-control" placeholder="CNES" maxlength="7" inputmode="numeric" />
               </div>
@@ -659,11 +691,27 @@ function submitAgenda() {
                 </select>
               </div>
               <div class="col-md-3">
-                <label for="psEditCrm" class="form-label">CRM <span class="text-danger">*</span></label>
-                <input v-mask="'CRM/AA #####'" v-model="formEdit.crm" type="text" id="psEditCrm" class="form-control" :class="{ 'is-invalid': formEdit.errors.crm }" placeholder="CRM/XX #####" maxlength="12" required />
-                <div class="invalid-feedback">{{ formEdit.errors.crm }}</div>
+                <label for="psEditConselho" class="form-label">Conselho <span class="text-danger">*</span></label>
+                <select v-model="formEdit.conselho_id" class="form-select mb-0" id="psEditConselho" data-choices ref="conselhoSelectEdit" required>
+                  <option selected disabled :value="null">Selecione...</option>
+                  <option v-for="c in props.conselhos" :key="c.id" :value="c.id">{{ c.sigla }}</option>
+                </select>
+                <div class="invalid-feedback">{{ formEdit.errors.conselho_id }}</div>
+              </div>
+              <div class="col-md-2">
+                <label for="psEditUfConselho" class="form-label">UF <span class="text-danger">*</span></label>
+                <select v-model="formEdit.uf_conselho" class="form-select mb-0" id="psEditUfConselho" data-choices ref="ufSelectEdit" required>
+                  <option selected disabled value="">Selecione...</option>
+                  <option v-for="uf in ufOptions" :key="uf" :value="uf">{{ uf }}</option>
+                </select>
+                <div class="invalid-feedback">{{ formEdit.errors.uf_conselho }}</div>
               </div>
               <div class="col-md-3">
+                <label for="psEditNumConselho" class="form-label">Nº Conselho <span class="text-danger">*</span></label>
+                <input v-model="formEdit.numero_conselho" type="text" id="psEditNumConselho" class="form-control" :class="{ 'is-invalid': formEdit.errors.numero_conselho }" placeholder="Número" maxlength="20" required />
+                <div class="invalid-feedback">{{ formEdit.errors.numero_conselho }}</div>
+              </div>
+              <div class="col-md-4">
                 <label for="psEditCnes" class="form-label">CNES</label>
                 <input v-mask="'#######'" v-model="formEdit.cnes" type="text" id="psEditCnes" class="form-control" placeholder="0000000" maxlength="7" />
               </div>

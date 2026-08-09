@@ -86,6 +86,16 @@ class LargeDataSeeder extends Seeder
         // ==== SEED MEDICOS ====
         $this->command->info('Criando 500 Médicos...');
         $medicos = [];
+        $crmId = DB::table('conselhos')->where('sigla', 'CRM')->value('id');
+        if (!$crmId) {
+            $crmId = DB::table('conselhos')->insertGetId([
+                'codigo' => '06',
+                'sigla' => 'CRM',
+                'descricao' => 'Conselho Regional de Medicina',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
         for ($i = 0; $i < 500; $i++) {
             $medicos[] = [
                 'nome' => $faker->name,
@@ -94,7 +104,9 @@ class LargeDataSeeder extends Seeder
                 'sexo' => $faker->randomElement(['Masculino', 'Feminino']),
                 'data_nascimento' => $faker->dateTimeBetween('-70 years', '-25 years')->format('Y-m-d'),
                 'cargo' => 'Médico',
-                'crm' => 'CRM/' . $faker->stateAbbr . ' ' . $faker->numerify('#####'),
+                'conselho_id' => $crmId,
+                'numero_conselho' => $faker->numerify('#####'),
+                'uf_conselho' => $faker->stateAbbr,
                 'celular' => $faker->cellphoneNumber,
                 'email' => $faker->unique()->safeEmail,
                 'created_at' => now(),

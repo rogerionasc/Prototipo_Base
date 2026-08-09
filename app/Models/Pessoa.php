@@ -21,7 +21,9 @@ class Pessoa extends Model
         'naturalidade',
         'estado_civil_id',
         'cnes',
-        'crm',
+        'conselho_id',
+        'numero_conselho',
+        'uf_conselho',
         'cargo',
         'endereco_id',
         'celular',
@@ -33,6 +35,11 @@ class Pessoa extends Model
     public function estadoCivil()
     {
         return $this->belongsTo(EstadoCivil::class, 'estado_civil_id');
+    }
+
+    public function conselho()
+    {
+        return $this->belongsTo(Conselho::class, 'conselho_id');
     }
 
     public function endereco()

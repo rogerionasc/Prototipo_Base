@@ -9,11 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('autorizacoes', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('convenio_id')->constrained()->onDelete('cascade');
+            $table->string('protocolo', 100)->nullable();
             $table->foreignId('agendamento_id')->nullable()->constrained('agendamentos')->nullOnDelete();
             $table->foreignId('tuss_id')->nullable()->constrained('tuss')->nullOnDelete();
-            $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos')->nullOnDelete();
             $table->decimal('valor', 10, 2)->nullable();
             $table->string('carteira', 100)->nullable();
             $table->string('numero_autorizacao', 100)->nullable();

@@ -129,11 +129,15 @@ const fetchPainelData = async () => {
         
         if (atendimentos.length > 0) {
             const current = atendimentos[0];
+            const isInitial = lastFetchTime.value === null;
             
             // Check if the current called patient is NEW or was called again
-            const isNewCall = mainTicket.value.id !== current.id || new Date(current.updated_at).getTime() > new Date(lastFetchTime.value || 0).getTime();
+            const isNewCall = !isInitial && (mainTicket.value.id !== current.id || new Date(current.updated_at).getTime() > new Date(lastFetchTime.value).getTime());
             
-            if (isNewCall) {
+            if (isInitial) {
+                mainTicket.value = current;
+                lastFetchTime.value = current.updated_at;
+            } else if (isNewCall) {
                 mainTicket.value = current;
                 lastFetchTime.value = current.updated_at;
 
@@ -154,6 +158,9 @@ const fetchPainelData = async () => {
             } else {
                 history.value = [];
             }
+        } else {
+            mainTicket.value = { id: null, paciente: 'Aguardando...', local: '-', medico: '-' };
+            history.value = [];
         }
     } catch (error) {
         console.error("Erro ao buscar dados do painel", error);

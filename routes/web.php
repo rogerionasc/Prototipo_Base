@@ -221,6 +221,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/parametros/comorbidade", [VelzonRoutesController::class, "parametros_store_comorbidade"])->name('parametros.comorbidade.store');
         Route::put("/parametros/comorbidade/{id}", [VelzonRoutesController::class, "parametros_update_comorbidade"])->name('parametros.comorbidade.update');
         Route::delete("/parametros/comorbidade/{id}", [VelzonRoutesController::class, "parametros_destroy_comorbidade"])->name('parametros.comorbidade.destroy');
+        Route::post("/parametros/conselho", [VelzonRoutesController::class, "parametros_store_conselho"])->name('parametros.conselho.store');
+        Route::put("/parametros/conselho/{id}", [VelzonRoutesController::class, "parametros_update_conselho"])->name('parametros.conselho.update');
+        Route::delete("/parametros/conselho/{id}", [VelzonRoutesController::class, "parametros_destroy_conselho"])->name('parametros.conselho.destroy');
         Route::put("/parametros/tipo-sanguineo/{id}", [VelzonRoutesController::class, "parametros_update_tipo_sanguineo"])->name('parametros.tipo_sanguineo.update');
         Route::delete("/parametros/tipo-sanguineo/{id}", [VelzonRoutesController::class, "parametros_destroy_tipo_sanguineo"])->name('parametros.tipo_sanguineo.destroy');
         Route::post("/parametros/canal-aviso", [VelzonRoutesController::class, "parametros_store_canal_aviso"])->name('parametros.canal_aviso.store');
@@ -272,9 +275,10 @@ Route::get('/app/painel-atendimento', function () {
 })->name('apps.painel_atendimento');
 
 Route::get('/app/painel/data', function () {
-    // Pega os últimos 5 atendimentos chamados
+    // Pega os últimos 5 atendimentos chamados do dia atual
     $atendimentos = \App\Models\Atendimento::with(['paciente', 'medico.salas'])
         ->whereIn('status', ['CHAMADO', 'EM ATENDIMENTO'])
+        ->whereDate('updated_at', \Carbon\Carbon::today())
         ->orderBy('updated_at', 'desc')
         ->take(5)
         ->get()
@@ -291,3 +295,5 @@ Route::get('/app/painel/data', function () {
 
     return response()->json($atendimentos);
 })->name('apps.painel.data');
+
+Route::get('/guias/{agendamento}/imprimir', [App\Http\Controllers\GuiaController::class, 'imprimirDaAgenda'])->name('guias.imprimirDaAgenda');

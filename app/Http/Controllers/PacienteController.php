@@ -26,7 +26,7 @@ class PacienteController extends Controller
                 'c.tipo',
                 'pc.numero_carteira',
                 'pc.plano',
-                DB::raw("DATE_FORMAT(pc.validade, '%d-%m-%Y') AS validade")
+                DB::raw("DATE_FORMAT(pc.validade, '%Y-%m-%d') AS validade")
             )
             ->where('pc.paciente_id', $pacienteId)
             ->where('pc.ativo', 1)
@@ -372,6 +372,7 @@ class PacienteController extends Controller
                     ->update([
                         'ativo' => true,
                         'numero_carteira' => $conv['numero_carteira'] ?? null,
+                        'validade' => !empty($conv['validade_carteira']) ? $conv['validade_carteira'] : null,
                         'deleted_at' => null,
                         'updated_at' => $now
                     ]);
@@ -382,7 +383,7 @@ class PacienteController extends Controller
                         'convenio_id' => $conv['convenio_id'],
                         'numero_carteira' => $conv['numero_carteira'] ?? null,
                         'plano' => null,
-                        'validade' => null,
+                        'validade' => !empty($conv['validade_carteira']) ? $conv['validade_carteira'] : null,
                         'ativo' => true,
                         'created_at' => $now,
                         'updated_at' => $now,
@@ -526,6 +527,7 @@ class PacienteController extends Controller
             'convenios' => ['nullable', 'array'],
             'convenios.*.convenio_id' => ['required', 'integer', 'exists:convenios,id'],
             'convenios.*.numero_carteira' => ['nullable', 'string', 'max:30'],
+            'convenios.*.validade_carteira' => ['nullable', 'date'],
         ], [
             'cpf.unique' => 'O CPF informado já está cadastrado.',
             'cpf.required' => 'O campo CPF é obrigatório.',
@@ -647,6 +649,7 @@ class PacienteController extends Controller
                     ->update([
                         'ativo' => true,
                         'numero_carteira' => $conv['numero_carteira'] ?? null,
+                        'validade' => !empty($conv['validade_carteira']) ? $conv['validade_carteira'] : null,
                         'deleted_at' => null,
                         'updated_at' => $now
                     ]);
@@ -657,7 +660,7 @@ class PacienteController extends Controller
                         'convenio_id' => $conv['convenio_id'],
                         'numero_carteira' => $conv['numero_carteira'] ?? null,
                         'plano' => null,
-                        'validade' => null,
+                        'validade' => !empty($conv['validade_carteira']) ? $conv['validade_carteira'] : null,
                         'ativo' => true,
                         'created_at' => $now,
                         'updated_at' => $now,

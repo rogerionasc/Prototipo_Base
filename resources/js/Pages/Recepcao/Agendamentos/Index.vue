@@ -113,7 +113,9 @@ export default {
                 status_id: null,
                 valor_cobrado: "",
                 observacoes: "",
-                is_retorno: false
+                is_retorno: false,
+                numero_autorizacao: "",
+                validade_autorizacao: ""
             },
             conveniosPacienteCriacao: [],
             conveniosPacienteEdicao: [],
@@ -204,6 +206,23 @@ export default {
         SimpleTable
     },
     computed: {
+        isConvenioAgendamento() {
+            const cid = this.agendamentoForm?.convenio_id;
+            if (!cid) return false;
+            let conv = (this.conveniosPacienteCriacao || []).find(c => String(c.id) === String(cid));
+            if (!conv && this.isEditMode) conv = (this.conveniosPacienteEdicao || []).find(c => String(c.id) === String(cid));
+            if (!conv) return false;
+            return String(conv.tipo || '').toUpperCase() === 'CONVENIO';
+        },
+        procedimentoRequerAutorizacao() {
+            const procId = this.agendamentoForm?.procedimento_id;
+            if (!procId) return true;
+            const proc = (this.procedimentosFiltrados || []).find(p => String(p.id) === String(procId));
+            if (proc && proc.source === 'tuss' && typeof proc.requer_autorizacao !== 'undefined') {
+                return !!proc.requer_autorizacao;
+            }
+            return true;
+        },
         configFlatpickrAgendar() {
             return {
                 ...this.opcoesFlatpickrData,
@@ -522,9 +541,12 @@ export default {
                             procNome += ` (Sessão ${sessN})`;
                         }
 
+                        const convTipo = String(ev?.extendedProps?.convenio_tipo || "Particular").trim();
+
                         return {
                             id: ev?.id,
                             paciente: pacNome || "Paciente",
+                            convenio_tipo: convTipo,
                             procedimento: procNome || "Procedimento",
                             hora: this.formatHora24(ev?.start) || "--:--",
                             status: st || "Agendado",
@@ -700,7 +722,7 @@ export default {
         },
         async carregarProcedimentosPorConvenio(cid) {
             const isRestaurando = this._restaurandoEdicao;
-            if (!cid || cid === 'Selecione') {
+            if (!cid || isNaN(cid) || String(cid).toLowerCase().includes('selecione')) {
                 this.procedimentosSelectRows = [];
                 this.procedimentosFiltrados = [];
                 if (!isRestaurando) this.agendamentoForm.procedimento_id = null;
@@ -726,7 +748,9 @@ export default {
                     valor: r.valor,
                     eh_tratamento: r.eh_tratamento,
                     quantidade_sessoes: r.quantidade_sessoes,
-                    especialidades: r.especialidades
+                    especialidades: r.especialidades,
+                    source: r.source,
+                    requer_autorizacao: r.requer_autorizacao
                 }));
 
                 if (isRestaurando && this.procedimentosFiltradosEdicao && this.procedimentosFiltradosEdicao.length > 0) {
@@ -817,7 +841,7 @@ export default {
                     if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
                 } catch (_) { }
 
-                this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
+                this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "" };
                 this.termoBuscaPaciente = "";
                 this.conveniosPacienteCriacao = [];
                 this.procedimentosSelectRows = [];
@@ -845,7 +869,7 @@ export default {
                 const fp = (this.$page?.props?.flash ?? {});
                 if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
             } catch (_) { }
-            this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
+            this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "" };
             this.termoBuscaPaciente = "";
             this.mostrarSugestoesPaciente = false;
 
@@ -906,6 +930,9 @@ export default {
             this.agendamentoForm.observacoes = String(ag?.observacoes || (this.eventoSelecionado.extendedProps && this.eventoSelecionado.extendedProps.observacoes) ? this.eventoSelecionado.extendedProps.observacoes : "");
             this.agendamentoForm.status_id = null;
             this.agendamentoForm.is_retorno = false;
+            this.agendamentoForm.autorizacao_id = ag?.autorizacao_id ?? null;
+            this.agendamentoForm.numero_autorizacao = ag?.numero_autorizacao ?? "";
+            this.agendamentoForm.validade_autorizacao = ag?.validade_autorizacao ?? "";
             
             const pacIdFromEP = ag?.paciente_id ?? this.eventoSelecionado?.extendedProps?.paciente_id ?? null;
             const procIdFromEP = ag?.procedimento_id ?? this.eventoSelecionado?.extendedProps?.procedimento_id ?? null;
@@ -1217,6 +1244,22 @@ export default {
             } catch (e) { }
         },
         async salvarEdicaoAgendamento() {
+            if (moment(this.agendamentoForm.data).isBefore(moment(), 'day')) {
+                this.$page.props.flash = { error: "A data do agendamento não pode ser retroativa a hoje." };
+                return;
+            }
+            if (this.isConvenioAgendamento && this.procedimentoRequerAutorizacao === false) {
+                if (this.agendamentoForm.validade_autorizacao) {
+                    if (moment(this.agendamentoForm.data).isAfter(moment(this.agendamentoForm.validade_autorizacao), 'day')) {
+                        this.$page.props.flash = { error: "A data do agendamento não pode ser superior à validade da autorização." };
+                        return;
+                    }
+                    if (moment(this.agendamentoForm.validade_autorizacao).isBefore(moment(), 'day')) {
+                        this.$page.props.flash = { error: "A validade da autorização não pode ser retroativa a hoje." };
+                        return;
+                    }
+                }
+            }
             const payload = {
                 paciente_id: this.agendamentoForm.paciente_id,
                 pessoa_id: this.agendamentoForm.pessoa_id,
@@ -1226,6 +1269,8 @@ export default {
                 status_id: this.agendamentoForm.status_id,
                 valor_cobrado: this.agendamentoForm.valor_cobrado ? Number(String(this.agendamentoForm.valor_cobrado).replace(/[^\d.,-]/g, '').replace(',', '.')) : null,
                 observacoes: this.agendamentoForm.observacoes,
+                numero_autorizacao: this.agendamentoForm.numero_autorizacao || null,
+                validade_autorizacao: this.agendamentoForm.validade_autorizacao || null,
             };
             this.processandoEdicao = true;
             try {
@@ -1271,6 +1316,9 @@ export default {
         async cancelarAgendamento() {
             if (!this.editAgendamentoForm.id) return;
             this.modalCancelamento = true;
+        },
+        imprimirGuiaAgendamento(agendamentoId) {
+            window.open(`/guias/${agendamentoId}/imprimir`, '_blank');
         },
         async confirmarCancelamentoAgendamento() {
             try {
@@ -1768,6 +1816,23 @@ export default {
             try { this.valorCobradoAutoCriacaoProcId = null; } catch (_) { }
         },
         async salvarAgendamento() {
+            if (moment(this.agendamentoForm.data).isBefore(moment(), 'day')) {
+                this.$page.props.flash = { error: "A data do agendamento não pode ser retroativa a hoje." };
+                return;
+            }
+            if (this.isConvenioAgendamento && this.procedimentoRequerAutorizacao === false) {
+                if (this.agendamentoForm.validade_autorizacao) {
+                    if (moment(this.agendamentoForm.data).isAfter(moment(this.agendamentoForm.validade_autorizacao), 'day')) {
+                        this.$page.props.flash = { error: "A data do agendamento não pode ser superior à validade da autorização." };
+                        return;
+                    }
+                    if (moment(this.agendamentoForm.validade_autorizacao).isBefore(moment(), 'day')) {
+                        this.$page.props.flash = { error: "A validade da autorização não pode ser retroativa a hoje." };
+                        return;
+                    }
+                }
+            }
+
             let basePayload = {
                 paciente_id: this.agendamentoForm.paciente_id,
                 pessoa_id: this.agendamentoForm.pessoa_id,
@@ -1777,6 +1842,8 @@ export default {
                 valor_cobrado: this.agendamentoForm.valor_cobrado ? Number(String(this.agendamentoForm.valor_cobrado).replace(/[^\d.,-]/g, '').replace(',', '.')) : null,
                 observacoes: this.agendamentoForm.observacoes,
                 is_retorno: this.agendamentoForm.is_retorno,
+                numero_autorizacao: this.agendamentoForm.numero_autorizacao || null,
+                validade_autorizacao: this.agendamentoForm.validade_autorizacao || null,
             };
             this.processandoCriacao = true;
             try {
@@ -1819,7 +1886,7 @@ export default {
                     this.$page.props.flash = { ...fp, success: createdCount > 1 ? "Agendamentos criados" : "Agendamento criado" };
                 } catch (_) { }
                 this.modalAgendarVisivel = false;
-                this.agendamentoForm = { paciente_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false };
+                this.agendamentoForm = { paciente_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "" };
                 this.valorCobradoAutoCriacaoProcId = null;
                 this.procedimentosFiltrados = [];
                 this.sessoesCriacao = [];
@@ -1870,6 +1937,8 @@ export default {
                         classNames: [cls],
                         extendedProps: {
                             paciente_id: r.paciente_id,
+                            convenio_id: r.convenio_id,
+                            convenio_tipo: r.convenio_tipo || "Particular",
                             procedimento_id: r.procedimento_id,
                             procedimento_nome: r.procedimento || "",
                             status: r.status || "",
@@ -2176,6 +2245,18 @@ export default {
                         <label class="form-check-label" for="isRetornoCheckbox">É Retorno?</label>
                     </div>
                 </div>
+
+                <div v-if="isConvenioAgendamento && procedimentoRequerAutorizacao === false" class="col-md-6 mt-3">
+                    <label class="form-label">Número da Autorização *</label>
+                    <input v-model="agendamentoForm.numero_autorizacao" type="text" class="form-control"
+                        placeholder="Insira o número" required />
+                </div>
+                <div v-if="isConvenioAgendamento && procedimentoRequerAutorizacao === false" class="col-md-6 mt-3">
+                    <label class="form-label">Validade da Autorização *</label>
+                    <flatPickr v-model="agendamentoForm.validade_autorizacao" class="form-control"
+                        :config="opcoesFlatpickrData" placeholder="Selecione a data de validade" required />
+                </div>
+
                 <div class="col-md-12">
                     <label class="form-label">Observações</label>
                     <textarea v-model="agendamentoForm.observacoes" class="form-control" rows="3" maxlength="500"
@@ -2210,6 +2291,11 @@ export default {
                     </div>
                 </template>
             </div>
+            <template #extraFooterLeft>
+                <button v-if="isEditMode && agendamentoForm.autorizacao_id" type="button" class="btn btn-info" title="Imprimir Guia" @click="imprimirGuiaAgendamento(agendamentoForm.id)">
+                    <i class="ri-printer-line me-1"></i> Guia
+                </button>
+            </template>
         </Offcanvas>
 
         <Modal :modelValue="modalCancelamento" title="Cancelar agendamento" nameButton="Sim, cancelar"
@@ -2222,9 +2308,9 @@ export default {
             :processing="false" :disableClose="bloquearAcoesModalEventosDia" size="xl" customWidth="95vw"
             @update:modelValue="modalEventosDiaVisivel = $event">
             <SimpleTable :key="chaveTabelaEventosDia" title="Lista de agendamentos" :items="eventosDiaGrid()"
-                :columns="[{ key: 'id', label: 'ID', width: '50px' }, { key: 'paciente', label: 'Paciente' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'medico', label: 'Médico' }, { key: 'hora', label: 'Hora' }, { key: 'status', label: 'Status' }]"
+                :columns="[{ key: 'id', label: 'ID', width: '50px' }, { key: 'paciente', label: 'Paciente' }, { key: 'convenio_tipo', label: 'Convênio' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'medico', label: 'Médico' }, { key: 'hora', label: 'Hora' }, { key: 'status', label: 'Status' }]"
                 has-actions :searchable="true" searchPlaceholder="Buscar agendamento..."
-                :searchFields="['paciente', 'procedimento', 'medico']" emptyTitle="Nenhum agendamento encontrado">
+                :searchFields="['paciente', 'convenio_tipo', 'procedimento', 'medico']" emptyTitle="Nenhum agendamento encontrado">
 
 
 
@@ -2233,6 +2319,11 @@ export default {
                         :disabled="bloquearAcoesModalEventosDia || acoesLoadingEventosDia?.[item.id]?.edit"
                         @click="abrirReagendarSessaoDaLista(item.id)">
                         <i class="ri-edit-line me-1"></i> Reagendar
+                    </button>
+                    <button v-if="String(item.convenio_tipo || '').toLowerCase().includes('convenio') || String(item.convenio_tipo || '').toLowerCase().includes('plano') || String(item.convenio_tipo || '').toLowerCase().includes('cooperativa')" type="button" class="btn btn-sm btn-info" title="Imprimir Guia"
+                        :disabled="bloquearAcoesModalEventosDia"
+                        @click="imprimirGuiaAgendamento(item.id)">
+                        <i class="ri-printer-line me-1"></i> Guia
                     </button>
                     <button v-if="!String(item.status || '').toLowerCase().includes('cancel')" type="button"
                         class="btn btn-sm btn-danger" title="Cancelar"

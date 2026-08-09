@@ -45,11 +45,11 @@ class ConvenioController extends Controller
 
     public function index()
     {
-        $convenios = Convenio::with(['medicos:id,nome,crm', 'medicos.especialidades:id,nome', 'medicoTuss:id'])
+        $convenios = Convenio::with(['medicos:id,nome,conselho_id,numero_conselho,uf_conselho', 'medicos.conselho', 'medicos.especialidades:id,nome', 'medicoTuss:id'])
             ->select('id','descricao','logo_path','tuss_tabela','tipo','empresa_id','ans','dias_recebimento','dias_retorno')
             ->get();
         $contas = Conta::select('id','nome')->orderBy('nome')->get();
-        $profissionaisSaude = Pessoa::with(['especialidades:id,nome'])->select('id','nome','crm')->orderBy('nome')->get();
+        $profissionaisSaude = Pessoa::with(['especialidades:id,nome', 'conselho'])->select('id','nome','conselho_id', 'numero_conselho', 'uf_conselho')->orderBy('nome')->get();
         $tussTabelas = DB::table('tuss')
             ->whereNotNull('tabela')
             ->where('tabela', '<>', '')
@@ -331,7 +331,7 @@ class ConvenioController extends Controller
             return response()->json(['procedimentos' => $out]);
         }
 
-        $select = ['t.id', 't.tabela', 't.codigo', 't.descricao', 't.total'];
+        $select = ['t.id', 't.tabela', 't.codigo', 't.descricao', 't.total', 'ct.requer_autorizacao'];
         if (Schema::hasColumn('tuss', 'eh_tratamento')) $select[] = 't.eh_tratamento';
         if (Schema::hasColumn('tuss', 'quantidade_sessoes')) $select[] = 't.quantidade_sessoes';
 
@@ -359,6 +359,7 @@ class ConvenioController extends Controller
             'valor' => $t->total ?? 0,
             'eh_tratamento' => (bool)($t->eh_tratamento ?? false),
             'quantidade_sessoes' => $t->quantidade_sessoes ?? null,
+            'requer_autorizacao' => (bool)($t->requer_autorizacao ?? false),
         ])->values();
 
         return response()->json(['procedimentos' => $out]);

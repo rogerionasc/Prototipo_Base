@@ -13,22 +13,24 @@ class PessoaSeeder extends Seeder
     public function run(): void
     {
         $estadoCivil = EstadoCivil::pluck('id', 'descricao')->toArray();
+        $conselhoId = \App\Models\Conselho::where('sigla', 'CRM')->value('id');
+
         $items = [
-            ['nome' => 'Dr. João Pereira', 'crm' => '12345-SP', 'sexo' => 'Masculino', 'estado_civil_id' => $estadoCivil['Casado'] ?? null, 'email' => 'joao.pereira@example.com'],
-            ['nome' => 'Dra. Maria Fernandes', 'crm' => '54321-SP', 'sexo' => 'Feminino', 'estado_civil_id' => $estadoCivil['Solteiro'] ?? null, 'email' => 'maria.fernandes@example.com'],
-            ['nome' => 'Dr. Carlos Lima', 'crm' => '98765-SP', 'sexo' => 'Masculino', 'estado_civil_id' => $estadoCivil['Viúvo'] ?? null, 'email' => 'carlos.lima@example.com'],
+            ['nome' => 'Dr. João Pereira', 'conselho_id' => $conselhoId, 'numero_conselho' => '12345', 'uf_conselho' => 'SP', 'sexo' => 'Masculino', 'estado_civil_id' => $estadoCivil['Casado'] ?? null, 'email' => 'joao.pereira@example.com'],
+            ['nome' => 'Dra. Maria Fernandes', 'conselho_id' => $conselhoId, 'numero_conselho' => '54321', 'uf_conselho' => 'SP', 'sexo' => 'Feminino', 'estado_civil_id' => $estadoCivil['Solteiro'] ?? null, 'email' => 'maria.fernandes@example.com'],
+            ['nome' => 'Dr. Carlos Lima', 'conselho_id' => $conselhoId, 'numero_conselho' => '98765', 'uf_conselho' => 'SP', 'sexo' => 'Masculino', 'estado_civil_id' => $estadoCivil['Viúvo'] ?? null, 'email' => 'carlos.lima@example.com'],
         ];
         foreach ($items as $data) {
-            Pessoa::firstOrCreate(['crm' => $data['crm']], $data);
+            Pessoa::firstOrCreate(['numero_conselho' => $data['numero_conselho']], $data);
         }
         $especialidades = Especialidade::pluck('id', 'nome')->toArray();
         $map = [
-            '12345-SP' => ['Clínica Geral', 'Cardiologia'],
-            '54321-SP' => ['Clínica Geral', 'Dermatologia'],
-            '98765-SP' => ['Ortopedia'],
+            '12345' => ['Clínica Geral', 'Cardiologia'],
+            '54321' => ['Clínica Geral', 'Dermatologia'],
+            '98765' => ['Ortopedia'],
         ];
-        foreach ($map as $crm => $lista) {
-            $prof = Pessoa::where('crm', $crm)->first();
+        foreach ($map as $num => $lista) {
+            $prof = Pessoa::where('numero_conselho', $num)->first();
             if (!$prof) {
                 continue;
             }
