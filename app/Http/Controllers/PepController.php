@@ -22,7 +22,7 @@ class PepController extends Controller
         }
 
 
-        $atendimento->load(['paciente', 'medico', 'procedimento', 'agendamento.sessaoTratamento']);
+        $atendimento->load(['paciente', 'medico', 'procedimento', 'tuss', 'agendamento.sessaoTratamento']);
         $paciente = $atendimento->paciente;
         $user = auth()->user();
         
@@ -89,7 +89,7 @@ class PepController extends Controller
             ->get();
 
         // Carrega o histórico de PEPs do paciente (incluindo o atual caso já esteja finalizado/encerrado)
-        $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'atendimento.procedimento', 'atendimento.agendamento.sessaoTratamento', 'diagnosticos.profissional', 'diagnosticos.cid'])
+        $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'atendimento.procedimento', 'atendimento.tuss', 'atendimento.agendamento.sessaoTratamento', 'diagnosticos.profissional', 'diagnosticos.cid'])
             ->where('paciente_id', $paciente->id)
             ->where(function($q) use ($pep) {
                 if ($pep->status === 'Aberto') {

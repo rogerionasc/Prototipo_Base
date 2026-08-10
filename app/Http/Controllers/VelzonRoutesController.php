@@ -48,16 +48,26 @@ class VelzonRoutesController extends Controller
         $parentescos = Parentesco::select('id','descricao')->orderBy('descricao')->get();
         $categoriasProcedimento = CategoriaProcedimento::select('id','nome')->orderBy('nome')->get();
         $comorbidades = Comorbidade::select('id','nome')->orderBy('nome')->get();
-        $conselhos = \App\Models\Conselho::select('id', 'codigo', 'sigla', 'descricao')->orderBy('sigla')->get();
         
-        return Inertia::render('Parametrizacoes/Index', [
+        return Inertia::render('Parametrizacao/Sistema/Index', [
             'estadosCivis' => $estados,
             'tiposSanguineos' => $tipos,
             'canaisAviso' => $canais,
             'parentescos' => $parentescos,
             'categoriasProcedimento' => $categoriasProcedimento,
             'comorbidades' => $comorbidades,
+        ]);
+    }
+
+    public function configuracaoTiss() {
+        $conselhos = \App\Models\Conselho::select('id', 'codigo', 'sigla', 'descricao')->orderBy('sigla')->get();
+        $caraterAtendimentos = \App\Models\CaraterAtendimento::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
+        $tabelasReferencia = \App\Models\TabelaReferencia::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
+        
+        return Inertia::render('Parametrizacao/Tiss/Index', [
             'conselhos' => $conselhos,
+            'caraterAtendimentos' => $caraterAtendimentos,
+            'tabelasReferencia' => $tabelasReferencia,
         ]);
     }
 
@@ -395,5 +405,61 @@ class VelzonRoutesController extends Controller
         $conselho = \App\Models\Conselho::findOrFail($id);
         $conselho->delete();
         return redirect()->back()->with('success', 'Conselho removido com sucesso!');
+    }
+
+    public function parametros_store_carater_atendimento(Request $request)
+    {
+        $data = $request->validate([
+            'codigo' => 'required|string|max:2|unique:carater_atendimentos,codigo',
+            'descricao' => 'required|string|max:50',
+        ]);
+        \App\Models\CaraterAtendimento::create($data);
+        return redirect()->back()->with('success', 'Caráter de Atendimento criado com sucesso!');
+    }
+
+    public function parametros_update_carater_atendimento(Request $request, $id)
+    {
+        $carater = \App\Models\CaraterAtendimento::findOrFail($id);
+        $data = $request->validate([
+            'codigo' => 'required|string|max:2|unique:carater_atendimentos,codigo,' . $id,
+            'descricao' => 'required|string|max:50',
+        ]);
+        $carater->update($data);
+        return redirect()->back()->with('success', 'Caráter de Atendimento atualizado com sucesso!');
+    }
+
+    public function parametros_destroy_carater_atendimento($id)
+    {
+        $carater = \App\Models\CaraterAtendimento::findOrFail($id);
+        $carater->delete();
+        return redirect()->back()->with('success', 'Caráter de Atendimento removido com sucesso!');
+    }
+
+    public function parametros_store_tabela_referencia(Request $request)
+    {
+        $data = $request->validate([
+            'codigo' => 'required|string|max:2|unique:tabela_referencias,codigo',
+            'descricao' => 'required|string|max:100',
+        ]);
+        \App\Models\TabelaReferencia::create($data);
+        return redirect()->back()->with('success', 'Tabela de Referência criada com sucesso!');
+    }
+
+    public function parametros_update_tabela_referencia(Request $request, $id)
+    {
+        $tabela = \App\Models\TabelaReferencia::findOrFail($id);
+        $data = $request->validate([
+            'codigo' => 'required|string|max:2|unique:tabela_referencias,codigo,' . $id,
+            'descricao' => 'required|string|max:100',
+        ]);
+        $tabela->update($data);
+        return redirect()->back()->with('success', 'Tabela de Referência atualizada com sucesso!');
+    }
+
+    public function parametros_destroy_tabela_referencia($id)
+    {
+        $tabela = \App\Models\TabelaReferencia::findOrFail($id);
+        $tabela->delete();
+        return redirect()->back()->with('success', 'Tabela de Referência removida com sucesso!');
     }
 }

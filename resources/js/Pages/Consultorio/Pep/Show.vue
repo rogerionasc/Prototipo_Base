@@ -199,7 +199,7 @@ const evolucoesPorAtendimento = computed(() => {
         hora_formatada: parts[1] || '',
         medico: props.atendimento?.medico?.nome || 'Profissional',
         procedimento: (() => {
-            let nome = props.atendimento?.procedimento?.nome || 'Consulta';
+            let nome = props.atendimento?.procedimento?.nome || props.atendimento?.tuss?.descricao || 'Consulta';
             const ag = props.atendimento?.agendamento;
             const st = ag?.sessao_tratamento || ag?.sessaoTratamento;
             if (st && st.numero_sessao) {
@@ -228,7 +228,7 @@ const evolucoesPorAtendimento = computed(() => {
                     hora_formatada: hParts[1] || '',
                     medico: h.atendimento?.medico?.nome || h.profissional?.nome || 'Profissional',
                     procedimento: (() => {
-                        let nome = h.atendimento?.procedimento?.nome || 'Consulta';
+                        let nome = h.atendimento?.procedimento?.nome || h.atendimento?.tuss?.descricao || 'Consulta';
                         const ag = h.atendimento?.agendamento;
                         const st = ag?.sessao_tratamento || ag?.sessaoTratamento;
                         if (st && st.numero_sessao) {
@@ -527,7 +527,7 @@ const finalizarAtendimento = () => {
                                 <div class="row">
                                     <div class="col-md-4">
                                         <p class="text-muted mb-1">Procedimento:</p>
-                                        <h6 class="fs-14 mb-0">{{ atendimento?.procedimento?.nome || 'N/A' }}</h6>
+                                        <h6 class="fs-14 mb-0">{{ atendimento?.procedimento?.nome || atendimento?.tuss?.descricao || 'N/A' }}</h6>
                                     </div>
                                     <div class="col-md-4">
                                         <p class="text-muted mb-1">Médico Responsável:</p>
@@ -683,8 +683,8 @@ const finalizarAtendimento = () => {
                                                                     </div>
                                                                     <div>
                                                                         <span class="fw-semibold text-dark fs-14">Atendimento em {{ formatDate(hist.aberto_em) }}</span>
-                                                                        <span v-if="hist.atendimento?.procedimento?.nome" class="badge bg-info-subtle text-info ms-2 fs-11">
-                                                                            {{ hist.atendimento.procedimento.nome }}
+                                                                        <span v-if="hist.atendimento?.procedimento?.nome || hist.atendimento?.tuss?.descricao" class="badge bg-info-subtle text-info ms-2 fs-11">
+                                                                            {{ hist.atendimento?.procedimento?.nome || hist.atendimento?.tuss?.descricao }}
                                                                         </span>
                                                                     </div>
                                                                 </div>
@@ -1049,7 +1049,7 @@ const finalizarAtendimento = () => {
                                         <div class="row g-3">
                                             <div class="col-md-4">
                                                 <label class="form-label">Tipo de Nota</label>
-                                                <select class="form-select" v-model="evolucaoForm.tipo" data-choices data-choices-search-false :disabled="!canEditPep">
+                                                <select :key="'tipo-'+canEditPep" class="form-select" v-model="evolucaoForm.tipo" data-choices data-choices-search-false :disabled="!canEditPep">
                                                     <option value="" disabled>Selecione o tipo</option>
                                                     <option value="Evolução Clínica">Evolução Clínica</option>
                                                     <option value="Nota de Enfermagem">Nota de Enfermagem</option>
@@ -1058,9 +1058,9 @@ const finalizarAtendimento = () => {
                                             </div>
                                             <div class="col-md-8">
                                                 <label class="form-label">Vincular a um Tratamento Ativo (Opcional)</label>
-                                                <select class="form-select" v-model="evolucaoForm.tratamento_id" data-choices data-choices-search-false :disabled="!canEditPep">
+                                                <select :key="'trat-'+canEditPep" class="form-select" v-model="evolucaoForm.tratamento_id" data-choices data-choices-search-false :disabled="!canEditPep">
                                                     <option :value="null">Nenhum (Evolução Avulsa)</option>
-                                                    <option v-for="trat in props.tratamentos?.filter(t => t.status === 'Em andamento' && (t.nome_tratamento || '').trim().toLowerCase() === (props.atendimento?.procedimento?.nome || '').trim().toLowerCase())" :key="trat.id" :value="trat.id">
+                                                    <option v-for="trat in props.tratamentos?.filter(t => t.status === 'Em andamento' && (t.nome_tratamento || '').trim().toLowerCase() === (props.atendimento?.procedimento?.nome || props.atendimento?.tuss?.descricao || '').trim().toLowerCase())" :key="trat.id" :value="trat.id">
                                                         {{ trat.nome_tratamento }} (Sessão {{ trat.quantidade_sessoes_realizadas + 1 }} de {{ trat.quantidade_sessoes_previstas }})
                                                     </option>
                                                 </select>

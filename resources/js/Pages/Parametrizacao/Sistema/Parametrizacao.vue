@@ -347,81 +347,7 @@
                             </SimpleTable>
                         </BTab>
 
-                        <!-- CONSELHOS -->
-                        <BTab title="Conselhos">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="mb-0">Lista de Conselhos</h6>
-                            </div>
-                            <div class="border rounded p-3 bg-light-subtle mb-4">
-                                <form @submit.prevent="saveConselho">
-                                    <BRow class="g-3 align-items-end">
-                                        <BCol md="2">
-                                            <label class="form-label">Cód.</label>
-                                            <input v-model="formConselho.codigo" type="text" class="form-control"
-                                                :class="{ 'is-invalid': formConselho.errors.codigo }"
-                                                placeholder="Ex.: 06" maxlength="5" />
-                                            <div class="invalid-feedback">{{ formConselho.errors.codigo }}</div>
-                                        </BCol>
-                                        <BCol md="2">
-                                            <label class="form-label">Sigla <span class="text-danger">*</span></label>
-                                            <input v-model="formConselho.sigla" type="text" class="form-control"
-                                                :class="{ 'is-invalid': formConselho.errors.sigla }"
-                                                placeholder="Ex.: CRM" maxlength="20" required />
-                                            <div class="invalid-feedback">{{ formConselho.errors.sigla }}</div>
-                                        </BCol>
-                                        <BCol md="5">
-                                            <label class="form-label">Descrição do Conselho <span class="text-danger">*</span></label>
-                                            <input v-model="formConselho.descricao" type="text" class="form-control"
-                                                :class="{ 'is-invalid': formConselho.errors.descricao }"
-                                                placeholder="Ex.: Conselho Regional de Medicina" required />
-                                            <div class="invalid-feedback">{{ formConselho.errors.descricao }}</div>
-                                        </BCol>
-                                        <BCol md="3">
-                                            <button type="submit" class="btn btn-primary w-100"
-                                                :disabled="formConselho.processing"><i
-                                                    class="ri-add-line align-bottom me-1"></i> Adicionar</button>
-                                        </BCol>
-                                    </BRow>
-                                </form>
-                            </div>
-                            <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
-                                :items="conselhosLocal" :columns="[{ key: 'codigo', label: 'Cód.' }, { key: 'sigla', label: 'Sigla' }, { key: 'descricao', label: 'Descrição' }, { key: 'acoes', label: 'Ações', width: '120px' }]" emptyTitle=""
-                                emptyMessage="Nenhum registro encontrado.">
-                                <template #body="{ items }">
-                                    <tr v-for="c in items" :key="c.id">
-                                        <template v-if="editingConselhoId !== c.id">
-                                            <td>{{ c.codigo }}</td>
-                                            <td>{{ c.sigla }}</td>
-                                            <td>{{ c.descricao }}</td>
-                                            <td class="text-end" style="width:150px">
-                                                <button type="button" class="btn btn-sm btn-soft-info me-2"
-                                                    @click="startEditConselho(c)" title="Editar"><i
-                                                        class="ri-pencil-line"></i></button>
-                                                <button type="button" class="btn btn-sm btn-soft-danger"
-                                                    @click="destroyConselho(c.id)" title="Excluir"><i
-                                                        class="ri-delete-bin-line"></i></button>
-                                            </td>
-                                        </template>
-                                        <template v-else>
-                                            <td colspan="4">
-                                                <div class="d-flex gap-2">
-                                                    <input v-model="editConselho.codigo" type="text"
-                                                        class="form-control" placeholder="Cód." style="width: 80px;" maxlength="5" />
-                                                    <input v-model="editConselho.sigla" type="text"
-                                                        class="form-control" placeholder="Sigla" style="width: 150px;" required />
-                                                    <input v-model="editConselho.descricao" type="text"
-                                                        class="form-control" placeholder="Descrição" required />
-                                                    <button type="button" class="btn btn-success"
-                                                        @click="updateConselho">Salvar</button>
-                                                    <button type="button" class="btn btn-light"
-                                                        @click="cancelEditConselho">Cancelar</button>
-                                                </div>
-                                            </td>
-                                        </template>
-                                    </tr>
-                                </template>
-                            </SimpleTable>
-                        </BTab>
+
                     </BTabs>
 
 
@@ -452,7 +378,6 @@ const props = defineProps({
     parentescos: { type: Array, default: () => [] },
     categoriasProcedimento: { type: Array, default: () => [] },
     comorbidades: { type: Array, default: () => [] },
-    conselhos: { type: Array, default: () => [] },
 });
 
 const estadosCivisLocal = ref([...(props.estadosCivis || [])]);
@@ -461,7 +386,6 @@ const canaisAvisoLocal = ref([...(props.canaisAviso || [])]);
 const parentescosLocal = ref([...(props.parentescos || [])]);
 const categoriasLocal = ref([...(props.categoriasProcedimento || [])]);
 const comorbidadesLocal = ref([...(props.comorbidades || [])]);
-const conselhosLocal = ref([...(props.conselhos || [])]);
 
 watch(() => props.estadosCivis, (v) => { estadosCivisLocal.value = [...(v || [])]; });
 watch(() => props.tiposSanguineos, (v) => { tiposSanguineosLocal.value = [...(v || [])]; });
@@ -469,7 +393,6 @@ watch(() => props.canaisAviso, (v) => { canaisAvisoLocal.value = [...(v || [])];
 watch(() => props.parentescos, (v) => { parentescosLocal.value = [...(v || [])]; });
 watch(() => props.categoriasProcedimento, (v) => { categoriasLocal.value = [...(v || [])]; });
 watch(() => props.comorbidades, (v) => { comorbidadesLocal.value = [...(v || [])]; });
-watch(() => props.conselhos, (v) => { conselhosLocal.value = [...(v || [])]; });
 
 const formEstadoCivil = useForm({ descricao: "" });
 const editEstadoCivil = useForm({ descricao: "" });
@@ -495,10 +418,6 @@ const formComorbidade = useForm({ nome: "" });
 const editComorbidade = useForm({ nome: "" });
 const editingComorbidadeId = ref(null);
 
-const formConselho = useForm({ codigo: "", sigla: "", descricao: "" });
-const editConselho = useForm({ codigo: "", sigla: "", descricao: "" });
-const editingConselhoId = ref(null);
-
 const deleteModal = ref(false);
 const deleteContext = ref({ type: '', id: null, nome: '' });
 const deleteTitle = computed(() => {
@@ -509,7 +428,6 @@ const deleteTitle = computed(() => {
     if (t === 'parentesco') return 'Excluir Parentesco';
     if (t === 'categoria_procedimento') return 'Excluir Categoria de Procedimento';
     if (t === 'comorbidade') return 'Excluir Comorbidade';
-    if (t === 'conselho') return 'Excluir Conselho';
     return 'Excluir';
 });
 const deleteSubTitleComputed = computed(() => {
@@ -708,40 +626,7 @@ const destroyComorbidade = (id) => {
     deleteModal.value = true;
 };
 
-const saveConselho = () => {
-    formConselho.post("/parametros/conselho", {
-        onSuccess: () => {
-            formConselho.reset();
-            router.reload({ only: ['conselhos'] });
-        },
-        preserveScroll: true,
-    });
-};
-const startEditConselho = (c) => {
-    editingConselhoId.value = c.id;
-    editConselho.codigo = c.codigo || "";
-    editConselho.sigla = c.sigla || "";
-    editConselho.descricao = c.descricao || "";
-};
-const cancelEditConselho = () => {
-    editingConselhoId.value = null;
-    editConselho.reset();
-};
-const updateConselho = () => {
-    editConselho.put(`/parametros/conselho/${editingConselhoId.value}`, {
-        onSuccess: () => {
-            editingConselhoId.value = null;
-            editConselho.reset();
-            router.reload({ only: ['conselhos'] });
-        },
-        preserveScroll: true,
-    });
-};
-const destroyConselho = (id) => {
-    const item = (props.conselhos || []).find(c => c.id === id);
-    deleteContext.value = { type: 'conselho', id, nome: item?.sigla || '' };
-    deleteModal.value = true;
-};
+
 
 const confirmDelete = () => {
     const ctx = deleteContext.value || {};
@@ -789,15 +674,6 @@ const confirmDelete = () => {
                 comorbidadesLocal.value = (comorbidadesLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
                 router.reload({ only: ['comorbidades'] });
             }
-        });
-    } else if (ctx.type === 'conselho') {
-        f.delete(`/parametros/conselho/${ctx.id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                conselhosLocal.value = (conselhosLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
-                router.reload({ only: ['conselhos'] });
-            }
-        });
     }
     deleteModal.value = false;
     deleteContext.value = { type: '', id: null, nome: '' };

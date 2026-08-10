@@ -1,10 +1,5 @@
 <template>
-  <form
-    class="row g-3 needs-validation"
-    novalidate
-    ref="formEl"
-    @submit.prevent="submit"
-  >
+  <form class="row g-3 needs-validation" novalidate ref="formEl" @submit.prevent="submit">
     <BTabs nav-class="nav-tabs-custom text-muted">
       <BTab title="Dados">
         <div class="row g-3 mt-2">
@@ -17,7 +12,8 @@
                 Logo
               </div>
             </div>
-            <input ref="logoInput" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" class="form-control" @change="onLogoChange" />
+            <input ref="logoInput" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+              class="form-control" @change="onLogoChange" />
             <div class="form-text">PNG, JPG ou WEBP (máx. 2MB).</div>
           </div>
 
@@ -25,48 +21,25 @@
             <div class="d-none d-md-block logo-preview-spacer mb-2"></div>
             <label for="descricao" class="form-label">Descrição</label>
             <span class="text-danger ms-1">*</span>
-            <input
-              v-model="form.descricao"
-              type="text"
-              class="form-control"
-              id="descricao"
-              placeholder="Nome do convênio"
-              required
-              maxlength="120"
-            />
+            <input v-model="form.descricao" type="text" class="form-control" id="descricao"
+              placeholder="Nome do convênio" required maxlength="120" />
             <div class="invalid-feedback">Informe a descrição.</div>
           </div>
 
           <div class="col-md-6">
             <label for="tipo" class="form-label">Tipo</label>
-            <select
-              data-choices
-              ref="tipoSelect"
-              v-model="form.tipo"
-              class="form-select"
-              id="tipo"
-            >
+            <select data-choices ref="tipoSelect" v-model="form.tipo" class="form-select" id="tipo">
               <option disabled value="">Selecione...</option>
-              <option value="Convenio">Convênio</option>
-              <option value="Particular">Particular</option>
+              <option value="CONVENIO">CONVÊNIO</option>
+              <option value="PARTICULAR">PARTICULAR</option>
             </select>
           </div>
 
           <div class="col-md-6">
             <label for="empresa" class="form-label">Empresa</label>
-            <select
-              v-model="form.empresa_id"
-              data-choices
-              class="form-select"
-              id="empresa"
-              ref="empresaSelect"
-            >
+            <select v-model="form.empresa_id" data-choices class="form-select" id="empresa" ref="empresaSelect">
               <option disabled value="">Selecione...</option>
-              <option
-                v-for="c in props.contas"
-                :key="c.id"
-                :value="c.id"
-              >
+              <option v-for="c in props.contas" :key="c.id" :value="c.id">
                 {{ c.nome }}
               </option>
             </select>
@@ -74,35 +47,19 @@
 
           <div class="col-md-2">
             <label for="ans" class="form-label">ANS</label>
-            <input
-              v-model.number="form.ans"
-              type="number"
-              class="form-control"
-              id="ans"
-              placeholder="Código ANS"
-            />
+            <input v-model.number="form.ans" type="number" class="form-control" id="ans" placeholder="Código ANS" />
           </div>
 
           <div class="col-md-2">
             <label for="diasReceb" class="form-label">Dias Receb.</label>
-            <input
-              v-model.number="form.dias_recebimento"
-              type="number"
-              class="form-control"
-              id="diasReceb"
-              placeholder="Ex.: 30"
-            />
+            <input v-model.number="form.dias_recebimento" type="number" class="form-control" id="diasReceb"
+              placeholder="Ex.: 30" />
           </div>
 
           <div class="col-md-2">
             <label for="diasRet" class="form-label">Dias Retorno</label>
-            <input
-              v-model.number="form.dias_retorno"
-              type="number"
-              class="form-control"
-              id="diasRet"
-              placeholder="Ex.: 7"
-            />
+            <input v-model.number="form.dias_retorno" type="number" class="form-control" id="diasRet"
+              placeholder="Ex.: 7" />
           </div>
         </div>
       </BTab>
@@ -120,14 +77,8 @@
                   <i class="ri-file-list-3-line text-primary me-1"></i>
                   Tabela TUSS
                 </label>
-                <select
-                  data-choices
-                  ref="tussTabelaSelect"
-                  v-model="form.tuss_tabela"
-                  class="form-select"
-                  id="tussTabela"
-                  :disabled="isTipoParticular"
-                >
+                <select data-choices ref="tussTabelaSelect" v-model="form.tuss_tabela" class="form-select"
+                  id="tussTabela" :disabled="isTipoParticular">
                   <option disabled value="">Selecione...</option>
                   <option v-for="t in allowedTabelas" :key="t" :value="t">{{ t }}</option>
                 </select>
@@ -136,12 +87,8 @@
 
               <div class="col-lg-6">
                 <div class="d-flex flex-wrap justify-content-lg-end gap-2">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-soft-danger"
-                    @click="clearSelectedTuss"
-                    :disabled="selectedTussRows.length === 0"
-                  >
+                  <button type="button" class="btn btn-sm btn-soft-danger" @click="clearSelectedTuss"
+                    :disabled="selectedTussRows.length === 0">
                     <i class="ri-delete-bin-6-line me-1"></i>
                     Limpar seleção
                   </button>
@@ -168,44 +115,37 @@
                 </div>
                 <div class="card-body pt-2">
                   <div class="search-box mb-2">
-                    <input
-                      v-model="selectedTussQuery"
-                      type="text"
-                      class="form-control search"
-                      placeholder="Buscar nos selecionados"
-                      :disabled="selectedTussRows.length === 0"
-                    />
+                    <input v-model="selectedTussQuery" type="text" class="form-control search"
+                      placeholder="Buscar nos selecionados" :disabled="selectedTussRows.length === 0" />
                     <i class="ri-search-line search-icon"></i>
                   </div>
 
                   <div class="tuss-selected-scroll">
                     <ul class="list-group list-group-flush" v-if="filteredSelectedTussRows.length > 0">
-                      <li
-                        v-for="r in filteredSelectedTussRows"
-                        :key="`sel-${r.id}`"
-                        class="list-group-item px-2 py-2 mb-1 border rounded"
-                      >
+                      <li v-for="r in filteredSelectedTussRows" :key="`sel-${r.id}`"
+                        class="list-group-item px-2 py-2 mb-1 border rounded">
                         <div class="d-flex justify-content-between align-items-start">
                           <div class="d-flex flex-column me-2 flex-grow-1" style="min-width:0;">
                             <span class="d-flex align-items-center flex-wrap gap-2">
                               <span class="fw-bold">{{ r.codigo }}</span>
                               <span class="badge bg-secondary-subtle text-secondary">{{ r.tabela || "—" }}</span>
-                              <button type="button" 
-                                class="btn btn-sm p-0 m-0 border-0 d-flex align-items-center" 
+                              <button type="button" class="btn btn-sm p-0 m-0 border-0 d-flex align-items-center"
                                 :class="r.requer_autorizacao ? 'text-success' : 'text-muted opacity-50'"
                                 @click="r.requer_autorizacao = !r.requer_autorizacao"
-                                :title="r.requer_autorizacao ? 'Requer autorização prévia (clique para alterar)' : 'Não requer autorização (clique para alterar)'"
-                              >
-                                <i :class="r.requer_autorizacao ? 'ri-shield-check-fill fs-5' : 'ri-shield-line fs-5'"></i>
+                                :title="r.requer_autorizacao ? 'Requer autorização prévia (clique para alterar)' : 'Não requer autorização (clique para alterar)'">
+                                <i
+                                  :class="r.requer_autorizacao ? 'ri-shield-check-fill fs-5' : 'ri-shield-line fs-5'"></i>
                               </button>
                             </span>
                             <span class="text-muted small mt-1 text-truncate-2">{{ r.descricao }}</span>
                           </div>
                           <div class="d-flex align-items-start gap-2 flex-shrink-0">
-                            <span v-if="r.total !== null && r.total !== undefined && String(r.total) !== ''" class="text-muted small text-nowrap mt-1 fw-medium">
+                            <span v-if="r.total !== null && r.total !== undefined && String(r.total) !== ''"
+                              class="text-muted small text-nowrap mt-1 fw-medium">
                               {{ formatMoney(r.total) }}
                             </span>
-                            <button type="button" class="btn btn-sm btn-soft-danger px-2 py-1" @click="removeTussRow(r.id)" title="Remover procedimento">
+                            <button type="button" class="btn btn-sm btn-soft-danger px-2 py-1"
+                              @click="removeTussRow(r.id)" title="Remover procedimento">
                               <i class="ri-close-line"></i>
                             </button>
                           </div>
@@ -237,53 +177,29 @@
                     </div>
                   </div>
                   <div class="fw-semibold">Selecione uma tabela TUSS</div>
-                  <div class="text-muted small">Depois use a busca para encontrar o procedimento e adicionar ao convênio.</div>
+                  <div class="text-muted small">Depois use a busca para encontrar o procedimento e adicionar ao
+                    convênio.</div>
                 </div>
               </div>
-              <TableGrid
-                v-if="form.tuss_tabela"
-                ref="tussGridRef"
-                :serverUrl="tussServerUrl"
-                :columns="tussGridColumns"
-                :search="true"
-                :searchPlaceholder="'Buscar procedimento (código ou descrição)'"
-                :showCheckbox="true"
-                :showMultiDelete="false"
-                :showAddButton="true"
-                :addButtonText="'Adicionar selecionados'"
-                :addButtonIconClass="'ri-add-circle-line'"
-                :addButtonDisabled="tussGridSelectedIds.length === 0"
-                :showActions="false"
-                :showPerPagination="true"
-                :compactSpacing="true"
-                :tableTitle="`Procedimentos (${form.tuss_tabela})`"
-                @add="addSelectedFromGrid"
-                @selectionChange="onTussGridSelectionChange"
-              />
+              <TableGrid v-if="form.tuss_tabela" ref="tussGridRef" :serverUrl="tussServerUrl" :columns="tussGridColumns"
+                :search="true" :searchPlaceholder="'Buscar procedimento (código ou descrição)'" :showCheckbox="true"
+                :showMultiDelete="false" :showAddButton="true" :addButtonText="'Adicionar selecionados'"
+                :addButtonIconClass="'ri-add-circle-line'" :addButtonDisabled="tussGridSelectedIds.length === 0"
+                :showActions="false" :showPerPagination="true" :compactSpacing="true"
+                :tableTitle="`Procedimentos (${form.tuss_tabela})`" @add="addSelectedFromGrid"
+                @selectionChange="onTussGridSelectionChange" />
             </div>
           </div>
         </div>
       </BTab>
       <BTab title="Médicos Conveniados">
         <div class="mt-2">
-          <TableGrid
-            :columns="medicosGridColumns"
-            :data="selectedMedicosRows"
-            :tableTitle="'Médicos Conveniados'"
-            :search="true"
-            :searchPlaceholder="'Buscar médico'"
-            :showCheckbox="false"
-            :showActions="true"
-            :showStatus="false"
-            :showPerPagination="true"
-            :showAddButton="true"
-            :addButtonText="'Adicionar Médico'"
+          <TableGrid :columns="medicosGridColumns" :data="selectedMedicosRows" :tableTitle="'Médicos Conveniados'"
+            :search="true" :searchPlaceholder="'Buscar médico'" :showCheckbox="false" :showActions="true"
+            :showStatus="false" :showPerPagination="true" :showAddButton="true" :addButtonText="'Adicionar Médico'"
             :addButtonIconClass="'ri-user-add-line'"
-            :actionsConfig="{ edit: false, show: false, delete: true, procedure: true }"
-            @add="openAddMedicoModal"
-            @procedure="editMedico"
-            @delete="removeMedico"
-          />
+            :actionsConfig="{ edit: false, show: false, delete: true, procedure: true }" @add="openAddMedicoModal"
+            @procedure="editMedico" @delete="removeMedico" />
         </div>
       </BTab>
     </BTabs>
@@ -291,7 +207,8 @@
 
   <!-- Modal para adicionar médico -->
   <Teleport to="body">
-    <Modal v-model="showAddMedicoModal" title="Adicionar Médico ao Convênio" :name-button="'Adicionar'" :zIndex="1060" :backdropZIndex="1055" @save="addMedicoFromModal">
+    <Modal v-model="showAddMedicoModal" title="Adicionar Médico ao Convênio" :name-button="'Adicionar'" :zIndex="1060"
+      :backdropZIndex="1055" @save="addMedicoFromModal">
       <div>
         <label class="form-label mb-1">Selecione o médico</label>
         <select ref="modalMedicoSelect" class="form-select" @change="handleModalMedicoSelect">
@@ -302,31 +219,21 @@
 
   <!-- Modal para editar TUSS do médico -->
   <Teleport to="body">
-    <Modal v-model="showEditMedicoTussModal" title="Procedimentos do Médico" :name-button="'Salvar'" :zIndex="1060" :backdropZIndex="1055" size="xl" @save="saveMedicoTussModal">
+    <Modal v-model="showEditMedicoTussModal" title="Procedimentos do Médico" :name-button="'Salvar'" :zIndex="1060"
+      :backdropZIndex="1055" size="xl" @save="saveMedicoTussModal">
       <div v-if="editingMedicoData">
         <h6 class="mb-3">Médico: {{ editingMedicoData.nome }}</h6>
         <div class="alert alert-info py-2 px-3 small mb-3">
-          <i class="ri-information-line me-1"></i> Apenas os procedimentos já selecionados na aba "Procedimentos (TUSS)" estão disponíveis para o médico.
+          <i class="ri-information-line me-1"></i> Apenas os procedimentos já selecionados na aba "Procedimentos (TUSS)"
+          estão disponíveis para o médico.
         </div>
-        <TableGrid
-          v-if="showEditMedicoTussModal"
-          ref="medicoTussGridRef"
-          :columns="[
-            { id: 'id', name: 'ID', sort: false, attributes: { style: 'display:none;' } },
-            { id: 'codigo', name: 'Código' },
-            { id: 'descricao', name: 'Descrição' }
-          ]"
-          :data="selectedTussRows"
-          :search="true"
-          :searchPlaceholder="'Buscar procedimento...'"
-          :showCheckbox="true"
-          :showMultiDelete="false"
-          :showAddButton="false"
-          :showActions="false"
-          :showPerPagination="false"
-          :compactSpacing="true"
-          :tableTitle="'Selecione os procedimentos'"
-        />
+        <TableGrid v-if="showEditMedicoTussModal" ref="medicoTussGridRef" :columns="[
+          { id: 'id', name: 'ID', sort: false, attributes: { style: 'display:none;' } },
+          { id: 'codigo', name: 'Código' },
+          { id: 'descricao', name: 'Descrição' }
+        ]" :data="selectedTussRows" :search="true" :searchPlaceholder="'Buscar procedimento...'" :showCheckbox="true"
+          :showMultiDelete="false" :showAddButton="false" :showActions="false" :showPerPagination="false"
+          :compactSpacing="true" :tableTitle="'Selecione os procedimentos'" />
       </div>
     </Modal>
   </Teleport>
@@ -549,20 +456,20 @@ function addSelectedTuss() {
   });
   selectedTussRows.value.push(...newRows);
   tussGridSelectedIds.value = [];
-  try { tussGridRef.value?.clearSelection?.(); } catch (_) {}
+  try { tussGridRef.value?.clearSelection?.(); } catch (_) { }
 }
 
 function clearSelectedTuss() {
   selectedTussRows.value = [];
   selectedTussQuery.value = "";
-  try { tussGridRef.value?.clearSelection?.(); } catch (_) {}
+  try { tussGridRef.value?.clearSelection?.(); } catch (_) { }
   tussGridSelectedIds.value = [];
 }
 
 function removeSelectedTussRows() {
   selectedTussRows.value = selectedTussRows.value.filter(r => !tussGridSelectedIds.value.includes(Number(r.id)));
   tussGridSelectedIds.value = [];
-  try { tussGridRef.value?.clearSelection?.(); } catch (_) {}
+  try { tussGridRef.value?.clearSelection?.(); } catch (_) { }
 }
 
 function clearSelectedMedicos() {
@@ -574,14 +481,14 @@ function clearSelectedMedicos() {
 function setSelectedMedicos(rows) {
   selectedMedicosRows.value = Array.isArray(rows)
     ? rows
-        .map((m) => ({
-          id: Number(m?.id),
-          nome: m?.nome || "",
-          crm: m?.crm || "",
-          especialidades: (m?.especialidades || []).map(e => ({ id: e.id, nome: e.nome })),
-          tuss_ids: Array.isArray(m?.tuss_ids) ? m.tuss_ids.map(Number) : []
-        }))
-        .filter((m) => Number.isFinite(m.id))
+      .map((m) => ({
+        id: Number(m?.id),
+        nome: m?.nome || "",
+        crm: m?.crm || "",
+        especialidades: (m?.especialidades || []).map(e => ({ id: e.id, nome: e.nome })),
+        tuss_ids: Array.isArray(m?.tuss_ids) ? m.tuss_ids.map(Number) : []
+      }))
+      .filter((m) => Number.isFinite(m.id))
     : [];
   form.medicos = selectedMedicosRows.value.map(m => ({
     id: m.id,
@@ -606,7 +513,7 @@ function removeMedico(row) {
 function addSelectedFromGrid() {
   const rows = tussGridRef.value?.getSelectedRowObjects?.() || [];
   for (const r of rows) addTussRow(r);
-  try { tussGridRef.value?.clearSelection?.(); } catch (_) {}
+  try { tussGridRef.value?.clearSelection?.(); } catch (_) { }
   tussGridSelectedIds.value = [];
 }
 
@@ -638,7 +545,7 @@ const logoDisplayUrl = computed(() => {
 function clearLogoLocal() {
   form.logo = null;
   if (logoPreviewUrl.value) {
-    try { URL.revokeObjectURL(logoPreviewUrl.value); } catch (_) {}
+    try { URL.revokeObjectURL(logoPreviewUrl.value); } catch (_) { }
   }
   logoPreviewUrl.value = "";
   if (logoInput.value) logoInput.value.value = "";
@@ -653,7 +560,7 @@ function onLogoChange(e) {
   const f = e?.target?.files?.[0] || null;
   form.logo = f;
   if (logoPreviewUrl.value) {
-    try { URL.revokeObjectURL(logoPreviewUrl.value); } catch (_) {}
+    try { URL.revokeObjectURL(logoPreviewUrl.value); } catch (_) { }
   }
   logoPreviewUrl.value = f ? URL.createObjectURL(f) : "";
 }
@@ -668,7 +575,7 @@ const getTussTabelaChoicesInstance = () => {
   return tussTabelaSelect.value?._choicesInstance || tussTabelaSelect.value?.choices || null;
 };
 const getEmpresaChoicesInstance = () => {
-    return empresaSelect.value?._choicesInstance || empresaSelect.value?.choices || null;
+  return empresaSelect.value?._choicesInstance || empresaSelect.value?.choices || null;
 };
 
 /* ======================
@@ -879,10 +786,10 @@ const submit = (onSuccess, hooks = {}) => {
       form._method = "put";
       form.post(`/convenios/${id}`, {
         forceFormData: true,
-        onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
+        onStart: () => { try { hooks.onStart?.(); } catch (_) { } },
         onFinish: () => {
           try { delete form._method; } catch (_) { form._method = null; }
-          try { hooks.onFinish?.(); } catch (_) {}
+          try { hooks.onFinish?.(); } catch (_) { }
         },
         onSuccess: () => {
           formEl.value?.classList.remove("was-validated");
@@ -894,8 +801,8 @@ const submit = (onSuccess, hooks = {}) => {
       });
     } else {
       form.put(`/convenios/${id}`, {
-        onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
-        onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
+        onStart: () => { try { hooks.onStart?.(); } catch (_) { } },
+        onFinish: () => { try { hooks.onFinish?.(); } catch (_) { } },
         onSuccess: () => {
           formEl.value?.classList.remove("was-validated");
           if (onSuccess) onSuccess();
@@ -908,8 +815,8 @@ const submit = (onSuccess, hooks = {}) => {
   } else {
     form.post("/convenios", {
       forceFormData: true,
-      onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
-      onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
+      onStart: () => { try { hooks.onStart?.(); } catch (_) { } },
+      onFinish: () => { try { hooks.onFinish?.(); } catch (_) { } },
       onSuccess: () => {
         formEl.value?.classList.remove("was-validated");
         if (onSuccess) onSuccess();
@@ -938,10 +845,10 @@ const submitUpdate = (id, onSuccess, hooks = {}) => {
     form._method = "put";
     form.post(`/convenios/${cid}`, {
       forceFormData: true,
-      onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
+      onStart: () => { try { hooks.onStart?.(); } catch (_) { } },
       onFinish: () => {
         try { delete form._method; } catch (_) { form._method = null; }
-        try { hooks.onFinish?.(); } catch (_) {}
+        try { hooks.onFinish?.(); } catch (_) { }
       },
       onSuccess: () => {
         formEl.value?.classList.remove("was-validated");
@@ -956,8 +863,8 @@ const submitUpdate = (id, onSuccess, hooks = {}) => {
     });
   } else {
     form.put(`/convenios/${cid}`, {
-      onStart: () => { try { hooks.onStart?.(); } catch (_) {} },
-      onFinish: () => { try { hooks.onFinish?.(); } catch (_) {} },
+      onStart: () => { try { hooks.onStart?.(); } catch (_) { } },
+      onFinish: () => { try { hooks.onFinish?.(); } catch (_) { } },
       onSuccess: () => {
         formEl.value?.classList.remove("was-validated");
         if (onSuccess) onSuccess();
@@ -990,46 +897,55 @@ defineExpose({ form, submit, submitUpdate, processingRef: toRef(form, "processin
 .choices {
   margin-bottom: 0 !important;
 }
+
 :deep(.nav-tabs-custom .nav-link.active) {
   background-color: transparent !important;
 }
+
 .tuss-panel {
-  box-shadow: 0 .125rem .25rem rgba(0,0,0,.04);
+  box-shadow: 0 .125rem .25rem rgba(0, 0, 0, .04);
 }
+
 .tuss-selected-scroll {
   max-height: 320px;
   overflow: auto;
 }
+
 .tuss-results-scroll {
   max-height: 420px;
   overflow: auto;
 }
+
 .tuss-empty {
-  border: 1px dashed rgba(0,0,0,.15);
+  border: 1px dashed rgba(0, 0, 0, .15);
   border-radius: .5rem;
   padding: 1rem;
-  background: rgba(255,255,255,.6);
+  background: rgba(255, 255, 255, .6);
 }
+
 .logo-preview-box {
   width: 25%;
   height: 64px;
-  border: 1px dashed rgba(0,0,0,.2);
+  border: 1px dashed rgba(0, 0, 0, .2);
   border-radius: .5rem;
-  background: rgba(0,0,0,.015);
+  background: rgba(0, 0, 0, .015);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: .25rem;
 }
+
 .logo-preview-spacer {
   height: 64px;
 }
+
 .logo-preview-img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
   display: block;
 }
+
 .text-truncate-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;

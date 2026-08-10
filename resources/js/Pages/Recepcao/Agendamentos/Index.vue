@@ -180,6 +180,7 @@ export default {
             mapaAgendasSemana: {},
             processandoEdicao: false,
             agendamentoEstaPago: false,
+            agendamentoFoiAtendido: false,
             termoBuscaPacienteEdicao: "",
             mostrarSugestoesPacienteEdicao: false,
             procedimentosFiltradosEdicao: [],
@@ -206,6 +207,9 @@ export default {
         SimpleTable
     },
     computed: {
+        isEdicaoBloqueada() {
+            return this.agendamentoEstaPago || this.agendamentoFoiAtendido || (this.isEditMode && !!this.agendamentoForm.autorizacao_id);
+        },
         isConvenioAgendamento() {
             const cid = this.agendamentoForm?.convenio_id;
             if (!cid) return false;
@@ -924,6 +928,7 @@ export default {
             }
 
             this.agendamentoEstaPago = (ag?.status_pagamento === 'PAGO');
+            this.agendamentoFoiAtendido = (ag?.status_atendimento === 'ATENDIDO');
             this.agendamentoForm.id = this.eventoSelecionado.id || null;
             this.agendamentoForm.data = ds;
             this.agendamentoForm.hora = hs;
@@ -1793,7 +1798,7 @@ export default {
                     try {
                         const el1 = this.$refs.selProfissionalCriacao;
                         if (el1) {
-                            el1.disabled = false;
+                            el1.disabled = this.isEdicaoBloqueada;
                             window.destroyChoiceEl(el1);
                             await this.$nextTick();
                             window.initChoiceEl(el1);
@@ -2180,7 +2185,7 @@ export default {
                 <div class="col-md-12">
                     <label class="form-label">Paciente</label>
                     <SuggestInput v-model="termoBuscaPaciente" :suggestions="pacientesSugestoesCriacao" :loading="false"
-                        :show="mostrarSugestoesPaciente" :disabled="agendamentoEstaPago" placeholder="Buscar paciente por nome ou CPF"
+                        :show="mostrarSugestoesPaciente" :disabled="isEdicaoBloqueada" placeholder="Buscar paciente por nome ou CPF"
                         keyPrefix="sug-pac" primaryTextProp="nome" secondaryTextProp="cpf"
                         @focus="mostrarSugestoesPaciente = true" @blur="onBlurSugestoesPaciente"
                         @select="selecionarSugestaoPaciente" />
@@ -2189,7 +2194,7 @@ export default {
                 <div class="col-md-12">
                     <label class="form-label">Convênio</label>
                     <select ref="selConvenioCriacao" data-choices v-model="agendamentoForm.convenio_id" class="form-select"
-                        :disabled="!agendamentoForm.paciente_id || agendamentoEstaPago"
+                        :disabled="!agendamentoForm.paciente_id || isEdicaoBloqueada"
                         @change="agendamentoForm.convenio_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="c in conveniosPacienteCriacao" :key="c.id" :value="c.id">{{ c.descricao }}
@@ -2203,7 +2208,7 @@ export default {
                 <div class="col-md-6">
                     <label class="form-label">Procedimento</label>
                     <select ref="selProcedimentoCriacao" data-choices v-model="agendamentoForm.procedimento_id" class="form-select"
-                        :disabled="!agendamentoForm.convenio_id || agendamentoEstaPago"
+                        :disabled="!agendamentoForm.convenio_id || isEdicaoBloqueada"
                         @change="agendamentoForm.procedimento_id = $event.detail ? $event.detail.value : $event.target.value; aoAlterarProcedimento()">
                         <option :value="null">Selecione</option>
                         <option v-for="p in procedimentosFiltrados" :key="p.id" :value="p.id">{{ p.nome }}</option>
@@ -2211,8 +2216,8 @@ export default {
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Profissional</label>
-                    <select ref="selProfissionalCriacao" data-choices v-model="agendamentoForm.pessoa_id" class="form-select"
-                        :disabled="!agendamentoForm.procedimento_id"
+                    <select :key="'prof-'+isEdicaoBloqueada" ref="selProfissionalCriacao" data-choices v-model="agendamentoForm.pessoa_id" class="form-select"
+                        :disabled="!agendamentoForm.procedimento_id || isEdicaoBloqueada"
                         @change="agendamentoForm.pessoa_id = $event.detail ? $event.detail.value : $event.target.value">
                         <option :value="null">Selecione</option>
                         <option v-for="d in listaProfissionaisCriacao" :key="d.id" :value="d.id">{{ d.nome }}</option>
@@ -2222,23 +2227,23 @@ export default {
                     <label class="form-label">Data *</label>
                     <div v-if="!isEditMode">
                         <flatPickr v-model="agendamentoForm.data" class="form-control" :config="opcoesFlatpickrData"
-                            placeholder="Selecione a data" />
+                            placeholder="Selecione a data" :disabled="agendamentoFoiAtendido" />
                     </div>
                     <div v-else>
                         <flatPickr v-model="agendamentoForm.data" class="form-control" :config="opcoesFlatpickrDataEdicao"
-                            placeholder="Selecione a data" />
+                            placeholder="Selecione a data" :disabled="agendamentoFoiAtendido" />
                     </div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Hora</label>
                     <flatPickr v-model="agendamentoForm.hora" class="form-control" :config="opcoesFlatpickrHora"
-                        placeholder="Selecione a hora" />
+                        placeholder="Selecione a hora" :disabled="agendamentoFoiAtendido" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Valor Cobrado</label>
                     <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao"
                         @blur="onBlurInputValorCobrado" @focus="$event.target.select()" type="text" class="form-control"
-                        placeholder="0,00" :disabled="agendamentoForm.is_retorno || agendamentoEstaPago" />
+                        placeholder="0,00" :disabled="agendamentoForm.is_retorno || isEdicaoBloqueada" />
                     <div v-if="!isEditMode" class="form-check mt-2">
                         <input class="form-check-input" type="checkbox" id="isRetornoCheckbox"
                             v-model="agendamentoForm.is_retorno">
@@ -2249,18 +2254,18 @@ export default {
                 <div v-if="isConvenioAgendamento && procedimentoRequerAutorizacao === false" class="col-md-6 mt-3">
                     <label class="form-label">Número da Autorização *</label>
                     <input v-model="agendamentoForm.numero_autorizacao" type="text" class="form-control"
-                        placeholder="Insira o número" required />
+                        placeholder="Insira o número" :disabled="isEdicaoBloqueada" required />
                 </div>
                 <div v-if="isConvenioAgendamento && procedimentoRequerAutorizacao === false" class="col-md-6 mt-3">
                     <label class="form-label">Validade da Autorização *</label>
                     <flatPickr v-model="agendamentoForm.validade_autorizacao" class="form-control"
-                        :config="opcoesFlatpickrData" placeholder="Selecione a data de validade" required />
+                        :config="opcoesFlatpickrData" placeholder="Selecione a data de validade" :disabled="isEdicaoBloqueada" required />
                 </div>
 
                 <div class="col-md-12">
                     <label class="form-label">Observações</label>
                     <textarea v-model="agendamentoForm.observacoes" class="form-control" rows="3" maxlength="500"
-                        placeholder="Anotações gerais" :disabled="isEditMode && podeReagendarAgendamentoCancelado()"></textarea>
+                        placeholder="Anotações gerais" :disabled="isEdicaoBloqueada"></textarea>
                 </div>
                 <template v-if="!isEditMode && sessoesCriacao && sessoesCriacao.length">
                     <div class="col-12">

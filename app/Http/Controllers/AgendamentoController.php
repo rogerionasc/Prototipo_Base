@@ -446,9 +446,10 @@ class AgendamentoController extends Controller
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
             ->leftJoin('sessoes_tratamento as st', 'st.id', '=', 'a.sessao_tratamento_id')
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
-            ->leftJoin('faturamentos as f', 'f.agendamento_id', '=', 'a.id')
-            ->leftJoin('pagamentos as pag', 'pag.faturamento_id', '=', 'f.id')
+            ->leftJoin('pagamentos as pag', 'pag.agendamento_id', '=', 'a.id')
+            ->leftJoin('faturamentos as f', 'f.id', '=', 'pag.faturamento_id')
             ->leftJoin('autorizacoes as au', 'au.agendamento_id', '=', 'a.id')
+            ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
             ->where('a.id', (int)$id)
             ->whereNull('a.deleted_at')
             ->select(
@@ -471,7 +472,8 @@ class AgendamentoController extends Controller
                 DB::raw('COALESCE(pag.status, "") AS status_pagamento'),
                 'au.id AS autorizacao_id',
                 'au.numero_autorizacao',
-                'au.validade AS validade_autorizacao'
+                'au.validade AS validade_autorizacao',
+                'at.status AS status_atendimento'
             )
             ->first();
 
@@ -768,8 +770,8 @@ class AgendamentoController extends Controller
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
 
-            ->leftJoin('faturamentos as f', 'f.agendamento_id', '=', 'a.id')
-            ->leftJoin('pagamentos as pag', 'pag.faturamento_id', '=', 'f.id')
+            ->leftJoin('pagamentos as pag', 'pag.agendamento_id', '=', 'a.id')
+            ->leftJoin('faturamentos as f', 'f.id', '=', 'pag.faturamento_id')
             ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
             ->where('a.paciente_id', $paciente_id)
             ->select(

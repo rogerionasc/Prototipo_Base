@@ -76,6 +76,12 @@ export default {
                     ]
                 },
                 {
+                    icon: "ri-file-paper-2-line",
+                    title: "Faturamento",
+                    type: "link",
+                    target: "/faturamento/convenios",
+                },
+                {
                     icon: "ri-user-heart-fill",
                     title: this.$t("t-patient"),
                     type: "link",
@@ -139,7 +145,11 @@ export default {
                     icon: "ri-equalizer-line",
                     title: "Parametrização",
                     type: "link",
-                    target: "/configuracao/parametrizacao",
+                    target: "#parametrizacao",
+                    children: [
+                        { href: "/configuracao/parametrizacao", label: "Sistema" },
+                        { href: "/configuracao/parametrizacao/tiss", label: "Tiss" },
+                    ]
                 },
                 {
                     icon: "ri-layout-grid-fill",

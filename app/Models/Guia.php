@@ -11,4 +11,14 @@ class Guia extends Model
     use HasFactory, SoftDeletes;
     
     protected $guarded = ['id'];
+
+    public function faturamento()
+    {
+        return $this->belongsTo(Faturamento::class, 'faturamento_id');
+    }
+
+    public function atendimento()
+    {
+        return $this->hasOne(Atendimento::class, 'guia_id');
+    }
 }

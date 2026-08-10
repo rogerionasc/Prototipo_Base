@@ -317,7 +317,7 @@ class MovimentacaoCaixaController extends Controller
         }
         $pagamentos = DB::table('pagamentos as p')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
-            ->leftJoin('agendamentos as a', 'a.id', '=', 'f.agendamento_id')
+            ->leftJoin('agendamentos as a', 'a.id', '=', 'p.agendamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
             ->select(
                 'p.id',

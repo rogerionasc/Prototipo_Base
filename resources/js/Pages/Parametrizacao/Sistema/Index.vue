@@ -9,7 +9,6 @@
       :parentescos="props.parentescos"
       :categoriasProcedimento="props.categoriasProcedimento"
       :comorbidades="props.comorbidades"
-      :conselhos="props.conselhos"
     />
   </Layout>
 </template>
@@ -25,6 +24,5 @@ const props = defineProps({
   parentescos: { type: Array, default: () => [] },
   categoriasProcedimento: { type: Array, default: () => [] },
   comorbidades: { type: Array, default: () => [] },
-  conselhos: { type: Array, default: () => [] },
 });
 </script>

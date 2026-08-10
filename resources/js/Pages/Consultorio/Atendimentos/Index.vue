@@ -158,7 +158,7 @@ const tableColumns = [
 
                     <template #cell(detalhes)="{ item }">
                         <div class="d-flex flex-column">
-                            <span class="fw-medium">{{ item.procedimento?.nome || 'N/A' }}</span>
+                            <span class="fw-medium">{{ item.procedimento_nome || 'N/A' }}</span>
                             <span class="text-muted fs-12">{{ item.medico?.nome || 'N/A' }}</span>
                         </div>
                     </template>

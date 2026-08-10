@@ -71,6 +71,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get('componentes', 'componentes')->name('componentes');
         Route::get('configuracao', 'configuracao')->name('configuracao.index');
         Route::get('configuracao/parametrizacao', 'configuracaoParametrizacao')->name('configuracao.parametrizacao');
+        Route::get('configuracao/parametrizacao/tiss', 'configuracaoTiss')->name('configuracao.tiss');
         Route::get('configuracao/especialidades', 'configuracaoEspecialidades')->name('configuracao.especialidades');
         Route::get('configuracao/tuss', 'configuracaoTuss')->name('configuracao.tuss');
         Route::get('configuracao/cid', 'configuracaoCid')->name('configuracao.cid');
@@ -150,10 +151,17 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/orcamentos/{id}/approve", [OrcamentoController::class, "approve"])->whereNumber('id')->name('orcamentos.approve');
         Route::put("/orcamentos/{id}/unapprove", [OrcamentoController::class, "unapprove"])->whereNumber('id')->name('orcamentos.unapprove');
 
-        // Faturamento (Ocultado temporariamente)
-        // Route::get("/faturamento/particular", [FaturamentoController::class, "particular"])->name('faturamento.particular');
-        // Route::get("/faturamento/convenios", [FaturamentoController::class, "convenios"])->name('faturamento.convenios');
-        // Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');
+        // Faturamento
+        Route::get("/faturamento/particular", [FaturamentoController::class, "particular"])->name('faturamento.particular');
+        Route::get("/faturamento/convenios", [FaturamentoController::class, "convenios"])->name('faturamento.convenios');
+        Route::get("/faturamento/guias-disponiveis", [FaturamentoController::class, "getGuiasDisponiveis"])->name('faturamento.guias_disponiveis');
+        Route::post("/faturamento/lote", [FaturamentoController::class, "storeLote"])->name('faturamento.store_lote');
+        Route::get("/faturamentos/{id}/guias", [FaturamentoController::class, "getGuiasLote"])->whereNumber('id')->name('faturamentos.guias');
+        Route::post("/faturamentos/{id}/guias", [FaturamentoController::class, "addGuiasLote"])->whereNumber('id')->name('faturamentos.guias.add');
+        Route::delete("/faturamentos/{lote}/guias/{guia}", [FaturamentoController::class, "removeGuiaLote"])->whereNumber('lote')->whereNumber('guia')->name('faturamentos.guias.remove');
+        Route::patch("/faturamentos/{lote}/guias/{guia}/status", [FaturamentoController::class, "updateGuiaStatus"])->whereNumber('lote')->whereNumber('guia')->name('faturamentos.guias.updateStatus');
+        Route::patch("/faturamentos/{lote}/guias/{guia}/glosa", [FaturamentoController::class, "updateGuiaGlosa"])->whereNumber('lote')->whereNumber('guia')->name('faturamentos.guias.updateGlosa');
+        Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');
 
         // Financeiro
         // Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');
@@ -224,6 +232,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/parametros/conselho", [VelzonRoutesController::class, "parametros_store_conselho"])->name('parametros.conselho.store');
         Route::put("/parametros/conselho/{id}", [VelzonRoutesController::class, "parametros_update_conselho"])->name('parametros.conselho.update');
         Route::delete("/parametros/conselho/{id}", [VelzonRoutesController::class, "parametros_destroy_conselho"])->name('parametros.conselho.destroy');
+
+        Route::post("/parametros/carater-atendimento", [VelzonRoutesController::class, "parametros_store_carater_atendimento"])->name('parametros.carater_atendimento.store');
+        Route::put("/parametros/carater-atendimento/{id}", [VelzonRoutesController::class, "parametros_update_carater_atendimento"])->name('parametros.carater_atendimento.update');
+        Route::delete("/parametros/carater-atendimento/{id}", [VelzonRoutesController::class, "parametros_destroy_carater_atendimento"])->name('parametros.carater_atendimento.destroy');
+        
+        Route::post("/parametros/tabela-referencia", [VelzonRoutesController::class, "parametros_store_tabela_referencia"])->name('parametros.tabela_referencia.store');
+        Route::put("/parametros/tabela-referencia/{id}", [VelzonRoutesController::class, "parametros_update_tabela_referencia"])->name('parametros.tabela_referencia.update');
+        Route::delete("/parametros/tabela-referencia/{id}", [VelzonRoutesController::class, "parametros_destroy_tabela_referencia"])->name('parametros.tabela_referencia.destroy');
         Route::put("/parametros/tipo-sanguineo/{id}", [VelzonRoutesController::class, "parametros_update_tipo_sanguineo"])->name('parametros.tipo_sanguineo.update');
         Route::delete("/parametros/tipo-sanguineo/{id}", [VelzonRoutesController::class, "parametros_destroy_tipo_sanguineo"])->name('parametros.tipo_sanguineo.destroy');
         Route::post("/parametros/canal-aviso", [VelzonRoutesController::class, "parametros_store_canal_aviso"])->name('parametros.canal_aviso.store');

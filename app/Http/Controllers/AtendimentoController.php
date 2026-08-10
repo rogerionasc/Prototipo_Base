@@ -12,7 +12,7 @@ class AtendimentoController extends Controller
     {
         $hoje = \Carbon\Carbon::today()->format('Y-m-d');
 
-        $query = Atendimento::with(['paciente.comorbidades', 'medico', 'procedimento', 'agendamento'])
+        $query = Atendimento::with(['paciente.comorbidades', 'medico', 'procedimento', 'tuss', 'agendamento'])
             ->whereDate('data_atendimento', $hoje);
 
         if (auth()->check() && auth()->id() !== 1 && auth()->user()->pessoa_id) {
@@ -31,6 +31,10 @@ class AtendimentoController extends Controller
                 $atendimento->tem_comorbidade = $atendimento->paciente && $atendimento->paciente->comorbidades->count() > 0;
                 $atendimento->prioridade_idade = $idade >= 60 && $idade < 80;
                 $atendimento->idade_paciente = $idade;
+                
+                $atendimento->procedimento_nome = $atendimento->procedimento 
+                    ? $atendimento->procedimento->nome 
+                    : ($atendimento->tuss ? $atendimento->tuss->descricao : 'N/A');
                 
                 return $atendimento;
             });
@@ -87,8 +91,11 @@ class AtendimentoController extends Controller
 
         // Verifica se o médico está alocado em alguma sala
         $sala = \App\Models\Sala::where('pessoa_id', $atendimento->medico_id)->first();
-        if (!$sala) {
-            return redirect()->back()->with('error', 'Você precisa estar alocado em um consultório/sala para chamar o paciente.');
+        if (!$sala && auth()->id() !== 1) {
+            $msg = (auth()->user()->pessoa_id != $atendimento->medico_id) 
+                ? 'O médico responsável precisa estar alocado em um consultório/sala para chamar o paciente.'
+                : 'Você precisa estar alocado em um consultório/sala para chamar o paciente.';
+            return redirect()->back()->with('error', $msg);
         }
 
         // Verifica se o médico já possui um atendimento em andamento
@@ -118,8 +125,11 @@ class AtendimentoController extends Controller
 
         // Verifica se o médico está alocado em alguma sala
         $sala = \App\Models\Sala::where('pessoa_id', $atendimento->medico_id)->first();
-        if (!$sala) {
-            return redirect()->back()->with('error', 'Você precisa estar alocado em um consultório/sala para iniciar o atendimento.');
+        if (!$sala && auth()->id() !== 1) {
+            $msg = (auth()->user()->pessoa_id != $atendimento->medico_id) 
+                ? 'O médico responsável precisa estar alocado em um consultório/sala para iniciar o atendimento.'
+                : 'Você precisa estar alocado em um consultório/sala para iniciar o atendimento.';
+            return redirect()->back()->with('error', $msg);
         }
 
         // Verifica se o médico já possui um atendimento em andamento
@@ -177,6 +187,12 @@ class AtendimentoController extends Controller
             $statusConcluido = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Concluído']);
             \App\Models\Agendamento::where('id', $atendimento->agendamento_id)
                 ->update(['status_id' => $statusConcluido->id]);
+        }
+
+        // Atualizar status da Guia para ATENDIDA se existir
+        if ($atendimento->guia_id) {
+            \App\Models\Guia::where('id', $atendimento->guia_id)
+                ->update(['status' => 'ATENDIDA']);
         }
 
         return redirect()->route('atendimentos.index')->with('success', 'Atendimento finalizado com sucesso.');

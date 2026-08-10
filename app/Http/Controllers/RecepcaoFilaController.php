@@ -27,9 +27,9 @@ class RecepcaoFilaController extends Controller
         ->where(function($q) use ($hoje) {
             $q->whereExists(function ($query) {
                 $query->select(DB::raw(1))
-                      ->from('faturamentos')
-                      ->whereColumn('faturamentos.agendamento_id', 'agendamentos.id')
-                      ->whereIn('faturamentos.status', ['PAGO', 'RECEBIDO']);
+                      ->from('pagamentos')
+                      ->whereColumn('pagamentos.agendamento_id', 'agendamentos.id')
+                      ->whereIn('pagamentos.status', ['PAGO', 'RECEBIDO']);
             })
             ->orWhereExists(function ($query) use ($hoje) {
                 $query->select(DB::raw(1))
@@ -139,7 +139,8 @@ class RecepcaoFilaController extends Controller
                 'paciente_id'               => $agendamento->paciente_id,
                 'medico_id'                => $agendamento->agendaMedica->pessoa_id ?? null,
                 'agendamento_id'           => $agendamento->id,
-                'procedimento_id'          => $agendamento->procedimento_id ?? $agendamento->tuss_id,
+                'procedimento_id'          => $agendamento->procedimento_id,
+                'tuss_id'                  => $agendamento->tuss_id,
                 'categoria_procedimento_id' => $catId ?: $defaultCategoria->id,
                 'data_atendimento'         => Carbon::today()->format('Y-m-d'),
                 'hora_prevista'            => Carbon::today()->format('Y-m-d') . ' ' . $agendamento->hora,

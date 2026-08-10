@@ -15,8 +15,6 @@ class ContasReceberController extends Controller
             ->leftJoin('faturamentos as f', 'f.id', '=', 'cr.faturamento_id')
             ->leftJoin('pacientes as p', 'p.id', '=', 'cr.paciente_id')
             ->leftJoin('convenios as c', 'c.id', '=', 'cr.convenio_id')
-            ->leftJoin('agendamentos as a', 'a.id', '=', 'f.agendamento_id')
-            ->leftJoin('procedimentos as proc', 'proc.id', '=', 'a.procedimento_id')
             ->select(
                 'cr.faturamento_id as id',
                 'cr.id as conta_id',
@@ -24,7 +22,7 @@ class ContasReceberController extends Controller
                 'cr.paciente_id',
                 'cr.convenio_id',
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
-                DB::raw("COALESCE(proc.nome,'') AS procedimento"),
+                DB::raw("COALESCE((SELECT proc.nome FROM pagamentos pag JOIN agendamentos a ON a.id = pag.agendamento_id JOIN procedimentos proc ON proc.id = a.procedimento_id WHERE pag.faturamento_id = cr.faturamento_id LIMIT 1), '') AS procedimento"),
                 DB::raw("COALESCE(c.descricao,'') AS convenio"),
                 DB::raw("IFNULL(c.tipo, 'PARTICULAR') AS tipo_convenio"),
                 DB::raw("DATE_FORMAT(cr.vencimento, '%d-%m-%Y') AS vencimento"),

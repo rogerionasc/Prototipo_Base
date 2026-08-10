@@ -21,6 +21,7 @@ class Atendimento extends Model
         'guia_id',
         'caixa_pagamento_id',
         'procedimento_id',
+        'tuss_id',
         'categoria_procedimento_id',
         'tipo_atendimento',
         'data_atendimento',
@@ -64,6 +65,11 @@ class Atendimento extends Model
     public function procedimento()
     {
         return $this->belongsTo(Procedimento::class, 'procedimento_id');
+    }
+
+    public function tuss()
+    {
+        return $this->belongsTo(Tuss::class, 'tuss_id');
     }
 
     public function categoriaProcedimento()
