@@ -147,7 +147,7 @@
                             </template>
                         </SimpleTable>
                     </BTab>
-                    <BTab title="87. Tabela de Referência">
+                    <BTab title="24. Tabela de Referência">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="mb-0">Lista de Tabelas de Referência</h6>
                         </div>
@@ -157,8 +157,8 @@
                                     <BCol md="2">
                                         <label class="form-label">Cód. <span class="text-danger">*</span></label>
                                         <input v-model="formTabelaReferencia.codigo" type="text" class="form-control"
-                                            :class="{ 'is-invalid': formTabelaReferencia.errors.codigo }" placeholder="Ex.: 22"
-                                            maxlength="2" required />
+                                            :class="{ 'is-invalid': formTabelaReferencia.errors.codigo }"
+                                            placeholder="Ex.: 22" maxlength="2" required />
                                         <div class="invalid-feedback">{{ formTabelaReferencia.errors.codigo }}</div>
                                     </BCol>
                                     <BCol md="7">
@@ -197,14 +197,147 @@
                                     <template v-else>
                                         <td colspan="3">
                                             <div class="d-flex gap-2">
-                                                <input v-model="editTabelaReferencia.codigo" type="text" class="form-control"
-                                                    placeholder="Cód." style="width: 80px;" maxlength="2" required />
-                                                <input v-model="editTabelaReferencia.descricao" type="text" class="form-control"
-                                                    placeholder="Descrição" required />
+                                                <input v-model="editTabelaReferencia.codigo" type="text"
+                                                    class="form-control" placeholder="Cód." style="width: 80px;"
+                                                    maxlength="2" required />
+                                                <input v-model="editTabelaReferencia.descricao" type="text"
+                                                    class="form-control" placeholder="Descrição" required />
                                                 <button type="button" class="btn btn-success"
                                                     @click="updateTabelaReferencia">Salvar</button>
                                                 <button type="button" class="btn btn-light"
                                                     @click="cancelEditTabelaReferencia">Cancelar</button>
+                                            </div>
+                                        </td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </SimpleTable>
+                    </BTab>
+                    <BTab title="33. Tipo de Atendimento">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">Lista de Tipo de Atendimento</h6>
+                        </div>
+                        <div class="border rounded p-3 bg-light-subtle mb-4">
+                            <form @submit.prevent="saveTipoAtendimento">
+                                <BRow class="g-3 align-items-end">
+                                    <BCol md="2">
+                                        <label class="form-label">Cód. <span class="text-danger">*</span></label>
+                                        <input v-model="formTipoAtendimento.codigo" type="text" class="form-control"
+                                            :class="{ 'is-invalid': formTipoAtendimento.errors.codigo }"
+                                            placeholder="Ex.: 01" maxlength="2" required />
+                                        <div class="invalid-feedback">{{ formTipoAtendimento.errors.codigo }}</div>
+                                    </BCol>
+                                    <BCol md="7">
+                                        <label class="form-label">Descrição <span class="text-danger">*</span></label>
+                                        <input v-model="formTipoAtendimento.descricao" type="text" class="form-control"
+                                            :class="{ 'is-invalid': formTipoAtendimento.errors.descricao }"
+                                            placeholder="Ex.: Remoção" required />
+                                        <div class="invalid-feedback">{{ formTipoAtendimento.errors.descricao }}</div>
+                                    </BCol>
+                                    <BCol md="3">
+                                        <button type="submit" class="btn btn-primary w-100"
+                                            :disabled="formTipoAtendimento.processing"><i
+                                                class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                    </BCol>
+                                </BRow>
+                            </form>
+                        </div>
+                        <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                            :items="tipoAtendimentosLocal"
+                            :columns="[{ key: 'codigo', label: 'Cód.' }, { key: 'descricao', label: 'Descrição' }, { key: 'acoes', label: 'Ações', width: '120px' }]"
+                            emptyTitle="" emptyMessage="Nenhum registro encontrado.">
+                            <template #body="{ items }">
+                                <tr v-for="t in items" :key="t.id">
+                                    <template v-if="editingTipoAtendimentoId !== t.id">
+                                        <td>{{ t.codigo }}</td>
+                                        <td>{{ t.descricao }}</td>
+                                        <td class="text-end" style="width:150px">
+                                            <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                @click="startEditTipoAtendimento(t)" title="Editar"><i
+                                                    class="ri-pencil-line"></i></button>
+                                            <button type="button" class="btn btn-sm btn-soft-danger"
+                                                @click="destroyTipoAtendimento(t.id)" title="Excluir"><i
+                                                    class="ri-delete-bin-line"></i></button>
+                                        </td>
+                                    </template>
+                                    <template v-else>
+                                        <td colspan="3">
+                                            <div class="d-flex gap-2">
+                                                <input v-model="editTipoAtendimento.codigo" type="text"
+                                                    class="form-control" placeholder="Cód." style="width: 80px;"
+                                                    maxlength="2" required />
+                                                <input v-model="editTipoAtendimento.descricao" type="text"
+                                                    class="form-control" placeholder="Descrição" required />
+                                                <button type="button" class="btn btn-success"
+                                                    @click="updateTipoAtendimento">Salvar</button>
+                                                <button type="button" class="btn btn-light"
+                                                    @click="cancelEditTipoAtendimento">Cancelar</button>
+                                            </div>
+                                        </td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </SimpleTable>
+                    </BTab>
+                    <BTab title="34. Indicação de Incidência">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">Lista de Indicação de Incidência</h6>
+                        </div>
+                        <div class="border rounded p-3 bg-light-subtle mb-4">
+                            <form @submit.prevent="saveTipoAtendimento">
+                                <BRow class="g-3 align-items-end">
+                                    <BCol md="2">
+                                        <label class="form-label">Cód. <span class="text-danger">*</span></label>
+                                        <input v-model="formTipoAtendimento.codigo" type="text" class="form-control"
+                                            :class="{ 'is-invalid': formTipoAtendimento.errors.codigo }"
+                                            placeholder="Ex.: 22" maxlength="2" required />
+                                        <div class="invalid-feedback">{{ formTipoAtendimento.errors.codigo }}</div>
+                                    </BCol>
+                                    <BCol md="7">
+                                        <label class="form-label">Descrição <span class="text-danger">*</span></label>
+                                        <input v-model="formTipoAtendimento.descricao" type="text" class="form-control"
+                                            :class="{ 'is-invalid': formTipoAtendimento.errors.descricao }"
+                                            placeholder="Ex.: Tabela Própria das Operadoras" required />
+                                        <div class="invalid-feedback">{{ formTipoAtendimento.errors.descricao }}</div>
+                                    </BCol>
+                                    <BCol md="3">
+                                        <button type="submit" class="btn btn-primary w-100"
+                                            :disabled="formTipoAtendimento.processing"><i
+                                                class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                    </BCol>
+                                </BRow>
+                            </form>
+                        </div>
+                        <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                            :items="tipoAtendimentosLocal"
+                            :columns="[{ key: 'codigo', label: 'Cód.' }, { key: 'descricao', label: 'Descrição' }, { key: 'acoes', label: 'Ações', width: '120px' }]"
+                            emptyTitle="" emptyMessage="Nenhum registro encontrado.">
+                            <template #body="{ items }">
+                                <tr v-for="t in items" :key="t.id">
+                                    <template v-if="editingTipoAtendimentoId !== t.id">
+                                        <td>{{ t.codigo }}</td>
+                                        <td>{{ t.descricao }}</td>
+                                        <td class="text-end" style="width:150px">
+                                            <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                @click="startEditTipoAtendimento(t)" title="Editar"><i
+                                                    class="ri-pencil-line"></i></button>
+                                            <button type="button" class="btn btn-sm btn-soft-danger"
+                                                @click="destroyTipoAtendimento(t.id)" title="Excluir"><i
+                                                    class="ri-delete-bin-line"></i></button>
+                                        </td>
+                                    </template>
+                                    <template v-else>
+                                        <td colspan="3">
+                                            <div class="d-flex gap-2">
+                                                <input v-model="editTipoAtendimento.codigo" type="text"
+                                                    class="form-control" placeholder="Cód." style="width: 80px;"
+                                                    maxlength="2" required />
+                                                <input v-model="editTipoAtendimento.descricao" type="text"
+                                                    class="form-control" placeholder="Descrição" required />
+                                                <button type="button" class="btn btn-success"
+                                                    @click="updateTipoAtendimento">Salvar</button>
+                                                <button type="button" class="btn btn-light"
+                                                    @click="cancelEditTipoAtendimento">Cancelar</button>
                                             </div>
                                         </td>
                                     </template>
@@ -228,19 +361,26 @@ const props = defineProps({
     conselhos: { type: Array, default: () => [] },
     caraterAtendimentos: { type: Array, default: () => [] },
     tabelasReferencia: { type: Array, default: () => [] },
+    tipoAtendimentos: { type: Array, default: () => [] },
 });
 
 const conselhosLocal = ref([...(props.conselhos || [])]);
 const caraterLocal = ref([...(props.caraterAtendimentos || [])]);
 const tabelasReferenciaLocal = ref([...(props.tabelasReferencia || [])]);
+const tipoAtendimentosLocal = ref([...(props.tipoAtendimentos || [])]);
 
 watch(() => props.conselhos, (v) => { conselhosLocal.value = [...(v || [])]; });
 watch(() => props.caraterAtendimentos, (v) => { caraterLocal.value = [...(v || [])]; });
 watch(() => props.tabelasReferencia, (v) => { tabelasReferenciaLocal.value = [...(v || [])]; });
+watch(() => props.tipoAtendimentos, (v) => { tipoAtendimentosLocal.value = [...(v || [])]; });
 
 const formConselho = useForm({ codigo: "", sigla: "", descricao: "" });
 const editConselho = useForm({ codigo: "", sigla: "", descricao: "" });
 const editingConselhoId = ref(null);
+
+const formTipoAtendimento = useForm({ codigo: "", descricao: "" });
+const editTipoAtendimento = useForm({ codigo: "", descricao: "" });
+const editingTipoAtendimentoId = ref(null);
 
 const saveConselho = () => {
     formConselho.post("/parametros/conselho", {
@@ -363,6 +503,59 @@ const saveTabelaReferencia = () => {
         onSuccess: () => {
             formTabelaReferencia.reset();
             router.reload({ only: ['tabelasReferencia'] });
+        }
+    });
+};
+
+const saveTipoAtendimento = () => {
+    formTipoAtendimento.post("/parametros/tipo-atendimento", {
+        preserveScroll: true,
+        onSuccess: () => {
+            formTipoAtendimento.reset();
+            router.reload({ only: ['tipoAtendimentos'] });
+        }
+    });
+};
+
+const startEditTipoAtendimento = (t) => {
+    editingTipoAtendimentoId.value = t.id;
+    editTipoAtendimento.codigo = t.codigo || "";
+    editTipoAtendimento.descricao = t.descricao || "";
+};
+
+const cancelEditTipoAtendimento = () => {
+    editingTipoAtendimentoId.value = null;
+    editTipoAtendimento.reset();
+};
+
+const updateTipoAtendimento = () => {
+    editTipoAtendimento.put(`/parametros/tipo-atendimento/${editingTipoAtendimentoId.value}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            editingTipoAtendimentoId.value = null;
+            editTipoAtendimento.reset();
+            router.reload({ only: ['tipoAtendimentos'] });
+        }
+    });
+};
+
+const destroyTipoAtendimento = (id) => {
+    Swal.fire({
+        title: "Tem certeza?",
+        text: "Excluir este tipo de atendimento não poderá ser desfeito.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#f46a6a",
+        confirmButtonText: "Sim, excluir",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(`/parametros/tipo-atendimento/${id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    router.reload({ only: ['tipoAtendimentos'] });
+                }
+            });
         }
     });
 };

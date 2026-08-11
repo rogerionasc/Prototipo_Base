@@ -148,7 +148,7 @@ export default {
                     target: "#parametrizacao",
                     children: [
                         { href: "/configuracao/parametrizacao", label: "Sistema" },
-                        { href: "/configuracao/parametrizacao/tiss", label: "Tiss" },
+                        { href: "/configuracao/parametrizacao/tiss", label: "TISS" },
                     ]
                 },
                 {

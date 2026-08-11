@@ -674,6 +674,7 @@ const confirmDelete = () => {
                 comorbidadesLocal.value = (comorbidadesLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
                 router.reload({ only: ['comorbidades'] });
             }
+        });
     }
     deleteModal.value = false;
     deleteContext.value = { type: '', id: null, nome: '' };

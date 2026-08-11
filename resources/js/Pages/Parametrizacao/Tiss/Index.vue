@@ -2,7 +2,12 @@
   <Layout>
     <Head title="Parametrização TISS" />
     <PageHeader title="Parametrização TISS" pageTitle="Configurações" />
-    <Tiss :conselhos="props.conselhos" :caraterAtendimentos="props.caraterAtendimentos" :tabelasReferencia="props.tabelasReferencia" />
+    <Tiss
+      :conselhos="props.conselhos"
+      :caraterAtendimentos="props.caraterAtendimentos"
+      :tabelasReferencia="props.tabelasReferencia"
+      :tipoAtendimentos="props.tipoAtendimentos"
+    />
   </Layout>
 </template>
 
@@ -16,5 +21,6 @@ const props = defineProps({
   conselhos: { type: Array, default: () => [] },
   caraterAtendimentos: { type: Array, default: () => [] },
   tabelasReferencia: { type: Array, default: () => [] },
+  tipoAtendimentos: { type: Array, default: () => [] },
 });
 </script>

@@ -22,6 +22,7 @@ use App\Http\Controllers\TotemController;
 use App\Http\Controllers\TotemOpcaoController;
 use App\Http\Controllers\PainelController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\TipoAtendimentoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,13 +50,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::post('/atendimentos/{atendimento}/pep/sinais-vitais', [PepController::class, 'saveSinaisVitais'])->name('atendimentos.pep.sinais-vitais.save');
     Route::post('/atendimentos/{atendimento}/pep/evolucao', [PepController::class, 'saveEvolucao'])->name('atendimentos.pep.evolucao.save');
     Route::delete('/atendimentos/{atendimento}/pep/evolucao/{evolucao}', [PepController::class, 'deleteEvolucao'])->name('atendimentos.pep.evolucao.delete');
-    
+
 
     Route::delete('/atendimentos/{atendimento}/pep/tratamento/{tratamento}', [PepController::class, 'deleteTratamento'])->name('atendimentos.pep.tratamento.delete');
 
     Route::post('/atendimentos/{atendimento}/pep/prescricao', [PepController::class, 'savePrescricao'])->name('atendimentos.pep.prescricao.save');
     Route::delete('/atendimentos/{atendimento}/pep/prescricao/{prescricao}', [PepController::class, 'deletePrescricao'])->name('atendimentos.pep.prescricao.delete');
-    
+
     Route::post('/atendimentos/{atendimento}/pep/diagnostico', [PepController::class, 'storeDiagnostico'])->name('atendimentos.pep.diagnostico.save');
     Route::get('/cids/search', [\App\Http\Controllers\CidController::class, 'search'])->name('cids.search');
     Route::get('/cids/list', [\App\Http\Controllers\CidController::class, 'list'])->name('cids.list');
@@ -173,7 +174,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/agenda-medica", [AgendaMedicaController::class, "store"])->name('agenda_medica.store');
         Route::get("/agendamentos/profissionais-por-procedimento", [AgendamentoController::class, "profissionaisPorProcedimento"])->name('agendamentos.profissionais_por_procedimento');
         Route::get("/agendamentos", [AgendamentoController::class, "index"])->name('agendamentos.index');
-        
+
         // Fila da Recepção
         Route::get("/recepcao/fila", [\App\Http\Controllers\RecepcaoFilaController::class, "index"])->name('recepcao.fila.index');
         Route::post("/recepcao/fila/{agendamento}/confirmar", [\App\Http\Controllers\RecepcaoFilaController::class, "confirmar"])->name('recepcao.fila.confirmar');
@@ -236,7 +237,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/parametros/carater-atendimento", [VelzonRoutesController::class, "parametros_store_carater_atendimento"])->name('parametros.carater_atendimento.store');
         Route::put("/parametros/carater-atendimento/{id}", [VelzonRoutesController::class, "parametros_update_carater_atendimento"])->name('parametros.carater_atendimento.update');
         Route::delete("/parametros/carater-atendimento/{id}", [VelzonRoutesController::class, "parametros_destroy_carater_atendimento"])->name('parametros.carater_atendimento.destroy');
-        
+
         Route::post("/parametros/tabela-referencia", [VelzonRoutesController::class, "parametros_store_tabela_referencia"])->name('parametros.tabela_referencia.store');
         Route::put("/parametros/tabela-referencia/{id}", [VelzonRoutesController::class, "parametros_update_tabela_referencia"])->name('parametros.tabela_referencia.update');
         Route::delete("/parametros/tabela-referencia/{id}", [VelzonRoutesController::class, "parametros_destroy_tabela_referencia"])->name('parametros.tabela_referencia.destroy');
@@ -248,7 +249,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/parametros/parentesco", [VelzonRoutesController::class, "parametros_store_parentesco"])->name('parametros.parentesco.store');
         Route::put("/parametros/parentesco/{id}", [VelzonRoutesController::class, "parametros_update_parentesco"])->name('parametros.parentesco.update');
         Route::delete("/parametros/parentesco/{id}", [VelzonRoutesController::class, "parametros_destroy_parentesco"])->name('parametros.parentesco.destroy');
-
+        Route::post("/parametros/tipo-atendimento", [TipoAtendimentoController::class, "parametros_store_tipo_atendimento"])->name('parametros.tipo_atendimento.store');
+        Route::put("/parametros/tipo-atendimento/{id}", [TipoAtendimentoController::class, "parametros_update_tipo_atendimento"])->name('parametros.tipo_atendimento.update');
+        Route::delete("/parametros/tipo-atendimento/{id}", [TipoAtendimentoController::class, "parametros_destroy_tipo_atendimento"])->name('parametros.tipo_atendimento.destroy');
         // Salas
         Route::resource('clinica/salas', SalaController::class)->names('salas')->parameters(['salas' => 'sala'])->except(['create', 'show', 'edit']);
         Route::resource('clinica/guiches', GuicheController::class)->names('guiches')->parameters(['guiches' => 'guiche'])->except(['create', 'show', 'edit']);
@@ -256,9 +259,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post('clinica/totens/{totem}/opcoes/sync', [TotemOpcaoController::class, 'sync'])->name('totens.opcoes.sync');
         Route::resource('clinica/totens.opcoes', TotemOpcaoController::class)->names('totens.opcoes')->parameters(['totens' => 'totem', 'opcoes' => 'opcao'])->only(['store', 'update', 'destroy']);
         Route::resource('clinica/paineis', PainelController::class)->names('paineis')->parameters(['paineis' => 'painel'])->except(['create', 'show', 'edit']);
-
     });
-
 });
 
 // PIX webhook (sem autenticação)
@@ -268,15 +269,15 @@ Route::post('/pix/mp/webhook', [\App\Http\Controllers\PagamentoController::class
 // Web Apps
 Route::get('/app/totem/{totem?}', function ($totem = null) {
     if (!$totem) {
-        $totemModel = \App\Models\Totem::with(['opcoes' => function($q) {
+        $totemModel = \App\Models\Totem::with(['opcoes' => function ($q) {
             $q->where('status', true);
         }])->where('status', true)->first();
     } else {
-        $totemModel = \App\Models\Totem::with(['opcoes' => function($q) {
+        $totemModel = \App\Models\Totem::with(['opcoes' => function ($q) {
             $q->where('status', true);
         }])->where('status', true)->findOrFail($totem);
     }
-    
+
     return Inertia\Inertia::render('Apps/Totem', [
         'totem' => $totemModel
     ]);
@@ -313,3 +314,5 @@ Route::get('/app/painel/data', function () {
 })->name('apps.painel.data');
 
 Route::get('/guias/{agendamento}/imprimir', [App\Http\Controllers\GuiaController::class, 'imprimirDaAgenda'])->name('guias.imprimirDaAgenda');
+Route::get('/guias/{agendamento}/dados', [App\Http\Controllers\GuiaController::class, 'getDadosDaAgenda'])->name('guias.dados');
+Route::put('/guias/{id}', [App\Http\Controllers\GuiaController::class, 'update'])->name('guias.update');

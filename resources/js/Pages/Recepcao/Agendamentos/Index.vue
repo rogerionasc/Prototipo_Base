@@ -23,6 +23,7 @@ import Modal from "@/Components/Modal.vue";
 import Offcanvas from "@/Components/Offcanvas.vue";
 import SuggestInput from "@/Components/SuggestInput.vue";
 import SimpleTable from "@/Components/Tables/SimpleTable.vue";
+import GuiaSADTModal from "@/Components/Guias/GuiaSADTModal.vue";
 
 export default {
     data() {
@@ -192,6 +193,8 @@ export default {
             eventoSelecionado: null,
             editandoNoModalDeCriacao: false,
             habilitarCorFundoCalendario: localStorage.getItem("habilitarCorFundoCalendario") === "true",
+            showGuiaSADTModal: false,
+            selectedAgendamentoForGuia: null,
         };
     },
     components: {
@@ -204,7 +207,8 @@ export default {
         Modal,
         Offcanvas,
         SuggestInput,
-        SimpleTable
+        SimpleTable,
+        GuiaSADTModal
     },
     computed: {
         isEdicaoBloqueada() {
@@ -1323,7 +1327,8 @@ export default {
             this.modalCancelamento = true;
         },
         imprimirGuiaAgendamento(agendamentoId) {
-            window.open(`/guias/${agendamentoId}/imprimir`, '_blank');
+            this.selectedAgendamentoForGuia = agendamentoId;
+            this.showGuiaSADTModal = true;
         },
         async confirmarCancelamentoAgendamento() {
             try {
@@ -2297,8 +2302,8 @@ export default {
                 </template>
             </div>
             <template #extraFooterLeft>
-                <button v-if="isEditMode && agendamentoForm.autorizacao_id" type="button" class="btn btn-info" title="Imprimir Guia" @click="imprimirGuiaAgendamento(agendamentoForm.id)">
-                    <i class="ri-printer-line me-1"></i> Guia
+                <button v-if="isEditMode && agendamentoForm.autorizacao_id" type="button" class="btn btn-info" title="Guia SP/SADT" @click="imprimirGuiaAgendamento(agendamentoForm.id)">
+                    <i class="ri-file-list-3-line me-1"></i> Guia SP/SADT
                 </button>
             </template>
         </Offcanvas>
@@ -2325,10 +2330,10 @@ export default {
                         @click="abrirReagendarSessaoDaLista(item.id)">
                         <i class="ri-edit-line me-1"></i> Reagendar
                     </button>
-                    <button v-if="String(item.convenio_tipo || '').toLowerCase().includes('convenio') || String(item.convenio_tipo || '').toLowerCase().includes('plano') || String(item.convenio_tipo || '').toLowerCase().includes('cooperativa')" type="button" class="btn btn-sm btn-info" title="Imprimir Guia"
+                    <button v-if="String(item.convenio_tipo || '').toLowerCase().includes('convenio') || String(item.convenio_tipo || '').toLowerCase().includes('plano') || String(item.convenio_tipo || '').toLowerCase().includes('cooperativa')" type="button" class="btn btn-sm btn-info" title="Guia SP/SADT"
                         :disabled="bloquearAcoesModalEventosDia"
                         @click="imprimirGuiaAgendamento(item.id)">
-                        <i class="ri-printer-line me-1"></i> Guia
+                        <i class="ri-file-list-3-line me-1"></i> Guia SP/SADT
                     </button>
                     <button v-if="!String(item.status || '').toLowerCase().includes('cancel')" type="button"
                         class="btn btn-sm btn-danger" title="Cancelar"
@@ -2339,6 +2344,9 @@ export default {
                 </template>
             </SimpleTable>
         </Modal>
+
+        <!-- Modal Guia SP/SADT - fora de qualquer contexto de empilhamento -->
+        <GuiaSADTModal v-if="showGuiaSADTModal" v-model="showGuiaSADTModal" :agendamento-id="selectedAgendamentoForGuia" />
 
 
     </Layout>
