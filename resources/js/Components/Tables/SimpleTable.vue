@@ -66,7 +66,7 @@ const slots = useSlots();
             <slot name="top"></slot>
 
             <div class="table-responsive" :class="{ 'table-card': variant === 'card', 'mb-1': true }">
-                <table class="table table-nowrap align-middle mb-0" :class="[tableClass, { 'table-sm': compact }]">
+                <table class="table table-hover table-nowrap align-middle mb-0" :class="[tableClass, { 'table-sm': compact }]">
                     <thead class="table-light text-muted">
                         <tr>
                             <th v-for="(col, index) in columns" :key="index" :style="{ width: col.width || 'auto' }" :class="col.thClass || ''">

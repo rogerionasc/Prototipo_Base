@@ -202,6 +202,38 @@
             @procedure="editMedico" @delete="removeMedico" />
         </div>
       </BTab>
+    
+      <BTab title="Config. Guia SP/SADT">
+        <div class="mt-4">
+          <h5 class="mb-3">Campos da Guia SP/SADT</h5>
+          <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <table class="table table-bordered table-sm table-striped">
+              <thead class="table-light position-sticky top-0 z-1">
+                <tr>
+                  <th>Campo</th>
+                  <th class="text-center" style="width: 100px;">Visível</th>
+                  <th class="text-center" style="width: 100px;">Obrigatório</th>
+                  <th class="text-center" style="width: 100px;">Bloqueado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="field in spsadtFields" :key="field.key">
+                  <td>{{ field.label }}</td>
+                  <td class="text-center">
+                    <input type="checkbox" class="form-check-input" :value="field.key" v-model="form.config_spsadt.visivel" />
+                  </td>
+                  <td class="text-center">
+                    <input type="checkbox" class="form-check-input" :value="field.key" v-model="form.config_spsadt.obrigatorio" />
+                  </td>
+                  <td class="text-center">
+                    <input type="checkbox" class="form-check-input" :value="field.key" v-model="form.config_spsadt.bloqueado" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </BTab>
     </BTabs>
   </form>
 
@@ -251,6 +283,71 @@ const props = defineProps({
   tussTabelas: { type: Array, default: () => [] },
   profissionaisSaude: { type: Array, default: () => [] },
 });
+
+const spsadtFields = [
+  { key: '1_registro_ans', label: '1 - Registro ANS' },
+  { key: '2_numero_guia_prestador', label: '2 - Número da Guia no Prestador' },
+  { key: '3_numero_guia_principal', label: '3 - Número da Guia Principal' },
+  { key: '4_data_autorizacao', label: '4 - Data da Autorização' },
+  { key: '5_senha', label: '5 - Senha' },
+  { key: '6_validade_senha', label: '6 - Data de Validade da Senha' },
+  { key: '7_numero_guia_operadora', label: '7 - Nº da Guia Atribuído pela Operadora' },
+  { key: '8_numero_carteira', label: '8 - Número da Carteira' },
+  { key: '9_validade_carteira', label: '9 - Validade da Carteira' },
+  { key: '10_nome_beneficiario', label: '10 - Nome' },
+  { key: '11_cartao_nacional_saude', label: '11 - Cartão Nacional de Saúde (CNS)' },
+  { key: '12_atendimento_rn', label: '12 - Atendimento a RN' },
+  
+  { key: '13_codigo_operadora', label: '13 - Código na Operadora / CPF' },
+  { key: '14_nome_contratado', label: '14 - Nome do Contratado Solicitante' },
+  { key: '15_nome_profissional_solicitante', label: '15 - Nome do Profissional Solicitante' },
+  { key: '16_conselho_profissional', label: '16 - Conselho' },
+  { key: '17_numero_conselho', label: '17 - Número do Conselho' },
+  { key: '18_uf_conselho', label: '18 - UF' },
+  { key: '19_codigo_cbo', label: '19 - CBO S' },
+  
+  { key: '21_carater_atendimento', label: '21 - Caráter do Atendimento' },
+  { key: '22_data_solicitacao', label: '22 - Data da Solicitação' },
+  { key: '23_indicacao_clinica', label: '23 - Indicação Clínica' },
+  
+  { key: '24_tabela', label: '24 - Tabela' },
+  { key: '25_codigo_procedimento', label: '25 - Código Proced.' },
+  { key: '26_descricao', label: '26 - Descrição' },
+  { key: '27_quantidade_solicitada', label: '27 - Qtd. Sol.' },
+  { key: '28_quantidade_autorizada', label: '28 - Qtd. Aut.' },
+  
+  { key: '29_codigo_operadora_executante', label: '29 - Código na Operadora / CPF / CNPJ' },
+  { key: '30_nome_contratado_executante', label: '30 - Nome do Contratado Executante' },
+  { key: '31_codigo_cnes_executante', label: '31 - Código CNES' },
+  
+  { key: '32_tipo_atendimento', label: '32 - Tipo de Atendimento' },
+  { key: '33_indicacao_acidente', label: '33 - Indicação de Acidente' },
+  { key: '34_tipo_consulta', label: '34 - Tipo de Consulta' },
+  { key: '35_motivo_encerramento', label: '35 - Motivo de Encerramento' },
+  
+  { key: '36_data_hora_execucao', label: '36 - Data de Realização' },
+  { key: '37_hora_inicial', label: '37 - Hora Inicial' },
+  { key: '38_hora_final', label: '38 - Hora Final' },
+  { key: '39_tabela_realizado', label: '39 - Tab' },
+  { key: '40_codigo_procedimento_realizado', label: '40 - Código Proced.' },
+  { key: '41_descricao_realizado', label: '41 - Descrição' },
+  { key: '42_quantidade_realizada', label: '42 - Qtd' },
+  { key: '43_via_acesso', label: '43 - Via' },
+  { key: '44_tecnica_utilizada', label: '44 - Téc' },
+  { key: '45_fator_reducao_acrescimo', label: '45 - Fat' },
+  { key: '46_valor_unitario', label: '46 - Val Unit' },
+  { key: '47_valor_total', label: '47 - Val Tot' },
+  
+  { key: '58_observacao', label: '58 - Observação / Justificativa' },
+  { key: '59_valor_total_honorarios', label: '59 - Total Procedimentos' },
+  { key: '60_valor_total_taxas', label: '60 - Total Taxas/Aluguéis' },
+  { key: '61_valor_total_materiais', label: '61 - Total Materiais' },
+  { key: '62_valor_total_opme', label: '62 - Total OPME' },
+  { key: '63_valor_total_medicamentos', label: '63 - Total Medicamentos' },
+  { key: '64_valor_total_gases', label: '64 - Total Gases Medicinais' },
+  { key: '65_valor_total_geral', label: '65 - Valor Total Geral' }
+];
+
 
 const formEl = ref(null);
 const tipoSelect = ref(null);
@@ -322,6 +419,7 @@ function saveMedicoTussModal() {
 }
 
 const form = useForm({
+  config_spsadt: { visivel: [], obrigatorio: [], bloqueado: [] },
   id: null,
   descricao: "",
   logo: null,

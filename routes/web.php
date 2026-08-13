@@ -252,6 +252,30 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/parametros/tipo-atendimento", [TipoAtendimentoController::class, "parametros_store_tipo_atendimento"])->name('parametros.tipo_atendimento.store');
         Route::put("/parametros/tipo-atendimento/{id}", [TipoAtendimentoController::class, "parametros_update_tipo_atendimento"])->name('parametros.tipo_atendimento.update');
         Route::delete("/parametros/tipo-atendimento/{id}", [TipoAtendimentoController::class, "parametros_destroy_tipo_atendimento"])->name('parametros.tipo_atendimento.destroy');
+
+        Route::post("/parametros/indicacao-incidencia", [\App\Http\Controllers\IndicacaoIncidenciaController::class, "store"])->name('parametros.indicacao_incidencia.store');
+        Route::put("/parametros/indicacao-incidencia/{id}", [\App\Http\Controllers\IndicacaoIncidenciaController::class, "update"])->name('parametros.indicacao_incidencia.update');
+        Route::delete("/parametros/indicacao-incidencia/{id}", [\App\Http\Controllers\IndicacaoIncidenciaController::class, "destroy"])->name('parametros.indicacao_incidencia.destroy');
+
+        Route::post("/parametros/tipo-consulta", [\App\Http\Controllers\TipoConsultaController::class, "store"])->name('parametros.tipo_consulta.store');
+        Route::put("/parametros/tipo-consulta/{id}", [\App\Http\Controllers\TipoConsultaController::class, "update"])->name('parametros.tipo_consulta.update');
+        Route::delete("/parametros/tipo-consulta/{id}", [\App\Http\Controllers\TipoConsultaController::class, "destroy"])->name('parametros.tipo_consulta.destroy');
+
+        Route::post("/parametros/motivo-encerramento", [\App\Http\Controllers\MotivoEncerramentoController::class, "store"])->name('parametros.motivo_encerramento.store');
+        Route::put("/parametros/motivo-encerramento/{id}", [\App\Http\Controllers\MotivoEncerramentoController::class, "update"])->name('parametros.motivo_encerramento.update');
+        Route::delete("/parametros/motivo-encerramento/{id}", [\App\Http\Controllers\MotivoEncerramentoController::class, "destroy"])->name('parametros.motivo_encerramento.destroy');
+
+        Route::post("/parametros/via-acesso", [\App\Http\Controllers\ViaAcessoController::class, "store"])->name('parametros.via_acesso.store');
+        Route::put("/parametros/via-acesso/{id}", [\App\Http\Controllers\ViaAcessoController::class, "update"])->name('parametros.via_acesso.update');
+        Route::delete("/parametros/via-acesso/{id}", [\App\Http\Controllers\ViaAcessoController::class, "destroy"])->name('parametros.via_acesso.destroy');
+
+        Route::post("/parametros/tecnica-utilizada", [\App\Http\Controllers\TecnicaUtilizadaController::class, "store"])->name('parametros.tecnica_utilizada.store');
+        Route::put("/parametros/tecnica-utilizada/{id}", [\App\Http\Controllers\TecnicaUtilizadaController::class, "update"])->name('parametros.tecnica_utilizada.update');
+        Route::delete("/parametros/tecnica-utilizada/{id}", [\App\Http\Controllers\TecnicaUtilizadaController::class, "destroy"])->name('parametros.tecnica_utilizada.destroy');
+
+        Route::post("/parametros/grau-participacao", [\App\Http\Controllers\GrauParticipacaoController::class, "store"])->name('parametros.grau_participacao.store');
+        Route::put("/parametros/grau-participacao/{id}", [\App\Http\Controllers\GrauParticipacaoController::class, "update"])->name('parametros.grau_participacao.update');
+        Route::delete("/parametros/grau-participacao/{id}", [\App\Http\Controllers\GrauParticipacaoController::class, "destroy"])->name('parametros.grau_participacao.destroy');
         // Salas
         Route::resource('clinica/salas', SalaController::class)->names('salas')->parameters(['salas' => 'sala'])->except(['create', 'show', 'edit']);
         Route::resource('clinica/guiches', GuicheController::class)->names('guiches')->parameters(['guiches' => 'guiche'])->except(['create', 'show', 'edit']);

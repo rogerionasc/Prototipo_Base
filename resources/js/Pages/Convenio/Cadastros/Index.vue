@@ -58,6 +58,8 @@ function openModalAdd() {
   if (convenioFormRef.value?.form) {
     convenioFormRef.value.form.id = null;
     convenioFormRef.value.form.tipo = 'CONVENIO';
+    convenioFormRef.value.form.dias_retorno = null;
+    convenioFormRef.value.form.config_spsadt = { visivel: [], obrigatorio: [], bloqueado: [] };
   }
   convenioFormRef.value?.setExistingLogoPath?.('');
   convenioFormRef.value?.setSelectedTussRows?.([]);
@@ -124,6 +126,11 @@ async function openModalEdit(id) {
     convenioFormRef.value.form.ans = c.ans ?? null;
     convenioFormRef.value.form.dias_recebimento = c.dias_recebimento ?? null;
     convenioFormRef.value.form.dias_retorno = c.dias_retorno ?? null;
+    convenioFormRef.value.form.config_spsadt = {
+      visivel: Object.values(c.config_spsadt?.visivel || []),
+      obrigatorio: Object.values(c.config_spsadt?.obrigatorio || []),
+      bloqueado: Object.values(c.config_spsadt?.bloqueado || [])
+    };
     const medicosMap = (c.medicos || []).map(m => {
       const mId = Number(m.id);
       // c.medico_tuss is eager loaded in ConvenioController as medico_tuss or medicoTuss

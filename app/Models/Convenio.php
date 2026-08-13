@@ -21,6 +21,11 @@ class Convenio extends Model
         'ans',
         'dias_recebimento',
         'dias_retorno',
+        'config_spsadt',
+    ];
+
+    protected $casts = [
+        'config_spsadt' => 'array',
     ];
 
     public function empresa()

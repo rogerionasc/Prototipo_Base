@@ -68,12 +68,24 @@ class VelzonRoutesController extends Controller
         $caraterAtendimentos = \App\Models\CaraterAtendimento::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
         $tabelasReferencia = \App\Models\TabelaReferencia::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
         $tipoAtendimentos = \App\Models\TipoAtendimento::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
+        $indicacaoIncidencias = \App\Models\IndicacaoIncidencia::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
+        $tipoConsultas = \App\Models\TipoConsulta::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
+        $motivosEncerramento = \App\Models\MotivoEncerramento::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
+        $viasAcesso = \App\Models\ViaAcesso::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
+        $tecnicasUtilizadas = \App\Models\TecnicaUtilizada::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
+        $grausParticipacao = \App\Models\GrauParticipacao::select('id', 'codigo', 'descricao')->orderBy('codigo')->get();
 
         return Inertia::render('Parametrizacao/Tiss/Index', [
             'conselhos' => $conselhos,
             'caraterAtendimentos' => $caraterAtendimentos,
             'tabelasReferencia' => $tabelasReferencia,
             'tipoAtendimentos' => $tipoAtendimentos,
+            'indicacaoIncidencias' => $indicacaoIncidencias,
+            'tipoConsultas' => $tipoConsultas,
+            'motivosEncerramento' => $motivosEncerramento,
+            'viasAcesso' => $viasAcesso,
+            'tecnicasUtilizadas' => $tecnicasUtilizadas,
+            'grausParticipacao' => $grausParticipacao,
         ]);
     }
 

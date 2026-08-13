@@ -64,9 +64,10 @@ createInertiaApp({
 
 function getChoicesConfig(el) {
     const isMultiple = !!el?.hasAttribute?.('multiple');
+    const disableSearch = !!el?.hasAttribute?.('data-choices-search-false');
     return {
-        searchEnabled: true,
-        searchChoices: true,
+        searchEnabled: !disableSearch,
+        searchChoices: !disableSearch,
         removeItemButton: isMultiple,
         shouldSort: false,
         searchFields: ['label', 'value'],

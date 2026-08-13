@@ -192,8 +192,8 @@ class GuiaController extends Controller
                 'data_solicitacao' => $agendamento->data,
                 'indicacao_clinica' => $agendamento->observacoes,
                 'tabela_procedimento_solicitado' => '22',
-                'procedimento_solicitado_codigo' => $agendamento->procedimento?->codigo ?? '00000000',
-                'procedimento_solicitado_descricao' => $agendamento->procedimento?->descricao ?? 'Consulta',
+                'procedimento_solicitado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->codigo ?? ''),
+                'procedimento_solicitado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->descricao ?? 'Consulta'),
                 'quantidade_solicitada' => 1,
                 'quantidade_autorizada' => 1,
                 'contratado_executante_codigo' => '000000000',
@@ -206,9 +206,9 @@ class GuiaController extends Controller
                 'data_realizacao' => null,
                 'hora_inicial' => null,
                 'hora_final' => null,
-                'tabela_procedimento_realizado' => null,
-                'procedimento_realizado_codigo' => null,
-                'procedimento_realizado_descricao' => null,
+                'tabela_procedimento_realizado' => '22',
+                'procedimento_realizado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->codigo ?? ''),
+                'procedimento_realizado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->descricao ?? 'Consulta'),
                 'quantidade_realizada' => null,
                 'via_acesso' => null,
                 'tecnica_utilizada' => null,
@@ -243,9 +243,26 @@ class GuiaController extends Controller
             }
         }
 
+        $conselhos = \App\Models\Conselho::orderBy('sigla')->get();
+        $especialidades = \App\Models\Especialidade::orderBy('nome')->get();
+        $carateresAtendimento = \App\Models\CaraterAtendimento::all();
+        $tabelasReferencia = \App\Models\TabelaReferencia::all();
+        $procedimentosTuss = \App\Models\Tuss::select('codigo', 'descricao')->orderBy('descricao')->get();
+        $tiposAtendimento = \App\Models\TipoAtendimento::orderBy('codigo')->get();
+        $indicacoesAcidente = \App\Models\IndicacaoIncidencia::orderBy('codigo')->get();
+        $tiposConsulta = \App\Models\TipoConsulta::orderBy('codigo')->get();
+
         return response()->json([
             'guia' => $guia,
-            'agendamento' => $agendamento
+            'agendamento' => $agendamento,
+            'conselhos' => $conselhos,
+            'especialidades' => $especialidades,
+            'carateres' => $carateresAtendimento,
+            'tabelas' => $tabelasReferencia,
+            'procedimentos' => $procedimentosTuss,
+            'tiposAtendimento' => $tiposAtendimento,
+            'indicacoesAcidente' => $indicacoesAcidente,
+            'tiposConsulta' => $tiposConsulta
         ]);
     }
 
@@ -261,13 +278,13 @@ class GuiaController extends Controller
         foreach ($data as $key => $value) {
             if (is_null($value)) {
                 // Campos de data, hora, chaves estrangeiras e timestamps (deleted_at) são nullable no banco, então mantemos null
-                if (str_starts_with($key, 'data_') || str_starts_with($key, 'hora_') || str_ends_with($key, '_id') || str_ends_with($key, '_at')) {
+                if (str_starts_with($key, 'data_') || str_starts_with($key, 'hora_') || str_ends_with($key, '_id') || str_ends_with($key, '_at') || $key === 'validade_carteira') {
                     continue;
                 }
 
-                if (in_array($key, ['quantidade_solicitada', 'quantidade_autorizada', 'atendimento_rn', 'quantidade_realizada'])) {
+                if (in_array($key, ['quantidade_solicitada', 'quantidade_autorizada', 'atendimento_rn', 'quantidade_realizada', 'tempo_doenca', 'quantidade_diarias'])) {
                     $data[$key] = 0;
-                } elseif (str_contains($key, 'valor_') || str_contains($key, 'total_') || str_contains($key, 'fator_')) {
+                } elseif (str_contains($key, 'valor_') || str_contains($key, 'total_') || str_contains($key, 'fator_') || str_contains($key, 'taxa_')) {
                     $data[$key] = 0.00;
                 } else {
                     $data[$key] = '';

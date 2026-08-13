@@ -792,4 +792,8 @@ onMounted(async () => {
     white-space: nowrap !important;
     overflow: visible !important;
 }
+
+.table-hover tbody tr:hover td.gridjs-td {
+    background-color: var(--bs-table-hover-bg, rgba(0, 0, 0, 0.075)) !important;
+}
 </style>

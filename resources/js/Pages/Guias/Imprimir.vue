@@ -45,7 +45,7 @@
                     <div class="box-value">{{ formatDate(guia.data_validade_senha) }}</div>
                 </div>
                 <div class="box" style="width: 30%;">
-                    <div class="box-title">7 - Número da Guia Atribuído pela Operadora</div>
+                    <div class="box-title">7 - Nº da Guia Atribuído pela Operadora</div>
                     <div class="box-value">{{ guia.numero_guia_operadora }}</div>
                 </div>
             </div>

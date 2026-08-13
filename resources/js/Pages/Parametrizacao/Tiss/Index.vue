@@ -7,6 +7,12 @@
       :caraterAtendimentos="props.caraterAtendimentos"
       :tabelasReferencia="props.tabelasReferencia"
       :tipoAtendimentos="props.tipoAtendimentos"
+      :indicacaoIncidencias="props.indicacaoIncidencias"
+      :tipoConsultas="props.tipoConsultas"
+      :motivosEncerramento="props.motivosEncerramento"
+      :viasAcesso="props.viasAcesso"
+      :tecnicasUtilizadas="props.tecnicasUtilizadas"
+      :grausParticipacao="props.grausParticipacao"
     />
   </Layout>
 </template>
@@ -22,5 +28,11 @@ const props = defineProps({
   caraterAtendimentos: { type: Array, default: () => [] },
   tabelasReferencia: { type: Array, default: () => [] },
   tipoAtendimentos: { type: Array, default: () => [] },
+  indicacaoIncidencias: { type: Array, default: () => [] },
+  tipoConsultas: { type: Array, default: () => [] },
+  motivosEncerramento: { type: Array, default: () => [] },
+  viasAcesso: { type: Array, default: () => [] },
+  tecnicasUtilizadas: { type: Array, default: () => [] },
+  grausParticipacao: { type: Array, default: () => [] },
 });
 </script>
