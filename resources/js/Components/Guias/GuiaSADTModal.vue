@@ -309,8 +309,11 @@
             </div>
             <div class="col-md-1 tiss-modern-col" v-if="isExibido('39_tabela_realizado')">
               <label>39 - Tab <span class="text-danger" v-if="isObrigatorio('39_tabela_realizado')">*</span></label>
-              <input v-model="form.tabela_realizado" type="text" class="form-control form-control-sm"
-                :disabled="isBloqueado('39_tabela_realizado')" :required="isObrigatorio('39_tabela_realizado')" />
+              <select v-model="form.tabela_procedimento_realizado" data-choices class="form-select" :key="'tabela-real-' + tabelas.length"
+                :disabled="isBloqueado('39_tabela_realizado')" :required="isObrigatorio('39_tabela_realizado')">
+                <option value="">Sel</option>
+                <option v-for="t in tabelas" :key="t.id" :value="t.codigo">{{ t.codigo }} - {{ t.descricao }}</option>
+              </select>
             </div>
             <div class="col-md-3 tiss-modern-col" v-if="isExibido('40_codigo_procedimento_realizado') || isExibido('41_descricao_realizado')">
               <label>40/41 - Cód/Descrição <span class="text-danger"
@@ -551,10 +554,13 @@ export default {
           this.form.procedimento_realizado_codigo = String(this.form.procedimento_realizado_codigo);
         }
         if (this.form.carater_atendimento) {
-          this.form.carater_atendimento = String(this.form.carater_atendimento);
+          this.form.carater_atendimento = String(this.form.carater_atendimento).padStart(2, '0');
         }
         if (this.form.tabela_procedimento_solicitado) {
           this.form.tabela_procedimento_solicitado = String(this.form.tabela_procedimento_solicitado);
+        }
+        if (this.form.tabela_procedimento_realizado) {
+          this.form.tabela_procedimento_realizado = String(this.form.tabela_procedimento_realizado);
         }
         if (this.form.tipo_atendimento) {
           this.form.tipo_atendimento = String(this.form.tipo_atendimento);
@@ -575,7 +581,10 @@ export default {
         this.tiposConsulta = response.data.tiposConsulta || [];
       } catch (error) {
         console.error("Erro ao carregar dados da Guia SP/SADT", error);
-        alert("Falha ao carregar dados da guia.");
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, error: "Falha ao carregar dados da guia." };
+        } catch (_) { }
         this.closeModal();
       }
     },
@@ -587,7 +596,10 @@ export default {
         this.closeModal();
       } catch (error) {
         console.error("Erro ao salvar guia", error);
-        alert("Falha ao salvar a Guia. Verifique os dados e tente novamente.");
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, error: "Falha ao salvar a Guia. Verifique os dados e tente novamente." };
+        } catch (_) { }
       } finally {
         this.isSalvando = false;
       }
@@ -601,7 +613,10 @@ export default {
         window.open(`/guias/${this.agendamentoId}/imprimir`, '_blank');
       } catch (error) {
         console.error("Erro ao salvar guia", error);
-        alert("Falha ao salvar a Guia. Verifique os dados e tente novamente.");
+        try {
+          const fp = (this.$page?.props?.flash ?? {});
+          this.$page.props.flash = { ...fp, error: "Falha ao salvar a Guia. Verifique os dados e tente novamente." };
+        } catch (_) { }
       } finally {
         this.isImprimindo = false;
       }

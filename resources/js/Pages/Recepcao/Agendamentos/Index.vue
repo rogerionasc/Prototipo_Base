@@ -851,6 +851,9 @@ export default {
 
                 this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "" };
                 this.termoBuscaPaciente = "";
+                this.isEditMode = false;
+                this.agendamentoEstaPago = false;
+                this.agendamentoFoiAtendido = false;
                 this.conveniosPacienteCriacao = [];
                 this.procedimentosSelectRows = [];
                 this.procedimentosFiltrados = [];
@@ -872,6 +875,8 @@ export default {
         },
         abrirNovoAgendamento() {
             this.isEditMode = false;
+            this.agendamentoEstaPago = false;
+            this.agendamentoFoiAtendido = false;
             // Limpa avisos de flash anteriores ao abrir modal limpo
             try {
                 const fp = (this.$page?.props?.flash ?? {});

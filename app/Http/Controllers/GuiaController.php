@@ -81,8 +81,8 @@ class GuiaController extends Controller
                 'data_solicitacao' => $agendamento->data,
                 'indicacao_clinica' => $agendamento->observacoes,
                 'tabela_procedimento_solicitado' => '22',
-                'procedimento_solicitado_codigo' => $agendamento->procedimento?->codigo ?? '00000000',
-                'procedimento_solicitado_descricao' => $agendamento->procedimento?->descricao ?? 'Consulta',
+                'procedimento_solicitado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->id ?? ''),
+                'procedimento_solicitado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->nome ?? 'Consulta'),
                 'quantidade_solicitada' => 1,
                 'quantidade_autorizada' => 1,
                 'contratado_executante_codigo' => '000000000',
@@ -96,8 +96,8 @@ class GuiaController extends Controller
                 'hora_inicial' => null,
                 'hora_final' => null,
                 'tabela_procedimento_realizado' => null,
-                'procedimento_realizado_codigo' => null,
-                'procedimento_realizado_descricao' => null,
+                'procedimento_realizado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->id ?? ''),
+                'procedimento_realizado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->nome ?? 'Consulta'),
                 'quantidade_realizada' => null,
                 'via_acesso' => null,
                 'tecnica_utilizada' => null,
@@ -192,8 +192,8 @@ class GuiaController extends Controller
                 'data_solicitacao' => $agendamento->data,
                 'indicacao_clinica' => $agendamento->observacoes,
                 'tabela_procedimento_solicitado' => '22',
-                'procedimento_solicitado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->codigo ?? ''),
-                'procedimento_solicitado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->descricao ?? 'Consulta'),
+                'procedimento_solicitado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->id ?? ''),
+                'procedimento_solicitado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->nome ?? 'Consulta'),
                 'quantidade_solicitada' => 1,
                 'quantidade_autorizada' => 1,
                 'contratado_executante_codigo' => '000000000',
@@ -207,8 +207,8 @@ class GuiaController extends Controller
                 'hora_inicial' => null,
                 'hora_final' => null,
                 'tabela_procedimento_realizado' => '22',
-                'procedimento_realizado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->codigo ?? ''),
-                'procedimento_realizado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->descricao ?? 'Consulta'),
+                'procedimento_realizado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->id ?? ''),
+                'procedimento_realizado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->nome ?? 'Consulta'),
                 'quantidade_realizada' => null,
                 'via_acesso' => null,
                 'tecnica_utilizada' => null,
@@ -276,7 +276,7 @@ class GuiaController extends Controller
         // para null por padrão (ConvertEmptyStringsToNull).
         // Precisamos reverter isso para os campos não falharem na restrição NOT NULL.
         foreach ($data as $key => $value) {
-            if (is_null($value)) {
+            if (is_null($value) || $value === '') {
                 // Campos de data, hora, chaves estrangeiras e timestamps (deleted_at) são nullable no banco, então mantemos null
                 if (str_starts_with($key, 'data_') || str_starts_with($key, 'hora_') || str_ends_with($key, '_id') || str_ends_with($key, '_at') || $key === 'validade_carteira') {
                     continue;
@@ -289,7 +289,13 @@ class GuiaController extends Controller
                 } else {
                     $data[$key] = '';
                 }
+            } elseif (is_string($value) && str_contains($value, 'T') && str_ends_with($value, 'Z')) {
+                $data[$key] = date('Y-m-d H:i:s', strtotime($value));
             }
+        }
+
+        if (isset($data['carater_atendimento'])) {
+            $data['carater_atendimento'] = (string) (int) $data['carater_atendimento'];
         }
 
         $guia->update($data);
