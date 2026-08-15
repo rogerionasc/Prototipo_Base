@@ -27,7 +27,6 @@ return new class extends Migration
             Schema::create('faturamentos', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
-                $table->unsignedBigInteger('agendamento_id')->nullable()->cascadeOnDelete();
                 $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();
                 $table->decimal('valor_total', 10, 2)->default(0);
                 $table->decimal('valor_final', 10, 2)->default(0);

@@ -218,9 +218,9 @@ export default {
             const cid = this.agendamentoForm?.convenio_id;
             if (!cid) return false;
             let conv = (this.conveniosPacienteCriacao || []).find(c => String(c.id) === String(cid));
-            if (!conv && this.isEditMode) conv = (this.conveniosPacienteEdicao || []).find(c => String(c.id) === String(cid));
+            if (!conv) conv = (this.conveniosPacienteEdicao || []).find(c => String(c.id) === String(cid));
             if (!conv) return false;
-            return String(conv.tipo || '').toUpperCase() === 'CONVENIO';
+            return String(conv.tipo || '').toUpperCase() !== 'PARTICULAR';
         },
         procedimentoRequerAutorizacao() {
             const procId = this.agendamentoForm?.procedimento_id;
@@ -1262,7 +1262,7 @@ export default {
                 this.$page.props.flash = { error: "A data do agendamento não pode ser retroativa a hoje." };
                 return;
             }
-            if (this.isConvenioAgendamento && this.procedimentoRequerAutorizacao === false) {
+            if (this.isConvenioAgendamento && this.procedimentoRequerAutorizacao) {
                 if (this.agendamentoForm.validade_autorizacao) {
                     if (moment(this.agendamentoForm.data).isAfter(moment(this.agendamentoForm.validade_autorizacao), 'day')) {
                         this.$page.props.flash = { error: "A data do agendamento não pode ser superior à validade da autorização." };
@@ -1835,7 +1835,7 @@ export default {
                 this.$page.props.flash = { error: "A data do agendamento não pode ser retroativa a hoje." };
                 return;
             }
-            if (this.isConvenioAgendamento && this.procedimentoRequerAutorizacao === false) {
+            if (this.isConvenioAgendamento && this.procedimentoRequerAutorizacao) {
                 if (this.agendamentoForm.validade_autorizacao) {
                     if (moment(this.agendamentoForm.data).isAfter(moment(this.agendamentoForm.validade_autorizacao), 'day')) {
                         this.$page.props.flash = { error: "A data do agendamento não pode ser superior à validade da autorização." };
@@ -2261,15 +2261,15 @@ export default {
                     </div>
                 </div>
 
-                <div v-if="isConvenioAgendamento && procedimentoRequerAutorizacao === false" class="col-md-6 mt-3">
-                    <label class="form-label">Número da Autorização *</label>
+                <div v-if="isConvenioAgendamento" class="col-md-6 mt-3">
+                    <label class="form-label">Número da Autorização <span v-if="procedimentoRequerAutorizacao" class="text-danger">*</span></label>
                     <input v-model="agendamentoForm.numero_autorizacao" type="text" class="form-control"
-                        placeholder="Insira o número" :disabled="isEdicaoBloqueada" required />
+                        placeholder="Insira o número" :disabled="agendamentoEstaPago || agendamentoFoiAtendido" :required="procedimentoRequerAutorizacao" />
                 </div>
-                <div v-if="isConvenioAgendamento && procedimentoRequerAutorizacao === false" class="col-md-6 mt-3">
-                    <label class="form-label">Validade da Autorização *</label>
+                <div v-if="isConvenioAgendamento" class="col-md-6 mt-3">
+                    <label class="form-label">Validade da Autorização <span v-if="procedimentoRequerAutorizacao" class="text-danger">*</span></label>
                     <flatPickr v-model="agendamentoForm.validade_autorizacao" class="form-control"
-                        :config="opcoesFlatpickrData" placeholder="Selecione a data de validade" :disabled="isEdicaoBloqueada" required />
+                        :config="opcoesFlatpickrData" placeholder="Selecione a data de validade" :disabled="agendamentoEstaPago || agendamentoFoiAtendido" :required="procedimentoRequerAutorizacao" />
                 </div>
 
                 <div class="col-md-12">

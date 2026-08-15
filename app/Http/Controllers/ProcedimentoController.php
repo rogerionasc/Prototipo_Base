@@ -848,6 +848,111 @@ class ProcedimentoController extends Controller
         return back()->with('success', 'Registro TUSS salvo.');
     }
 
+    public function updateTuss(Request $request, string $id)
+    {
+        $tuss = DB::table('tuss')->where('id', $id)->first();
+        if (!$tuss) {
+            abort(404, 'Registro TUSS não encontrado.');
+        }
+
+        $allowedTabelas = ['AMB1990', 'AMB1992', 'AMB1993', 'AMB1999', 'CBHPM3', 'CBHPM4', 'CBHPM5', 'TUSS'];
+        $hasProcRef = Schema::hasColumn('tuss', 'proc_ref');
+        $hasEhTratamento = Schema::hasColumn('tuss', 'eh_tratamento');
+        $hasQuantidadeSessoes = Schema::hasColumn('tuss', 'quantidade_sessoes');
+
+        $rules = [
+            'tabela' => ['required', 'string', 'max:20'],
+            'codigo' => ['required', 'string', 'max:30'],
+            'descricao' => ['nullable', 'string', 'max:255'],
+            'm2_filme' => ['nullable', 'string', 'max:50'],
+            'auxiliares' => ['nullable', 'string', 'max:50'],
+            'incidencia' => ['nullable', 'string', 'max:50'],
+            'porte' => ['nullable', 'string', 'max:20'],
+            'ch' => ['nullable', 'string', 'max:50'],
+            'co' => ['nullable', 'string', 'max:50'],
+        ];
+        if ($hasProcRef) $rules['proc_ref'] = ['nullable', 'string', 'max:50'];
+        if ($hasEhTratamento) $rules['eh_tratamento'] = ['nullable'];
+        if ($hasQuantidadeSessoes) $rules['quantidade_sessoes'] = ['nullable', 'integer', 'min:1', 'max:1000'];
+
+        $data = $request->validate($rules, [
+            'tabela.required' => 'Informe a tabela.',
+            'codigo.required' => 'Informe o código.',
+        ]);
+
+        $tabela = trim((string)($data['tabela'] ?? ''));
+        $codigo = trim((string)($data['codigo'] ?? ''));
+        if (!in_array($tabela, $allowedTabelas, true)) {
+            throw ValidationException::withMessages(['tabela' => ['Tabela inválida.']]);
+        }
+        if ($tabela === '' || $codigo === '') {
+            throw ValidationException::withMessages([
+                'tabela' => $tabela === '' ? ['Informe a tabela.'] : [],
+                'codigo' => $codigo === '' ? ['Informe o código.'] : [],
+            ]);
+        }
+
+        // Se mudou tabela/codigo, verificar se já não existe outro registro com o mesmo (tabela, codigo)
+        if ($tabela !== $tuss->tabela || $codigo !== $tuss->codigo) {
+            $exists = DB::table('tuss')
+                ->where('tabela', $tabela)
+                ->where('codigo', $codigo)
+                ->where('id', '!=', $id)
+                ->exists();
+            if ($exists) {
+                throw ValidationException::withMessages(['codigo' => ['Já existe um registro com esta tabela e código.']]);
+            }
+        }
+
+        $ch = $this->parseDecimal($data['ch'] ?? null);
+        $co = $this->parseDecimal($data['co'] ?? null);
+        $ehTratamento = $hasEhTratamento
+            ? (filter_var($data['eh_tratamento'] ?? false, FILTER_VALIDATE_BOOLEAN) ? true : false)
+            : null;
+        $quantidadeSessoes = $hasQuantidadeSessoes
+            ? (isset($data['quantidade_sessoes']) && $data['quantidade_sessoes'] !== '' ? (int)$data['quantidade_sessoes'] : null)
+            : null;
+        if ($hasEhTratamento && !$ehTratamento) {
+            $quantidadeSessoes = null;
+        }
+        if ($hasEhTratamento && $ehTratamento && $hasQuantidadeSessoes && $quantidadeSessoes === null) {
+            throw ValidationException::withMessages(['quantidade_sessoes' => ['Informe a quantidade de sessões.']]);
+        }
+
+        $hasChOrCo = ($ch !== null) || ($co !== null);
+        if (!$hasChOrCo) {
+            $total = null;
+        } elseif ($hasEhTratamento && $ehTratamento && $quantidadeSessoes !== null) {
+            $total = ((float)($ch ?? 0)) * (int)$quantidadeSessoes + (float)($co ?? 0);
+        } else {
+            $total = (float)($ch ?? 0) + (float)($co ?? 0);
+        }
+
+        $payload = [
+            'tabela' => $tabela,
+            'codigo' => $codigo,
+            'descricao' => isset($data['descricao']) && trim((string)$data['descricao']) !== '' ? trim((string)$data['descricao']) : null,
+            'm2_filme' => $this->parseDecimal($data['m2_filme'] ?? null),
+            'auxiliares' => $this->parseDecimal($data['auxiliares'] ?? null),
+            'incidencia' => $this->parseDecimal($data['incidencia'] ?? null),
+            'porte' => isset($data['porte']) && trim((string)$data['porte']) !== '' ? trim((string)$data['porte']) : null,
+            'ch' => $ch,
+            'co' => $co,
+            'total' => $total,
+            'updated_at' => now(),
+            'deleted_at' => null,
+        ];
+        if ($hasProcRef) {
+            $payload['proc_ref'] = isset($data['proc_ref']) && trim((string)$data['proc_ref']) !== '' ? trim((string)$data['proc_ref']) : null;
+        }
+        if ($hasEhTratamento) $payload['eh_tratamento'] = $ehTratamento ? 1 : 0;
+        if ($hasQuantidadeSessoes) $payload['quantidade_sessoes'] = $quantidadeSessoes;
+
+        DB::table('tuss')->where('id', $id)->update($payload);
+
+        return back()->with('success', 'Registro TUSS atualizado com sucesso.');
+    }
+
     public function listTuss(Request $request)
     {
         $data = $request->validate([

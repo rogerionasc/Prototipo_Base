@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedInteger('ans')->nullable();
             $table->unsignedInteger('dias_recebimento')->nullable();
             $table->unsignedInteger('dias_retorno')->nullable();
+            $table->json('config_spsadt')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

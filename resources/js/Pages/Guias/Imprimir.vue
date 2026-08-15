@@ -1,4 +1,5 @@
 <template>
+
     <Head title="Guia de Serviço Profissional / SADT" />
 
 
@@ -9,8 +10,9 @@
             <!-- ══ CABEÇALHO ══ -->
             <div class="g-row header-row">
                 <div class="logo-cell">
-                    <img :src="agendamento?.convenio?.logo_path ? '/storage/' + agendamento.convenio.logo_path : '/images/logo.png'" alt="Logo" style="max-height:45px; max-width:100%;"
-                        @error="$event.target.src='/images/logo.png'" />
+                    <img :src="agendamento?.convenio?.logo_path ? '/storage/' + agendamento.convenio.logo_path : '/images/logo.png'"
+                        alt="Logo" style="max-height:45px; max-width:100%;"
+                        @error="$event.target.src = '/images/logo.png'" />
                 </div>
                 <div style="flex:1; display:flex; flex-direction:column; border-left:1px solid #000;">
                     <div class="guia-title">
@@ -121,7 +123,8 @@
                     <span class="cell-label">19 - Código CBO</span>
                     <span class="cell-value">{{ guia.cbo_solicitante }}</span>
                 </div>
-                <div class="g-cell assinatura-cell" style="width:25%; border-right:none; text-align:center; justify-content: space-between;">
+                <div class="g-cell assinatura-cell"
+                    style="width:25%; border-right:none; text-align:center; justify-content: space-between;">
                     <span class="cell-label">20 - Assinatura do Profissional Solicitante</span>
                     <div class="assinatura-line"></div>
                 </div>
@@ -169,18 +172,28 @@
                     <span class="cell-label">28 - Qt. Autoriz.</span>
                 </div>
             </div>
-            <!-- Linha 1 - solicitado -->
-            <div class="g-row" style="border-bottom:none;">
-                <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">1 -</span></div>
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ guia.tabela_procedimento_solicitado }}</span></div>
-                <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">{{ guia.procedimento_solicitado_codigo }}</span></div>
-                <div class="g-cell" style="width:55%; border-right:none;"><span class="cell-value">{{ guia.procedimento_solicitado_descricao }}</span></div>
-                <div class="g-cell" style="width:10%; border-right:none;"><span class="cell-value">{{ guia.quantidade_solicitada }}</span></div>
-                <div class="g-cell" style="width:10%; border-right:none;"><span class="cell-value">{{ guia.quantidade_autorizada }}</span></div>
+            <!-- Linhas de itens solicitados -->
+            <div v-for="(proc, i) in (guia.procedimentos_solicitados && guia.procedimentos_solicitados.length ? guia.procedimentos_solicitados : [{}])"
+                :key="'sol-' + i" class="g-row" style="border-bottom:none;">
+                <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">{{ i + 1 }} -</span>
+                </div>
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
+                    proc.tabela_procedimento_solicitado || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">{{
+                    proc.procedimento_solicitado_codigo || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:55%; border-right:none;"><span class="cell-value">{{
+                    proc.procedimento_solicitado_descricao || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:10%; border-right:none;"><span class="cell-value">{{
+                    proc.quantidade_solicitada || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:10%; border-right:none;"><span class="cell-value">{{
+                    proc.quantidade_autorizada || '&nbsp;' }}</span></div>
             </div>
-            <!-- Linhas extras (em branco) -->
-            <div v-for="n in 4" :key="'sol-'+n" class="g-row" style="border-bottom:none;">
-                <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">{{ n+1 }} -</span></div>
+            <!-- Linhas extras (em branco) para fechar 5 linhas -->
+            <div v-for="n in Math.max(0, 5 - (guia.procedimentos_solicitados ? guia.procedimentos_solicitados.length : 1))"
+                :key="'sol-blank-' + n" class="g-row" style="border-bottom:none;">
+                <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">{{
+                    (guia.procedimentos_solicitados ? guia.procedimentos_solicitados.length : 1) + n }} -</span>
+                </div>
                 <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:55%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
@@ -251,30 +264,57 @@
                 <div class="g-cell" style="width:5%;"><span class="cell-label">44 - Téc.</span></div>
                 <div class="g-cell" style="width:5%;"><span class="cell-label">45 - % Re./Acresc.</span></div>
                 <div class="g-cell" style="width:7%;"><span class="cell-label">46 - Valor Unitário (R$)</span></div>
-                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-label">47 - Valor Total (R$)</span></div>
+                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-label">47 - Valor Total
+                        (R$)</span></div>
             </div>
-            <!-- Linha 1 - realizado -->
-            <div class="g-row" style="border-bottom:none;">
-                <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">1 -</span></div>
-                <div class="g-cell" style="width:9%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? formatDate(guia.data_realizacao) : '' }}</span></div>
-                <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? guia.hora_inicial : '' }}</span></div>
-                <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">a</span></div>
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? guia.tabela_procedimento_realizado : '' }}</span></div>
-                <div class="g-cell" style="width:13%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? guia.procedimento_realizado_codigo : '' }}</span></div>
-                <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? guia.procedimento_realizado_descricao : '' }}</span></div>
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? guia.quantidade_realizada : '' }}</span></div>
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? guia.via_acesso : '' }}</span></div>
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? guia.tecnica_utilizada : '' }}</span></div>
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? guia.fator_reducao_acrescimo : '' }}</span></div>
-                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? formatCurrency(guia.valor_unitario) : '' }}</span></div>
-                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{ agendamento?.status_id === 2 ? formatCurrency(guia.valor_total) : '' }}</span></div>
+            <!-- Linhas de itens realizados -->
+            <div v-for="(proc, i) in (guia.procedimentos_realizados && guia.procedimentos_realizados.length ? guia.procedimentos_realizados : [{}])"
+                :key="'real-' + i" class="g-row" style="border-bottom:none;">
+                <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">{{ i + 1 }} -</span>
+                </div>
+                <div class="g-cell" style="width:9%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? formatDate(proc.data_realizacao || guia.data_realizacao) :
+                        '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (proc.hora_inicial || guia.hora_inicial || '&nbsp;') : '&nbsp;'
+                        }}</span></div>
+                <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (proc.hora_final || guia.hora_final || '&nbsp;') : '&nbsp;'
+                        }}</span></div>
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (proc.tabela_procedimento_realizado || '&nbsp;') : '&nbsp;'
+                        }}</span></div>
+                <div class="g-cell" style="width:13%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (proc.procedimento_realizado_codigo || '&nbsp;') : '&nbsp;'
+                        }}</span></div>
+                <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (proc.procedimento_realizado_descricao || '&nbsp;') : '&nbsp;'
+                        }}</span></div>
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (proc.quantidade_realizada || '&nbsp;') : '&nbsp;' }}</span>
+                </div>
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (proc.via_acesso || '&nbsp;') : '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (proc.tecnica_utilizada || '&nbsp;') : '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (proc.fator_reducao_acrescimo || '&nbsp;') : '&nbsp;' }}</span>
+                </div>
+                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (formatCurrency(proc.valor_unitario) || '&nbsp;') : '&nbsp;'
+                        }}</span></div>
+                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{
+                    agendamento?.status_id === 2 ? (formatCurrency(proc.valor_total) || '&nbsp;') : '&nbsp;'
+                        }}</span></div>
             </div>
-            <!-- Linhas extras em branco -->
-            <div v-for="n in 5" :key="'exec-'+n" class="g-row" style="border-bottom:none;">
-                <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">{{ n+1 }} -</span></div>
+            <!-- Linhas extras em branco para fechar 5 linhas -->
+            <div v-for="n in Math.max(0, 5 - (guia.procedimentos_realizados ? guia.procedimentos_realizados.length : 1))"
+                :key="'exec-blank-' + n" class="g-row" style="border-bottom:none;">
+                <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">{{
+                    (guia.procedimentos_realizados ? guia.procedimentos_realizados.length : 1) + n }} -</span></div>
                 <div class="g-cell" style="width:9%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
-                <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">a</span></div>
+                <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:13%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
@@ -291,27 +331,38 @@
             <div class="g-row header-table-row">
                 <div class="g-cell" style="width:5%;"><span class="cell-label">48 - Seq. Ref.</span></div>
                 <div class="g-cell" style="width:7%;"><span class="cell-label">49 - Grau Part.</span></div>
-                <div class="g-cell" style="width:17%;"><span class="cell-label">50 - Código na Operadora / CPF</span></div>
+                <div class="g-cell" style="width:17%;"><span class="cell-label">50 - Código na Operadora / CPF</span>
+                </div>
                 <div class="g-cell" style="width:25%;"><span class="cell-label">51 - Nome do Profissional</span></div>
                 <div class="g-cell" style="width:12%;"><span class="cell-label">52 - Conselho Profissional</span></div>
                 <div class="g-cell" style="width:12%;"><span class="cell-label">53 - Número no Conselho</span></div>
                 <div class="g-cell" style="width:7%;"><span class="cell-label">54 - UF</span></div>
-                <div class="g-cell" style="width:15%; border-right:none;"><span class="cell-label">55 - Código CBO</span></div>
+                <div class="g-cell" style="width:15%; border-right:none;"><span class="cell-label">55 - Código
+                        CBO</span></div>
             </div>
             <!-- Linha 1 -->
             <div class="g-row" style="border-bottom:none;">
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ guia.sequencial_referencia ?? 1 }}</span></div>
-                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{ guia.grau_participacao }}</span></div>
-                <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">{{ guia.profissional_executante_codigo }}</span></div>
-                <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">{{ guia.profissional_executante_nome }}</span></div>
-                <div class="g-cell" style="width:12%; border-right:none;"><span class="cell-value">{{ guia.conselho_executante }}</span></div>
-                <div class="g-cell" style="width:12%; border-right:none;"><span class="cell-value">{{ guia.numero_conselho_executante }}</span></div>
-                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{ guia.uf_conselho_executante }}</span></div>
-                <div class="g-cell" style="width:15%; border-right:none;"><span class="cell-value">{{ guia.cbo_executante }}</span></div>
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
+                    guia.sequencial_referencia ?? 1 }}</span></div>
+                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{
+                    guia.grau_participacao }}</span></div>
+                <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">{{
+                    guia.profissional_executante_codigo }}</span></div>
+                <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">{{
+                    guia.profissional_executante_nome }}</span></div>
+                <div class="g-cell" style="width:12%; border-right:none;"><span class="cell-value">{{
+                    guia.conselho_executante }}</span></div>
+                <div class="g-cell" style="width:12%; border-right:none;"><span class="cell-value">{{
+                    guia.numero_conselho_executante }}</span></div>
+                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{
+                    guia.uf_conselho_executante }}</span></div>
+                <div class="g-cell" style="width:15%; border-right:none;"><span class="cell-value">{{
+                    guia.cbo_executante }}</span></div>
             </div>
             <!-- Linhas extras -->
-            <div v-for="n in 3" :key="'prof-'+n" class="g-row" :style="n < 3 ? 'border-bottom:none;' : ''">
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ n+1 }}</span></div>
+            <div v-for="n in 4" :key="'prof-' + n" class="g-row" :style="n < 4 ? 'border-bottom:none;' : ''">
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ n + 1 }}</span>
+                </div>
                 <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
@@ -343,7 +394,8 @@
                 <div class="g-cell" style="width:16%; border-right:none;">
                     <span class="cell-value-sm">9 -</span>
                 </div>
-                <div class="g-cell" style="width:20%; border-right:none;"><span class="cell-value-sm">&nbsp;</span></div>
+                <div class="g-cell" style="width:20%; border-right:none;"><span class="cell-value-sm">&nbsp;</span>
+                </div>
             </div>
             <div class="g-row">
                 <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">2 -</span></div>
@@ -351,7 +403,8 @@
                 <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">6 -</span></div>
                 <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">8 -</span></div>
                 <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">10 -</span></div>
-                <div class="g-cell" style="width:20%; border-right:none;"><span class="cell-value-sm">&nbsp;</span></div>
+                <div class="g-cell" style="width:20%; border-right:none;"><span class="cell-value-sm">&nbsp;</span>
+                </div>
             </div>
             <div class="g-row">
                 <div class="g-cell" style="width:100%; border-right:none;">
@@ -395,7 +448,8 @@
                 </div>
                 <div class="g-cell" style="width:15%; background:#eee; border-right:none;">
                     <span class="cell-label" style="font-weight:bold;">65 - Total Geral (R$)</span>
-                    <span class="cell-value" style="font-weight:bold;">{{ formatCurrency(guia.valor_total_geral) }}</span>
+                    <span class="cell-value" style="font-weight:bold;">{{ formatCurrency(guia.valor_total_geral)
+                    }}</span>
                 </div>
             </div>
 
@@ -577,9 +631,10 @@ const formatCurrency = (value) => {
 .no-grid {
     border-bottom: none !important;
 }
+
 .no-grid .g-cell,
-.no-grid > .g-cell,
-.no-grid > div {
+.no-grid>.g-cell,
+.no-grid>div {
     border-right: none !important;
     border-bottom: none !important;
 }
@@ -611,7 +666,9 @@ const formatCurrency = (value) => {
     letter-spacing: 0.5px;
 }
 
-.btn-print:hover { background: #1240a8; }
+.btn-print:hover {
+    background: #1240a8;
+}
 
 /* ─── Impressão ─────────────────────────────────────────── */
 @page {

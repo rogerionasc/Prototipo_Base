@@ -8,11 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
         if (!Schema::hasTable('pagamentos')) {
             Schema::create('pagamentos', function (Blueprint $table) {
                 $table->id();
                 $table->string('nu_pagamento', 25)->nullable();
                 $table->foreignId('faturamento_id')->constrained('faturamentos')->cascadeOnDelete();
+                $table->foreignId('agendamento_id')->nullable()->constrained('agendamentos')->nullOnDelete();
                 $table->foreignId('caixa_id')->nullable()->constrained('caixas')->nullOnDelete();
                 $table->foreignId('movimentacao_id')->nullable()->constrained('movimentacoes_caixa')->nullOnDelete();
                 $table->decimal('valor', 10, 2)->default(0);
@@ -24,6 +26,7 @@ return new class extends Migration
                 $table->timestamps();
             });
         }
+        Schema::enableForeignKeyConstraints();
     }
 
     public function down(): void

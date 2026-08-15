@@ -39,12 +39,21 @@ class HandleInertiaRequests extends Middleware
     {
         return array_merge(parent::share($request), [
             //
-            'flash' => [
-                'success' => Session::get('success'),
-                'error' => Session::get('error'),
-                'warning' => Session::get('warning'),
-                'info' => Session::get('info'),
-            ],
+            'flash' => function () use ($request) {
+                $error = Session::get('error');
+                if (!$error && Session::has('errors')) {
+                    $errors = Session::get('errors')->getBag('default');
+                    if ($errors && $errors->any()) {
+                        $error = 'Erro de Validação: ' . $errors->first();
+                    }
+                }
+                return [
+                    'success' => Session::get('success'),
+                    'error' => $error,
+                    'warning' => Session::get('warning'),
+                    'info' => Session::get('info'),
+                ];
+            },
         ]);
     }
 }

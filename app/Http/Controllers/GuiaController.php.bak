@@ -54,11 +54,6 @@ class GuiaController extends Controller
         }
 
         if (!$guia) {
-            $numeroGuiaPrestador = 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT);
-            $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
-        }
-
-        if (!$guia) {
             // Create a generic Guia
             $guia = Guia::create([
                 'faturamento_id' => null,
@@ -85,6 +80,11 @@ class GuiaController extends Controller
                 'carater_atendimento' => $agendamento->emergencia ? '2' : '1',
                 'data_solicitacao' => $agendamento->data,
                 'indicacao_clinica' => $agendamento->observacoes,
+                'tabela_procedimento_solicitado' => '22',
+                'procedimento_solicitado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->id ?? ''),
+                'procedimento_solicitado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->nome ?? 'Consulta'),
+                'quantidade_solicitada' => 1,
+                'quantidade_autorizada' => 1,
                 'contratado_executante_codigo' => '000000000',
                 'contratado_executante_nome' => 'CLINICA PADRAO',
                 'cnes_executante' => '0000000',
@@ -95,6 +95,24 @@ class GuiaController extends Controller
                 'data_realizacao' => null,
                 'hora_inicial' => null,
                 'hora_final' => null,
+                'tabela_procedimento_realizado' => null,
+                'procedimento_realizado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->id ?? ''),
+                'procedimento_realizado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->nome ?? 'Consulta'),
+                'quantidade_realizada' => null,
+                'via_acesso' => null,
+                'tecnica_utilizada' => null,
+                'fator_reducao_acrescimo' => null,
+                'valor_unitario' => null,
+                'valor_total' => null,
+                'sequencial_referencia' => null,
+                'grau_participacao' => null,
+                'profissional_executante_codigo' => null,
+                'profissional_executante_nome' => null,
+                'conselho_executante' => null,
+                'numero_conselho_executante' => null,
+                'uf_conselho_executante' => null,
+                'cbo_executante' => null,
+                'data_realizacao_serie' => null,
                 'assinatura_beneficiario_serie' => '',
                 'observacao_justificativa' => null,
                 'total_procedimentos' => null,
@@ -103,6 +121,7 @@ class GuiaController extends Controller
                 'total_opme' => null,
                 'total_medicamentos' => null,
                 'total_gases_medicinais' => null,
+                'valor_total_geral' => 0.00,
                 'assinatura_responsavel_autorizacao' => '',
                 'assinatura_beneficiario' => '',
                 'assinatura_contratado' => '',
@@ -113,29 +132,6 @@ class GuiaController extends Controller
             }
         }
 
-        if ($guia->procedimentosSolicitados()->count() === 0 && $agendamento->tuss) {
-            $guia->procedimentosSolicitados()->create([
-                'tabela_procedimento_solicitado' => '22',
-                'procedimento_solicitado_codigo' => $agendamento->tuss->codigo,
-                'procedimento_solicitado_descricao' => $agendamento->tuss->descricao,
-                'quantidade_solicitada' => 1,
-                'quantidade_autorizada' => 1,
-            ]);
-        }
-
-        if ($guia->procedimentosRealizados()->count() === 0 && $agendamento->tuss) {
-            $guia->procedimentosRealizados()->create([
-                'tabela_procedimento_realizado' => '22',
-                'procedimento_realizado_codigo' => $agendamento->tuss->codigo,
-                'procedimento_realizado_descricao' => $agendamento->tuss->descricao,
-                'quantidade_realizada' => 1,
-                'data_realizacao' => $agendamento->data,
-                'hora_inicial' => $agendamento->hora,
-            ]);
-        }
-
-        $guia->load(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes']);
-
         return \Inertia\Inertia::render('Guias/Imprimir', [
             'guia' => $guia,
             'agendamento' => $agendamento
@@ -143,7 +139,7 @@ class GuiaController extends Controller
     }
     public function getDadosDaAgenda($agendamentoId)
     {
-        $agendamento = Agendamento::with(['paciente', 'convenio', 'procedimento', 'tuss', 'agendaMedica.profissionalSaude.conselho', 'agendaMedica.profissionalSaude.especialidades'])->findOrFail($agendamentoId);
+        $agendamento = Agendamento::with(['paciente', 'convenio', 'procedimento', 'agendaMedica.profissionalSaude.conselho', 'agendaMedica.profissionalSaude.especialidades'])->findOrFail($agendamentoId);
 
         // Fetch or create Guia based on Agendamento -> Atendimento
         $atendimento = Atendimento::where('agendamento_id', $agendamento->id)->first();
@@ -169,11 +165,6 @@ class GuiaController extends Controller
         }
 
         if (!$guia) {
-            $numeroGuiaPrestador = 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT);
-            $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
-        }
-
-        if (!$guia) {
             // Create a generic Guia
             $guia = Guia::create([
                 'faturamento_id' => null,
@@ -200,6 +191,11 @@ class GuiaController extends Controller
                 'carater_atendimento' => $agendamento->emergencia ? '2' : '1',
                 'data_solicitacao' => $agendamento->data,
                 'indicacao_clinica' => $agendamento->observacoes,
+                'tabela_procedimento_solicitado' => '22',
+                'procedimento_solicitado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->id ?? ''),
+                'procedimento_solicitado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->nome ?? 'Consulta'),
+                'quantidade_solicitada' => 1,
+                'quantidade_autorizada' => 1,
                 'contratado_executante_codigo' => '000000000',
                 'contratado_executante_nome' => 'CLINICA PADRAO',
                 'cnes_executante' => '0000000',
@@ -210,6 +206,24 @@ class GuiaController extends Controller
                 'data_realizacao' => null,
                 'hora_inicial' => null,
                 'hora_final' => null,
+                'tabela_procedimento_realizado' => '22',
+                'procedimento_realizado_codigo' => $agendamento->tuss?->codigo ?? ($agendamento->procedimento?->id ?? ''),
+                'procedimento_realizado_descricao' => $agendamento->tuss?->descricao ?? ($agendamento->procedimento?->nome ?? 'Consulta'),
+                'quantidade_realizada' => null,
+                'via_acesso' => null,
+                'tecnica_utilizada' => null,
+                'fator_reducao_acrescimo' => null,
+                'valor_unitario' => null,
+                'valor_total' => null,
+                'sequencial_referencia' => null,
+                'grau_participacao' => null,
+                'profissional_executante_codigo' => null,
+                'profissional_executante_nome' => null,
+                'conselho_executante' => null,
+                'numero_conselho_executante' => null,
+                'uf_conselho_executante' => null,
+                'cbo_executante' => null,
+                'data_realizacao_serie' => null,
                 'assinatura_beneficiario_serie' => '',
                 'observacao_justificativa' => null,
                 'total_procedimentos' => null,
@@ -218,6 +232,7 @@ class GuiaController extends Controller
                 'total_opme' => null,
                 'total_medicamentos' => null,
                 'total_gases_medicinais' => null,
+                'valor_total_geral' => 0.00,
                 'assinatura_responsavel_autorizacao' => '',
                 'assinatura_beneficiario' => '',
                 'assinatura_contratado' => '',
@@ -228,16 +243,6 @@ class GuiaController extends Controller
             }
         }
 
-        if ($guia->procedimentosSolicitados()->count() === 0 && $agendamento->tuss) {
-            $guia->procedimentosSolicitados()->create([
-                'tabela_procedimento_solicitado' => '22',
-                'procedimento_solicitado_codigo' => $agendamento->tuss->codigo,
-                'procedimento_solicitado_descricao' => $agendamento->tuss->descricao,
-                'quantidade_solicitada' => 1,
-                'quantidade_autorizada' => 1,
-            ]);
-        }
-
         $conselhos = \App\Models\Conselho::orderBy('sigla')->get();
         $especialidades = \App\Models\Especialidade::orderBy('nome')->get();
         $carateresAtendimento = \App\Models\CaraterAtendimento::all();
@@ -246,8 +251,6 @@ class GuiaController extends Controller
         $tiposAtendimento = \App\Models\TipoAtendimento::orderBy('codigo')->get();
         $indicacoesAcidente = \App\Models\IndicacaoIncidencia::orderBy('codigo')->get();
         $tiposConsulta = \App\Models\TipoConsulta::orderBy('codigo')->get();
-
-        $guia->load(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes']);
 
         return response()->json([
             'guia' => $guia,
@@ -267,7 +270,7 @@ class GuiaController extends Controller
     {
         $guia = Guia::findOrFail($id);
         
-        $data = $request->except(['procedimentos_solicitados', 'procedimentos_realizados', 'profissionais_executantes']);
+        $data = $request->all();
         
         // A tabela guias não possui campos nullable. O Laravel converte strings vazias ('') 
         // para null por padrão (ConvertEmptyStringsToNull).
@@ -279,7 +282,7 @@ class GuiaController extends Controller
                     continue;
                 }
 
-                if (in_array($key, ['atendimento_rn', 'tempo_doenca', 'quantidade_diarias'])) {
+                if (in_array($key, ['quantidade_solicitada', 'quantidade_autorizada', 'atendimento_rn', 'quantidade_realizada', 'tempo_doenca', 'quantidade_diarias'])) {
                     $data[$key] = 0;
                 } elseif (str_contains($key, 'valor_') || str_contains($key, 'total_') || str_contains($key, 'fator_') || str_contains($key, 'taxa_')) {
                     $data[$key] = 0.00;
@@ -296,32 +299,10 @@ class GuiaController extends Controller
         }
 
         $guia->update($data);
-
-        // Sync relationships
-        if ($request->has('procedimentos_solicitados')) {
-            $guia->procedimentosSolicitados()->delete();
-            foreach ($request->input('procedimentos_solicitados', []) as $proc) {
-                $guia->procedimentosSolicitados()->create($proc);
-            }
-        }
-
-        if ($request->has('procedimentos_realizados')) {
-            $guia->procedimentosRealizados()->delete();
-            foreach ($request->input('procedimentos_realizados', []) as $proc) {
-                $guia->procedimentosRealizados()->create($proc);
-            }
-        }
-
-        if ($request->has('profissionais_executantes')) {
-            $guia->profissionaisExecutantes()->delete();
-            foreach ($request->input('profissionais_executantes', []) as $prof) {
-                $guia->profissionaisExecutantes()->create($prof);
-            }
-        }
         
         return response()->json([
             'message' => 'Guia atualizada com sucesso',
-            'guia' => $guia->load(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes'])
+            'guia' => $guia
         ]);
     }
 }

@@ -135,10 +135,13 @@ class RecepcaoFilaController extends Controller
             $defaultCategoria = \App\Models\CategoriaProcedimento::firstOrCreate(['nome' => 'Geral']);
             $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : $defaultCategoria->id;
 
+            $autorizacao = \App\Models\Autorizacao::where('agendamento_id', $agendamento->id)->latest()->first();
+
             Atendimento::create([
                 'paciente_id'               => $agendamento->paciente_id,
                 'medico_id'                => $agendamento->agendaMedica->pessoa_id ?? null,
                 'agendamento_id'           => $agendamento->id,
+                'autorizacao_id'           => $autorizacao?->id,
                 'procedimento_id'          => $agendamento->procedimento_id,
                 'tuss_id'                  => $agendamento->tuss_id,
                 'categoria_procedimento_id' => $catId ?: $defaultCategoria->id,
@@ -180,10 +183,13 @@ class RecepcaoFilaController extends Controller
             $defaultCategoria = \App\Models\CategoriaProcedimento::firstOrCreate(['nome' => 'Geral']);
             $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : $defaultCategoria->id;
 
+            $autorizacao = \App\Models\Autorizacao::where('agendamento_id', $agendamento->id)->latest()->first();
+
             $atendimento = Atendimento::create([
                 'paciente_id' => $agendamento->paciente_id,
                 'medico_id' => $agendamento->agendaMedica->pessoa_id ?? null,
                 'agendamento_id' => $agendamento->id,
+                'autorizacao_id' => $autorizacao?->id,
                 'procedimento_id' => $agendamento->procedimento_id ?? $agendamento->tuss_id,
                 'categoria_procedimento_id' => $catId ?: $defaultCategoria->id,
                 'data_atendimento' => Carbon::today()->format('Y-m-d'),

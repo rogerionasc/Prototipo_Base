@@ -773,6 +773,7 @@ class AgendamentoController extends Controller
             ->leftJoin('pagamentos as pag', 'pag.agendamento_id', '=', 'a.id')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'pag.faturamento_id')
             ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
+            ->leftJoin('convenios as conv', 'conv.id', '=', DB::raw('COALESCE(at.convenio_id, a.convenio_id)'))
             ->where('a.paciente_id', $paciente_id)
             ->select(
                 'a.id',
@@ -780,7 +781,8 @@ class AgendamentoController extends Controller
                 'a.hora',
                 'a.procedimento_id',
                 'a.tuss_id',
-                DB::raw('at.convenio_id AS convenio_id'),
+                DB::raw('COALESCE(at.convenio_id, a.convenio_id) AS convenio_id'),
+                DB::raw('COALESCE(conv.descricao, conv.tipo, "Particular") AS convenio_nome'),
                 'am.pessoa_id',
                 DB::raw('COALESCE(CONCAT(pr.nome, CASE WHEN st.numero_sessao IS NOT NULL AND pr.quantidade_sessoes IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, "/", pr.quantidade_sessoes, ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END), t.descricao, "") AS procedimento_nome'),
                 DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),
@@ -809,8 +811,11 @@ class AgendamentoController extends Controller
             $atendido = str_contains($stRaw, 'atendido');
 
             $convenioId = $ag->convenio_id;
+            $convenioNome = $ag->convenio_nome;
+
             if (!$convenioId && ($ag->procedimento_id || !$ag->tuss_id)) {
                 $convenioId = $convenioParticularId;
+                $convenioNome = 'Particular';
             }
 
             return [
@@ -826,6 +831,7 @@ class AgendamentoController extends Controller
                 'procedimento_id' => $ag->procedimento_id,
                 'tuss_id' => $ag->tuss_id,
                 'convenio_id' => $convenioId,
+                'convenio_nome' => $convenioNome,
                 'pessoa_id' => $ag->pessoa_id,
                 'is_virtual' => false,
             ];

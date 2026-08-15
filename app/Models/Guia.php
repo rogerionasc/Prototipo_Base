@@ -21,4 +21,19 @@ class Guia extends Model
     {
         return $this->hasOne(Atendimento::class, 'guia_id');
     }
+
+    public function procedimentosSolicitados()
+    {
+        return $this->hasMany(GuiaProcedimentoSolicitado::class);
+    }
+
+    public function procedimentosRealizados()
+    {
+        return $this->hasMany(GuiaProcedimentoRealizado::class);
+    }
+
+    public function profissionaisExecutantes()
+    {
+        return $this->hasMany(GuiaProfissionalExecutante::class);
+    }
 }

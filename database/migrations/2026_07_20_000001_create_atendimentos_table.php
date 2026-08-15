@@ -19,7 +19,8 @@ return new class extends Migration
             $table->unsignedBigInteger('autorizacao_id')->nullable(); // nullable
             $table->unsignedBigInteger('guia_id')->nullable(); // nullable
             $table->foreignId('caixa_pagamento_id')->nullable()->constrained('pagamentos');
-            $table->foreignId('procedimento_id')->constrained('procedimentos');
+            $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos');
+            $table->foreignId('tuss_id')->nullable()->constrained('tuss')->onDelete('restrict');
             $table->foreignId('categoria_procedimento_id')->constrained('categorias_procedimento');
             
             $table->string('tipo_atendimento', 50)->nullable(); // Particular ou Convenio

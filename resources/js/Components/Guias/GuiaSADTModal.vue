@@ -36,7 +36,9 @@
             <div class="col-md-3 tiss-modern-col" v-if="isExibido('4_data_autorizacao')">
               <label>4 - Data da Autorização <span class="text-danger"
                   v-if="isObrigatorio('4_data_autorizacao')">*</span></label>
-              <flatPickr v-model="form.data_autorizacao" class="form-control form-control-sm" :config="flatpickrDateOptions" :disabled="isBloqueado('4_data_autorizacao')" :required="isObrigatorio('4_data_autorizacao')" />
+              <flatPickr v-model="form.data_autorizacao" class="form-control form-control-sm"
+                :config="flatpickrDateOptions" :disabled="isBloqueado('4_data_autorizacao')"
+                :required="isObrigatorio('4_data_autorizacao')" />
             </div>
             <div class="col-md-3 tiss-modern-col" v-if="isExibido('5_senha')">
               <label>5 - Senha <span class="text-danger" v-if="isObrigatorio('5_senha')">*</span></label>
@@ -46,7 +48,9 @@
             <div class="col-md-3 tiss-modern-col" v-if="isExibido('6_validade_senha')">
               <label>6 - Data de Validade da Senha <span class="text-danger"
                   v-if="isObrigatorio('6_validade_senha')">*</span></label>
-              <flatPickr v-model="form.data_validade_senha" class="form-control form-control-sm" :config="flatpickrDateOptions" :disabled="isBloqueado('6_validade_senha')" :required="isObrigatorio('6_validade_senha')" />
+              <flatPickr v-model="form.data_validade_senha" class="form-control form-control-sm"
+                :config="flatpickrDateOptions" :disabled="isBloqueado('6_validade_senha')"
+                :required="isObrigatorio('6_validade_senha')" />
             </div>
             <div class="col-md-6 tiss-modern-col" v-if="isExibido('7_numero_guia_operadora')">
               <label>7 - Nº da Guia Atribuído pela Operadora <span class="text-danger"
@@ -71,7 +75,9 @@
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('9_validade_carteira')">
               <label>9 - Validade da Carteira <span class="text-danger"
                   v-if="isObrigatorio('9_validade_carteira')">*</span></label>
-              <flatPickr v-model="form.validade_carteira" class="form-control form-control-sm" :config="flatpickrDateOptions" :disabled="isBloqueado('9_validade_carteira')" :required="isObrigatorio('9_validade_carteira')" />
+              <flatPickr v-model="form.validade_carteira" class="form-control form-control-sm"
+                :config="flatpickrDateOptions" :disabled="isBloqueado('9_validade_carteira')"
+                :required="isObrigatorio('9_validade_carteira')" />
             </div>
             <div class="col-md-4 tiss-modern-col" v-if="isExibido('10_nome_beneficiario')">
               <label>10 - Nome <span class="text-danger" v-if="isObrigatorio('10_nome_beneficiario')">*</span></label>
@@ -123,8 +129,8 @@
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('16_conselho_profissional')">
               <label>16 - Conselho <span class="text-danger"
                   v-if="isObrigatorio('16_conselho_profissional')">*</span></label>
-              <select v-model="form.conselho_solicitante" data-choices class="form-select" :key="'conselho-' + conselhos.length"
-                :disabled="isBloqueado('16_conselho_profissional')"
+              <select v-model="form.conselho_solicitante" data-choices class="form-select"
+                :key="'conselho-' + conselhos.length" :disabled="isBloqueado('16_conselho_profissional')"
                 :required="isObrigatorio('16_conselho_profissional')">
                 <option value="">Selecione</option>
                 <option v-for="c in conselhos" :key="c.id" :value="c.codigo">{{ c.sigla }}</option>
@@ -138,16 +144,18 @@
             </div>
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('18_uf_conselho')">
               <label>18 - UF <span class="text-danger" v-if="isObrigatorio('18_uf_conselho')">*</span></label>
-              <select v-model="form.uf_conselho_solicitante" data-choices class="form-select" :key="'uf-' + (form.uf_conselho_solicitante || 'load')"
-                :disabled="isBloqueado('18_uf_conselho')" :required="isObrigatorio('18_uf_conselho')">
+              <select v-model="form.uf_conselho_solicitante" data-choices class="form-select"
+                :key="'uf-' + (form.uf_conselho_solicitante || 'load')" :disabled="isBloqueado('18_uf_conselho')"
+                :required="isObrigatorio('18_uf_conselho')">
                 <option value="">Selecione</option>
                 <option v-for="uf in ufOptions" :key="uf" :value="uf">{{ uf }}</option>
               </select>
             </div>
             <div class="col-md-5 tiss-modern-col" v-if="isExibido('19_codigo_cbo')">
               <label>19 - CBO S <span class="text-danger" v-if="isObrigatorio('19_codigo_cbo')">*</span></label>
-              <select v-model="form.cbo_solicitante" data-choices class="form-select" :key="'cbo-' + especialidades.length"
-                :disabled="isBloqueado('19_codigo_cbo')" :required="isObrigatorio('19_codigo_cbo')">
+              <select v-model="form.cbo_solicitante" data-choices class="form-select"
+                :key="'cbo-' + especialidades.length" :disabled="isBloqueado('19_codigo_cbo')"
+                :required="isObrigatorio('19_codigo_cbo')">
                 <option value="">Selecione</option>
                 <option v-for="e in especialidades" :key="e.id" :value="e.codigo">{{ e.codigo }} - {{ e.nome }}</option>
               </select>
@@ -162,8 +170,9 @@
             <div class="col-md-3 tiss-modern-col" v-if="isExibido('21_carater_atendimento')">
               <label>21 - Caráter do Atendimento <span class="text-danger"
                   v-if="isObrigatorio('21_carater_atendimento')">*</span></label>
-              <select v-model="form.carater_atendimento" data-choices class="form-select" :key="'carater-' + carateres.length"
-                :disabled="isBloqueado('21_carater_atendimento')" :required="isObrigatorio('21_carater_atendimento')">
+              <select v-model="form.carater_atendimento" data-choices class="form-select"
+                :key="'carater-' + carateres.length" :disabled="isBloqueado('21_carater_atendimento')"
+                :required="isObrigatorio('21_carater_atendimento')">
                 <option value="">Selecione</option>
                 <option v-for="c in carateres" :key="c.id" :value="c.codigo">{{ c.codigo }} - {{ c.descricao }}</option>
               </select>
@@ -171,7 +180,9 @@
             <div class="col-md-3 tiss-modern-col" v-if="isExibido('22_data_solicitacao')">
               <label>22 - Data da Solicitação <span class="text-danger"
                   v-if="isObrigatorio('22_data_solicitacao')">*</span></label>
-              <flatPickr v-model="form.data_solicitacao" class="form-control form-control-sm" :config="flatpickrDateOptions" :disabled="isBloqueado('22_data_solicitacao')" :required="isObrigatorio('22_data_solicitacao')" />
+              <flatPickr v-model="form.data_solicitacao" class="form-control form-control-sm"
+                :config="flatpickrDateOptions" :disabled="isBloqueado('22_data_solicitacao')"
+                :required="isObrigatorio('22_data_solicitacao')" />
             </div>
             <div class="col-md-6 tiss-modern-col" v-if="isExibido('23_indicacao_clinica')">
               <label>23 - Indicação Clínica <span class="text-danger"
@@ -179,42 +190,54 @@
               <input v-model="form.indicacao_clinica" type="text" class="form-control form-control-sm"
                 :disabled="isBloqueado('23_indicacao_clinica')" :required="isObrigatorio('23_indicacao_clinica')" />
             </div>
-            <div class="col-md-2 tiss-modern-col" v-if="isExibido('24_tabela')">
+            <!-- <div class="col-md-2 tiss-modern-col" v-if="isExibido('24_tabela')">
               <label>24 - Tabela <span class="text-danger" v-if="isObrigatorio('24_tabela')">*</span></label>
-              <select v-model="form.tabela_procedimento_solicitado" data-choices class="form-select" :key="'tabela-' + tabelas.length"
-                :disabled="isBloqueado('24_tabela')" :required="isObrigatorio('24_tabela')">
+              <select v-model="form.tabela_procedimento_solicitado" data-choices class="form-select"
+                :key="'tabela-' + tabelas.length" :disabled="isBloqueado('24_tabela')"
+                :required="isObrigatorio('24_tabela')">
                 <option value="">Selecione</option>
                 <option v-for="t in tabelas" :key="t.id" :value="t.codigo">{{ t.codigo }} - {{ t.descricao }}</option>
               </select>
-            </div>
-            <div class="col-md-2 tiss-modern-col" v-if="isExibido('25_codigo_procedimento')">
-              <label>25 - Código Proced. <span class="text-danger"
-                  v-if="isObrigatorio('25_codigo_procedimento')">*</span></label>
-              <select v-model="form.procedimento_solicitado_codigo" data-choices class="form-select" :key="'proced-' + procedimentos.length"
-                :disabled="isBloqueado('25_codigo_procedimento')" :required="isObrigatorio('25_codigo_procedimento')"
-                @change="updateProcedimentoDescricao">
-                <option value="">Selecione</option>
-                <option v-for="p in procedimentos" :key="p.codigo" :value="p.codigo">{{ p.codigo }} - {{ p.descricao }}</option>
-              </select>
-            </div>
-            <div class="col-md-6 tiss-modern-col" v-if="isExibido('26_descricao')">
-              <label>26 - Descrição <span class="text-danger" v-if="isObrigatorio('26_descricao')">*</span></label>
-              <input v-model="form.procedimento_solicitado_descricao" type="text" class="form-control form-control-sm"
-                :disabled="isBloqueado('26_descricao')" :required="isObrigatorio('26_descricao')" />
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('27_quantidade_solicitada')">
-              <label>27 - Qtd. Sol. <span class="text-danger"
-                  v-if="isObrigatorio('27_quantidade_solicitada')">*</span></label>
-              <input v-model="form.quantidade_solicitada" type="number" class="form-control form-control-sm"
-                :disabled="isBloqueado('27_quantidade_solicitada')"
-                :required="isObrigatorio('27_quantidade_solicitada')" />
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('28_quantidade_autorizada')">
-              <label>28 - Qtd. Aut. <span class="text-danger"
-                  v-if="isObrigatorio('28_quantidade_autorizada')">*</span></label>
-              <input v-model="form.quantidade_autorizada" type="number" class="form-control form-control-sm"
-                :disabled="isBloqueado('28_quantidade_autorizada')"
-                :required="isObrigatorio('28_quantidade_autorizada')" />
+            </div> -->
+          </div>
+          <div class="mt-3">
+            <h6 class="tiss-legend" style="border:none; margin:0 0 10px 0;">Procedimentos Solicitados</h6>
+            <div class="table-responsive" style="overflow: visible;">
+              <table class="table table-sm table-bordered align-middle mb-1">
+                <thead class="table-light">
+                  <tr>
+                    <th v-if="isExibido('24_tabela') || isExibido('25_codigo_procedimento') || isExibido('26_descricao')">24/25/26-Procedimento</th>
+                    <th v-if="isExibido('27_quantidade_solicitada')" style="width: 100px;">27-Qtd Sol.</th>
+                    <th v-if="isExibido('28_quantidade_autorizada')" style="width: 100px;">28-Qtd Aut.</th>
+                    <th style="width: 60px;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(item, index) in form.procedimentos_solicitados" :key="'sol-' + index">
+                    <td v-if="isExibido('24_tabela') || isExibido('25_codigo_procedimento') || isExibido('26_descricao')">
+                      <select v-model="item.procedimento_solicitado_codigo" class="form-select form-select-sm" data-choices
+                        :disabled="isBloqueado('25_codigo_procedimento')" @change="updateProcSolDescricao(item)">
+                        <option value="">Selecione</option>
+                        <option v-for="p in procedimentos" :key="p.codigo" :value="p.codigo">22 - {{ p.codigo }} - {{ p.descricao }}</option>
+                      </select>
+                    </td>
+                    <td v-if="isExibido('27_quantidade_solicitada')">
+                      <input v-model="item.quantidade_solicitada" type="number" class="form-control form-control-sm"
+                        :disabled="isBloqueado('27_quantidade_solicitada')" />
+                    </td>
+                    <td v-if="isExibido('28_quantidade_autorizada')">
+                      <input v-model="item.quantidade_autorizada" type="number" class="form-control form-control-sm"
+                        :disabled="isBloqueado('28_quantidade_autorizada')" />
+                    </td>
+                    <td>
+                      <button type="button" class="btn btn-sm btn-soft-danger" @click="removeProcSol(index)"><i
+                          class="ri-delete-bin-line"></i></button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <button type="button" class="btn btn-sm btn-soft-success" @click="addProcSol">+ Adicionar
+                Procedimento</button>
             </div>
           </div>
         </fieldset>
@@ -254,8 +277,9 @@
             <div class="col-md-3 tiss-modern-col" v-if="isExibido('32_tipo_atendimento')">
               <label>32 - Tipo de Atendimento <span class="text-danger"
                   v-if="isObrigatorio('32_tipo_atendimento')">*</span></label>
-              <select v-model="form.tipo_atendimento" data-choices class="form-select" :key="'tipoatend-' + tiposAtendimento.length"
-                :disabled="isBloqueado('32_tipo_atendimento')" :required="isObrigatorio('32_tipo_atendimento')">
+              <select v-model="form.tipo_atendimento" data-choices class="form-select"
+                :key="'tipoatend-' + tiposAtendimento.length" :disabled="isBloqueado('32_tipo_atendimento')"
+                :required="isObrigatorio('32_tipo_atendimento')">
                 <option value="">Selecione</option>
                 <option v-for="tipo in tiposAtendimento" :key="tipo.codigo" :value="String(tipo.codigo)">
                   {{ tipo.codigo }} - {{ tipo.descricao }}
@@ -265,8 +289,9 @@
             <div class="col-md-3 tiss-modern-col" v-if="isExibido('33_indicacao_acidente')">
               <label>33 - Indicação de Acidente <span class="text-danger"
                   v-if="isObrigatorio('33_indicacao_acidente')">*</span></label>
-              <select v-model="form.indicacao_acidente" data-choices class="form-select" :key="'indaci-' + indicacoesAcidente.length"
-                :disabled="isBloqueado('33_indicacao_acidente')" :required="isObrigatorio('33_indicacao_acidente')">
+              <select v-model="form.indicacao_acidente" data-choices class="form-select"
+                :key="'indaci-' + indicacoesAcidente.length" :disabled="isBloqueado('33_indicacao_acidente')"
+                :required="isObrigatorio('33_indicacao_acidente')">
                 <option value="">Selecione</option>
                 <option v-for="ind in indicacoesAcidente" :key="ind.codigo" :value="String(ind.codigo)">
                   {{ ind.codigo }} - {{ ind.descricao }}
@@ -276,8 +301,9 @@
             <div class="col-md-3 tiss-modern-col" v-if="isExibido('34_tipo_consulta')">
               <label>34 - Tipo de Consulta <span class="text-danger"
                   v-if="isObrigatorio('34_tipo_consulta')">*</span></label>
-              <select v-model="form.tipo_consulta" data-choices class="form-select" :key="'tipocons-' + tiposConsulta.length"
-                :disabled="isBloqueado('34_tipo_consulta')" :required="isObrigatorio('34_tipo_consulta')">
+              <select v-model="form.tipo_consulta" data-choices class="form-select"
+                :key="'tipocons-' + tiposConsulta.length" :disabled="isBloqueado('34_tipo_consulta')"
+                :required="isObrigatorio('34_tipo_consulta')">
                 <option value="">Selecione</option>
                 <option v-for="tipo in tiposConsulta" :key="tipo.codigo" :value="String(tipo.codigo)">
                   {{ tipo.codigo }} - {{ tipo.descricao }}
@@ -296,69 +322,163 @@
         <!-- BLOCO 7 -->
         <fieldset class="tiss-fieldset">
           <legend class="tiss-legend">Dados da Execução / Procedimentos e Exames Realizados</legend>
-          <div class="row g-3">
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('36_data_hora_execucao')">
-              <label>36/37 - Data/Hora <span class="text-danger"
-                  v-if="isObrigatorio('36_data_hora_execucao')">*</span></label>
-              <flatPickr v-model="form.data_hora_execucao" class="form-control form-control-sm" :config="flatpickrDateTimeOptions" :disabled="isBloqueado('36_data_hora_execucao')" :required="isObrigatorio('36_data_hora_execucao')" />
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('38_hora_final')">
-              <label>38 - H.Fin <span class="text-danger" v-if="isObrigatorio('38_hora_final')">*</span></label>
-              <flatPickr v-model="form.hora_final" :config="flatpickrTimeOptions" class="form-control form-control-sm"
-                :disabled="isBloqueado('38_hora_final')" :required="isObrigatorio('38_hora_final')" />
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('39_tabela_realizado')">
-              <label>39 - Tab <span class="text-danger" v-if="isObrigatorio('39_tabela_realizado')">*</span></label>
-              <select v-model="form.tabela_procedimento_realizado" data-choices class="form-select" :key="'tabela-real-' + tabelas.length"
-                :disabled="isBloqueado('39_tabela_realizado')" :required="isObrigatorio('39_tabela_realizado')">
-                <option value="">Sel</option>
-                <option v-for="t in tabelas" :key="t.id" :value="t.codigo">{{ t.codigo }} - {{ t.descricao }}</option>
-              </select>
-            </div>
-            <div class="col-md-3 tiss-modern-col" v-if="isExibido('40_codigo_procedimento_realizado') || isExibido('41_descricao_realizado')">
-              <label>40/41 - Cód/Descrição <span class="text-danger"
-                  v-if="isObrigatorio('40_codigo_procedimento_realizado') || isObrigatorio('41_descricao_realizado')">*</span></label>
-              <select v-model="form.procedimento_realizado_codigo" data-choices class="form-select" :key="'proced-real-' + procedimentos.length"
-                :disabled="isBloqueado('40_codigo_procedimento_realizado') || isBloqueado('41_descricao_realizado')"
-                :required="isObrigatorio('40_codigo_procedimento_realizado') || isObrigatorio('41_descricao_realizado')"
-                @change="updateProcedimentoRealizadoDescricao">
-                <option value="">Sel</option>
-                <option v-for="p in procedimentos" :key="p.codigo" :value="p.codigo">{{ p.codigo }} - {{ p.descricao }}</option>
-              </select>
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('42_quantidade_realizada')">
-              <label>42 - Qtd <span class="text-danger" v-if="isObrigatorio('42_quantidade_realizada')">*</span></label>
-              <input v-model="form.quantidade_realizada" type="number" class="form-control form-control-sm"
-                :disabled="isBloqueado('42_quantidade_realizada')"
-                :required="isObrigatorio('42_quantidade_realizada')" />
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('43_via_acesso')">
-              <label>43 - Via <span class="text-danger" v-if="isObrigatorio('43_via_acesso')">*</span></label>
-              <input v-model="form.via_acesso" type="text" class="form-control form-control-sm"
-                :disabled="isBloqueado('43_via_acesso')" :required="isObrigatorio('43_via_acesso')" />
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('44_tecnica_utilizada')">
-              <label>44 - Téc <span class="text-danger" v-if="isObrigatorio('44_tecnica_utilizada')">*</span></label>
-              <input v-model="form.tecnica_utilizada" type="text" class="form-control form-control-sm"
-                :disabled="isBloqueado('44_tecnica_utilizada')" :required="isObrigatorio('44_tecnica_utilizada')" />
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('45_fator_reducao_acrescimo')">
-              <label>45 - Fat <span class="text-danger"
-                  v-if="isObrigatorio('45_fator_reducao_acrescimo')">*</span></label>
-              <input v-model="form.fator_reducao_acrescimo" type="text" class="form-control form-control-sm"
-                :disabled="isBloqueado('45_fator_reducao_acrescimo')"
-                :required="isObrigatorio('45_fator_reducao_acrescimo')" />
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('46_valor_unitario')">
-              <label>46 - V.Unit <span class="text-danger" v-if="isObrigatorio('46_valor_unitario')">*</span></label>
-              <input v-model="form.valor_unitario" type="number" class="form-control form-control-sm"
-                :disabled="isBloqueado('46_valor_unitario')" :required="isObrigatorio('46_valor_unitario')" />
-            </div>
-            <div class="col-md-1 tiss-modern-col" v-if="isExibido('47_valor_total')">
-              <label>47 - V.Tot <span class="text-danger" v-if="isObrigatorio('47_valor_total')">*</span></label>
-              <input v-model="form.valor_total" type="number" class="form-control form-control-sm"
-                :disabled="isBloqueado('47_valor_total')" :required="isObrigatorio('47_valor_total')" />
-            </div>
+          <div class="table-responsive mt-2">
+            <table class="table table-sm table-bordered align-middle mb-1">
+              <thead class="table-light">
+                <tr>
+                  <th v-if="isExibido('36_data_hora_execucao')">36-Data</th>
+                  <th v-if="isExibido('36_data_hora_execucao')">37-H.Ini</th>
+                  <th v-if="isExibido('38_hora_final')">38-H.Fin</th>
+                  <th v-if="isExibido('39_tabela_realizado')">39-Tab</th>
+                  <th v-if="isExibido('40_codigo_procedimento_realizado') || isExibido('41_descricao_realizado')">
+                    40/41-Procedimento</th>
+                  <th v-if="isExibido('42_quantidade_realizada')">42-Qtd</th>
+                  <th v-if="isExibido('43_via_acesso')">43-Via</th>
+                  <th v-if="isExibido('44_tecnica_utilizada')">44-Téc</th>
+                  <th v-if="isExibido('45_fator_reducao_acrescimo')">45-Fat</th>
+                  <th v-if="isExibido('46_valor_unitario')">46-V.Unit</th>
+                  <th v-if="isExibido('47_valor_total')">47-V.Tot</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in form.procedimentos_realizados" :key="'real-' + index">
+                  <td v-if="isExibido('36_data_hora_execucao')">
+                    <flatPickr v-model="item.data_realizacao" class="form-control form-control-sm"
+                      :config="flatpickrDateOptions" :disabled="isBloqueado('36_data_hora_execucao')" />
+                  </td>
+                  <td v-if="isExibido('36_data_hora_execucao')">
+                    <flatPickr v-model="item.hora_inicial" class="form-control form-control-sm"
+                      :config="flatpickrTimeOptions" :disabled="isBloqueado('36_data_hora_execucao')" />
+                  </td>
+                  <td v-if="isExibido('38_hora_final')">
+                    <flatPickr v-model="item.hora_final" class="form-control form-control-sm"
+                      :config="flatpickrTimeOptions" :disabled="isBloqueado('38_hora_final')" />
+                  </td>
+                  <td v-if="isExibido('39_tabela_realizado')">
+                    <select v-model="item.tabela_procedimento_realizado" class="form-select form-select-sm"
+                      :disabled="isBloqueado('39_tabela_realizado')">
+                      <option value="">Sel</option>
+                      <option v-for="t in tabelas" :key="t.id" :value="t.codigo">{{ t.codigo }}</option>
+                    </select>
+                  </td>
+                  <td v-if="isExibido('40_codigo_procedimento_realizado') || isExibido('41_descricao_realizado')">
+                    <select v-model="item.procedimento_realizado_codigo" class="form-select form-select-sm"
+                      :disabled="isBloqueado('40_codigo_procedimento_realizado')"
+                      @change="updateProcRealDescricao(item)">
+                      <option value="">Sel</option>
+                      <option v-for="p in procedimentos" :key="p.codigo" :value="p.codigo">{{ p.codigo }}</option>
+                    </select>
+                  </td>
+                  <td v-if="isExibido('42_quantidade_realizada')">
+                    <input v-model="item.quantidade_realizada" type="number" class="form-control form-control-sm"
+                      :disabled="isBloqueado('42_quantidade_realizada')" />
+                  </td>
+                  <td v-if="isExibido('43_via_acesso')">
+                    <input v-model="item.via_acesso" type="text" class="form-control form-control-sm"
+                      :disabled="isBloqueado('43_via_acesso')" />
+                  </td>
+                  <td v-if="isExibido('44_tecnica_utilizada')">
+                    <input v-model="item.tecnica_utilizada" type="text" class="form-control form-control-sm"
+                      :disabled="isBloqueado('44_tecnica_utilizada')" />
+                  </td>
+                  <td v-if="isExibido('45_fator_reducao_acrescimo')">
+                    <input v-model="item.fator_reducao_acrescimo" type="text" class="form-control form-control-sm"
+                      :disabled="isBloqueado('45_fator_reducao_acrescimo')" />
+                  </td>
+                  <td v-if="isExibido('46_valor_unitario')">
+                    <input v-model="item.valor_unitario" type="number" class="form-control form-control-sm"
+                      :disabled="isBloqueado('46_valor_unitario')" />
+                  </td>
+                  <td v-if="isExibido('47_valor_total')">
+                    <input v-model="item.valor_total" type="number" class="form-control form-control-sm"
+                      :disabled="isBloqueado('47_valor_total')" />
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-sm btn-soft-danger" @click="removeProcReal(index)"><i
+                        class="ri-delete-bin-line"></i></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <button type="button" class="btn btn-sm btn-soft-success" @click="addProcReal">+ Adicionar Procedimento
+              Realizado</button>
+          </div>
+        </fieldset>
+
+        <!-- BLOCO IDENTIFICAÇÃO DO PROFISSIONAL EXECUTANTE -->
+        <fieldset class="tiss-fieldset">
+          <legend class="tiss-legend">Identificação do(s) Profissional(is) Executante(s)</legend>
+          <div class="table-responsive mt-2">
+            <table class="table table-sm table-bordered align-middle mb-1">
+              <thead class="table-light">
+                <tr>
+                  <th v-if="isExibido('48_sequencial_referencia')">48-Seq.</th>
+                  <th v-if="isExibido('49_grau_participacao')">49-Grau Part.</th>
+                  <th v-if="isExibido('50_codigo_operadora_profissional')">50-Cód. Profissional</th>
+                  <th v-if="isExibido('51_nome_profissional_executante')">51-Nome Profissional</th>
+                  <th v-if="isExibido('52_conselho_profissional_executante')">52-Cons.</th>
+                  <th v-if="isExibido('53_numero_conselho_executante')">53-Nº Cons.</th>
+                  <th v-if="isExibido('54_uf_conselho_executante')">54-UF</th>
+                  <th v-if="isExibido('55_codigo_cbo_executante')">55-CBO</th>
+                  <th v-if="isExibido('56_data_realizacao_serie')">56-Data Série</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in form.profissionais_executantes" :key="'prof-' + index">
+                  <td v-if="isExibido('48_sequencial_referencia')">
+                    <input v-model="item.sequencial_referencia" type="text" class="form-control form-control-sm"
+                      :disabled="isBloqueado('48_sequencial_referencia')" />
+                  </td>
+                  <td v-if="isExibido('49_grau_participacao')">
+                    <input v-model="item.grau_participacao" type="text" class="form-control form-control-sm"
+                      :disabled="isBloqueado('49_grau_participacao')" />
+                  </td>
+                  <td v-if="isExibido('50_codigo_operadora_profissional')">
+                    <input v-model="item.profissional_executante_codigo" type="text"
+                      class="form-control form-control-sm"
+                      :disabled="isBloqueado('50_codigo_operadora_profissional')" />
+                  </td>
+                  <td v-if="isExibido('51_nome_profissional_executante')">
+                    <input v-model="item.profissional_executante_nome" type="text" class="form-control form-control-sm"
+                      :disabled="isBloqueado('51_nome_profissional_executante')" />
+                  </td>
+                  <td v-if="isExibido('52_conselho_profissional_executante')">
+                    <select v-model="item.conselho_executante" class="form-select form-select-sm"
+                      :disabled="isBloqueado('52_conselho_profissional_executante')">
+                      <option value="">Sel</option>
+                      <option v-for="c in conselhos" :key="c.id" :value="c.codigo">{{ c.sigla }}</option>
+                    </select>
+                  </td>
+                  <td v-if="isExibido('53_numero_conselho_executante')">
+                    <input v-model="item.numero_conselho_executante" type="text" class="form-control form-control-sm"
+                      :disabled="isBloqueado('53_numero_conselho_executante')" />
+                  </td>
+                  <td v-if="isExibido('54_uf_conselho_executante')">
+                    <select v-model="item.uf_conselho_executante" class="form-select form-select-sm"
+                      :disabled="isBloqueado('54_uf_conselho_executante')">
+                      <option value="">UF</option>
+                      <option v-for="uf in ufOptions" :key="uf" :value="uf">{{ uf }}</option>
+                    </select>
+                  </td>
+                  <td v-if="isExibido('55_codigo_cbo_executante')">
+                    <input v-model="item.cbo_executante" type="text" class="form-control form-control-sm"
+                      :disabled="isBloqueado('55_codigo_cbo_executante')" />
+                  </td>
+                  <td v-if="isExibido('56_data_realizacao_serie')">
+                    <flatPickr v-model="item.data_realizacao_serie" class="form-control form-control-sm"
+                      :config="flatpickrDateOptions" :disabled="isBloqueado('56_data_realizacao_serie')" />
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-sm btn-soft-danger" @click="removeProfissional(index)"><i
+                        class="ri-delete-bin-line"></i></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <button type="button" class="btn btn-sm btn-soft-success" @click="addProfissional">+ Adicionar
+              Profissional</button>
           </div>
         </fieldset>
 
@@ -380,8 +500,7 @@
                 :required="isObrigatorio('59_valor_total_honorarios')" />
             </div>
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('60_valor_total_taxas')">
-              <label>60 - Taxas <span class="text-danger"
-                  v-if="isObrigatorio('60_valor_total_taxas')">*</span></label>
+              <label>60 - Taxas <span class="text-danger" v-if="isObrigatorio('60_valor_total_taxas')">*</span></label>
               <input v-model="form.total_taxas_alugueis" type="number" class="form-control form-control-sm"
                 :disabled="isBloqueado('60_valor_total_taxas')" :required="isObrigatorio('60_valor_total_taxas')" />
             </div>
@@ -393,8 +512,7 @@
                 :required="isObrigatorio('61_valor_total_materiais')" />
             </div>
             <div class="col-md-1 tiss-modern-col" v-if="isExibido('62_valor_total_opme')">
-              <label>62 - OPME <span class="text-danger"
-                  v-if="isObrigatorio('62_valor_total_opme')">*</span></label>
+              <label>62 - OPME <span class="text-danger" v-if="isObrigatorio('62_valor_total_opme')">*</span></label>
               <input v-model="form.total_opme" type="number" class="form-control form-control-sm"
                 :disabled="isBloqueado('62_valor_total_opme')" :required="isObrigatorio('62_valor_total_opme')" />
             </div>
@@ -406,8 +524,7 @@
                 :required="isObrigatorio('63_valor_total_medicamentos')" />
             </div>
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('64_valor_total_gases')">
-              <label>64 - Gases <span class="text-danger"
-                  v-if="isObrigatorio('64_valor_total_gases')">*</span></label>
+              <label>64 - Gases <span class="text-danger" v-if="isObrigatorio('64_valor_total_gases')">*</span></label>
               <input v-model="form.total_gases_medicinais" type="number" class="form-control form-control-sm"
                 :disabled="isBloqueado('64_valor_total_gases')" :required="isObrigatorio('64_valor_total_gases')" />
             </div>
@@ -473,7 +590,7 @@ export default {
       tiposAtendimento: [],
       indicacoesAcidente: [],
       tiposConsulta: [],
-      ufOptions: ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'],
+      ufOptions: ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'],
       isSalvando: false,
       isImprimindo: false,
       flatpickrDateOptions: { altInput: true, altInputClass: "form-control tiss-flatpickr", altFormat: "d M, Y", dateFormat: "Y-m-d", locale: Portuguese },
@@ -482,6 +599,38 @@ export default {
     };
   },
   watch: {
+    'form.procedimentos_solicitados': {
+      deep: true,
+      handler(newVal) {
+        if (!this.form || !this.form.procedimentos_realizados) return;
+        if (!newVal) return;
+        newVal.forEach((sol, i) => {
+          if (this.form.procedimentos_realizados[i]) {
+            this.form.procedimentos_realizados[i].procedimento_realizado_codigo = sol.procedimento_solicitado_codigo;
+            this.form.procedimentos_realizados[i].procedimento_realizado_descricao = sol.procedimento_solicitado_descricao;
+            this.form.procedimentos_realizados[i].quantidade_realizada = sol.quantidade_solicitada;
+          } else {
+            this.form.procedimentos_realizados.push({
+              tabela_procedimento_realizado: sol.tabela_procedimento_solicitado || '22',
+              procedimento_realizado_codigo: sol.procedimento_solicitado_codigo,
+              procedimento_realizado_descricao: sol.procedimento_solicitado_descricao,
+              quantidade_realizada: sol.quantidade_solicitada,
+              data_realizacao: this.form.agendamento ? this.form.agendamento.data : null,
+              hora_inicial: this.form.agendamento ? this.form.agendamento.hora : null,
+              hora_final: null,
+              via_acesso: '',
+              tecnica_utilizada: '',
+              fator_reducao_acrescimo: null,
+              valor_unitario: null,
+              valor_total: null
+            });
+          }
+        });
+        if (this.form.procedimentos_realizados.length > newVal.length) {
+          this.form.procedimentos_realizados.splice(newVal.length);
+        }
+      }
+    },
     modelValue: {
       immediate: true,
       handler(val) {
@@ -505,21 +654,72 @@ export default {
     }
   },
   methods: {
-    updateProcedimentoDescricao() {
-      if (this.form && this.form.procedimento_solicitado_codigo) {
-        const proc = this.procedimentos.find(p => String(p.codigo) === String(this.form.procedimento_solicitado_codigo));
+    updateProcSolDescricao(item) {
+      if (item && item.procedimento_solicitado_codigo) {
+        const proc = this.procedimentos.find(p => String(p.codigo) === String(item.procedimento_solicitado_codigo));
         if (proc) {
-          this.form.procedimento_solicitado_descricao = proc.descricao;
+          item.procedimento_solicitado_descricao = proc.descricao;
+          item.tabela_procedimento_solicitado = '22';
         }
       }
     },
-    updateProcedimentoRealizadoDescricao() {
-      if (this.form && this.form.procedimento_realizado_codigo) {
-        const proc = this.procedimentos.find(p => String(p.codigo) === String(this.form.procedimento_realizado_codigo));
+    updateProcRealDescricao(item) {
+      if (item && item.procedimento_realizado_codigo) {
+        const proc = this.procedimentos.find(p => String(p.codigo) === String(item.procedimento_realizado_codigo));
         if (proc) {
-          this.form.procedimento_realizado_descricao = proc.descricao;
+          item.procedimento_realizado_descricao = proc.descricao;
         }
       }
+    },
+    addProcSol() {
+      if (!this.form.procedimentos_solicitados) this.form.procedimentos_solicitados = [];
+      this.form.procedimentos_solicitados.push({
+        tabela_procedimento_solicitado: '22',
+        procedimento_solicitado_codigo: '',
+        procedimento_solicitado_descricao: '',
+        quantidade_solicitada: 1,
+        quantidade_autorizada: 1
+      });
+    },
+    removeProcSol(index) {
+      this.form.procedimentos_solicitados.splice(index, 1);
+    },
+    addProcReal() {
+      if (!this.form.procedimentos_realizados) this.form.procedimentos_realizados = [];
+      this.form.procedimentos_realizados.push({
+        tabela_procedimento_realizado: '22',
+        procedimento_realizado_codigo: '',
+        procedimento_realizado_descricao: '',
+        quantidade_realizada: null,
+        data_realizacao: null,
+        hora_inicial: null,
+        hora_final: null,
+        via_acesso: '',
+        tecnica_utilizada: '',
+        fator_reducao_acrescimo: null,
+        valor_unitario: null,
+        valor_total: null
+      });
+    },
+    removeProcReal(index) {
+      this.form.procedimentos_realizados.splice(index, 1);
+    },
+    addProfissional() {
+      if (!this.form.profissionais_executantes) this.form.profissionais_executantes = [];
+      this.form.profissionais_executantes.push({
+        sequencial_referencia: '',
+        grau_participacao: '',
+        profissional_executante_codigo: '',
+        profissional_executante_nome: '',
+        conselho_executante: '',
+        numero_conselho_executante: '',
+        uf_conselho_executante: '',
+        cbo_executante: '',
+        data_realizacao_serie: null
+      });
+    },
+    removeProfissional(index) {
+      this.form.profissionais_executantes.splice(index, 1);
     },
     isExibido(key) {
       const config = this.form?.convenio?.config_spsadt || this.form?.agendamento?.convenio?.config_spsadt;
@@ -542,25 +742,38 @@ export default {
     async fetchGuiaDados() {
       try {
         const response = await window.axios.get(`/guias/${this.agendamentoId}/dados`);
-        this.form = { 
+        
+        // Carrega as listas de opções primeiro
+        this.conselhos = response.data.conselhos || [];
+        this.especialidades = response.data.especialidades || [];
+        this.carateres = response.data.carateres || [];
+        this.tabelas = response.data.tabelas || [];
+        this.procedimentos = response.data.procedimentos || [];
+        this.tiposAtendimento = response.data.tiposAtendimento || [];
+        this.indicacoesAcidente = response.data.indicacoesAcidente || [];
+        this.tiposConsulta = response.data.tiposConsulta || [];
+
+        // Aguarda as opções renderizarem no DOM
+        await this.$nextTick();
+
+        // Agora atribui o formulário
+        this.form = {
           ...response.data.guia,
-          agendamento: response.data.agendamento 
+          agendamento: response.data.agendamento
         };
+        
         // Garantir que códigos numéricos sejam string para o match do select
-        if (this.form.procedimento_solicitado_codigo) {
-          this.form.procedimento_solicitado_codigo = String(this.form.procedimento_solicitado_codigo);
+        if (!this.form.procedimentos_solicitados) this.form.procedimentos_solicitados = [];
+        else {
+          this.form.procedimentos_solicitados.forEach(p => {
+            if (p.procedimento_solicitado_codigo) p.procedimento_solicitado_codigo = String(p.procedimento_solicitado_codigo);
+          });
         }
-        if (this.form.procedimento_realizado_codigo) {
-          this.form.procedimento_realizado_codigo = String(this.form.procedimento_realizado_codigo);
-        }
+        if (!this.form.procedimentos_realizados) this.form.procedimentos_realizados = [];
+        if (!this.form.profissionais_executantes) this.form.profissionais_executantes = [];
+
         if (this.form.carater_atendimento) {
           this.form.carater_atendimento = String(this.form.carater_atendimento).padStart(2, '0');
-        }
-        if (this.form.tabela_procedimento_solicitado) {
-          this.form.tabela_procedimento_solicitado = String(this.form.tabela_procedimento_solicitado);
-        }
-        if (this.form.tabela_procedimento_realizado) {
-          this.form.tabela_procedimento_realizado = String(this.form.tabela_procedimento_realizado);
         }
         if (this.form.tipo_atendimento) {
           this.form.tipo_atendimento = String(this.form.tipo_atendimento);
@@ -571,14 +784,12 @@ export default {
         if (this.form.tipo_consulta) {
           this.form.tipo_consulta = String(this.form.tipo_consulta);
         }
-        this.conselhos = response.data.conselhos || [];
-        this.especialidades = response.data.especialidades || [];
-        this.carateres = response.data.carateres || [];
-        this.tabelas = response.data.tabelas || [];
-        this.procedimentos = response.data.procedimentos || [];
-        this.tiposAtendimento = response.data.tiposAtendimento || [];
-        this.indicacoesAcidente = response.data.indicacoesAcidente || [];
-        this.tiposConsulta = response.data.tiposConsulta || [];
+        
+        // Sincroniza o Choices JS após o DOM estar atualizado
+        await this.$nextTick();
+        if (typeof window.autoSyncChoices === 'function') {
+          window.autoSyncChoices();
+        }
       } catch (error) {
         console.error("Erro ao carregar dados da Guia SP/SADT", error);
         try {
@@ -696,6 +907,7 @@ export default {
   min-width: 0;
   max-width: 100%;
 }
+
 .guia-tiss-container .choices__inner {
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -707,6 +919,7 @@ export default {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
+
 .guia-tiss-container .choices__list--single {
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -714,6 +927,7 @@ export default {
   width: 100%;
   padding-right: 15px !important;
 }
+
 .guia-tiss-container .choices__list--single .choices__item {
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -734,10 +948,10 @@ export default {
 }
 
 /* Estilo para campos bloqueados (cinza) */
-.guia-tiss-container input:disabled, 
-.guia-tiss-container select:disabled, 
-.guia-tiss-container textarea:disabled, 
-.guia-tiss-container .form-control:disabled, 
+.guia-tiss-container input:disabled,
+.guia-tiss-container select:disabled,
+.guia-tiss-container textarea:disabled,
+.guia-tiss-container .form-control:disabled,
 .guia-tiss-container .form-select:disabled,
 .guia-tiss-container input[disabled] {
   background-color: #e9ecef !important;

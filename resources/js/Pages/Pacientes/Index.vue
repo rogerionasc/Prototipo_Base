@@ -94,9 +94,9 @@
                     <div class="mt-2">
                         <SimpleTable variant="borderless" compact tableClass="table-sm align-middle"
                             :items="agendamentosPaciente"
-                            :columns="[{ key: 'nu_pagamento', label: 'Nº Pgto' }, { key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }, { key: 'status_pagamento', label: 'Pagamento' }]"
+                            :columns="[{ key: 'nu_pagamento', label: 'Nº Pgto' }, { key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'convenio_nome', label: 'Convênio' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }, { key: 'status_pagamento', label: 'Pagamento' }]"
                             has-actions :searchable="true" searchPlaceholder="Buscar agendamento..."
-                            :searchFields="['procedimento', 'profissional', 'status', 'nu_pagamento', 'status_pagamento']"
+                            :searchFields="['procedimento', 'profissional', 'status', 'nu_pagamento', 'status_pagamento', 'convenio_nome']"
                             emptyTitle="Nenhum agendamento encontrado">
 
                             <template #cell(data)="{ item }">
@@ -107,6 +107,16 @@
                                 {{ item.hora || '--:--' }}
                             </template>
 
+                            <template #actions="{ item }">
+                                <a :href="'/recepcao/agendamentos?id=' + item.id" class="btn btn-sm btn-light" title="Reagendar">
+                                    <i class="ri-edit-line me-1"></i> Reagendar
+                                </a>
+                                <button type="button" class="btn btn-sm btn-info ms-1" title="Guia SP/SADT"
+                                    @click="imprimirGuiaAgendamento(item.id)">
+                                    <i class="ri-file-text-line"></i>
+                                </button>
+                            </template>
+
 
                                 <span class="text-muted small">—</span>
                         </SimpleTable>
@@ -115,6 +125,8 @@
             </BTabs>
         </Modal>
 
+        <!-- Modal Guia SP/SADT -->
+        <GuiaSADTModal v-if="showGuiaSADTModal" v-model="showGuiaSADTModal" :agendamento-id="selectedAgendamentoForGuia" />
 
     </Layout>
 </template>
@@ -128,6 +140,7 @@ import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import PacienteForm from "@/Pages/Pacientes/Create.vue";
 import SimpleTable from "@/Components/Tables/SimpleTable.vue";
+import GuiaSADTModal from "@/Components/Guias/GuiaSADTModal.vue";
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.css";
 import { Portuguese } from "flatpickr/dist/l10n/pt.js";
@@ -184,6 +197,15 @@ const showModal = ref(false);
 const modalTitle = ref('Adicionar Paciente');
 const formKey = ref(0);
 const tableGridRef = ref(null);
+
+const showGuiaSADTModal = ref(false);
+const selectedAgendamentoForGuia = ref(null);
+
+function imprimirGuiaAgendamento(agendamentoId) {
+    selectedAgendamentoForGuia.value = agendamentoId;
+    showGuiaSADTModal.value = true;
+}
+
 function openModalAdd() {
     modalTitle.value = 'Adicionar Paciente';
     showModal.value = true;

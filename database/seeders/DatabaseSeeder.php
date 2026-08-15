@@ -14,17 +14,20 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             // UserAndPreUserSeeder::class,
-            EstadoCivilSeeder::class,
-            ParentescoSeeder::class,
-            ConselhoSeeder::class,
-            TipoSanguineoSeeder::class,
-            CanalAvisoSeeder::class,
-            CategoriaProcedimentoSeeder::class,
-            EspecialidadeSeeder::class,
+            // EstadoCivilSeeder::class,
+            // ParentescoSeeder::class,
+            // ConselhoSeeder::class,
+            // TipoSanguineoSeeder::class,
+            // CanalAvisoSeeder::class,
+            // CategoriaProcedimentoSeeder::class,
+            // EspecialidadeSeeder::class,
             ConvenioSeeder::class,
-            ProcedimentoSeeder::class,
-            PacienteSeeder::class,
-            PessoaSeeder::class,
+            LargeDataSeeder::class,
+            ParametrizacaoTissSeeder::class,
+
+            // ProcedimentoSeeder::class,
+            // PacienteSeeder::class,
+            // PessoaSeeder::class,
         ]);
         // \App\Models\User::factory(10)->create();
 

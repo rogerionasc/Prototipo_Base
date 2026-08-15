@@ -18,13 +18,34 @@ class LargeDataSeeder extends Seeder
         // ==== SEED ESPECIALIDADES ====
         $this->command->info('Criando Especialidades...');
         $especialidadesNomes = [
-            'Cardiologia', 'Dermatologia', 'Endocrinologia', 'Gastroenterologia', 'Geriatria', 
-            'Ginecologia', 'Neurologia', 'Oftalmologia', 'Ortopedia', 'Otorrinolaringologia', 
-            'Pediatria', 'Psiquiatria', 'Urologia', 'Reumatologia', 'Infectologia',
-            'Pneumologia', 'Nefrologia', 'Hematologia', 'Oncologia', 'Mastologia',
-            'Cirurgia Geral', 'Cirurgia Plástica', 'Vascular', 'Anestesiologia', 'Radiologia'
+            'Cardiologia',
+            'Clinica Geral',
+            'Dermatologia',
+            'Endocrinologia',
+            'Gastroenterologia',
+            'Geriatria',
+            'Ginecologia',
+            'Neurologia',
+            'Oftalmologia',
+            'Ortopedia',
+            'Otorrinolaringologia',
+            'Pediatria',
+            'Psiquiatria',
+            'Urologia',
+            'Reumatologia',
+            'Infectologia',
+            'Pneumologia',
+            'Nefrologia',
+            'Hematologia',
+            'Oncologia',
+            'Mastologia',
+            'Cirurgia Geral',
+            'Cirurgia Plástica',
+            'Vascular',
+            'Anestesiologia',
+            'Radiologia'
         ];
-        
+
         $especialidadesIds = [];
         foreach ($especialidadesNomes as $idx => $nome) {
             // Insere ignorando duplicatas pelo nome se tivesse chave unica, mas usaremos firstOrCreate
@@ -47,7 +68,7 @@ class LargeDataSeeder extends Seeder
         $this->command->info('Criando 100 Procedimentos...');
         $procedimentosPrefixos = ['Consulta', 'Exame', 'Cirurgia', 'Avaliação', 'Terapia', 'Retorno', 'Sessão de'];
         $procedimentosSufixos = ['de Rotina', 'Especializada', 'Geral', 'com Laudo', 'de Urgência', 'Estética', 'Preventiva', 'Diagnóstica'];
-        
+
         $procedimentos = [];
         $pivotData = [];
         for ($i = 0; $i < 100; $i++) {
@@ -55,9 +76,9 @@ class LargeDataSeeder extends Seeder
             $sufix = $faker->randomElement($procedimentosSufixos);
             $word = $faker->word;
             $nome = "$prefix $sufix " . ucfirst($word);
-            
+
             $ehTratamento = $faker->boolean(20);
-            
+
             $procId = DB::table('procedimentos')->insertGetId([
                 'nome' => substr(ucfirst(trim($nome)), 0, 120),
                 'descricao' => substr($faker->sentence, 0, 120),
@@ -113,7 +134,7 @@ class LargeDataSeeder extends Seeder
                 'updated_at' => now(),
             ];
         }
-        
+
         foreach (array_chunk($medicos, 100) as $chunk) {
             DB::table('pessoas')->insert($chunk);
         }
@@ -122,10 +143,10 @@ class LargeDataSeeder extends Seeder
 
         // ==== SEED PACIENTES ====
         $this->command->info('Criando 7000 Pacientes (Isso pode demorar um pouco)...');
-        
+
         $total = 7000;
         $chunkSize = 1000;
-        
+
         for ($j = 0; $j < ($total / $chunkSize); $j++) {
             $pacientes = [];
             for ($i = 0; $i < $chunkSize; $i++) {
@@ -142,11 +163,11 @@ class LargeDataSeeder extends Seeder
                     'updated_at' => now(),
                 ];
             }
-            
+
             DB::table('pacientes')->insert($pacientes);
             $this->command->info('Criados ' . (($j + 1) * $chunkSize) . ' pacientes...');
         }
-        
+
         $this->command->info('7000 Pacientes criados com sucesso!');
     }
 

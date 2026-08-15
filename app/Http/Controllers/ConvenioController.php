@@ -47,10 +47,10 @@ class ConvenioController extends Controller
     public function index()
     {
         $convenios = Convenio::with(['medicos:id,nome,conselho_id,numero_conselho,uf_conselho', 'medicos.conselho', 'medicos.especialidades:id,nome', 'medicoTuss:id'])
-            ->select('id','descricao','logo_path','tuss_tabela','tipo','empresa_id','ans','dias_recebimento','dias_retorno', 'config_spsadt')
+            ->select('id', 'descricao', 'logo_path', 'tuss_tabela', 'tipo', 'empresa_id', 'ans', 'dias_recebimento', 'dias_retorno', 'config_spsadt')
             ->get();
-        $contas = Conta::select('id','nome')->orderBy('nome')->get();
-        $profissionaisSaude = Pessoa::with(['especialidades:id,nome', 'conselho'])->select('id','nome','conselho_id', 'numero_conselho', 'uf_conselho')->orderBy('nome')->get();
+        $contas = Conta::select('id', 'nome')->orderBy('nome')->get();
+        $profissionaisSaude = Pessoa::with(['especialidades:id,nome', 'conselho'])->select('id', 'nome', 'conselho_id', 'numero_conselho', 'uf_conselho')->orderBy('nome')->get();
         $tussTabelas = DB::table('tuss')
             ->whereNotNull('tabela')
             ->where('tabela', '<>', '')
@@ -75,8 +75,14 @@ class ConvenioController extends Controller
             'tuss_tabela' => trim((string)$request->input('tuss_tabela', '')) !== '' ? trim((string)$request->input('tuss_tabela')) : null,
             'tuss_ids' => $request->input('tuss_ids', []),
             'medicos' => $request->input('medicos', []),
+            'config_spsadt' => array_merge([
+                'visivel' => [],
+                'obrigatorio' => [],
+                'bloqueado' => [],
+            ], $request->input('config_spsadt', []) ?: [])
         ]);
         $data = $request->validate($this->rules());
+        $data['config_spsadt'] = $request->input('config_spsadt');
         $data['tipo'] = $this->normalizeTipo($data['tipo'] ?? 'Convenio');
         if (!$data['tipo']) {
             return back()->withErrors(['tipo' => 'Tipo inválido.']);
@@ -95,7 +101,8 @@ class ConvenioController extends Controller
 
         if ($data['tipo'] === 'Convenio') {
             if (empty($tussData)) {
-                return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.']);
+                return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.'])
+                             ->with('error', 'Erro de Validação: Selecione ao menos 1 procedimento da TUSS para este convênio.');
             }
             $data['tuss_tabela'] = null;
         } else {
@@ -127,7 +134,7 @@ class ConvenioController extends Controller
                 $medicoTussRows = [];
                 foreach ($medicosInput as $m) {
                     $mTuss = array_values(array_unique(array_map('intval', (array)($m['tuss_ids'] ?? []))));
-                    $mTuss = array_values(array_filter($mTuss, function($tid) use ($tussData) {
+                    $mTuss = array_values(array_filter($mTuss, function ($tid) use ($tussData) {
                         return array_key_exists($tid, $tussData);
                     }));
                     if (empty($mTuss)) {
@@ -156,20 +163,27 @@ class ConvenioController extends Controller
             }
         });
 
-        return back()->with('success','Convênio cadastrado');
+        return back()->with('success', 'Convênio cadastrado');
     }
 
     public function update(Request $request, string $id)
     {
-        // dd($request->all());
+        \Log::info('Convenio Update Payload:', $request->all());
         $convenio = Convenio::findOrFail($id);
         $request->merge([
             'tuss_tabela' => trim((string)$request->input('tuss_tabela', '')) !== '' ? trim((string)$request->input('tuss_tabela')) : null,
             'tuss_ids' => $request->input('tuss_ids', []),
             'medicos' => $request->input('medicos', []),
+            'config_spsadt' => array_merge([
+                'visivel' => [],
+                'obrigatorio' => [],
+                'bloqueado' => [],
+            ], $request->input('config_spsadt', []) ?: [])
         ]);
         $data = $request->validate($this->rules());
-        $data['tipo'] = $this->normalizeTipo($data['tipo'] ?? $convenio->tipo ?? 'Convenio');
+        $data['config_spsadt'] = $request->input('config_spsadt');
+        \Log::info('Convenio Update Data array:', ['data' => $data]);
+        $data['tipo'] = $this->normalizeTipo($data['tipo'] ?? $convenio->tipo ?? 'CONVENIO');
         if (!$data['tipo']) {
             return back()->withErrors(['tipo' => 'Tipo inválido.']);
         }
@@ -187,7 +201,8 @@ class ConvenioController extends Controller
 
         if ($data['tipo'] === 'Convenio') {
             if (empty($tussData)) {
-                return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.']);
+                return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.'])
+                             ->with('error', 'Erro de Validação: Selecione ao menos 1 procedimento da TUSS para este convênio.');
             }
             $data['tuss_tabela'] = null;
         } else {
@@ -200,7 +215,10 @@ class ConvenioController extends Controller
         if ($logoFile) {
             $old = (string)($convenio->logo_path ?? '');
             if ($old !== '') {
-                try { Storage::disk('public')->delete($old); } catch (\Throwable $e) {}
+                try {
+                    Storage::disk('public')->delete($old);
+                } catch (\Throwable $e) {
+                }
             }
             $data['logo_path'] = $logoFile->store('convenios', 'public');
         }
@@ -233,7 +251,7 @@ class ConvenioController extends Controller
                 $medicoTussRows = [];
                 foreach ($medicosInput as $m) {
                     $mTuss = array_values(array_unique(array_map('intval', (array)($m['tuss_ids'] ?? []))));
-                    $mTuss = array_values(array_filter($mTuss, function($tid) use ($tussData) {
+                    $mTuss = array_values(array_filter($mTuss, function ($tid) use ($tussData) {
                         return array_key_exists($tid, $tussData);
                     }));
                     if (empty($mTuss)) {
@@ -262,7 +280,7 @@ class ConvenioController extends Controller
             }
         });
 
-        return back()->with('success','Convênio atualizado');
+        return back()->with('success', 'Convênio atualizado');
     }
 
     public function tussProcedimentos(Request $request, int $id)
@@ -320,7 +338,7 @@ class ConvenioController extends Controller
                 ->select('p.id', 'p.nome', 'p.descricao', 'p.valor', 'p.categoria_id', 'p.eh_tratamento', 'p.quantidade_sessoes')
                 ->orderBy('p.nome')
                 ->get();
-            $out = $rows->map(fn ($p) => [
+            $out = $rows->map(fn($p) => [
                 'source' => 'procedimento',
                 'id' => (int)($p->id ?? 0),
                 'nome' => $p->nome ?? '',
@@ -339,7 +357,7 @@ class ConvenioController extends Controller
         $tussRows = DB::table('convenio_tuss as ct')
             ->join('tuss as t', function ($j) {
                 $j->on('t.id', '=', 'ct.tuss_id')
-                  ->whereNull('t.deleted_at');
+                    ->whereNull('t.deleted_at');
             })
             ->where('ct.convenio_id', (int)$convenio->id)
             ->whereNull('ct.deleted_at')
@@ -350,7 +368,7 @@ class ConvenioController extends Controller
         if ($tussRows->isEmpty()) {
             return response()->json(['procedimentos' => []]);
         }
-        $out = $tussRows->map(fn ($t) => [
+        $out = $tussRows->map(fn($t) => [
             'source' => 'tuss',
             'id' => (int)($t->id ?? 0),
             'tabela' => $t->tabela ?? '',
@@ -371,6 +389,6 @@ class ConvenioController extends Controller
         $convenio = Convenio::findOrFail($id);
         $convenio->delete();
 
-        return back()->with('success','Convênio excluído');
+        return back()->with('success', 'Convênio excluído');
     }
 }

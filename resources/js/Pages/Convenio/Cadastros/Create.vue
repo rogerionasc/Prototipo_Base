@@ -204,16 +204,25 @@
       </BTab>
     
       <BTab title="Config. Guia SP/SADT">
-        <div class="mt-4">
+        <div class="mt-2">
           <h5 class="mb-3">Campos da Guia SP/SADT</h5>
           <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
             <table class="table table-bordered table-sm table-striped">
               <thead class="table-light position-sticky top-0 z-1">
                 <tr>
-                  <th>Campo</th>
-                  <th class="text-center" style="width: 100px;">Visível</th>
-                  <th class="text-center" style="width: 100px;">Obrigatório</th>
-                  <th class="text-center" style="width: 100px;">Bloqueado</th>
+                  <th class="align-middle">Campo</th>
+                  <th class="text-center align-middle" style="width: 100px;">
+                    Visível<br>
+                    <input type="checkbox" class="form-check-input mt-1" @change="toggleAll('visivel', $event.target.checked)" :checked="isAllChecked('visivel')" />
+                  </th>
+                  <th class="text-center align-middle" style="width: 100px;">
+                    Obrigatório<br>
+                    <input type="checkbox" class="form-check-input mt-1" @change="toggleAll('obrigatorio', $event.target.checked)" :checked="isAllChecked('obrigatorio')" />
+                  </th>
+                  <th class="text-center align-middle" style="width: 100px;">
+                    Bloqueado<br>
+                    <input type="checkbox" class="form-check-input mt-1" @change="toggleAll('bloqueado', $event.target.checked)" :checked="isAllChecked('bloqueado')" />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -337,7 +346,14 @@ const spsadtFields = [
   { key: '45_fator_reducao_acrescimo', label: '45 - Fat' },
   { key: '46_valor_unitario', label: '46 - Val Unit' },
   { key: '47_valor_total', label: '47 - Val Tot' },
-  
+  { key: '48_sequencial_referencia', label: '48 - Seq. Ref.' },
+  { key: '49_grau_participacao', label: '49 - Grau Part.' },
+  { key: '50_codigo_operadora_profissional', label: '50 - Código na Operadora / CPF' },
+  { key: '51_nome_profissional_executante', label: '51 - Nome do Profissional' },
+  { key: '52_conselho_profissional_executante', label: '52 - Conselho Profissional' },
+  { key: '53_numero_conselho_executante', label: '53 - Número no Conselho' },
+  { key: '54_uf_conselho_executante', label: '54 - UF' },
+  { key: '55_codigo_cbo_executante', label: '55 - Código CBO' },
   { key: '58_observacao', label: '58 - Observação / Justificativa' },
   { key: '59_valor_total_honorarios', label: '59 - Total Procedimentos' },
   { key: '60_valor_total_taxas', label: '60 - Total Taxas/Aluguéis' },
@@ -431,6 +447,7 @@ const form = useForm({
   ans: null,
   dias_recebimento: null,
   dias_retorno: null,
+  _method: null,
 });
 
 const hasLogoFile = computed(() => {
@@ -986,6 +1003,18 @@ function setSelectedTussRows(rows) {
     requer_autorizacao: !!r?.requer_autorizacao,
   })).filter(r => Number.isFinite(r.id)) : [];
 }
+
+const toggleAll = (type, isChecked) => {
+  if (isChecked) {
+    form.config_spsadt[type] = spsadtFields.map(f => f.key);
+  } else {
+    form.config_spsadt[type] = [];
+  }
+};
+
+const isAllChecked = (type) => {
+  return form.config_spsadt[type] && form.config_spsadt[type].length === spsadtFields.length && spsadtFields.length > 0;
+};
 
 defineExpose({ form, submit, submitUpdate, processingRef: toRef(form, "processing"), setExistingLogoPath, clearLogoLocal, setSelectedTussRows, setSelectedMedicos });
 
