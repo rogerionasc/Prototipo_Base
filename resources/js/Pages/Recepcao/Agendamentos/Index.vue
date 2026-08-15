@@ -116,7 +116,8 @@ export default {
                 observacoes: "",
                 is_retorno: false,
                 numero_autorizacao: "",
-                validade_autorizacao: ""
+                validade_autorizacao: "",
+                procedimentosAdicionais: []
             },
             conveniosPacienteCriacao: [],
             conveniosPacienteEdicao: [],
@@ -452,6 +453,85 @@ export default {
         },
     },
     methods: {
+        adicionarProcedimentoAdicional() {
+            this.agendamentoForm.procedimentosAdicionais.push({
+                procedimento_id: null,
+                pessoa_id: null,
+                data: this.agendamentoForm.data,
+                hora: this.agendamentoForm.hora,
+                valor_cobrado: '',
+                profissionais: []
+            });
+            this.$nextTick(() => {
+                const elsProc = this.$refs.selProcedimentoAdicional;
+                if (elsProc && elsProc.length > 0) {
+                    try { 
+                        const elProc = elsProc[elsProc.length - 1];
+                        window.destroyChoiceEl(elProc);
+                        window.initChoiceEl(elProc); 
+                    } catch (_) {}
+                }
+                const elsProf = this.$refs.selProfissionalAdicional;
+                if (elsProf && elsProf.length > 0) {
+                    try {
+                        const elProf = elsProf[elsProf.length - 1];
+                        elProf.disabled = true;
+                        window.destroyChoiceEl(elProf);
+                        window.initChoiceEl(elProf);
+                    } catch (_) {}
+                }
+            });
+        },
+        async aoAlterarProcedimentoAdicional(idx, event) {
+            const val = event.detail ? event.detail.value : event.target.value;
+            this.agendamentoForm.procedimentosAdicionais[idx].procedimento_id = val;
+            this.agendamentoForm.procedimentosAdicionais[idx].pessoa_id = null;
+            
+            if (val) {
+                try {
+                    const proc = ((this.procedimentosFiltrados || []).find(p => String(p.id) === String(val)) || 
+                        (this.procedimentosLocal || []).find(p => String(p.id) === String(val)));
+                    const v = proc?.valor ?? null;
+                    const valCobrado = this.agendamentoForm.procedimentosAdicionais[idx].valor_cobrado;
+                    if (v != null && (!valCobrado || String(valCobrado).trim() === "")) {
+                        this.agendamentoForm.procedimentosAdicionais[idx].valor_cobrado = String(Number(v).toFixed(2)).replace('.', ',');
+                    }
+                } catch (_) {}
+
+                try {
+                    const resp = await window.axios.get('/agendamentos/profissionais-por-procedimento', {
+                        params: { procedimento_id: val, convenio_id: this.agendamentoForm.convenio_id }
+                    });
+                    const list = resp?.data?.profissionais;
+                    this.agendamentoForm.procedimentosAdicionais[idx].profissionais = Array.isArray(list) ? list : [];
+                } catch (e) {
+                    this.agendamentoForm.procedimentosAdicionais[idx].profissionais = [];
+                }
+            } else {
+                this.agendamentoForm.procedimentosAdicionais[idx].profissionais = [];
+            }
+
+            this.$nextTick(() => {
+                try {
+                    const elsProf = this.$refs.selProfissionalAdicional;
+                    if (elsProf && elsProf[idx]) {
+                        const el = elsProf[idx];
+                        el.disabled = !val || this.isEdicaoBloqueada;
+                        window.destroyChoiceEl(el);
+                        window.initChoiceEl(el);
+                    }
+                } catch (_) {}
+            });
+        },
+        removerProcedimentoAdicional(idx) {
+            try {
+                const elsProc = this.$refs.selProcedimentoAdicional;
+                if (elsProc && elsProc[idx]) window.destroyChoiceEl(elsProc[idx]);
+                const elsProf = this.$refs.selProfissionalAdicional;
+                if (elsProf && elsProf[idx]) window.destroyChoiceEl(elsProf[idx]);
+            } catch (_) {}
+            this.agendamentoForm.procedimentosAdicionais.splice(idx, 1);
+        },
 
         reiniciarChoicesJs(refsArray, initMode = true) {
             refsArray.forEach(refName => {
@@ -849,7 +929,7 @@ export default {
                     if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
                 } catch (_) { }
 
-                this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "" };
+                this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: ds, hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "", procedimentosAdicionais: [] };
                 this.termoBuscaPaciente = "";
                 this.isEditMode = false;
                 this.agendamentoEstaPago = false;
@@ -882,7 +962,7 @@ export default {
                 const fp = (this.$page?.props?.flash ?? {});
                 if (fp.warning) this.$page.props.flash = { ...fp, warning: null };
             } catch (_) { }
-            this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "" };
+            this.agendamentoForm = { paciente_id: null, convenio_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "", procedimentosAdicionais: [] };
             this.termoBuscaPaciente = "";
             this.mostrarSugestoesPaciente = false;
 
@@ -1859,6 +1939,7 @@ export default {
                 is_retorno: this.agendamentoForm.is_retorno,
                 numero_autorizacao: this.agendamentoForm.numero_autorizacao || null,
                 validade_autorizacao: this.agendamentoForm.validade_autorizacao || null,
+                procedimentosAdicionais: this.agendamentoForm.procedimentosAdicionais || [],
             };
             this.processandoCriacao = true;
             try {
@@ -1875,14 +1956,19 @@ export default {
                 for (const s of sessions) {
                     const payload = { ...basePayload, data: s.data, hora: s.hora };
                     const resp = await window.axios.post("/agendamentos", payload);
-                    const ag = resp?.data?.agendamento;
-                    if (ag) {
+                    
+                    const ags = resp?.data?.agendamentos || [];
+                    if (ags.length === 0 && resp?.data?.agendamento) {
+                        ags.push(resp.data.agendamento);
+                    }
+
+                    for (const ag of ags) {
                         createdCount++;
                         const pLocal = (this.procedimentosLocal || []).find(pr => String(pr.id) === String(ag.procedimento_id));
                         const pFilt = (this.procedimentosFiltrados || []).find(pr => String(pr.id) === String(ag.procedimento_id));
                         const procNome = pFilt?.nome || pLocal?.nome || 'Procedimento';
                         const pacNome = (this.pacientesLocal.find(p => String(p.id) === String(ag.paciente_id))?.nome || 'Paciente');
-                        const title = `${pacNome} • ${procNome}`;
+                        const title = `${pacNome} - ${procNome}`;
                         const calendarApi = this.$refs.fullCalendar.getApi();
                         calendarApi.addEvent({
                             id: ag.id,
@@ -1895,13 +1981,16 @@ export default {
                         });
                         try { calendarApi.gotoDate(ag.data); } catch (e) { }
                     }
+
+                    // Limpa procedimentos adicionais para não duplicar se houver múltiplas sessões do procedimento principal
+                    basePayload.procedimentosAdicionais = [];
                 }
                 try {
                     const fp = (this.$page?.props?.flash ?? {});
                     this.$page.props.flash = { ...fp, success: createdCount > 1 ? "Agendamentos criados" : "Agendamento criado" };
                 } catch (_) { }
                 this.modalAgendarVisivel = false;
-                this.agendamentoForm = { paciente_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "" };
+                this.agendamentoForm = { paciente_id: null, pessoa_id: null, procedimento_id: null, data: "", hora: "", status_id: null, valor_cobrado: "", observacoes: "", is_retorno: false, numero_autorizacao: "", validade_autorizacao: "", procedimentosAdicionais: [] };
                 this.valorCobradoAutoCriacaoProcId = null;
                 this.procedimentosFiltrados = [];
                 this.sessoesCriacao = [];
@@ -2149,7 +2238,7 @@ export default {
             </BCol>
         </BRow>
 
-        <Offcanvas size="xl" :modelValue="modalAgendarVisivel"
+        <Offcanvas size="xl" customWidth="1450px" :modelValue="modalAgendarVisivel"
             :title="isEditMode ? 'Editar Agendamento' : 'Novo Agendamento'"
             :nameButton="isEditMode ? (podeReagendarAgendamentoCancelado() ? 'Reagendar' : 'Salvar') : 'Agendar'"
             :processing="isEditMode ? processandoEdicao : processandoCriacao"
@@ -2157,31 +2246,31 @@ export default {
             @update:modelValue="modalAgendarVisivel = $event" @save="salvarAgendarOuEditar">
             <div v-if="carregandoDadosOffcanvas" key="skeleton" class="placeholder-wave">
                 <div class="row g-3">
-                    <div class="col-md-12">
+                    <div class="col-md-8">
                         <label class="form-label">Paciente</label>
                         <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-md-4">
                         <label class="form-label">Convênio</label>
                         <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Procedimento</label>
                         <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-3">
                         <label class="form-label">Profissional</label>
                         <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="form-label">Data *</label>
                         <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-1">
                         <label class="form-label">Hora</label>
                         <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="form-label">Valor Cobrado</label>
                         <div class="placeholder col-12 rounded " style="height: 38px; background-color: #adb5bd;"></div>
                     </div>
@@ -2192,7 +2281,7 @@ export default {
                 </div>
             </div>
             <div v-else :key="chaveRenderizacaoModalEvento" class="row g-3">
-                <div class="col-md-12">
+                <div class="col-md-8">
                     <label class="form-label">Paciente</label>
                     <SuggestInput v-model="termoBuscaPaciente" :suggestions="pacientesSugestoesCriacao" :loading="false"
                         :show="mostrarSugestoesPaciente" :disabled="isEdicaoBloqueada" placeholder="Buscar paciente por nome ou CPF"
@@ -2201,7 +2290,7 @@ export default {
                         @select="selecionarSugestaoPaciente" />
                 </div>
 
-                <div class="col-md-12">
+                <div class="col-md-4">
                     <label class="form-label">Convênio</label>
                     <select ref="selConvenioCriacao" data-choices v-model="agendamentoForm.convenio_id" class="form-select"
                         :disabled="!agendamentoForm.paciente_id || isEdicaoBloqueada"
@@ -2215,7 +2304,7 @@ export default {
                         Paciente sem convênio ativo
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label">Procedimento</label>
                     <select ref="selProcedimentoCriacao" data-choices v-model="agendamentoForm.procedimento_id" class="form-select"
                         :disabled="!agendamentoForm.convenio_id || isEdicaoBloqueada"
@@ -2224,7 +2313,7 @@ export default {
                         <option v-for="p in procedimentosFiltrados" :key="p.id" :value="p.id">{{ p.nome }}</option>
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-3">
                     <label class="form-label">Profissional</label>
                     <select :key="'prof-'+isEdicaoBloqueada" ref="selProfissionalCriacao" data-choices v-model="agendamentoForm.pessoa_id" class="form-select"
                         :disabled="!agendamentoForm.procedimento_id || isEdicaoBloqueada"
@@ -2233,7 +2322,7 @@ export default {
                         <option v-for="d in listaProfissionaisCriacao" :key="d.id" :value="d.id">{{ d.nome }}</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <label class="form-label">Data *</label>
                     <div v-if="!isEditMode">
                         <flatPickr v-model="agendamentoForm.data" class="form-control" :config="opcoesFlatpickrData"
@@ -2244,12 +2333,17 @@ export default {
                             placeholder="Selecione a data" :disabled="agendamentoFoiAtendido" />
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-1">
                     <label class="form-label">Hora</label>
-                    <flatPickr v-model="agendamentoForm.hora" class="form-control" :config="opcoesFlatpickrHora"
-                        placeholder="Selecione a hora" :disabled="agendamentoFoiAtendido" />
+                    <div v-if="!isEditMode">
+                        <flatPickr v-model="agendamentoForm.hora" class="form-control" :config="opcoesFlatpickrHora"
+                            placeholder="Hora" :disabled="agendamentoFoiAtendido" />
+                    </div>
+                    <div v-else>
+                        <input type="time" class="form-control bg-light" :value="agendamentoForm.hora" disabled />
+                    </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <label class="form-label">Valor Cobrado</label>
                     <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao"
                         @blur="onBlurInputValorCobrado" @focus="$event.target.select()" type="text" class="form-control"
@@ -2259,6 +2353,47 @@ export default {
                             v-model="agendamentoForm.is_retorno">
                         <label class="form-check-label" for="isRetornoCheckbox">É Retorno?</label>
                     </div>
+                </div>
+
+                <!-- PROCEDIMENTOS ADICIONAIS -->
+                <div class="col-12 mt-3 mb-2" v-if="!isEditMode && isConvenioAgendamento">
+                    <h6 class="border-bottom pb-2">Procedimentos Adicionais</h6>
+                    <div v-for="(pAdicional, idx) in agendamentoForm.procedimentosAdicionais" :key="idx" class="row g-3 mb-3 pb-3 border-bottom position-relative">
+                        <div class="col-md-4">
+                            <label class="form-label">Procedimento</label>
+                            <select ref="selProcedimentoAdicional" data-choices class="form-select" v-model="pAdicional.procedimento_id" @change="aoAlterarProcedimentoAdicional(idx, $event)" :disabled="!agendamentoForm.convenio_id || isEdicaoBloqueada">
+                                <option :value="null">Selecione</option>
+                                <option v-for="p in procedimentosFiltrados" :key="'add-' + idx + '-' + p.id" :value="p.id">{{ p.nome }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Profissional</label>
+                            <select :key="'prof-add-'+idx+'-'+isEdicaoBloqueada" ref="selProfissionalAdicional" data-choices class="form-select" v-model="pAdicional.pessoa_id" @change="pAdicional.pessoa_id = $event.detail ? $event.detail.value : $event.target.value" :disabled="!pAdicional.procedimento_id || isEdicaoBloqueada">
+                                <option :value="null">Selecione</option>
+                                <option v-for="d in (pAdicional.profissionais || [])" :key="'add-' + idx + '-' + d.id" :value="d.id">{{ d.nome }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Data *</label>
+                            <flatPickr v-model="pAdicional.data" class="form-control" :config="opcoesFlatpickrData" placeholder="Data" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">Hora</label>
+                            <flatPickr v-model="pAdicional.hora" class="form-control" :config="opcoesFlatpickrHora" placeholder="Hora" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">Valor</label>
+                            <input v-model="pAdicional.valor_cobrado" v-maska data-maska="9,99" data-maska-tokens="9:[0-9]:repeated" data-maska-reversed type="text" class="form-control" placeholder="0,00" />
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end justify-content-center">
+                            <button type="button" class="btn btn-soft-danger" @click="removerProcedimentoAdicional(idx)" title="Remover">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-soft-success mt-2" @click="adicionarProcedimentoAdicional()">
+                        + Adicionar Procedimento
+                    </button>
                 </div>
 
                 <div v-if="isConvenioAgendamento" class="col-md-6 mt-3">
@@ -2272,7 +2407,7 @@ export default {
                         :config="opcoesFlatpickrData" placeholder="Selecione a data de validade" :disabled="agendamentoEstaPago || agendamentoFoiAtendido" :required="procedimentoRequerAutorizacao" />
                 </div>
 
-                <div class="col-md-12">
+                <div class="col-md-12 mt-3">
                     <label class="form-label">Observações</label>
                     <textarea v-model="agendamentoForm.observacoes" class="form-control" rows="3" maxlength="500"
                         placeholder="Anotações gerais" :disabled="isEdicaoBloqueada"></textarea>

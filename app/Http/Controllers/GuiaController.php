@@ -113,25 +113,43 @@ class GuiaController extends Controller
             }
         }
 
-        if ($guia->procedimentosSolicitados()->count() === 0 && $agendamento->tuss) {
-            $guia->procedimentosSolicitados()->create([
-                'tabela_procedimento_solicitado' => '22',
-                'procedimento_solicitado_codigo' => $agendamento->tuss->codigo,
-                'procedimento_solicitado_descricao' => $agendamento->tuss->descricao,
-                'quantidade_solicitada' => 1,
-                'quantidade_autorizada' => 1,
-            ]);
+        if ($guia->procedimentosSolicitados()->count() === 0) {
+            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+            $allAgendamentos = Agendamento::where('id', $origemId)
+                                          ->orWhere('agendamento_origem_id', $origemId)
+                                          ->with('tuss')
+                                          ->get();
+            foreach ($allAgendamentos as $ag) {
+                if ($ag->tuss) {
+                    $guia->procedimentosSolicitados()->create([
+                        'tabela_procedimento_solicitado' => '22',
+                        'procedimento_solicitado_codigo' => $ag->tuss->codigo,
+                        'procedimento_solicitado_descricao' => $ag->tuss->descricao,
+                        'quantidade_solicitada' => 1,
+                        'quantidade_autorizada' => 1,
+                    ]);
+                }
+            }
         }
 
-        if ($guia->procedimentosRealizados()->count() === 0 && $agendamento->tuss) {
-            $guia->procedimentosRealizados()->create([
-                'tabela_procedimento_realizado' => '22',
-                'procedimento_realizado_codigo' => $agendamento->tuss->codigo,
-                'procedimento_realizado_descricao' => $agendamento->tuss->descricao,
-                'quantidade_realizada' => 1,
-                'data_realizacao' => $agendamento->data,
-                'hora_inicial' => $agendamento->hora,
-            ]);
+        if ($guia->procedimentosRealizados()->count() === 0) {
+            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+            $allAgendamentos = Agendamento::where('id', $origemId)
+                                          ->orWhere('agendamento_origem_id', $origemId)
+                                          ->with('tuss')
+                                          ->get();
+            foreach ($allAgendamentos as $ag) {
+                if ($ag->tuss) {
+                    $guia->procedimentosRealizados()->create([
+                        'tabela_procedimento_realizado' => '22',
+                        'procedimento_realizado_codigo' => $ag->tuss->codigo,
+                        'procedimento_realizado_descricao' => $ag->tuss->descricao,
+                        'quantidade_realizada' => 1,
+                        'data_realizacao' => $ag->data,
+                        'hora_inicial' => $ag->hora,
+                    ]);
+                }
+            }
         }
 
         $guia->load(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes']);
@@ -228,14 +246,23 @@ class GuiaController extends Controller
             }
         }
 
-        if ($guia->procedimentosSolicitados()->count() === 0 && $agendamento->tuss) {
-            $guia->procedimentosSolicitados()->create([
-                'tabela_procedimento_solicitado' => '22',
-                'procedimento_solicitado_codigo' => $agendamento->tuss->codigo,
-                'procedimento_solicitado_descricao' => $agendamento->tuss->descricao,
-                'quantidade_solicitada' => 1,
-                'quantidade_autorizada' => 1,
-            ]);
+        if ($guia->procedimentosSolicitados()->count() === 0) {
+            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+            $allAgendamentos = Agendamento::where('id', $origemId)
+                                          ->orWhere('agendamento_origem_id', $origemId)
+                                          ->with('tuss')
+                                          ->get();
+            foreach ($allAgendamentos as $ag) {
+                if ($ag->tuss) {
+                    $guia->procedimentosSolicitados()->create([
+                        'tabela_procedimento_solicitado' => '22',
+                        'procedimento_solicitado_codigo' => $ag->tuss->codigo,
+                        'procedimento_solicitado_descricao' => $ag->tuss->descricao,
+                        'quantidade_solicitada' => 1,
+                        'quantidade_autorizada' => 1,
+                    ]);
+                }
+            }
         }
 
         $conselhos = \App\Models\Conselho::orderBy('sigla')->get();

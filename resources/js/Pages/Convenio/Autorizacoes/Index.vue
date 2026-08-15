@@ -182,15 +182,12 @@ const columns = [
   { id: "id", name: "ID" },
   { id: "protocolo", name: "Protocolo" },
   { id: "convenio_id", name: "Convênio", formatter: (cell) => convenios.find(c => c.id == cell)?.descricao || cell || "" },
+  { id: "agendamento", name: "Paciente", formatter: (cell) => cell?.paciente?.nome || "-" },
   { id: "tuss", name: "Procedimento", formatter: (cell) => cell ? `${cell.codigo} - ${cell.descricao}` : "-" },
-  // { id: "carteira", name: "Carteirinha" },
   { id: "numero_autorizacao", name: "Nº Autorização" },
   { id: "status", name: "Status" },
   { id: "validade", name: "Validade" },
   { id: "data_solicitacao", name: "Data Solicitação" },
-  { id: "data_resposta", name: "Data Resposta" },
-  { id: "usuario_id", name: "Solicitado Por", formatter: (cell) => usuarios.find(u => u.id == cell)?.nome || cell || "" },
-  // { id: "usuario_id_validou", name: "Validado Por", formatter: (cell) => cell ? (usuarios.find(u => u.id == cell)?.nome || cell) : "" },
 ];
 
 const showModal = ref(false);
