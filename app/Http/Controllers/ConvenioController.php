@@ -14,16 +14,6 @@ use Illuminate\Support\Str;
 
 class ConvenioController extends Controller
 {
-    private function normalizeTipo(?string $tipo): ?string
-    {
-        $t = trim((string)($tipo ?? ''));
-        if ($t === '') return null;
-        $t = strtoupper(Str::ascii($t));
-        if ($t === 'CONVENIO') return 'Convenio';
-        if ($t === 'PARTICULAR') return 'Particular';
-        return null;
-    }
-
     private function rules(): array
     {
         return [
@@ -83,7 +73,7 @@ class ConvenioController extends Controller
         ]);
         $data = $request->validate($this->rules());
         $data['config_spsadt'] = $request->input('config_spsadt');
-        $data['tipo'] = $this->normalizeTipo($data['tipo'] ?? 'Convenio');
+        $data['tipo'] = strtoupper(trim((string)($data['tipo'] ?? 'CONVENIO')));
         if (!$data['tipo']) {
             return back()->withErrors(['tipo' => 'Tipo inválido.']);
         }
@@ -99,10 +89,10 @@ class ConvenioController extends Controller
         $medicosInput = (array)($request->input('medicos', []));
         unset($data['tuss_ids'], $data['medicos']);
 
-        if ($data['tipo'] === 'Convenio') {
+        if ($data['tipo'] === 'CONVENIO') {
             if (empty($tussData)) {
                 return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.'])
-                             ->with('error', 'Erro de Validação: Selecione ao menos 1 procedimento da TUSS para este convênio.');
+                    ->with('error', 'Erro de Validação: Selecione ao menos 1 procedimento da TUSS para este convênio.');
             }
             $data['tuss_tabela'] = null;
         } else {
@@ -168,6 +158,7 @@ class ConvenioController extends Controller
 
     public function update(Request $request, string $id)
     {
+        // dd($request->all());
         \Log::info('Convenio Update Payload:', $request->all());
         $convenio = Convenio::findOrFail($id);
         $request->merge([
@@ -183,7 +174,7 @@ class ConvenioController extends Controller
         $data = $request->validate($this->rules());
         $data['config_spsadt'] = $request->input('config_spsadt');
         \Log::info('Convenio Update Data array:', ['data' => $data]);
-        $data['tipo'] = $this->normalizeTipo($data['tipo'] ?? $convenio->tipo ?? 'CONVENIO');
+        $data['tipo'] = strtoupper(trim((string)($data['tipo'] ?? $convenio->tipo ?? 'CONVENIO')));
         if (!$data['tipo']) {
             return back()->withErrors(['tipo' => 'Tipo inválido.']);
         }
@@ -199,10 +190,10 @@ class ConvenioController extends Controller
         $medicosInput = (array)($request->input('medicos', []));
         unset($data['tuss_ids'], $data['medicos']);
 
-        if ($data['tipo'] === 'Convenio') {
+        if ($data['tipo'] === 'CONVENIO') {
             if (empty($tussData)) {
                 return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.'])
-                             ->with('error', 'Erro de Validação: Selecione ao menos 1 procedimento da TUSS para este convênio.');
+                    ->with('error', 'Erro de Validação: Selecione ao menos 1 procedimento da TUSS para este convênio.');
             }
             $data['tuss_tabela'] = null;
         } else {

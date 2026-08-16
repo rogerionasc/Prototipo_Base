@@ -489,17 +489,18 @@ function initGrid() {
                         return false;
                     }
                 };
+                const isRowLoading = !!rowLoading;
                 const buttons = [
-                    can(ac.delete) ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('delete') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('delete')) ? 'disabled' : ''} title="${al.delete ?? 'Excluir'}">${isLoadingAction('delete') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.delete ?? 'ri-delete-bin-5-fill'} align-bottom"></i>${bt.delete ? `<span class="d-none d-sm-inline ms-1">${bt.delete}</span>` : ''}</button>` : ``,
-                    can(ac.edit) ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('edit') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('edit')) ? 'disabled' : ''} title="${al.edit ?? 'Editar'}">${isLoadingAction('edit') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.edit ?? 'ri-pencil-fill'} align-bottom"></i>${bt.edit ? `<span class="d-none d-sm-inline ms-1">${bt.edit}</span>` : ''}</button>` : ``,
-                    can(ac.show) ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('show') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('show')) ? 'disabled' : ''} title="${al.show ?? 'Visualizar'}">${isLoadingAction('show') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.show ?? 'ri-eye-fill'} align-bottom"></i>${bt.show ? `<span class="d-none d-sm-inline ms-1">${bt.show}</span>` : ''}</button>` : ``,
-                    (can(ac.restore) && rowData.fechado_em) ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="restore" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('restore') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('restore')) ? 'disabled' : ''} title="${al.restore ?? 'Reabrir'}">${isLoadingAction('restore') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.restore ?? 'ri-refresh-line'} align-bottom"></i>${bt.restore ? `<span class="d-none d-sm-inline ms-1">${bt.restore}</span>` : ''}</button>` : ``,
-                    can(ac.print) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('print') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('print')) ? 'disabled' : ''} title="${al.print ?? 'Imprimir'}">${isLoadingAction('print') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.print ?? 'ri-printer-fill'} align-bottom"></i>${bt.print ? `<span class="d-none d-sm-inline ms-1">${bt.print}</span>` : ''}</button>` : ``,
-                    can(ac.download) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('download') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('download')) ? 'disabled' : ''} title="${al.download ?? 'Baixar'}">${isLoadingAction('download') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.download ?? 'ri-download-line'} align-bottom"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
-                    can(ac.receive) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('receive') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('receive')) ? 'disabled' : ''} title="${al.receive ?? 'Receber'}">${isLoadingAction('receive') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.receive ?? 'ri-money-dollar-box-line'} align-bottom"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
-                    can(ac.procedure) ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="procedure" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('procedure') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('procedure')) ? 'disabled' : ''} title="${al.procedure ?? 'Procedimentos'}">${isLoadingAction('procedure') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.procedure ?? 'ri-list-check'} align-bottom"></i>${bt.procedure ? `<span class="d-none d-sm-inline ms-1">${bt.procedure}</span>` : ''}</button>` : ``,
-                    (props.showDiaryButton && can(ac.diary)) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('diary') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('diary')) ? 'disabled' : ''} title="${al.diary ?? 'Agenda'}">${isLoadingAction('diary') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.diary ?? 'ri-calendar-2-line'} align-bottom"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``,
-                    can(ac.toggle) ? `<button class="btn btn-sm ${rowData.is_active ? 'btn-soft-success' : 'btn-soft-danger'}" type="button" data-action="toggle" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('toggle') ? 'true' : 'false'}" ${(disabledAll || isLoadingAction('toggle')) ? 'disabled' : ''} title="${al.toggle ?? (rowData.is_active ? 'Bloquear' : 'Desbloquear')}">${isLoadingAction('toggle') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.toggle ?? (rowData.is_active ? 'ri-lock-unlock-fill' : 'ri-lock-fill')} align-bottom"></i>${bt.toggle ? `<span class="d-none d-sm-inline ms-1">${bt.toggle}</span>` : ''}</button>` : ``
+                    can(ac.delete) ? `<button class="btn btn-sm btn-soft-danger" type="button" data-action="delete" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('delete') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.delete ?? 'Excluir'}">${isLoadingAction('delete') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.delete ?? 'ri-delete-bin-5-fill'} align-bottom ${isLoadingAction('delete') ? 'd-none' : ''}"></i>${bt.delete ? `<span class="d-none d-sm-inline ms-1">${bt.delete}</span>` : ''}</button>` : ``,
+                    can(ac.edit) ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="edit" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('edit') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.edit ?? 'Editar'}">${isLoadingAction('edit') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.edit ?? 'ri-pencil-fill'} align-bottom ${isLoadingAction('edit') ? 'd-none' : ''}"></i>${bt.edit ? `<span class="d-none d-sm-inline ms-1">${bt.edit}</span>` : ''}</button>` : ``,
+                    can(ac.show) ? `<button class="btn btn-sm btn-soft-warning" type="button" data-action="show" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('show') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.show ?? 'Visualizar'}">${isLoadingAction('show') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.show ?? 'ri-eye-fill'} align-bottom ${isLoadingAction('show') ? 'd-none' : ''}"></i>${bt.show ? `<span class="d-none d-sm-inline ms-1">${bt.show}</span>` : ''}</button>` : ``,
+                    (can(ac.restore) && rowData.fechado_em) ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="restore" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('restore') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.restore ?? 'Reabrir'}">${isLoadingAction('restore') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.restore ?? 'ri-refresh-line'} align-bottom ${isLoadingAction('restore') ? 'd-none' : ''}"></i>${bt.restore ? `<span class="d-none d-sm-inline ms-1">${bt.restore}</span>` : ''}</button>` : ``,
+                    can(ac.print) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('print') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.print ?? 'Imprimir'}">${isLoadingAction('print') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.print ?? 'ri-printer-fill'} align-bottom ${isLoadingAction('print') ? 'd-none' : ''}"></i>${bt.print ? `<span class="d-none d-sm-inline ms-1">${bt.print}</span>` : ''}</button>` : ``,
+                    can(ac.download) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('download') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.download ?? 'Baixar'}">${isLoadingAction('download') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.download ?? 'ri-download-line'} align-bottom ${isLoadingAction('download') ? 'd-none' : ''}"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
+                    can(ac.receive) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('receive') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.receive ?? 'Receber'}">${isLoadingAction('receive') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.receive ?? 'ri-money-dollar-box-line'} align-bottom ${isLoadingAction('receive') ? 'd-none' : ''}"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
+                    can(ac.procedure) ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="procedure" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('procedure') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.procedure ?? 'Procedimentos'}">${isLoadingAction('procedure') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.procedure ?? 'ri-list-check'} align-bottom ${isLoadingAction('procedure') ? 'd-none' : ''}"></i>${bt.procedure ? `<span class="d-none d-sm-inline ms-1">${bt.procedure}</span>` : ''}</button>` : ``,
+                    (props.showDiaryButton && can(ac.diary)) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('diary') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.diary ?? 'Agenda'}">${isLoadingAction('diary') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.diary ?? 'ri-calendar-2-line'} align-bottom ${isLoadingAction('diary') ? 'd-none' : ''}"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``,
+                    can(ac.toggle) ? `<button class="btn btn-sm ${rowData.is_active ? 'btn-soft-success' : 'btn-soft-danger'}" type="button" data-action="toggle" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('toggle') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.toggle ?? (rowData.is_active ? 'Bloquear' : 'Desbloquear')}">${isLoadingAction('toggle') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.toggle ?? (rowData.is_active ? 'ri-lock-unlock-fill' : 'ri-lock-fill')} align-bottom ${isLoadingAction('toggle') ? 'd-none' : ''}"></i>${bt.toggle ? `<span class="d-none d-sm-inline ms-1">${bt.toggle}</span>` : ''}</button>` : ``
                 ].join('');
                 return html(`<div class="d-flex gap-2">${buttons}</div>`);
             }
@@ -611,7 +612,36 @@ function initGrid() {
     clickListener = (e) => {
         const target = e.target.closest('[data-action]');
         if (!target) return;
-        if (target.getAttribute('data-loading') === 'true' || target.hasAttribute('disabled')) return;
+        if (target.getAttribute('data-loading') === 'true' || target.hasAttribute('disabled') || target.hasAttribute('data-local-disabled')) return;
+        
+        // Desabilita imediatamente todos os botões da mesma célula para evitar múltiplos cliques
+        const parentDiv = target.closest('.d-flex.gap-2');
+        if (parentDiv) {
+            const buttons = parentDiv.querySelectorAll('button[data-action]');
+            buttons.forEach(btn => {
+                btn.setAttribute('disabled', 'disabled');
+                btn.setAttribute('data-local-disabled', 'true');
+            });
+            // Adiciona o spinner no botão clicado caso ainda não tenha e oculta o ícone
+            if (!target.querySelector('.spinner-border')) {
+                target.insertAdjacentHTML('afterbegin', '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>');
+                const icon = target.querySelector('i');
+                if (icon) icon.classList.add('d-none');
+            }
+            
+            // Remove a trava de segurança após 1 segundo (caso o componente pai não faça o re-render via actionsLoading)
+            setTimeout(() => {
+                buttons.forEach(btn => {
+                    btn.removeAttribute('disabled');
+                    btn.removeAttribute('data-local-disabled');
+                });
+                const spinner = target.querySelector('.spinner-border');
+                if (spinner) spinner.remove();
+                const icon = target.querySelector('i');
+                if (icon) icon.classList.remove('d-none');
+            }, 1000);
+        }
+
         const action = target.getAttribute('data-action');
         const id = target.getAttribute('data-id');
         let rowObj = {};
@@ -795,5 +825,12 @@ onMounted(async () => {
 
 .table-hover tbody tr:hover td.gridjs-td {
     background-color: var(--bs-table-hover-bg, rgba(0, 0, 0, 0.075)) !important;
+}
+
+.table td .btn:disabled, 
+.table td .btn[disabled],
+.table td .btn[data-local-disabled="true"] {
+    border-color: rgba(0, 0, 0, 0.15) !important;
+    opacity: 0.65 !important;
 }
 </style>

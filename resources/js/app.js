@@ -74,6 +74,7 @@ function getChoicesConfig(el) {
         noResultsText: 'Nem resultado encontrado',
         placeholder: true,
         placeholderValue: 'Selecione',
+        position: 'bottom',
         fuseOptions: {
             threshold: 0.0,
             ignoreLocation: true,

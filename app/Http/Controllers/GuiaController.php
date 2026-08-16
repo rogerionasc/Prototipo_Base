@@ -14,7 +14,7 @@ class GuiaController extends Controller
         $agendamento = Agendamento::with(['paciente', 'convenio', 'procedimento', 'agendaMedica.profissionalSaude.conselho', 'agendaMedica.profissionalSaude.especialidades'])->findOrFail($agendamentoId);
 
         // Fetch or create Guia based on Agendamento -> Atendimento
-        $atendimento = Atendimento::where('agendamento_id', $agendamento->id)->first();
+        $atendimento = Atendimento::with(['medico.conselho', 'medico.especialidades'])->where('agendamento_id', $agendamento->id)->first();
         
         // Get carteira info from pivot if available
         $pacienteConvenio = $agendamento->paciente?->convenios()
@@ -54,63 +54,13 @@ class GuiaController extends Controller
         }
 
         if (!$guia) {
-            $numeroGuiaPrestador = 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT);
+            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+            $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
             $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
         }
 
         if (!$guia) {
-            // Create a generic Guia
-            $guia = Guia::create([
-                'faturamento_id' => null,
-                'ans_registro' => $registroAns,
-                'numero_guia_prestador' => 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT),
-                'numero_guia_principal' => null,
-                'data_autorizacao' => $dataAutorizacao,
-                'senha' => $senha,
-                'data_validade_senha' => $dataValidadeSenha,
-                'numero_guia_operadora' => null,
-                'numero_carteira' => $numeroCarteira,
-                'validade_carteira' => $validadeCarteira,
-                'beneficiario_nome' => $agendamento->paciente?->nome ?? 'Paciente',
-                'cns' => $agendamento->paciente?->cns,
-                'atendimento_rn' => false,
-                'contratado_solicitante_codigo' => $agendamento->agendaMedica?->profissionalSaude?->cpf ?? '000000000',
-                'contratado_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome ?? 'Profissional',
-                'profissional_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome ?? 'Profissional',
-                'conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->conselho?->codigo ?? 'CR',
-                'numero_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->numero_conselho ?? '000000',
-                'uf_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->uf_conselho ?? 'SP',
-                'cbo_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->especialidades?->first()?->codigo ?? '2251',
-                'assinatura_profissional_solicitante' => '',
-                'carater_atendimento' => $agendamento->emergencia ? '2' : '1',
-                'data_solicitacao' => $agendamento->data,
-                'indicacao_clinica' => $agendamento->observacoes,
-                'contratado_executante_codigo' => '000000000',
-                'contratado_executante_nome' => 'CLINICA PADRAO',
-                'cnes_executante' => '0000000',
-                'tipo_atendimento' => '01',
-                'indicacao_acidente' => '9',
-                'tipo_consulta' => null,
-                'motivo_encerramento' => null,
-                'data_realizacao' => null,
-                'hora_inicial' => null,
-                'hora_final' => null,
-                'assinatura_beneficiario_serie' => '',
-                'observacao_justificativa' => null,
-                'total_procedimentos' => null,
-                'total_taxas_alugueis' => null,
-                'total_materiais' => null,
-                'total_opme' => null,
-                'total_medicamentos' => null,
-                'total_gases_medicinais' => null,
-                'assinatura_responsavel_autorizacao' => '',
-                'assinatura_beneficiario' => '',
-                'assinatura_contratado' => '',
-            ]);
-
-            if ($atendimento) {
-                $atendimento->update(['guia_id' => $guia->id]);
-            }
+            abort(404, 'Nenhuma guia foi gerada para este agendamento.');
         }
 
         if ($guia->procedimentosSolicitados()->count() === 0) {
@@ -132,7 +82,7 @@ class GuiaController extends Controller
             }
         }
 
-        if ($guia->procedimentosRealizados()->count() === 0) {
+        if ($guia->procedimentosRealizados()->count() === 0 && $atendimento && $atendimento->status === 'ATENDIDO') {
             $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
             $allAgendamentos = Agendamento::where('id', $origemId)
                                           ->orWhere('agendamento_origem_id', $origemId)
@@ -140,13 +90,43 @@ class GuiaController extends Controller
                                           ->get();
             foreach ($allAgendamentos as $ag) {
                 if ($ag->tuss) {
-                    $guia->procedimentosRealizados()->create([
-                        'tabela_procedimento_realizado' => '22',
-                        'procedimento_realizado_codigo' => $ag->tuss->codigo,
-                        'procedimento_realizado_descricao' => $ag->tuss->descricao,
-                        'quantidade_realizada' => 1,
-                        'data_realizacao' => $ag->data,
-                        'hora_inicial' => $ag->hora,
+                    $agAtendimento = \App\Models\Atendimento::where('agendamento_id', $ag->id)->where('status', 'ATENDIDO')->first();
+                    if ($agAtendimento) {
+                        $guia->procedimentosRealizados()->create([
+                            'tabela_procedimento_realizado' => '22',
+                            'procedimento_realizado_codigo' => $ag->tuss->codigo,
+                            'procedimento_realizado_descricao' => $ag->tuss->descricao,
+                            'quantidade_realizada' => 1,
+                            'data_realizacao' => $ag->data,
+                            'hora_inicial' => $ag->hora,
+                        ]);
+                    }
+                }
+            }
+        }
+
+        $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+        $allAgendamentos = Agendamento::where('id', $origemId)
+                                      ->orWhere('agendamento_origem_id', $origemId)
+                                      ->get();
+        foreach ($allAgendamentos as $ag) {
+            $agAtendimento = \App\Models\Atendimento::where('agendamento_id', $ag->id)->with(['medico.conselho', 'medico.especialidades'])->first();
+            if ($agAtendimento && $agAtendimento->medico) {
+                $profissional = $agAtendimento->medico;
+                $cpf = $profissional->cpf ?? '00000000000';
+                $existe = $guia->profissionaisExecutantes()->where('profissional_executante_codigo', $cpf)->exists();
+                if (!$existe) {
+                    $count = $guia->profissionaisExecutantes()->count();
+                    $guia->profissionaisExecutantes()->create([
+                        'sequencial_referencia' => $count + 1,
+                        'grau_participacao' => '01',
+                        'profissional_executante_codigo' => $cpf,
+                        'profissional_executante_nome' => $profissional->nome ?? 'Profissional',
+                        'conselho_executante' => $profissional->conselho?->codigo ?? 'CR',
+                        'numero_conselho_executante' => $profissional->numero_conselho ?? '000000',
+                        'uf_conselho_executante' => $profissional->uf_conselho ?? 'SP',
+                        'cbo_executante' => $profissional->especialidades?->first()?->codigo ?? '2251',
+                        'data_realizacao_serie' => $agAtendimento->hora_inicio ? \Carbon\Carbon::parse($agAtendimento->hora_inicio)->format('Y-m-d') : $ag->data,
                     ]);
                 }
             }
@@ -164,7 +144,7 @@ class GuiaController extends Controller
         $agendamento = Agendamento::with(['paciente', 'convenio', 'procedimento', 'tuss', 'agendaMedica.profissionalSaude.conselho', 'agendaMedica.profissionalSaude.especialidades'])->findOrFail($agendamentoId);
 
         // Fetch or create Guia based on Agendamento -> Atendimento
-        $atendimento = Atendimento::where('agendamento_id', $agendamento->id)->first();
+        $atendimento = Atendimento::with(['medico.conselho', 'medico.especialidades'])->where('agendamento_id', $agendamento->id)->first();
         
         // Get carteira info from pivot if available
         $pacienteConvenio = $agendamento->paciente?->convenios()
@@ -187,63 +167,15 @@ class GuiaController extends Controller
         }
 
         if (!$guia) {
-            $numeroGuiaPrestador = 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT);
+            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+            $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
             $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
         }
 
         if (!$guia) {
-            // Create a generic Guia
-            $guia = Guia::create([
-                'faturamento_id' => null,
-                'ans_registro' => $registroAns,
-                'numero_guia_prestador' => 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT),
-                'numero_guia_principal' => null,
-                'data_autorizacao' => $dataAutorizacao,
-                'senha' => $senha,
-                'data_validade_senha' => $dataValidadeSenha,
-                'numero_guia_operadora' => null,
-                'numero_carteira' => $numeroCarteira,
-                'validade_carteira' => $validadeCarteira,
-                'beneficiario_nome' => $agendamento->paciente?->nome ?? 'Paciente',
-                'cns' => $agendamento->paciente?->cns,
-                'atendimento_rn' => false,
-                'contratado_solicitante_codigo' => $agendamento->agendaMedica?->profissionalSaude?->cpf ?? '000000000',
-                'contratado_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome ?? 'Profissional',
-                'profissional_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome ?? 'Profissional',
-                'conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->conselho?->codigo ?? 'CR',
-                'numero_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->numero_conselho ?? '000000',
-                'uf_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->uf_conselho ?? 'SP',
-                'cbo_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->especialidades?->first()?->codigo ?? '2251',
-                'assinatura_profissional_solicitante' => '',
-                'carater_atendimento' => $agendamento->emergencia ? '2' : '1',
-                'data_solicitacao' => $agendamento->data,
-                'indicacao_clinica' => $agendamento->observacoes,
-                'contratado_executante_codigo' => '000000000',
-                'contratado_executante_nome' => 'CLINICA PADRAO',
-                'cnes_executante' => '0000000',
-                'tipo_atendimento' => '01',
-                'indicacao_acidente' => '9',
-                'tipo_consulta' => null,
-                'motivo_encerramento' => null,
-                'data_realizacao' => null,
-                'hora_inicial' => null,
-                'hora_final' => null,
-                'assinatura_beneficiario_serie' => '',
-                'observacao_justificativa' => null,
-                'total_procedimentos' => null,
-                'total_taxas_alugueis' => null,
-                'total_materiais' => null,
-                'total_opme' => null,
-                'total_medicamentos' => null,
-                'total_gases_medicinais' => null,
-                'assinatura_responsavel_autorizacao' => '',
-                'assinatura_beneficiario' => '',
-                'assinatura_contratado' => '',
-            ]);
-
-            if ($atendimento) {
-                $atendimento->update(['guia_id' => $guia->id]);
-            }
+            return response()->json([
+                'error' => 'Nenhuma guia foi gerada para este agendamento. Se este agendamento é antigo, a geração automática estava desabilitada.'
+            ], 404);
         }
 
         if ($guia->procedimentosSolicitados()->count() === 0) {
@@ -265,6 +197,29 @@ class GuiaController extends Controller
             }
         }
 
+        if ($guia->procedimentosRealizados()->count() === 0 && $atendimento && $atendimento->status === 'ATENDIDO') {
+            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+            $allAgendamentos = Agendamento::where('id', $origemId)
+                                          ->orWhere('agendamento_origem_id', $origemId)
+                                          ->with('tuss')
+                                          ->get();
+            foreach ($allAgendamentos as $ag) {
+                if ($ag->tuss) {
+                    $agAtendimento = \App\Models\Atendimento::where('agendamento_id', $ag->id)->where('status', 'ATENDIDO')->first();
+                    if ($agAtendimento) {
+                        $guia->procedimentosRealizados()->create([
+                            'tabela_procedimento_realizado' => '22',
+                            'procedimento_realizado_codigo' => $ag->tuss->codigo,
+                            'procedimento_realizado_descricao' => $ag->tuss->descricao,
+                            'quantidade_realizada' => 1,
+                            'data_realizacao' => $ag->data,
+                            'hora_inicial' => $ag->hora,
+                        ]);
+                    }
+                }
+            }
+        }
+
         $conselhos = \App\Models\Conselho::orderBy('sigla')->get();
         $especialidades = \App\Models\Especialidade::orderBy('nome')->get();
         $carateresAtendimento = \App\Models\CaraterAtendimento::all();
@@ -273,6 +228,33 @@ class GuiaController extends Controller
         $tiposAtendimento = \App\Models\TipoAtendimento::orderBy('codigo')->get();
         $indicacoesAcidente = \App\Models\IndicacaoIncidencia::orderBy('codigo')->get();
         $tiposConsulta = \App\Models\TipoConsulta::orderBy('codigo')->get();
+
+        $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+        $allAgendamentos = Agendamento::where('id', $origemId)
+                                      ->orWhere('agendamento_origem_id', $origemId)
+                                      ->get();
+        foreach ($allAgendamentos as $ag) {
+            $agAtendimento = \App\Models\Atendimento::where('agendamento_id', $ag->id)->with(['medico.conselho', 'medico.especialidades'])->first();
+            if ($agAtendimento && $agAtendimento->medico) {
+                $profissional = $agAtendimento->medico;
+                $cpf = $profissional->cpf ?? '00000000000';
+                $existe = $guia->profissionaisExecutantes()->where('profissional_executante_codigo', $cpf)->exists();
+                if (!$existe) {
+                    $count = $guia->profissionaisExecutantes()->count();
+                    $guia->profissionaisExecutantes()->create([
+                        'sequencial_referencia' => $count + 1,
+                        'grau_participacao' => '01',
+                        'profissional_executante_codigo' => $cpf,
+                        'profissional_executante_nome' => $profissional->nome ?? 'Profissional',
+                        'conselho_executante' => $profissional->conselho?->codigo ?? 'CR',
+                        'numero_conselho_executante' => $profissional->numero_conselho ?? '000000',
+                        'uf_conselho_executante' => $profissional->uf_conselho ?? 'SP',
+                        'cbo_executante' => $profissional->especialidades?->first()?->codigo ?? '2251',
+                        'data_realizacao_serie' => $agAtendimento->hora_inicio ? \Carbon\Carbon::parse($agAtendimento->hora_inicio)->format('Y-m-d') : $ag->data,
+                    ]);
+                }
+            }
+        }
 
         $guia->load(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes']);
 

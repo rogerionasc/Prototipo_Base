@@ -25,7 +25,7 @@ class FaturamentoController extends Controller
             )
             ->leftJoin('convenios as c', 'c.id', '=', 'f.convenio_id')
             ->where(function($q) {
-                $q->where('c.tipo', 'Particular')
+                $q->whereRaw('UPPER(c.tipo) = ?', ['PARTICULAR'])
                   ->orWhereNull('f.convenio_id');
             })
             ->orderByDesc('f.updated_at')

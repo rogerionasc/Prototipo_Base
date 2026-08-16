@@ -363,7 +363,7 @@ class AgendamentoController extends Controller
                         ->whereNull('deleted_at')
                         ->first();
 
-                    Autorizacao::create([
+                    $aut = Autorizacao::create([
                         'convenio_id' => $convenioId,
                         'agendamento_id' => $agendamento->id,
                         'tuss_id' => $isConvenio ? $procId : null,
@@ -378,6 +378,58 @@ class AgendamentoController extends Controller
                         'usuario_id' => Auth::id() ?? 1,
                         'usuario_id_validou' => null,
                     ]);
+
+                    if ($item['is_master']) {
+                        $agendamento->load(['paciente', 'convenio', 'agendaMedica.profissionalSaude.conselho', 'agendaMedica.profissionalSaude.especialidades']);
+                        $numeroCarteira = $pacienteConvenio->numero_carteira ?? '0000000000';
+                        $validadeCarteira = $pacienteConvenio->validade ?? null;
+                        $registroAns = $agendamento->convenio?->ans ?? '000000';
+                        $senha = $aut->numero_autorizacao ?? null;
+                        $dataValidadeSenha = $aut->validade ?? null;
+                        $dataAutorizacao = $aut->data_resposta ?? $aut->data_solicitacao ?? $aut->created_at?->format('Y-m-d');
+
+                        \App\Models\Guia::create([
+                            'faturamento_id' => null,
+                            'ans_registro' => $registroAns,
+                            'numero_guia_prestador' => 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT),
+                            'numero_guia_principal' => null,
+                            'data_autorizacao' => $dataAutorizacao,
+                            'senha' => $senha,
+                            'data_validade_senha' => $dataValidadeSenha,
+                            'numero_guia_operadora' => null,
+                            'numero_carteira' => $numeroCarteira,
+                            'validade_carteira' => $validadeCarteira,
+                            'beneficiario_nome' => $agendamento->paciente?->nome ?? 'Paciente',
+                            'cns' => $agendamento->paciente?->cns,
+                            'atendimento_rn' => false,
+                            'contratado_solicitante_codigo' => $agendamento->agendaMedica?->profissionalSaude?->cpf ?? '000000000',
+                            'contratado_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome ?? 'Profissional',
+                            'profissional_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome ?? 'Profissional',
+                            'conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->conselho?->codigo ?? 'CR',
+                            'numero_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->numero_conselho ?? '000000',
+                            'uf_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->uf_conselho ?? 'SP',
+                            'cbo_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->especialidades?->first()?->codigo ?? '2251',
+                            'assinatura_profissional_solicitante' => '',
+                            'carater_atendimento' => $agendamento->emergencia ? '2' : '1',
+                            'data_solicitacao' => $agendamento->data,
+                            'indicacao_clinica' => $agendamento->observacoes,
+                            'contratado_executante_codigo' => '000000000',
+                            'contratado_executante_nome' => 'CLINICA PADRAO',
+                            'cnes_executante' => '0000000',
+                            'tipo_atendimento' => '01',
+                            'indicacao_acidente' => '9',
+                            'tipo_consulta' => null,
+                            'motivo_encerramento' => null,
+                            'data_realizacao' => null,
+                            'hora_inicial' => null,
+                            'hora_final' => null,
+                            'assinatura_beneficiario_serie' => '',
+                            'observacao_justificativa' => null,
+                            'total_procedimentos' => null,
+                            'total_taxas_alugueis' => null,
+                            'total_materiais' => null,
+                        ]);
+                    }
                 }
 
                 if (!$isConvenio) {
@@ -442,9 +494,15 @@ class AgendamentoController extends Controller
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
             ->leftJoin('convenios as c', 'c.id', '=', 'a.convenio_id')
+            ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
             ->where(function ($q) {
-                $q->where('s.descricao', 'NOT LIKE', '%Atendido%')
-                  ->orWhereNull('s.descricao');
+                $q->where(function($sub) {
+                    $sub->where('s.descricao', 'NOT LIKE', '%Atendido%')
+                        ->orWhereNull('s.descricao');
+                })->where(function($sub) {
+                    $sub->where('at.status', '!=', 'ATENDIDO')
+                        ->orWhereNull('at.status');
+                });
             })
             ->select(
                 'a.id',
@@ -531,6 +589,18 @@ class AgendamentoController extends Controller
     {
         $agendamento = Agendamento::findOrFail($id);
 
+        // Bloquear edição de agendamentos com atendimento concluído
+        $atendimentoConcluido = \App\Models\Atendimento::where('agendamento_id', $agendamento->id)
+            ->where('status', 'ATENDIDO')
+            ->exists();
+        if ($atendimentoConcluido) {
+            return response()->json([
+                'errors' => [
+                    'agendamento' => ['Este agendamento já foi concluído e não pode ser alterado.']
+                ]
+            ], 422);
+        }
+
         $convenioIdInput = $request->input('convenio_id', $agendamento->convenio_id);
         $isConvenio = false;
         if (!empty($convenioIdInput)) {
@@ -583,17 +653,25 @@ class AgendamentoController extends Controller
             }
         }
 
-        $pessoaId = $payload['pessoa_id'] ?? ($agendamento->agendaMedica->pessoa_id ?? null);
+        $pessoaId = $payload['pessoa_id'] ?? ($agendamento->agendaMedica?->pessoa_id ?? null);
         $novaData = $payload['data'] ?? $agendamento->data;
 
         if (isset($payload['pessoa_id']) || isset($payload['data'])) {
             if ($pessoaId && $novaData) {
                 $dt = Carbon::parse($novaData);
                 $weekday = $dt->dayOfWeek;
-                $agenda = \App\Models\AgendaMedica::firstOrCreate(
-                    ['pessoa_id' => $pessoaId, 'dia_semana' => $weekday],
-                    ['horario_inicio' => '08:00', 'horario_fim' => '18:00', 'duracao_consulta' => 30]
-                );
+                $agenda = \App\Models\AgendaMedica::where('pessoa_id', $pessoaId)
+                    ->where('dia_semana', $weekday)
+                    ->first();
+                
+                if (!$agenda) {
+                    return response()->json([
+                        'errors' => [
+                            'agendamento' => ['O profissional não possui agenda para o dia selecionado.']
+                        ]
+                    ], 422);
+                }
+                
                 $payload['agenda_medica_id'] = $agenda->id;
             }
         }

@@ -123,7 +123,7 @@ async function openModalEdit(id) {
     convenioFormRef.value.form.id = c.id;
     convenioFormRef.value.form.descricao = c.descricao || '';
     convenioFormRef.value.form.tuss_tabela = '';
-    convenioFormRef.value.form.tipo = c.tipo || 'CONVENIO';
+    convenioFormRef.value.form.tipo = c.tipo ? String(c.tipo).toUpperCase() : 'CONVENIO';
     convenioFormRef.value.form.empresa_id = c.empresa_id || '';
     convenioFormRef.value.form.ans = c.ans ?? null;
     convenioFormRef.value.form.dias_recebimento = c.dias_recebimento ?? null;

@@ -5,6 +5,7 @@ import { useChoicesRemoteSearch } from "@/Composables/useChoicesRemoteSearch";
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import Swal from 'sweetalert2';
+import Choices from 'choices.js';
 
 const props = defineProps({
     atendimento: Object,
@@ -106,6 +107,70 @@ const evolucaoForm = useForm({
     tipo: 'Evolução Clínica',
     descricao: '',
     tratamento_id: null
+});
+
+const evolucaoTipoSelect = ref(null);
+const evolucaoTratamentoSelect = ref(null);
+let evolucaoChoicesInited = false;
+
+function initEvolucaoChoices() {
+    if (evolucaoChoicesInited) return;
+    evolucaoChoicesInited = true;
+    nextTick(() => {
+        [evolucaoTipoSelect.value, evolucaoTratamentoSelect.value].forEach(el => {
+            if (!el || el._choicesInstance) return;
+            try {
+                if (typeof window.destroyChoiceEl === 'function') window.destroyChoiceEl(el);
+            } catch (_) {}
+            try {
+                const inst = new Choices(el, {
+                    searchEnabled: false,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: 'Selecione',
+                    noResultsText: 'Nenhum resultado encontrado',
+                });
+                el._choicesInstance = inst;
+                if (!canEditPep.value) inst.disable();
+                else inst.enable();
+                el.dataset.choicesInitialized = 'true';
+                try { el.style.display = 'none'; } catch (_) {}
+            } catch (e) {
+                console.error('Choices evolucao init error:', e);
+            }
+        });
+        // Sync initial values
+        syncEvolucaoChoiceValue(evolucaoTipoSelect.value, evolucaoForm.tipo);
+        syncEvolucaoChoiceValue(evolucaoTratamentoSelect.value, evolucaoForm.tratamento_id);
+    });
+}
+
+function syncEvolucaoChoiceValue(el, value) {
+    if (!el) return;
+    const inst = el._choicesInstance;
+    if (!inst) return;
+    try {
+        inst.setChoiceByValue(value != null ? String(value) : '');
+    } catch (_) {}
+}
+
+watch(() => evolucaoForm.tipo, (val) => syncEvolucaoChoiceValue(evolucaoTipoSelect.value, val));
+watch(() => evolucaoForm.tratamento_id, (val) => syncEvolucaoChoiceValue(evolucaoTratamentoSelect.value, val));
+
+watch(() => canEditPep.value, (val) => {
+    [evolucaoTipoSelect.value, evolucaoTratamentoSelect.value].forEach(el => {
+        if (el && el._choicesInstance) {
+            if (val) el._choicesInstance.enable();
+            else el._choicesInstance.disable();
+        }
+    });
+});
+
+onMounted(() => {
+    const tabEl = document.getElementById('v-pills-evolucao-tab');
+    if (tabEl) {
+        tabEl.addEventListener('shown.bs.tab', () => initEvolucaoChoices());
+    }
 });
 
 const saveEvolucao = () => {
@@ -1049,7 +1114,7 @@ const finalizarAtendimento = () => {
                                         <div class="row g-3">
                                             <div class="col-md-4">
                                                 <label class="form-label">Tipo de Nota</label>
-                                                <select :key="'tipo-'+canEditPep" class="form-select" v-model="evolucaoForm.tipo" data-choices data-choices-search-false :disabled="!canEditPep">
+                                                <select ref="evolucaoTipoSelect" class="form-select" v-model="evolucaoForm.tipo" data-choices data-choices-search-false :disabled="!canEditPep" @change="evolucaoForm.tipo = $event.target.value">
                                                     <option value="" disabled>Selecione o tipo</option>
                                                     <option value="Evolução Clínica">Evolução Clínica</option>
                                                     <option value="Nota de Enfermagem">Nota de Enfermagem</option>
@@ -1058,7 +1123,7 @@ const finalizarAtendimento = () => {
                                             </div>
                                             <div class="col-md-8">
                                                 <label class="form-label">Vincular a um Tratamento Ativo (Opcional)</label>
-                                                <select :key="'trat-'+canEditPep" class="form-select" v-model="evolucaoForm.tratamento_id" data-choices data-choices-search-false :disabled="!canEditPep">
+                                                <select ref="evolucaoTratamentoSelect" class="form-select" v-model="evolucaoForm.tratamento_id" data-choices data-choices-search-false :disabled="!canEditPep" @change="evolucaoForm.tratamento_id = $event.target.value || null">
                                                     <option :value="null">Nenhum (Evolução Avulsa)</option>
                                                     <option v-for="trat in props.tratamentos?.filter(t => t.status === 'Em andamento' && (t.nome_tratamento || '').trim().toLowerCase() === (props.atendimento?.procedimento?.nome || props.atendimento?.tuss?.descricao || '').trim().toLowerCase())" :key="trat.id" :value="trat.id">
                                                         {{ trat.nome_tratamento }} (Sessão {{ trat.quantidade_sessoes_realizadas + 1 }} de {{ trat.quantidade_sessoes_previstas }})

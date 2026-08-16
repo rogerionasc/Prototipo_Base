@@ -54,6 +54,7 @@ export default {
                 },
                 initialView: this.obterVisaoInicial(),
                 initialEvents: [],
+                eventDisplay: "block",
                 editable: true,
                 selectable: true,
                 selectMirror: true,
@@ -61,25 +62,66 @@ export default {
                 weekends: true,
                 dateClick: this.cliqueNaData,
                 eventClick: this.editarEvento,
+                eventDrop: this.aoMoverEvento,
                 viewDidMount: this.aoMontarVisao,
                 datesSet: this.aoDefinirDatas,
                 eventContent: function (arg) {
                     let ev = arg.event;
-                    let time = arg.timeText || "";
-                    let title = String(ev.title || "").split('•')[0] || "Evento";
+                    let title = String(ev.title || "").split('–')[0] || "Evento";
                     let ext = ev.extendedProps || {};
                     let proc = ext.procedimento_nome || "";
+                    let medico = ext.profissional_nome || "Profissional";
+                    let convenioTipo = ext.convenio_tipo || "Particular";
                     let status = ext.status || "";
                     let icon = "mdi mdi-calendar-clock";
                     if (status.toLowerCase().includes("atendido")) icon = "mdi mdi-check-circle";
                     else if (status.toLowerCase().includes("cancelado")) icon = "mdi mdi-close-circle";
 
-                    let html = `
-                        <div class="p-1 h-100 w-100 d-flex flex-column justify-content-start text-dark" style="font-size: 0.75rem; line-height: 1.1; overflow: hidden; white-space: normal; position: relative;">
+                    let isMonthView = arg.view && arg.view.type === 'dayGridMonth';
+                    let isListView = arg.view && arg.view.type.includes('list');
+                    
+                    if (isListView) {
+                        let html = `
+                            <div class="p-1 w-100 d-flex flex-column justify-content-center text-dark" style="line-height: 1.4; white-space: normal;">
+                                <div class="d-flex align-items-center mb-1" style="font-size: 0.9rem;">
+                                    <i class="mdi mdi-doctor me-1 text-primary fs-5"></i>
+                                    <span class="fw-bold">${medico}</span> <span class="opacity-75 ms-1">- ${convenioTipo}</span>
+                                </div>
+                                <div class="d-flex align-items-center fw-bold mb-1" style="font-size: 0.85rem;" title="${title}">
+                                    <i class="mdi mdi-account me-1 text-info fs-6"></i> <span>${title}</span>
+                                </div>
+                                <div class="d-flex align-items-center opacity-75" style="font-size: 0.8rem;" title="${proc}">
+                                    <i class="mdi mdi-medical-bag me-1 text-danger fs-6"></i> <span>${proc}</span>
+                                </div>
+                            </div>
+                        `;
+                        return { html: html };
+                    }
+
+                    let headerHtml = "";
+                    if (isMonthView) {
+                        let time = arg.timeText || "";
+                        if (ev.start) {
+                            time = String(ev.start.getHours()).padStart(2, '0') + ':' + String(ev.start.getMinutes()).padStart(2, '0');
+                        }
+                        headerHtml = `
                             <div class="d-flex align-items-center mb-1" style="opacity: 0.9; font-size: 0.7rem;">
                                 <i class="${icon} me-1"></i>
                                 <span>${time}</span>
                             </div>
+                        `;
+                    } else {
+                        headerHtml = `
+                            <div class="d-flex align-items-center mb-1" style="opacity: 0.9; font-size: 0.7rem;">
+                                <i class="${icon} me-1"></i>
+                                <span>${medico} - ${convenioTipo}</span>
+                            </div>
+                        `;
+                    }
+
+                    let html = `
+                        <div class="p-1 h-100 w-100 d-flex flex-column justify-content-start text-dark" style="font-size: 0.75rem; line-height: 1.1; overflow: hidden; white-space: normal; position: relative;">
+                            ${headerHtml}
                             <div class="fw-bold mb-1 text-truncate" title="${title}">${title}</div>
                             <div class="text-truncate opacity-75" style="font-size: 0.7rem;" title="${proc}">${proc}</div>
                         </div>
@@ -363,8 +405,8 @@ export default {
             this.agendasHoje = [...(props.agendasHoje || [])];
             this.dataAgendaSelecionada = moment().format("YYYY-MM-DD");
             if (this.agendasHoje.length > 0) {
-                this.classeFundoDataSelecionada = this.paletaMedicos[0].bg;
-                this.coresDataSelecionada = this.agendasHoje.map((_, idx) => this.paletaMedicos[idx % this.paletaMedicos.length].bg);
+                this.classeFundoDataSelecionada = this.obterClassesMedico(this.agendasHoje[0].pessoa_id).bg;
+                this.coresDataSelecionada = this.agendasHoje.map((a) => this.obterClassesMedico(a.pessoa_id).bg);
             }
             this.buscarMapaDiasSemanaSelecionados();
             this.buscarUltimosAgendamentos();
@@ -453,6 +495,11 @@ export default {
         },
     },
     methods: {
+        obterClassesMedico(pessoa_id) {
+            const idx = this.profissionaisLocal.findIndex(p => String(p.id) === String(pessoa_id));
+            if (idx === -1) return { bg: "bg-secondary-subtle", text: "text-secondary" };
+            return this.paletaMedicos[idx % this.paletaMedicos.length];
+        },
         adicionarProcedimentoAdicional() {
             this.agendamentoForm.procedimentosAdicionais.push({
                 procedimento_id: null,
@@ -985,9 +1032,56 @@ export default {
                 if (jsEvent && jsEvent.stopPropagation) jsEvent.stopPropagation();
             } catch (e) { }
             try {
-                const ds = moment(date).format("YYYY-MM-DD");
+                const ds = window.moment ? window.moment(date).format("YYYY-MM-DD") : String(date).slice(0,10);
                 this.buscarAgendasPorData(ds);
             } catch (e) { }
+        },
+        async aoMoverEvento(arg) {
+            const ev = arg.event;
+            const id = ev.id;
+            if (!id) {
+                arg.revert();
+                return;
+            }
+            const data = window.moment ? window.moment(ev.start).format("YYYY-MM-DD") : ev.start.toISOString().split('T')[0];
+            const hora = window.moment ? window.moment(ev.start).format("HH:mm") : ev.start.toTimeString().slice(0, 5);
+            
+            try {
+                if (window.moment && window.moment(data).isBefore(window.moment(), 'day')) {
+                    if (this.$page && this.$page.props) this.$page.props.flash = { error: "Não é possível mover para data retroativa." };
+                    arg.revert();
+                    return;
+                }
+
+                await window.axios.put(`/agendamentos/${id}`, {
+                    data: data,
+                    hora: hora
+                });
+                
+                if (this.$page && this.$page.props) {
+                    this.$page.props.flash = { success: null, error: null, warning: null };
+                    this.$nextTick(() => {
+                        const zws = '\u200B'.repeat(Math.floor(Math.random() * 10) + 1);
+                        this.$page.props.flash = { success: "Agendamento movido com sucesso!" + zws };
+                    });
+                }
+                
+                this.buscarAgendasPorData(this.dataAgendaSelecionada);
+                this.buscarUltimosAgendamentos();
+                
+            } catch (e) {
+                arg.revert();
+                const msg = e?.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(' - ') : 'Falha ao mover';
+                if (this.$page && this.$page.props) {
+                    this.$page.props.flash = { success: null, error: null, warning: null };
+                    this.$nextTick(() => {
+                        const zws = '\u200B'.repeat(Math.floor(Math.random() * 10) + 1);
+                        this.$page.props.flash = { error: msg + zws };
+                    });
+                }
+            }
+        },
+        aoMontarVisao() {
         },
         /**
          * Modal open for edit event
@@ -1668,10 +1762,19 @@ export default {
             }
         },
         corDoMedicoSelecionado(id) {
-            const arr = this.agendasHoje || [];
-            const idx = arr.findIndex(a => String(a.pessoa_id) === String(id));
-            if (idx < 0) return null;
-            return (this.coresDataSelecionada || [])[idx % this.paletaMedicos.length] || null;
+            if (!id) return "bg-primary-subtle";
+            const arr = this.profissionaisLocal || [];
+            let idx = arr.findIndex(a => String(a.id) === String(id));
+            if (idx < 0) idx = parseInt(String(id).slice(-1)) || 0;
+            return this.paletaMedicos[idx % this.paletaMedicos.length].bg;
+        },
+        obterClassesMedico(id) {
+            if (!id) return ["bg-primary-subtle", "text-primary"];
+            const arr = this.profissionaisLocal || [];
+            let idx = arr.findIndex(a => String(a.id) === String(id));
+            if (idx < 0) idx = parseInt(String(id).slice(-1)) || 0;
+            const p = this.paletaMedicos[idx % this.paletaMedicos.length];
+            return [p.bg, p.text];
         },
         coresDoDiaSemanaSelecionado(weekday) {
             const ids = this.mapaDiasSemanaSelecionados?.[weekday] || [];
@@ -2031,9 +2134,7 @@ export default {
                     const start = startMoment.isValid() ? startMoment.toDate() : null;
                     const title = `${r.paciente || ""}`.trim();
                     const st = String(r.status || "").toLowerCase();
-                    const cls = st.includes("cancel") ? "bg-danger-subtle"
-                        : (st.includes("conclu") ? "bg-success-subtle"
-                            : (st.includes("pend") ? "bg-warning-subtle" : "bg-primary-subtle"));
+                    const cls = this.corDoMedicoSelecionado(r.pessoa_id);
                     return {
                         id: r.id,
                         title,
@@ -2165,8 +2266,8 @@ export default {
                                             profissional com agenda nesta data.</div>
                                         <div v-for="(ag, idx) in agendasHoje" :key="`${ag.pessoa_id}-${idx}`"
                                             class="external-event fc-event d-flex align-items-center"
-                                            :class="[paletaMedicos[idx % paletaMedicos.length].bg, paletaMedicos[idx % paletaMedicos.length].text]"
-                                            :data-class="paletaMedicos[idx % paletaMedicos.length].bg">
+                                            :class="obterClassesMedico(ag.pessoa_id)"
+                                            :data-class="corDoMedicoSelecionado(ag.pessoa_id)">
                                             <i class="mdi mdi-checkbox-blank-circle me-2"></i>
                                             <div class="flex-grow-1" style="min-width:0">
                                                 <div class="d-flex align-items-center" style="min-width:0">

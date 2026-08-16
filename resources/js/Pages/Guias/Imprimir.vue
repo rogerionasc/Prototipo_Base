@@ -273,39 +273,31 @@
                 <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">{{ i + 1 }} -</span>
                 </div>
                 <div class="g-cell" style="width:9%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? formatDate(proc.data_realizacao || guia.data_realizacao) :
-                        '&nbsp;' }}</span></div>
+                    formatDate(proc.data_realizacao || guia.data_realizacao) || '&nbsp;' }}</span></div>
                 <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (proc.hora_inicial || guia.hora_inicial || '&nbsp;') : '&nbsp;'
-                        }}</span></div>
+                    proc.hora_inicial || guia.hora_inicial || '&nbsp;' }}</span></div>
                 <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (proc.hora_final || guia.hora_final || '&nbsp;') : '&nbsp;'
-                        }}</span></div>
+                    proc.hora_final || guia.hora_final || '&nbsp;' }}</span></div>
                 <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (proc.tabela_procedimento_realizado || '&nbsp;') : '&nbsp;'
-                        }}</span></div>
+                    proc.tabela_procedimento_realizado || '&nbsp;' }}</span></div>
                 <div class="g-cell" style="width:13%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (proc.procedimento_realizado_codigo || '&nbsp;') : '&nbsp;'
-                        }}</span></div>
+                    proc.procedimento_realizado_codigo || '&nbsp;' }}</span></div>
                 <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (proc.procedimento_realizado_descricao || '&nbsp;') : '&nbsp;'
-                        }}</span></div>
+                    proc.procedimento_realizado_descricao || '&nbsp;' }}</span></div>
                 <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (proc.quantidade_realizada || '&nbsp;') : '&nbsp;' }}</span>
+                    proc.quantidade_realizada || '&nbsp;' }}</span>
                 </div>
                 <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (proc.via_acesso || '&nbsp;') : '&nbsp;' }}</span></div>
+                    proc.via_acesso || '&nbsp;' }}</span></div>
                 <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (proc.tecnica_utilizada || '&nbsp;') : '&nbsp;' }}</span></div>
+                    proc.tecnica_utilizada || '&nbsp;' }}</span></div>
                 <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (proc.fator_reducao_acrescimo || '&nbsp;') : '&nbsp;' }}</span>
+                    proc.fator_reducao_acrescimo || '&nbsp;' }}</span>
                 </div>
                 <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (formatCurrency(proc.valor_unitario) || '&nbsp;') : '&nbsp;'
-                        }}</span></div>
+                    formatCurrency(proc.valor_unitario) || '&nbsp;' }}</span></div>
                 <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{
-                    agendamento?.status_id === 2 ? (formatCurrency(proc.valor_total) || '&nbsp;') : '&nbsp;'
-                        }}</span></div>
+                    formatCurrency(proc.valor_total) || '&nbsp;' }}</span></div>
             </div>
             <!-- Linhas extras em branco para fechar 5 linhas -->
             <div v-for="n in Math.max(0, 5 - (guia.procedimentos_realizados ? guia.procedimentos_realizados.length : 1))"
@@ -340,29 +332,22 @@
                 <div class="g-cell" style="width:15%; border-right:none;"><span class="cell-label">55 - Código
                         CBO</span></div>
             </div>
-            <!-- Linha 1 -->
-            <div class="g-row" style="border-bottom:none;">
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{
-                    guia.sequencial_referencia ?? 1 }}</span></div>
-                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{
-                    guia.grau_participacao }}</span></div>
-                <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">{{
-                    guia.profissional_executante_codigo }}</span></div>
-                <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">{{
-                    guia.profissional_executante_nome }}</span></div>
-                <div class="g-cell" style="width:12%; border-right:none;"><span class="cell-value">{{
-                    guia.conselho_executante }}</span></div>
-                <div class="g-cell" style="width:12%; border-right:none;"><span class="cell-value">{{
-                    guia.numero_conselho_executante }}</span></div>
-                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{
-                    guia.uf_conselho_executante }}</span></div>
-                <div class="g-cell" style="width:15%; border-right:none;"><span class="cell-value">{{
-                    guia.cbo_executante }}</span></div>
+            <!-- Linhas de profissionais -->
+            <div v-for="(prof, i) in (guia.profissionais_executantes && guia.profissionais_executantes.length ? guia.profissionais_executantes : [{}])"
+                :key="'prof-exec-' + i" class="g-row" style="border-bottom:none;">
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ prof.sequencial_referencia || (i + 1) }}</span></div>
+                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{ prof.grau_participacao || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">{{ prof.profissional_executante_codigo || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">{{ prof.profissional_executante_nome || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:12%; border-right:none;"><span class="cell-value">{{ prof.conselho_executante || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:12%; border-right:none;"><span class="cell-value">{{ prof.numero_conselho_executante || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{ prof.uf_conselho_executante || '&nbsp;' }}</span></div>
+                <div class="g-cell" style="width:15%; border-right:none;"><span class="cell-value">{{ prof.cbo_executante || '&nbsp;' }}</span></div>
             </div>
             <!-- Linhas extras -->
-            <div v-for="n in 4" :key="'prof-' + n" class="g-row" :style="n < 4 ? 'border-bottom:none;' : ''">
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ n + 1 }}</span>
-                </div>
+            <div v-for="n in Math.max(0, 4 - (guia.profissionais_executantes ? (guia.profissionais_executantes.length - 1) : 0))"
+                :key="'prof-blank-' + n" class="g-row" :style="n < Math.max(0, 4 - (guia.profissionais_executantes ? (guia.profissionais_executantes.length - 1) : 0)) ? 'border-bottom:none;' : ''">
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ (guia.profissionais_executantes ? guia.profissionais_executantes.length : 1) + n }}</span></div>
                 <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
@@ -380,29 +365,29 @@
             </div>
             <div class="g-row" style="border-bottom:none;">
                 <div class="g-cell" style="width:16%; border-right:none;">
-                    <span class="cell-value-sm">1 - {{ formatDate(guia.data_realizacao_serie) }}</span>
+                    <span class="cell-value-sm">1 - {{ formatDate(guia.profissionais_executantes?.[0]?.data_realizacao_serie) }}</span>
                 </div>
                 <div class="g-cell" style="width:16%; border-right:none;">
-                    <span class="cell-value-sm">3 -</span>
+                    <span class="cell-value-sm">3 - {{ formatDate(guia.profissionais_executantes?.[2]?.data_realizacao_serie) }}</span>
                 </div>
                 <div class="g-cell" style="width:16%; border-right:none;">
-                    <span class="cell-value-sm">5 -</span>
+                    <span class="cell-value-sm">5 - {{ formatDate(guia.profissionais_executantes?.[4]?.data_realizacao_serie) }}</span>
                 </div>
                 <div class="g-cell" style="width:16%; border-right:none;">
-                    <span class="cell-value-sm">7 -</span>
+                    <span class="cell-value-sm">7 - {{ formatDate(guia.profissionais_executantes?.[6]?.data_realizacao_serie) }}</span>
                 </div>
                 <div class="g-cell" style="width:16%; border-right:none;">
-                    <span class="cell-value-sm">9 -</span>
+                    <span class="cell-value-sm">9 - {{ formatDate(guia.profissionais_executantes?.[8]?.data_realizacao_serie) }}</span>
                 </div>
                 <div class="g-cell" style="width:20%; border-right:none;"><span class="cell-value-sm">&nbsp;</span>
                 </div>
             </div>
             <div class="g-row">
-                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">2 -</span></div>
-                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">4 -</span></div>
-                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">6 -</span></div>
-                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">8 -</span></div>
-                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">10 -</span></div>
+                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">2 - {{ formatDate(guia.profissionais_executantes?.[1]?.data_realizacao_serie) }}</span></div>
+                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">4 - {{ formatDate(guia.profissionais_executantes?.[3]?.data_realizacao_serie) }}</span></div>
+                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">6 - {{ formatDate(guia.profissionais_executantes?.[5]?.data_realizacao_serie) }}</span></div>
+                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">8 - {{ formatDate(guia.profissionais_executantes?.[7]?.data_realizacao_serie) }}</span></div>
+                <div class="g-cell" style="width:16%; border-right:none;"><span class="cell-value-sm">10 - {{ formatDate(guia.profissionais_executantes?.[9]?.data_realizacao_serie) }}</span></div>
                 <div class="g-cell" style="width:20%; border-right:none;"><span class="cell-value-sm">&nbsp;</span>
                 </div>
             </div>

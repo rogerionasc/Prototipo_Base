@@ -108,7 +108,7 @@
                             </template>
 
                             <template #actions="{ item }">
-                                <a :href="'/recepcao/agendamentos?id=' + item.id" class="btn btn-sm btn-light" title="Reagendar">
+                                <a v-if="!String(item.status || '').toLowerCase().includes('conclu') && !String(item.status || '').toLowerCase().includes('atendido')" :href="'/recepcao/agendamentos?id=' + item.id" class="btn btn-sm btn-light" title="Reagendar">
                                     <i class="ri-edit-line me-1"></i> Reagendar
                                 </a>
                                 <button type="button" class="btn btn-sm btn-info ms-1" title="Guia SP/SADT"

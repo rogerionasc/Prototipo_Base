@@ -202,7 +202,7 @@
             @procedure="editMedico" @delete="removeMedico" />
         </div>
       </BTab>
-    
+
       <BTab title="Config. Guia SP/SADT">
         <div class="mt-2">
           <h5 class="mb-3">Campos da Guia SP/SADT</h5>
@@ -213,15 +213,19 @@
                   <th class="align-middle">Campo</th>
                   <th class="text-center align-middle" style="width: 100px;">
                     Visível<br>
-                    <input type="checkbox" class="form-check-input mt-1" @change="toggleAll('visivel', $event.target.checked)" :checked="isAllChecked('visivel')" />
+                    <input type="checkbox" class="form-check-input mt-1"
+                      @change="toggleAll('visivel', $event.target.checked)" :checked="isAllChecked('visivel')" />
                   </th>
                   <th class="text-center align-middle" style="width: 100px;">
                     Obrigatório<br>
-                    <input type="checkbox" class="form-check-input mt-1" @change="toggleAll('obrigatorio', $event.target.checked)" :checked="isAllChecked('obrigatorio')" />
+                    <input type="checkbox" class="form-check-input mt-1"
+                      @change="toggleAll('obrigatorio', $event.target.checked)"
+                      :checked="isAllChecked('obrigatorio')" />
                   </th>
                   <th class="text-center align-middle" style="width: 100px;">
                     Bloqueado<br>
-                    <input type="checkbox" class="form-check-input mt-1" @change="toggleAll('bloqueado', $event.target.checked)" :checked="isAllChecked('bloqueado')" />
+                    <input type="checkbox" class="form-check-input mt-1"
+                      @change="toggleAll('bloqueado', $event.target.checked)" :checked="isAllChecked('bloqueado')" />
                   </th>
                 </tr>
               </thead>
@@ -229,13 +233,16 @@
                 <tr v-for="field in spsadtFields" :key="field.key">
                   <td>{{ field.label }}</td>
                   <td class="text-center">
-                    <input type="checkbox" class="form-check-input" :value="field.key" v-model="form.config_spsadt.visivel" />
+                    <input type="checkbox" class="form-check-input" :value="field.key"
+                      v-model="form.config_spsadt.visivel" />
                   </td>
                   <td class="text-center">
-                    <input type="checkbox" class="form-check-input" :value="field.key" v-model="form.config_spsadt.obrigatorio" />
+                    <input type="checkbox" class="form-check-input" :value="field.key"
+                      v-model="form.config_spsadt.obrigatorio" />
                   </td>
                   <td class="text-center">
-                    <input type="checkbox" class="form-check-input" :value="field.key" v-model="form.config_spsadt.bloqueado" />
+                    <input type="checkbox" class="form-check-input" :value="field.key"
+                      v-model="form.config_spsadt.bloqueado" />
                   </td>
                 </tr>
               </tbody>
@@ -306,7 +313,7 @@ const spsadtFields = [
   { key: '10_nome_beneficiario', label: '10 - Nome' },
   { key: '11_cartao_nacional_saude', label: '11 - Cartão Nacional de Saúde (CNS)' },
   { key: '12_atendimento_rn', label: '12 - Atendimento a RN' },
-  
+
   { key: '13_codigo_operadora', label: '13 - Código na Operadora / CPF' },
   { key: '14_nome_contratado', label: '14 - Nome do Contratado Solicitante' },
   { key: '15_nome_profissional_solicitante', label: '15 - Nome do Profissional Solicitante' },
@@ -314,26 +321,26 @@ const spsadtFields = [
   { key: '17_numero_conselho', label: '17 - Número do Conselho' },
   { key: '18_uf_conselho', label: '18 - UF' },
   { key: '19_codigo_cbo', label: '19 - CBO S' },
-  
+
   { key: '21_carater_atendimento', label: '21 - Caráter do Atendimento' },
   { key: '22_data_solicitacao', label: '22 - Data da Solicitação' },
   { key: '23_indicacao_clinica', label: '23 - Indicação Clínica' },
-  
+
   { key: '24_tabela', label: '24 - Tabela' },
   { key: '25_codigo_procedimento', label: '25 - Código Proced.' },
   { key: '26_descricao', label: '26 - Descrição' },
   { key: '27_quantidade_solicitada', label: '27 - Qtd. Sol.' },
   { key: '28_quantidade_autorizada', label: '28 - Qtd. Aut.' },
-  
+
   { key: '29_codigo_operadora_executante', label: '29 - Código na Operadora / CPF / CNPJ' },
   { key: '30_nome_contratado_executante', label: '30 - Nome do Contratado Executante' },
   { key: '31_codigo_cnes_executante', label: '31 - Código CNES' },
-  
+
   { key: '32_tipo_atendimento', label: '32 - Tipo de Atendimento' },
   { key: '33_indicacao_acidente', label: '33 - Indicação de Acidente' },
   { key: '34_tipo_consulta', label: '34 - Tipo de Consulta' },
   { key: '35_motivo_encerramento', label: '35 - Motivo de Encerramento' },
-  
+
   { key: '36_data_hora_execucao', label: '36 - Data de Realização' },
   { key: '37_hora_inicial', label: '37 - Hora Inicial' },
   { key: '38_hora_final', label: '38 - Hora Final' },
@@ -439,7 +446,7 @@ const form = useForm({
   id: null,
   descricao: "",
   logo: null,
-  tipo: "Convenio",
+  tipo: "CONVENIO",
   tuss_tabela: "",
   tuss_ids: [],
   medicos: [],

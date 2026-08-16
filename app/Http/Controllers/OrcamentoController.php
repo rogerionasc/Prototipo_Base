@@ -249,7 +249,7 @@ class OrcamentoController extends Controller
             ->selectSub(function ($q) {
                 $q->from('convenios as c')
                     ->whereColumn('c.id', 'o.convenio_id')
-                    ->where('c.tipo', '!=', 'PARTICULAR')
+                    ->whereRaw('UPPER(c.tipo) != ?', ['PARTICULAR'])
                     ->limit(1)
                     ->select(DB::raw('1'));
             }, 'is_convenio')
@@ -332,7 +332,7 @@ class OrcamentoController extends Controller
             ->selectSub(function ($q) {
                 $q->from('convenios as c')
                     ->whereColumn('c.id', 'o.convenio_id')
-                    ->where('c.tipo', '!=', 'PARTICULAR')
+                    ->whereRaw('UPPER(c.tipo) != ?', ['PARTICULAR'])
                     ->limit(1)
                     ->select(DB::raw('1'));
             }, 'is_convenio')
@@ -502,7 +502,7 @@ class OrcamentoController extends Controller
             ->selectSub(function ($q) {
                 $q->from('convenios as c')
                     ->whereColumn('c.id', 'o.convenio_id')
-                    ->where('c.tipo', '!=', 'PARTICULAR')
+                    ->whereRaw('UPPER(c.tipo) != ?', ['PARTICULAR'])
                     ->limit(1)
                     ->select(DB::raw('1'));
             }, 'is_convenio');

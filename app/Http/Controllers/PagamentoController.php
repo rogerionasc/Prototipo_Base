@@ -44,7 +44,7 @@ class PagamentoController extends Controller
             ->where('p.forma_pagamento', 'PIX')
             ->leftJoin('convenios as conv_uc', 'conv_uc.id', '=', 'f.convenio_id')
             ->where(function($q) {
-                $q->where('conv_uc.tipo', 'Particular')
+                $q->whereRaw('UPPER(conv_uc.tipo) = ?', ['PARTICULAR'])
                   ->orWhereNull('f.convenio_id');
             })
             ->where('f.status', 'AGUARDANDO_PAGAMENTO')
@@ -514,7 +514,7 @@ class PagamentoController extends Controller
             ->where('p.status', 'RECUSADO')
             ->leftJoin('convenios as conv_uc', 'conv_uc.id', '=', 'f.convenio_id')
             ->where(function($q) {
-                $q->where('conv_uc.tipo', 'Particular')
+                $q->whereRaw('UPPER(conv_uc.tipo) = ?', ['PARTICULAR'])
                   ->orWhereNull('f.convenio_id');
             })
             ->orderByDesc('p.updated_at')
