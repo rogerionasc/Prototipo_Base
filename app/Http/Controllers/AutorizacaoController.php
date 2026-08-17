@@ -13,7 +13,7 @@ class AutorizacaoController extends Controller
 {
     public function index()
     {
-        $autorizacoes = Autorizacao::with(['convenio', 'tuss', 'agendamento', 'agendamento.paciente', 'agendamento.agendaMedica.profissionalSaude', 'agendamento.status', 'usuario', 'usuarioValidou'])
+        $autorizacoes = Autorizacao::with(['convenio', 'tuss', 'guia', 'guia.agendamento.paciente', 'guia.agendamento.agendaMedica.profissionalSaude', 'guia.agendamento.status', 'usuario', 'usuarioValidou'])
             ->orderBy('id', 'desc')
             ->get();
         $convenios = Convenio::select('id', 'descricao')->get();
@@ -31,7 +31,8 @@ class AutorizacaoController extends Controller
         $data = $request->validate([
             'protocolo' => ['nullable', 'string', 'max:100'],
             'convenio_id' => ['required', 'integer', 'exists:convenios,id'],
-            'carteira' => ['nullable', 'string', 'max:100'],
+            'guia_id' => ['nullable', 'integer', 'exists:guias,id'],
+            'procedimento_solicitado_id' => ['nullable', 'integer', 'exists:guia_procedimento_solicitados,id'],
             'numero_autorizacao' => ['nullable', 'string', 'max:100'],
             'status' => ['required', 'in:SOLICITADA,AUTORIZADA,Pendente,Aprovada,Negada,Expirada,Cancelada'],
             'validade' => ['nullable', 'date'],
@@ -54,7 +55,8 @@ class AutorizacaoController extends Controller
         $data = $request->validate([
             'protocolo' => ['nullable', 'string', 'max:100'],
             'convenio_id' => ['required', 'integer', 'exists:convenios,id'],
-            'carteira' => ['nullable', 'string', 'max:100'],
+            'guia_id' => ['nullable', 'integer', 'exists:guias,id'],
+            'procedimento_solicitado_id' => ['nullable', 'integer', 'exists:guia_procedimento_solicitados,id'],
             'numero_autorizacao' => ['nullable', 'string', 'max:100'],
             'status' => ['required', 'in:SOLICITADA,AUTORIZADA,Pendente,Aprovada,Negada,Expirada,Cancelada'],
             'validade' => ['nullable', 'date'],

@@ -76,6 +76,15 @@ export default {
                     ]
                 },
                 {
+                    icon: "ri-shield-check-line",
+                    title: "Contas Médicas",
+                    type: "link",
+                    target: "#contas-medicas",
+                    children: [
+                        { href: "/contas-medicas/validacao-guias", label: "Validação de Guias" },
+                    ]
+                },
+                {
                     icon: "ri-file-paper-2-line",
                     title: "Faturamento",
                     type: "link",

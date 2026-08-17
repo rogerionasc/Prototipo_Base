@@ -69,6 +69,11 @@ class Agendamento extends Model
         return $this->hasMany(Atendimento::class, 'agendamento_id');
     }
 
+    public function guias()
+    {
+        return $this->hasMany(Guia::class, 'agendamento_id');
+    }
+
 
 
     public function tuss()

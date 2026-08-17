@@ -10,6 +10,7 @@ return new class extends Migration
         Schema::create('guias', function (Blueprint $table) {
             $table->id();
             $table->foreignId('faturamento_id')->nullable()->constrained('faturamentos')->nullOnDelete()->nullable()->comment('Lote (Faturamento)');
+            $table->foreignId('agendamento_id')->nullable()->constrained('agendamentos')->nullOnDelete()->comment('Agendamento vinculado');
             $table->string('status', 30)->default('CRIADA')->nullable()->comment('CRIADA, EM_ANALISE, AUTORIZADA, GLOSADA, PAGA, CANCELADA');
             $table->string('tipo')->nullable()->default('Guia de Consulta');
 
@@ -18,8 +19,6 @@ return new class extends Migration
             $table->string('numero_guia_prestador', 20)->nullable()->comment('Número da guia no prestador'); // 2
             $table->string('numero_guia_principal', 20)->nullable()->comment('Número da guia principal'); // 3
             $table->date('data_autorizacao')->nullable()->comment('Data da autorização'); // 4
-            $table->string('senha', 20)->nullable()->comment('Senha'); // 5
-            $table->date('data_validade_senha')->nullable()->comment('Data validade senha'); // 6
             $table->string('numero_guia_operadora', 20)->nullable()->comment('Número guia operadora'); // 7
 
             // DADOS DO BENEFICIÁRIO

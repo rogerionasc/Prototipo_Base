@@ -21,10 +21,10 @@ class GuiaController extends Controller
             ->where('convenios.id', $agendamento->convenio_id)
             ->first();
         $numeroCarteira = $pacienteConvenio?->pivot?->numero_carteira ?? '0000000000';
-        $validadeCarteira = $pacienteConvenio?->pivot?->validade;
+        $validadeCarteira = $pacienteConvenio?->pivot?->validade_carteira;
         $registroAns = $agendamento->convenio?->ans ?? '000000';
 
-        $autorizacao = \App\Models\Autorizacao::where('agendamento_id', $agendamento->id)->first();
+        $autorizacao = \App\Models\Autorizacao::whereHas('guia', function($q) use ($agendamento) { $q->where('agendamento_id', $agendamento->id); })->first();
         $senha = $autorizacao?->numero_autorizacao;
         $dataValidadeSenha = $autorizacao?->validade;
         $dataAutorizacao = $autorizacao ? ($autorizacao->data_resposta ?? $autorizacao->data_solicitacao ?? $autorizacao->created_at?->format('Y-m-d')) : null;
@@ -151,10 +151,10 @@ class GuiaController extends Controller
             ->where('convenios.id', $agendamento->convenio_id)
             ->first();
         $numeroCarteira = $pacienteConvenio?->pivot?->numero_carteira ?? '0000000000';
-        $validadeCarteira = $pacienteConvenio?->pivot?->validade;
+        $validadeCarteira = $pacienteConvenio?->pivot?->validade_carteira;
         $registroAns = $agendamento->convenio?->ans ?? '000000';
 
-        $autorizacao = \App\Models\Autorizacao::where('agendamento_id', $agendamento->id)->first();
+        $autorizacao = \App\Models\Autorizacao::whereHas('guia', function($q) use ($agendamento) { $q->where('agendamento_id', $agendamento->id); })->first();
         $senha = $autorizacao?->numero_autorizacao;
         $dataValidadeSenha = $autorizacao?->validade;
         $dataAutorizacao = $autorizacao ? ($autorizacao->data_resposta ?? $autorizacao->data_solicitacao ?? $autorizacao->created_at?->format('Y-m-d')) : null;
@@ -236,12 +236,14 @@ class GuiaController extends Controller
         foreach ($allAgendamentos as $ag) {
             $agAtendimento = \App\Models\Atendimento::where('agendamento_id', $ag->id)->with(['medico.conselho', 'medico.especialidades'])->first();
             if ($agAtendimento && $agAtendimento->medico) {
-                $profissional = $agAtendimento->medico;
-                $cpf = $profissional->cpf ?? '00000000000';
-                $existe = $guia->profissionaisExecutantes()->where('profissional_executante_codigo', $cpf)->exists();
-                if (!$existe) {
-                    $count = $guia->profissionaisExecutantes()->count();
-                    $guia->profissionaisExecutantes()->create([
+                $procRealizado = $guia->procedimentosRealizados()->where('procedimento_realizado_codigo', $ag->tuss->codigo ?? null)->first();
+                if ($procRealizado) {
+                    $profissional = $agAtendimento->medico;
+                    $cpf = $profissional->cpf ?? '00000000000';
+                    $existe = $procRealizado->profissionaisExecutantes()->where('profissional_executante_codigo', $cpf)->exists();
+                    if (!$existe) {
+                        $count = $procRealizado->profissionaisExecutantes()->count();
+                        $procRealizado->profissionaisExecutantes()->create([
                         'sequencial_referencia' => $count + 1,
                         'grau_participacao' => '01',
                         'profissional_executante_codigo' => $cpf,
@@ -252,6 +254,7 @@ class GuiaController extends Controller
                         'cbo_executante' => $profissional->especialidades?->first()?->codigo ?? '2251',
                         'data_realizacao_serie' => $agAtendimento->hora_inicio ? \Carbon\Carbon::parse($agAtendimento->hora_inicio)->format('Y-m-d') : $ag->data,
                     ]);
+                    }
                 }
             }
         }
@@ -308,24 +311,45 @@ class GuiaController extends Controller
 
         // Sync relationships
         if ($request->has('procedimentos_solicitados')) {
-            $guia->procedimentosSolicitados()->delete();
+            $keepIds = [];
             foreach ($request->input('procedimentos_solicitados', []) as $proc) {
-                $guia->procedimentosSolicitados()->create($proc);
+                unset($proc['created_at'], $proc['updated_at']);
+                if (!empty($proc['id'])) {
+                    $guia->procedimentosSolicitados()->where('id', $proc['id'])->update($proc);
+                    $keepIds[] = $proc['id'];
+                } else {
+                    $keepIds[] = $guia->procedimentosSolicitados()->create($proc)->id;
+                }
             }
+            $guia->procedimentosSolicitados()->whereNotIn('id', $keepIds)->delete();
         }
 
         if ($request->has('procedimentos_realizados')) {
-            $guia->procedimentosRealizados()->delete();
+            $keepIds = [];
             foreach ($request->input('procedimentos_realizados', []) as $proc) {
-                $guia->procedimentosRealizados()->create($proc);
+                unset($proc['created_at'], $proc['updated_at']);
+                if (!empty($proc['id'])) {
+                    $guia->procedimentosRealizados()->where('id', $proc['id'])->update($proc);
+                    $keepIds[] = $proc['id'];
+                } else {
+                    $keepIds[] = $guia->procedimentosRealizados()->create($proc)->id;
+                }
             }
+            $guia->procedimentosRealizados()->whereNotIn('id', $keepIds)->delete();
         }
 
         if ($request->has('profissionais_executantes')) {
-            $guia->profissionaisExecutantes()->delete();
+            $keepIds = [];
             foreach ($request->input('profissionais_executantes', []) as $prof) {
-                $guia->profissionaisExecutantes()->create($prof);
+                unset($prof['created_at'], $prof['updated_at'], $prof['laravel_through_key']);
+                if (!empty($prof['id'])) {
+                    \App\Models\GuiaProfissionalExecutante::where('id', $prof['id'])->update($prof);
+                    $keepIds[] = $prof['id'];
+                } else {
+                    $keepIds[] = \App\Models\GuiaProfissionalExecutante::create($prof)->id;
+                }
             }
+            $guia->profissionaisExecutantes()->whereNotIn('guia_profissional_executantes.id', $keepIds)->delete();
         }
         
         return response()->json([

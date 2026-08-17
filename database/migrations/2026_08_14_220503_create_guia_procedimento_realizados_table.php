@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('guia_procedimento_realizados', function (Blueprint $table) {
             $table->id();
             $table->foreignId('guia_id')->constrained('guias')->cascadeOnDelete();
+            $table->foreignId('procedimento_solicitado_id')->nullable()->constrained('guia_procedimento_solicitados')->cascadeOnDelete();
             $table->date('data_realizacao')->nullable()->comment('Data realização'); // 36
             $table->time('hora_inicial')->nullable()->comment('Hora inicial'); // 37
             $table->time('hora_final')->nullable()->comment('Hora final'); // 38

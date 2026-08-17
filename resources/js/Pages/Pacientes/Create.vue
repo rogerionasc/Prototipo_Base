@@ -557,7 +557,7 @@ const loadConvenios = (conveniosData) => {
         convenio_id: c.convenio_id,
         descricao: getConvenioDescricao(c.convenio_id),
         numero_carteira: c.numero_carteira || '',
-        validade_carteira: c.validade || '',
+        validade_carteira: c.validade_carteira || '',
     })) : [];
 };
 defineExpose({ submit, submitUpdate, form, syncChoices, processingRef: toRef(form, "processing"), loadConvenios });

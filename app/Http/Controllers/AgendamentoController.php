@@ -22,12 +22,12 @@ class AgendamentoController extends Controller
 {
     public function index()
     {
-        $pacientes = Paciente::select('id','nome','cpf')->orderBy('nome')->get();
-        $profissionais = Pessoa::with('especialidades:id')->select('id','nome')->orderBy('nome')->get();
-        $procedimentos = Procedimento::select('id','nome','valor','eh_tratamento','quantidade_sessoes')
+        $pacientes = Paciente::select('id', 'nome', 'cpf')->orderBy('nome')->get();
+        $profissionais = Pessoa::with('especialidades:id')->select('id', 'nome')->orderBy('nome')->get();
+        $procedimentos = Procedimento::select('id', 'nome', 'valor', 'eh_tratamento', 'quantidade_sessoes')
             ->with('especialidades:id,nome')
             ->orderBy('nome')->get();
-        $status = StatusAgendamento::select('id','descricao')->orderBy('descricao')->get();
+        $status = StatusAgendamento::select('id', 'descricao')->orderBy('descricao')->get();
         $weekday = Carbon::now()->dayOfWeek;
         $agendasHoje = DB::table('agenda_medica as a')
             ->join('pessoas as ps', 'ps.id', '=', 'a.pessoa_id')
@@ -41,7 +41,7 @@ class AgendamentoController extends Controller
                 DB::raw("GROUP_CONCAT(DISTINCT e.nome ORDER BY e.nome SEPARATOR ', ') AS especialidades")
             )
             ->where('a.dia_semana', $weekday)
-            ->groupBy('a.pessoa_id','ps.nome','a.hora_inicio','a.hora_fim')
+            ->groupBy('a.pessoa_id', 'ps.nome', 'a.hora_inicio', 'a.hora_fim')
             ->orderBy('ps.nome')
             ->get();
         return Inertia::render('Recepcao/Agendamentos/Index', [
@@ -56,7 +56,7 @@ class AgendamentoController extends Controller
     public function agendasByDate(Request $request)
     {
         $data = $request->validate([
-            'data' => ['required','date_format:Y-m-d'],
+            'data' => ['required', 'date_format:Y-m-d'],
         ]);
         $weekday = Carbon::createFromFormat('Y-m-d', $data['data'])->dayOfWeek;
         $agendas = DB::table('agenda_medica as a')
@@ -71,7 +71,7 @@ class AgendamentoController extends Controller
                 DB::raw("GROUP_CONCAT(DISTINCT e.nome ORDER BY e.nome SEPARATOR ', ') AS especialidades")
             )
             ->where('a.dia_semana', $weekday)
-            ->groupBy('a.pessoa_id','ps.nome')
+            ->groupBy('a.pessoa_id', 'ps.nome')
             ->orderBy('ps.nome')
             ->get();
         return response()->json([
@@ -97,8 +97,8 @@ class AgendamentoController extends Controller
     public function weekdayByDoctors(Request $request)
     {
         $data = $request->validate([
-            'ids' => ['required','array','min:1'],
-            'ids.*' => ['integer','exists:pessoas,id'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:pessoas,id'],
         ]);
         $rows = DB::table('agenda_medica')
             ->select('dia_semana', DB::raw('GROUP_CONCAT(DISTINCT pessoa_id) AS prof_ids'))
@@ -136,24 +136,41 @@ class AgendamentoController extends Controller
         ]);
 
         $data = $request->validate([
-            'paciente_id' => ['required','integer','exists:pacientes,id'],
-            'pessoa_id' => ['required','integer','exists:pessoas,id'],
+            'paciente_id' => ['required', 'integer', 'exists:pacientes,id'],
+            'pessoa_id' => ['required', 'integer', 'exists:pessoas,id'],
             'procedimento_id' => $procRule,
-            'data' => ['required','date_format:Y-m-d'],
-            'hora' => ['required','regex:/^\d{2}:\d{2}$/'],
-            'status_id' => ['nullable','integer','exists:status_agendamento,id'],
-            'valor_cobrado' => ['nullable','numeric','min:0'],
-            'observacoes' => ['nullable','string'],
-            'convenio_id' => ['nullable','integer','exists:convenios,id'],
-            'is_retorno' => ['nullable','boolean'],
-            'numero_autorizacao' => ['nullable','string'],
-            'validade_autorizacao' => ['nullable','date'],
-            'procedimentosAdicionais' => ['nullable','array'],
+            'data' => ['required', 'date_format:Y-m-d'],
+            'hora' => ['required', 'regex:/^\d{2}:\d{2}$/'],
+            'status_id' => ['nullable', 'integer', 'exists:status_agendamento,id'],
+            'valor_cobrado' => ['nullable', 'numeric', 'min:0'],
+            'observacoes' => ['nullable', 'string'],
+            'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
+            'is_retorno' => ['nullable', 'boolean'],
+            'numero_autorizacao' => ['nullable', 'string'],
+            'validade_autorizacao' => ['nullable', 'date'],
+            'procedimentosAdicionais' => ['nullable', 'array'],
             'procedimentosAdicionais.*.procedimento_id' => $procRule,
-            'procedimentosAdicionais.*.pessoa_id' => ['required','integer','exists:pessoas,id'],
-            'procedimentosAdicionais.*.data' => ['required','date_format:Y-m-d'],
-            'procedimentosAdicionais.*.hora' => ['required','regex:/^\d{2}:\d{2}$/'],
+            'procedimentosAdicionais.*.pessoa_id' => ['required', 'integer', 'exists:pessoas,id'],
+            'procedimentosAdicionais.*.data' => ['required', 'date_format:Y-m-d'],
+            'procedimentosAdicionais.*.hora' => ['required', 'regex:/^\d{2}:\d{2}$/'],
         ]);
+
+        if ($isConvenio) {
+            $pacienteConvenio = DB::table('paciente_convenio')
+                ->where('paciente_id', $data['paciente_id'])
+                ->where('convenio_id', $data['convenio_id'])
+                ->where('ativo', 1)
+                ->whereNull('deleted_at')
+                ->first();
+
+            if (!$pacienteConvenio || !$pacienteConvenio->validade_carteira) {
+                return redirect()->back()->with('error', 'A carteira do convênio não possui uma data de validade informada.');
+            }
+
+            if (\Carbon\Carbon::parse($pacienteConvenio->validade_carteira)->startOfDay()->lt(\Carbon\Carbon::parse($data['data'])->startOfDay())) {
+                return redirect()->back()->with('error', 'A carteira do convênio está com a validade expirada para a data deste agendamento.');
+            }
+        }
 
         $isRetorno = $request->input('is_retorno', false);
 
@@ -213,10 +230,10 @@ class AgendamentoController extends Controller
             }
 
             $lastAgendamento = Agendamento::where('paciente_id', (int)$data['paciente_id'])
-                ->whereHas('agendaMedica', function($q) use ($data) {
+                ->whereHas('agendaMedica', function ($q) use ($data) {
                     $q->where('pessoa_id', (int)$data['pessoa_id']);
                 })
-                ->where(function($q) use ($isConvenio, $data) {
+                ->where(function ($q) use ($isConvenio, $data) {
                     if ($isConvenio) {
                         $q->where('tuss_id', (int)$data['procedimento_id']);
                     } else {
@@ -224,11 +241,11 @@ class AgendamentoController extends Controller
                     }
                 })
                 ->whereNull('agendamento_origem_id')
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->whereNull('status_id')
-                      ->orWhereHas('status', function($sub) {
-                          $sub->whereRaw("LOWER(descricao) NOT LIKE '%cancel%'");
-                      });
+                        ->orWhereHas('status', function ($sub) {
+                            $sub->whereRaw("LOWER(descricao) NOT LIKE '%cancel%'");
+                        });
                 })
                 ->orderBy('data', 'desc')
                 ->first();
@@ -251,11 +268,11 @@ class AgendamentoController extends Controller
             }
 
             $hasReturn = Agendamento::where('agendamento_origem_id', $lastAgendamento->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->whereNull('status_id')
-                      ->orWhereHas('status', function($sub) {
-                          $sub->whereRaw("LOWER(descricao) NOT LIKE '%cancel%'");
-                      });
+                        ->orWhereHas('status', function ($sub) {
+                            $sub->whereRaw("LOWER(descricao) NOT LIKE '%cancel%'");
+                        });
                 })
                 ->exists();
 
@@ -284,7 +301,7 @@ class AgendamentoController extends Controller
                 if ($isConvenio) {
                     $proc = DB::table('tuss')->select('id', 'total as valor', 'eh_tratamento', 'quantidade_sessoes')->where('id', $procId)->first();
                 } else {
-                    $proc = Procedimento::select('id','valor', 'eh_tratamento', 'quantidade_sessoes')->findOrFail($procId);
+                    $proc = Procedimento::select('id', 'valor', 'eh_tratamento', 'quantidade_sessoes')->findOrFail($procId);
                 }
 
                 $valorItem = array_key_exists('valor_cobrado', $item) ? $item['valor_cobrado'] : $valorCobrado;
@@ -363,39 +380,20 @@ class AgendamentoController extends Controller
                         ->whereNull('deleted_at')
                         ->first();
 
-                    $aut = Autorizacao::create([
-                        'convenio_id' => $convenioId,
-                        'agendamento_id' => $agendamento->id,
-                        'tuss_id' => $isConvenio ? $procId : null,
-                        'valor' => $valorItem,
-                        'carteira' => $pacienteConvenio->numero_carteira ?? null,
-                        'numero_autorizacao' => $data['numero_autorizacao'] ?? null,
-                        'status' => $requerAutorizacao ? 'SOLICITADA' : 'AUTORIZADA',
-                        'validade' => $data['validade_autorizacao'] ?? null,
-                        'data_solicitacao' => Carbon::now(),
-                        'data_resposta' => $requerAutorizacao ? null : Carbon::now(),
-                        'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
-                        'usuario_id' => Auth::id() ?? 1,
-                        'usuario_id_validou' => null,
-                    ]);
-
+                    // Criar a Guia apenas para o master (ou reutilizar)
                     if ($item['is_master']) {
                         $agendamento->load(['paciente', 'convenio', 'agendaMedica.profissionalSaude.conselho', 'agendaMedica.profissionalSaude.especialidades']);
                         $numeroCarteira = $pacienteConvenio->numero_carteira ?? '0000000000';
-                        $validadeCarteira = $pacienteConvenio->validade ?? null;
+                        $validadeCarteira = $pacienteConvenio->validade_carteira ?? null;
                         $registroAns = $agendamento->convenio?->ans ?? '000000';
-                        $senha = $aut->numero_autorizacao ?? null;
-                        $dataValidadeSenha = $aut->validade ?? null;
-                        $dataAutorizacao = $aut->data_resposta ?? $aut->data_solicitacao ?? $aut->created_at?->format('Y-m-d');
 
-                        \App\Models\Guia::create([
+                        $masterGuia = \App\Models\Guia::create([
+                            'agendamento_id' => $agendamento->id,
                             'faturamento_id' => null,
                             'ans_registro' => $registroAns,
                             'numero_guia_prestador' => 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT),
                             'numero_guia_principal' => null,
-                            'data_autorizacao' => $dataAutorizacao,
-                            'senha' => $senha,
-                            'data_validade_senha' => $dataValidadeSenha,
+                            'data_autorizacao' => $requerAutorizacao ? null : Carbon::now(),
                             'numero_guia_operadora' => null,
                             'numero_carteira' => $numeroCarteira,
                             'validade_carteira' => $validadeCarteira,
@@ -428,6 +426,26 @@ class AgendamentoController extends Controller
                             'total_procedimentos' => null,
                             'total_taxas_alugueis' => null,
                             'total_materiais' => null,
+                        ]);
+                    }
+
+                    // Se não for master mas precisarmos de uma guia, garantimos que tenha a master
+                    $guiaIdParaAutorizacao = isset($masterGuia) ? $masterGuia->id : null;
+
+                    if ($guiaIdParaAutorizacao) {
+                        $aut = Autorizacao::create([
+                            'convenio_id' => $convenioId,
+                            'guia_id' => $guiaIdParaAutorizacao,
+                            'tuss_id' => $isConvenio ? $procId : null,
+                            'valor' => $valorItem,
+                            'numero_autorizacao' => $data['numero_autorizacao'] ?? null,
+                            'status' => $requerAutorizacao ? 'SOLICITADA' : 'AUTORIZADA',
+                            'validade' => $data['validade_autorizacao'] ?? null,
+                            'data_solicitacao' => Carbon::now(),
+                            'data_resposta' => $requerAutorizacao ? null : Carbon::now(),
+                            'observacao' => 'Gerado automaticamente pelo agendamento #' . $agendamento->id,
+                            'usuario_id' => Auth::id() ?? 1,
+                            'usuario_id_validou' => null,
                         ]);
                     }
                 }
@@ -496,10 +514,10 @@ class AgendamentoController extends Controller
             ->leftJoin('convenios as c', 'c.id', '=', 'a.convenio_id')
             ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
             ->where(function ($q) {
-                $q->where(function($sub) {
+                $q->where(function ($sub) {
                     $sub->where('s.descricao', 'NOT LIKE', '%Atendido%')
                         ->orWhereNull('s.descricao');
-                })->where(function($sub) {
+                })->where(function ($sub) {
                     $sub->where('at.status', '!=', 'ATENDIDO')
                         ->orWhereNull('at.status');
                 });
@@ -543,7 +561,7 @@ class AgendamentoController extends Controller
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('pagamentos as pag', 'pag.agendamento_id', '=', 'a.id')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'pag.faturamento_id')
-            ->leftJoin('autorizacoes as au', 'au.agendamento_id', '=', 'a.id')
+            ->leftJoin('guias as g_au', 'g_au.agendamento_id', '=', 'a.id')->leftJoin('autorizacoes as au', 'au.guia_id', '=', 'g_au.id')
             ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
             ->where('a.id', (int)$id)
             ->whereNull('a.deleted_at')
@@ -613,20 +631,20 @@ class AgendamentoController extends Controller
         $procRule = $isConvenio ? ['nullable', 'integer', 'exists:tuss,id'] : ['nullable', 'integer', 'exists:procedimentos,id'];
 
         $data = $request->validate([
-            'paciente_id' => ['nullable','integer','exists:pacientes,id'],
-            'pessoa_id' => ['nullable','integer','exists:pessoas,id'],
+            'paciente_id' => ['nullable', 'integer', 'exists:pacientes,id'],
+            'pessoa_id' => ['nullable', 'integer', 'exists:pessoas,id'],
             'procedimento_id' => $procRule,
-            'data' => ['nullable','date_format:Y-m-d'],
-            'hora' => ['nullable','regex:/^\d{2}:\d{2}$/'],
-            'status_id' => ['nullable','integer','exists:status_agendamento,id'],
-            'valor_cobrado' => ['nullable','numeric','min:0'],
-            'observacoes' => ['nullable','string'],
-            'convenio_id' => ['nullable','integer','exists:convenios,id'],
-            'numero_autorizacao' => ['nullable','string'],
-            'validade_autorizacao' => ['nullable','date'],
+            'data' => ['nullable', 'date_format:Y-m-d'],
+            'hora' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
+            'status_id' => ['nullable', 'integer', 'exists:status_agendamento,id'],
+            'valor_cobrado' => ['nullable', 'numeric', 'min:0'],
+            'observacoes' => ['nullable', 'string'],
+            'convenio_id' => ['nullable', 'integer', 'exists:convenios,id'],
+            'numero_autorizacao' => ['nullable', 'string'],
+            'validade_autorizacao' => ['nullable', 'date'],
         ]);
         $payload = [];
-        foreach (['paciente_id','pessoa_id','data','hora','status_id','valor_cobrado','observacoes', 'convenio_id'] as $k) {
+        foreach (['paciente_id', 'pessoa_id', 'data', 'hora', 'status_id', 'valor_cobrado', 'observacoes', 'convenio_id'] as $k) {
             if (array_key_exists($k, $data) && $data[$k] !== null) {
                 $payload[$k] = $data[$k];
             }
@@ -663,7 +681,7 @@ class AgendamentoController extends Controller
                 $agenda = \App\Models\AgendaMedica::where('pessoa_id', $pessoaId)
                     ->where('dia_semana', $weekday)
                     ->first();
-                
+
                 if (!$agenda) {
                     return response()->json([
                         'errors' => [
@@ -671,11 +689,11 @@ class AgendamentoController extends Controller
                         ]
                     ], 422);
                 }
-                
+
                 $payload['agenda_medica_id'] = $agenda->id;
             }
         }
-        
+
         if (array_key_exists('pessoa_id', $payload)) {
             unset($payload['pessoa_id']);
         }
@@ -710,7 +728,7 @@ class AgendamentoController extends Controller
                 $authPayload = [];
                 if (array_key_exists('numero_autorizacao', $data)) $authPayload['numero_autorizacao'] = $data['numero_autorizacao'];
                 if (array_key_exists('validade_autorizacao', $data)) $authPayload['validade'] = $data['validade_autorizacao'];
-                
+
                 if (!empty($authPayload)) {
                     $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
                     $grupoIds = \App\Models\Agendamento::where('id', $origemId)
@@ -721,21 +739,35 @@ class AgendamentoController extends Controller
                         $agAux = \App\Models\Agendamento::find($ag_id);
                         if (!$agAux || !$agAux->convenio_id) continue;
 
-                        $autorizacao = \App\Models\Autorizacao::where('agendamento_id', $ag_id)->first();
+                        $convAux = \App\Models\Convenio::select('tipo')->find($agAux->convenio_id);
+                        if ($convAux && strtoupper((string)$convAux->tipo) === 'PARTICULAR') {
+                            continue;
+                        }
+
+                        $autorizacao = \App\Models\Autorizacao::whereHas('guia', function ($q) use ($ag_id) {
+                            $q->where('agendamento_id', $ag_id);
+                        })->first();
                         if ($autorizacao) {
                             $autorizacao->update($authPayload);
                         } else {
-                            $pacienteConvenio = \Illuminate\Support\Facades\DB::table('pacientes_convenios')
+                            $pacienteConvenio = \Illuminate\Support\Facades\DB::table('paciente_convenio')
                                 ->where('paciente_id', $agAux->paciente_id)
                                 ->where('convenio_id', $agAux->convenio_id)
                                 ->first();
 
+                            $guia = \App\Models\Guia::firstOrCreate(
+                                ['agendamento_id' => $ag_id],
+                                [
+                                    'status' => 'CRIADA',
+                                    'numero_carteira' => $pacienteConvenio->numero_carteira ?? null
+                                ]
+                            );
+
                             \App\Models\Autorizacao::create([
                                 'convenio_id' => $agAux->convenio_id,
-                                'agendamento_id' => $ag_id,
+                                'guia_id' => $guia->id,
                                 'tuss_id' => $agAux->tuss_id,
                                 'valor' => $agAux->valor_cobrado,
-                                'carteira' => $pacienteConvenio->numero_carteira ?? null,
                                 'numero_autorizacao' => $authPayload['numero_autorizacao'] ?? null,
                                 'status' => 'AUTORIZADA',
                                 'validade' => $authPayload['validade'] ?? null,
@@ -787,9 +819,9 @@ class AgendamentoController extends Controller
         }
 
         $data = $request->validate([
-            'pessoa_id' => ['required','integer','exists:pessoas,id'],
-            'data' => ['required','date_format:Y-m-d'],
-            'hora' => ['required','regex:/^\d{2}:\d{2}$/'],
+            'pessoa_id' => ['required', 'integer', 'exists:pessoas,id'],
+            'data' => ['required', 'date_format:Y-m-d'],
+            'hora' => ['required', 'regex:/^\d{2}:\d{2}$/'],
         ]);
 
         $dt = Carbon::createFromFormat('Y-m-d', $data['data'])->startOfDay();
@@ -918,6 +950,7 @@ class AgendamentoController extends Controller
             ->leftJoin('faturamentos as f', 'f.id', '=', 'pag.faturamento_id')
             ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
             ->leftJoin('convenios as conv', 'conv.id', '=', DB::raw('COALESCE(at.convenio_id, a.convenio_id)'))
+            ->leftJoin('guias as g_aut', 'g_aut.agendamento_id', '=', 'a.id')->leftJoin('autorizacoes as aut', 'aut.guia_id', '=', 'g_aut.id')
             ->where('a.paciente_id', $paciente_id)
             ->select(
                 'a.id',
@@ -930,9 +963,12 @@ class AgendamentoController extends Controller
                 'am.pessoa_id',
                 DB::raw('COALESCE(CONCAT(pr.nome, CASE WHEN st.numero_sessao IS NOT NULL AND pr.quantidade_sessoes IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, "/", pr.quantidade_sessoes, ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END), t.descricao, "") AS procedimento_nome'),
                 DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),
-                DB::raw('COALESCE(s.descricao, "") AS status'),
+                DB::raw('CASE WHEN at.status = "ATENDIDO" THEN "ATENDIDO" ELSE COALESCE(s.descricao, "") END AS status'),
                 'pag.nu_pagamento',
-                DB::raw('COALESCE(pag.status, "N/A") AS status_pagamento')
+                DB::raw('COALESCE(pag.status, "N/A") AS status_pagamento'),
+                'aut.numero_autorizacao',
+                'aut.status as status_autorizacao',
+                'conv.tipo as convenio_tipo'
             )
             ->orderByRaw("CASE WHEN LOWER(COALESCE(s.descricao, '')) LIKE '%atendido%' OR LOWER(COALESCE(s.descricao, '')) LIKE '%cancelado%' THEN 1 ELSE 0 END ASC")
             ->orderByRaw("CASE WHEN LOWER(COALESCE(s.descricao, '')) LIKE '%atendido%' OR LOWER(COALESCE(s.descricao, '')) LIKE '%cancelado%' THEN a.data END DESC")
@@ -944,9 +980,9 @@ class AgendamentoController extends Controller
 
         $convenioParticularId = DB::table('convenios')
             ->whereNull('deleted_at')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->whereRaw('UPPER(tipo) = ?', ['PARTICULAR'])
-                  ->orWhereRaw('UPPER(descricao) = ?', ['PARTICULAR']);
+                    ->orWhereRaw('UPPER(descricao) = ?', ['PARTICULAR']);
             })
             ->value('id');
 
@@ -978,6 +1014,9 @@ class AgendamentoController extends Controller
                 'convenio_nome' => $convenioNome,
                 'pessoa_id' => $ag->pessoa_id,
                 'is_virtual' => false,
+                'numero_autorizacao' => $ag->numero_autorizacao,
+                'status_autorizacao' => $ag->status_autorizacao,
+                'convenio_tipo' => $ag->convenio_tipo,
             ];
         })->toArray();
 

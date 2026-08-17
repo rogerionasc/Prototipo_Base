@@ -548,6 +548,10 @@
         <button type="button" class="btn btn-light" @click="closeModal" :disabled="isSalvando || isImprimindo">
           <i class="ri-close-line me-1"></i> Cancelar
         </button>
+        <button v-if="permitirValidacaoFaturamento" type="button" class="btn btn-info" @click="validarParaFaturamento" :disabled="isSalvando || isImprimindo">
+          <span v-if="isSalvando" class="spinner-border spinner-border-sm me-1"></span>
+          <i v-else class="ri-check-double-line me-1"></i> Validar Guia
+        </button>
         <button type="button" class="btn btn-primary" @click="salvarGuia" :disabled="isSalvando || isImprimindo">
           <span v-if="isSalvando" class="spinner-border spinner-border-sm me-1"></span>
           <i v-else class="ri-save-line me-1"></i> Salvar
@@ -575,9 +579,17 @@ export default {
       default: false,
     },
     agendamentoId: {
-      type: [Number, String],
-      required: true,
+      type: [String, Number],
+      default: null
     },
+    permitirValidacaoFaturamento: {
+      type: Boolean,
+      default: false
+    },
+    ignorarBloqueios: {
+      type: Boolean,
+      default: false
+    }
   },
   data() {
     return {
@@ -701,6 +713,7 @@ export default {
       return config.obrigatorio.includes(key);
     },
     isBloqueado(key) {
+      if (this.ignorarBloqueios) return false;
       const config = this.form?.convenio?.config_spsadt || this.form?.agendamento?.convenio?.config_spsadt;
       if (!config || !config.bloqueado || !Array.isArray(config.bloqueado)) return false;
       return config.bloqueado.includes(key);
@@ -762,25 +775,30 @@ export default {
         }
       } catch (error) {
         console.error("Erro ao carregar dados da Guia SP/SADT", error);
-        try {
-          const fp = (this.$page?.props?.flash ?? {});
-          this.$page.props.flash = { ...fp, error: "Falha ao carregar dados da guia." };
-        } catch (_) { }
+        window.dispatchEvent(new CustomEvent('flash:show', {
+          detail: { type: 'danger', message: 'Falha ao carregar dados da guia.' }
+        }));
         this.closeModal();
       }
     },
-    async salvarGuia() {
+    async salvarGuia(customSuccessMessage = null) {
       if (!this.form || !this.form.id) return;
       this.isSalvando = true;
       try {
         await window.axios.put(`/guias/${this.form.id}`, this.form);
+        this.$emit('saved');
         this.closeModal();
+        window.dispatchEvent(new CustomEvent('flash:show', {
+          detail: {
+            type: 'success',
+            message: typeof customSuccessMessage === 'string' ? customSuccessMessage : 'Guia salva com sucesso!'
+          }
+        }));
       } catch (error) {
         console.error("Erro ao salvar guia", error);
-        try {
-          const fp = (this.$page?.props?.flash ?? {});
-          this.$page.props.flash = { ...fp, error: "Falha ao salvar a Guia. Verifique os dados e tente novamente." };
-        } catch (_) { }
+        window.dispatchEvent(new CustomEvent('flash:show', {
+          detail: { type: 'danger', message: error.response?.data?.message || 'Falha ao salvar a Guia. Verifique os dados e tente novamente.' }
+        }));
       } finally {
         this.isSalvando = false;
       }
@@ -794,14 +812,18 @@ export default {
         window.open(`/guias/${this.agendamentoId}/imprimir`, '_blank');
       } catch (error) {
         console.error("Erro ao salvar guia", error);
-        try {
-          const fp = (this.$page?.props?.flash ?? {});
-          this.$page.props.flash = { ...fp, error: "Falha ao salvar a Guia. Verifique os dados e tente novamente." };
-        } catch (_) { }
+        window.dispatchEvent(new CustomEvent('flash:show', {
+          detail: { type: 'danger', message: error.response?.data?.message || 'Falha ao salvar a Guia. Verifique os dados e tente novamente.' }
+        }));
       } finally {
         this.isImprimindo = false;
       }
     },
+    async validarParaFaturamento() {
+      if (!this.form) return;
+      this.form.status = 'VALIDADA';
+      await this.salvarGuia('Guia validada com sucesso!');
+    }
   },
 };
 </script>

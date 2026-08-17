@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('guia_profissional_executantes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('guia_id')->constrained('guias')->cascadeOnDelete();
+            $table->foreignId('procedimento_realizado_id')->constrained('guia_procedimento_realizados')->cascadeOnDelete();
             $table->string('sequencial_referencia', 2)->nullable()->comment('Sequencial referência'); // 48
             $table->string('grau_participacao', 2)->nullable()->comment('Grau participação'); // 49
             $table->string('profissional_executante_codigo', 14)->nullable()->comment('Código/CPF executante'); // 50

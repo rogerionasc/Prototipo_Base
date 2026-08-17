@@ -81,7 +81,7 @@
                                 <tr v-for="o in items" :key="o.id">
                                     <td>{{ o.numero }}</td>
                                     <td>{{ formatDateTimeBR(o.data_emissao) }}</td>
-                                    <td>{{ formatDateTimeBR(o.validade) }}</td>
+                                    <td>{{ formatDateTimeBR(o.validade_carteira) }}</td>
                                     <td class="text-end">{{ formatCurrencyBR(o.valor_bruto) }}</td>
                                     <td class="text-end">{{ formatCurrencyBR(o.desconto) }}</td>
                                     <td class="text-end">{{ formatCurrencyBR(o.valor_total) }}</td>
@@ -94,9 +94,9 @@
                     <div class="mt-2">
                         <SimpleTable variant="borderless" compact tableClass="table-sm align-middle"
                             :items="agendamentosPaciente"
-                            :columns="[{ key: 'nu_pagamento', label: 'Nº Pgto' }, { key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'convenio_nome', label: 'Convênio' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }, { key: 'status_pagamento', label: 'Pagamento' }]"
+                            :columns="[{ key: 'nu_pagamento', label: 'Nº Pgto' }, { key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'convenio_nome', label: 'Convênio' }, { key: 'numero_autorizacao', label: 'Autorização' }, { key: 'status_autorizacao', label: 'St. Aut.' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }, { key: 'status_pagamento', label: 'Pagamento' }]"
                             has-actions :searchable="true" searchPlaceholder="Buscar agendamento..."
-                            :searchFields="['procedimento', 'profissional', 'status', 'nu_pagamento', 'status_pagamento', 'convenio_nome']"
+                            :searchFields="['procedimento', 'profissional', 'status', 'nu_pagamento', 'status_pagamento', 'convenio_nome', 'numero_autorizacao', 'status_autorizacao']"
                             emptyTitle="Nenhum agendamento encontrado">
 
                             <template #cell(data)="{ item }">
@@ -105,6 +105,39 @@
 
                             <template #cell(hora)="{ item }">
                                 {{ item.hora || '--:--' }}
+                            </template>
+
+                            <template #cell(numero_autorizacao)="{ item }">
+                                <span v-if="String(item.convenio_tipo || '').toUpperCase() !== 'PARTICULAR'">
+                                    {{ item.numero_autorizacao || 'N/A' }}
+                                </span>
+                                <span v-else class="text-muted">—</span>
+                            </template>
+
+                            <template #cell(status)="{ item }">
+                                <span :class="{
+                                    'badge fs-12 px-2 py-1 bg-success-subtle text-success': ['atendido', 'concluido', 'realizado', 'confirmado'].includes(String(item.status || '').toLowerCase()),
+                                    'badge fs-12 px-2 py-1 bg-warning-subtle text-warning': ['pendente', 'aguardando', 'agendado'].includes(String(item.status || '').toLowerCase()),
+                                    'badge fs-12 px-2 py-1 bg-danger-subtle text-danger': ['cancelado', 'falta'].includes(String(item.status || '').toLowerCase()),
+                                    'badge fs-12 px-2 py-1 bg-info-subtle text-info': ['em atendimento', 'em_atendimento'].includes(String(item.status || '').toLowerCase()),
+                                    'badge fs-12 px-2 py-1 bg-secondary-subtle text-secondary': !item.status
+                                }">
+                                    {{ item.status || 'N/A' }}
+                                </span>
+                            </template>
+
+                            <template #cell(status_autorizacao)="{ item }">
+                                <span v-if="String(item.convenio_tipo || '').toUpperCase() !== 'PARTICULAR'">
+                                    <span :class="{
+                                        'badge fs-12 px-2 py-1 bg-success-subtle text-success': ['autorizada', 'aprovada'].includes(String(item.status_autorizacao || '').toLowerCase()),
+                                        'badge fs-12 px-2 py-1 bg-warning-subtle text-warning': ['pendente', 'solicitada'].includes(String(item.status_autorizacao || '').toLowerCase()),
+                                        'badge fs-12 px-2 py-1 bg-danger-subtle text-danger': ['negada', 'cancelada', 'expirada'].includes(String(item.status_autorizacao || '').toLowerCase()),
+                                        'badge fs-12 px-2 py-1 bg-secondary-subtle text-secondary': !item.status_autorizacao
+                                    }">
+                                        {{ item.status_autorizacao || 'N/A' }}
+                                    </span>
+                                </span>
+                                <span v-else class="text-muted">—</span>
                             </template>
 
                             <template #actions="{ item }">
@@ -165,7 +198,7 @@ const opcoesFlatpickrHora = {
 const orcamentosColumns = [
     { key: 'numero', label: 'Número' },
     { key: 'emissao', label: 'Emissão' },
-    { key: 'validade', label: 'Validade' },
+    { key: 'validade_carteira', label: 'Validade' },
     { key: 'bruto', label: 'Bruto', thClass: 'text-end' },
     { key: 'desconto', label: 'Desconto', thClass: 'text-end' },
     { key: 'total', label: 'Total', thClass: 'text-end' }
@@ -366,7 +399,7 @@ async function openModalEdit(id) {
         f.convenios = conveniosData.map(c => ({
             convenio_id: c.id,
             numero_carteira: c.numero_carteira || '',
-            validade: c.validade || ''
+            validade_carteira: c.validade_carteira || ''
         }));
         if (pacienteFormRef.value?.loadConvenios) {
             pacienteFormRef.value.loadConvenios(f.convenios);
@@ -429,7 +462,7 @@ async function openModalShow(id) {
                 id: o.id,
                 numero: o.numero,
                 data_emissao: o.data_emissao,
-                validade: o.validade,
+                validade: o.validade_carteira,
                 valor_bruto: o.valor_bruto,
                 desconto: o.desconto,
                 valor_total: o.valor_total,

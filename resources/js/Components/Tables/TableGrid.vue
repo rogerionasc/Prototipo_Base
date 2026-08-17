@@ -756,6 +756,7 @@ onMounted(async () => {
                                 type="button" class="btn btn-danger btn-icon waves-effect waves-light">
                                 <i class="ri-delete-bin-5-line"></i>
                             </button>
+                            <slot name="custom-actions" :selectedRows="selectedRows"></slot>
                             <div v-if="showPerPagination" class="d-flex align-items-center">
                                 <span class="text-muted text-nowrap me-2">Exibir:</span>
                                 <Multiselect style="width: 100px;" name="perPagination" id="perPagination"

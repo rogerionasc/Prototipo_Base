@@ -40,7 +40,7 @@ class FaturamentoController extends Controller
 
     public function convenios()
     {
-        $faturamentos = \App\Models\Faturamento::with(['guias.atendimento.agendamento.paciente', 'convenio'])
+        $faturamentos = \App\Models\Faturamento::with(['guias.atendimento.agendamento.paciente', 'guias.agendamento.paciente', 'guias.procedimentosSolicitados', 'convenio'])
             ->whereHas('convenio', function($q) {
                 $q->where('tipo', 'CONVENIO');
             })
@@ -78,14 +78,17 @@ class FaturamentoController extends Controller
                         'id' => $g->id,
                         'senha' => $g->senha,
                         'status' => $g->status,
-                        'valor_total' => $g->valor_total,
+                        'valor_total' => $g->valor_total_geral,
                         'valor_glosado' => $g->valor_glosado,
                         'tipo' => $g->tipo,
                         'numero_guia_prestador' => $g->numero_guia_prestador,
                         'numero_guia_operadora' => $g->numero_guia_operadora,
-                        'agendamento_id' => $g->atendimento?->agendamento_id,
-                        'paciente_nome' => $g->atendimento?->agendamento?->paciente?->nome ?? 'Não informado',
-                        'data_atendimento' => $g->atendimento?->agendamento?->data ? \Carbon\Carbon::parse($g->atendimento->agendamento->data)->format('d/m/Y') : '-'
+                        'numero_carteira' => $g->numero_carteira,
+                        'agendamento_id' => $g->atendimento?->agendamento_id ?? $g->agendamento_id,
+                        'paciente_nome' => $g->atendimento?->agendamento?->paciente?->nome ?? $g->agendamento?->paciente?->nome ?? $g->beneficiario_nome ?? 'Não informado',
+                        'data_atendimento' => $g->atendimento?->agendamento?->data ? \Carbon\Carbon::parse($g->atendimento->agendamento->data)->format('d/m/Y') : ($g->agendamento?->data ? \Carbon\Carbon::parse($g->agendamento->data)->format('d/m/Y') : ($g->data_solicitacao ? \Carbon\Carbon::parse($g->data_solicitacao)->format('d/m/Y') : '-')),
+                        'procedimento_solicitado_descricao' => $g->procedimentosSolicitados->first()?->procedimento_solicitado_descricao ?? '-',
+                        'profissional_solicitante_nome' => $g->profissional_solicitante_nome ?? '-'
                     ];
                 })->toArray()
             ];
@@ -102,16 +105,52 @@ class FaturamentoController extends Controller
         $convenioId = $request->query('convenio_id');
         
         $guias = \App\Models\Guia::whereNull('faturamento_id')
-            ->whereHas('atendimento', function($q) use ($convenioId) {
-                $q->where('convenio_id', $convenioId)
-                  ->orWhereHas('agendamento', function($q2) use ($convenioId) {
-                      $q2->where('convenio_id', $convenioId);
-                  });
+            ->where('status', 'PRONTA_FATURAMENTO')
+            ->where(function ($query) use ($convenioId) {
+                $query->whereHas('atendimento', function($q) use ($convenioId) {
+                    $q->where('convenio_id', $convenioId)
+                      ->orWhereHas('agendamento', function($q2) use ($convenioId) {
+                          $q2->where('convenio_id', $convenioId);
+                      });
+                })->orWhereHas('agendamento', function($q) use ($convenioId) {
+                    $q->where('convenio_id', $convenioId);
+                });
             })
-            ->with(['atendimento.agendamento.paciente', 'atendimento.paciente']) // Include relation to display data in frontend
+            ->with(['atendimento.agendamento.paciente', 'agendamento.paciente', 'procedimentosSolicitados']) // Include relation to display data in frontend
             ->get();
             
-        return response()->json($guias);
+        $mapped = $guias->map(function($g) {
+            return [
+                'id' => $g->id,
+                'senha' => $g->senha,
+                'status' => $g->status,
+                'valor_total' => $g->valor_total_geral,
+                'valor_glosado' => $g->valor_glosado,
+                'tipo' => $g->tipo,
+                'numero_guia_prestador' => $g->numero_guia_prestador,
+                'numero_guia_operadora' => $g->numero_guia_operadora,
+                'numero_carteira' => $g->numero_carteira,
+                'agendamento_id' => $g->atendimento?->agendamento_id ?? $g->agendamento_id,
+                'paciente_nome' => $g->atendimento?->agendamento?->paciente?->nome ?? $g->agendamento?->paciente?->nome ?? $g->beneficiario_nome ?? 'Não informado',
+                'data_atendimento' => $g->atendimento?->agendamento?->data ? \Carbon\Carbon::parse($g->atendimento->agendamento->data)->format('d/m/Y') : ($g->agendamento?->data ? \Carbon\Carbon::parse($g->agendamento->data)->format('d/m/Y') : ($g->data_solicitacao ? \Carbon\Carbon::parse($g->data_solicitacao)->format('d/m/Y') : '-')),
+                'procedimento_solicitado_descricao' => $g->procedimentosSolicitados->first()?->procedimento_solicitado_descricao ?? '-',
+                'profissional_solicitante_nome' => $g->profissional_solicitante_nome ?? '-'
+            ];
+        });
+
+        return response()->json($mapped);
+    }
+
+    public function devolverGuia($id)
+    {
+        $guia = \App\Models\Guia::findOrFail($id);
+        if ($guia->faturamento_id) {
+            return response()->json(['message' => 'Guia já está em um lote.'], 400);
+        }
+        $guia->status = 'CRIADA';
+        $guia->save();
+
+        return response()->json(['message' => 'Guia devolvida para o Contas Médicas com sucesso!']);
     }
 
     public function storeLote(Request $request)
@@ -127,7 +166,7 @@ class FaturamentoController extends Controller
             $guias = \App\Models\Guia::whereIn('id', $data['guias'])->get();
         }
         
-        $total = $guias->sum('valor_total'); // Replace with correct column from Guia if needed
+        $total = $guias->sum('valor_total_geral');
 
         $fat = \App\Models\Faturamento::create([
             'convenio_id' => $data['convenio_id'],
@@ -139,7 +178,10 @@ class FaturamentoController extends Controller
         ]);
 
         if (!empty($data['guias'])) {
-            \App\Models\Guia::whereIn('id', $data['guias'])->update(['faturamento_id' => $fat->id]);
+            \App\Models\Guia::whereIn('id', $data['guias'])->update([
+                'faturamento_id' => $fat->id,
+                'status' => 'FATURADA'
+            ]);
         }
 
         return back()->with('success', 'Lote criado com sucesso!');
@@ -162,18 +204,21 @@ class FaturamentoController extends Controller
             'guias.*' => 'exists:guias,id'
         ]);
 
-        $guias = \App\Models\Guia::with(['atendimento.agendamento'])->whereIn('id', $data['guias'])->get();
+        $guias = \App\Models\Guia::with(['atendimento.agendamento', 'agendamento'])->whereIn('id', $data['guias'])->get();
         
         foreach($guias as $guia) {
-            $convId = $guia->atendimento?->convenio_id ?? $guia->atendimento?->agendamento?->convenio_id;
+            $convId = $guia->atendimento?->convenio_id ?? $guia->atendimento?->agendamento?->convenio_id ?? $guia->agendamento?->convenio_id;
             if($convId != $fat->convenio_id) {
                 return back()->with('error', 'Uma ou mais guias não pertencem ao convênio deste lote.');
             }
         }
 
-        \App\Models\Guia::whereIn('id', $data['guias'])->update(['faturamento_id' => $fat->id]);
+        \App\Models\Guia::whereIn('id', $data['guias'])->update([
+            'faturamento_id' => $fat->id,
+            'status' => 'FATURADA'
+        ]);
         
-        $novoTotal = \App\Models\Guia::where('faturamento_id', $fat->id)->sum('valor_total');
+        $novoTotal = \App\Models\Guia::where('faturamento_id', $fat->id)->sum('valor_total_geral');
         $fat->update([
             'valor_total' => $novoTotal,
             'valor_cobrado' => $novoTotal
@@ -189,10 +234,10 @@ class FaturamentoController extends Controller
 
         $guia->update([
             'faturamento_id' => null,
-            'status' => 'ATENDIDO'
+            'status' => 'PRONTA_FATURAMENTO'
         ]);
 
-        $novoTotal = \App\Models\Guia::where('faturamento_id', $fat->id)->sum('valor_total');
+        $novoTotal = \App\Models\Guia::where('faturamento_id', $fat->id)->sum('valor_total_geral');
         $fat->update([
             'valor_total' => $novoTotal,
             'valor_cobrado' => $novoTotal

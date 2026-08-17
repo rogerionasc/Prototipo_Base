@@ -64,7 +64,7 @@ class Paciente extends Model
     public function convenios()
     {
         return $this->belongsToMany(Convenio::class, 'paciente_convenio', 'paciente_id', 'convenio_id')
-            ->withPivot('numero_carteira', 'plano', 'validade', 'ativo')
+            ->withPivot('numero_carteira', 'plano', 'validade_carteira', 'ativo')
             ->wherePivot('ativo', true)
             ->whereNull('paciente_convenio.deleted_at');
     }

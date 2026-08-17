@@ -22,6 +22,11 @@ class Guia extends Model
         return $this->hasOne(Atendimento::class, 'guia_id');
     }
 
+    public function agendamento()
+    {
+        return $this->belongsTo(Agendamento::class, 'agendamento_id');
+    }
+
     public function procedimentosSolicitados()
     {
         return $this->hasMany(GuiaProcedimentoSolicitado::class);
@@ -32,8 +37,13 @@ class Guia extends Model
         return $this->hasMany(GuiaProcedimentoRealizado::class);
     }
 
+    public function autorizacoes()
+    {
+        return $this->hasMany(Autorizacao::class);
+    }
+
     public function profissionaisExecutantes()
     {
-        return $this->hasMany(GuiaProfissionalExecutante::class);
+        return $this->hasManyThrough(GuiaProfissionalExecutante::class, GuiaProcedimentoRealizado::class, 'guia_id', 'procedimento_realizado_id');
     }
 }

@@ -13,6 +13,7 @@ use App\Http\Controllers\CaixaController;
 use App\Http\Controllers\MovimentacaoCaixaController;
 use App\Http\Controllers\AgendamentoController;
 use App\Http\Controllers\FaturamentoController;
+use App\Http\Controllers\ContasMedicasController;
 use App\Http\Controllers\ContasReceberController;
 use App\Http\Controllers\AtendimentoController;
 use App\Http\Controllers\PepController;
@@ -153,6 +154,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/orcamentos/{id}/approve", [OrcamentoController::class, "approve"])->whereNumber('id')->name('orcamentos.approve');
         Route::put("/orcamentos/{id}/unapprove", [OrcamentoController::class, "unapprove"])->whereNumber('id')->name('orcamentos.unapprove');
 
+        // Contas Médicas
+        Route::get("/contas-medicas/validacao-guias", [ContasMedicasController::class, "validacaoGuias"])->name('contas_medicas.validacao_guias');
+        Route::post("/contas-medicas/validacao-guias/encaminhar", [ContasMedicasController::class, "encaminharFaturamento"])->name('contas_medicas.encaminhar_faturamento');
+
         // Faturamento
         Route::get("/faturamento/particular", [FaturamentoController::class, "particular"])->name('faturamento.particular');
         Route::get("/faturamento/convenios", [FaturamentoController::class, "convenios"])->name('faturamento.convenios');
@@ -164,6 +169,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::patch("/faturamentos/{lote}/guias/{guia}/status", [FaturamentoController::class, "updateGuiaStatus"])->whereNumber('lote')->whereNumber('guia')->name('faturamentos.guias.updateStatus');
         Route::patch("/faturamentos/{lote}/guias/{guia}/glosa", [FaturamentoController::class, "updateGuiaGlosa"])->whereNumber('lote')->whereNumber('guia')->name('faturamentos.guias.updateGlosa');
         Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');
+        Route::post("/faturamento/guias/{id}/devolver", [FaturamentoController::class, "devolverGuia"])->whereNumber('id')->name('faturamento.guias.devolver');
 
         // Financeiro
         // Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');

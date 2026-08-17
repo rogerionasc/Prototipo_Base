@@ -12,10 +12,10 @@ return new class extends Migration
             $table->id()->startingValue(1000);
             $table->foreignId('convenio_id')->constrained()->onDelete('cascade');
             $table->string('protocolo', 100)->nullable();
-            $table->foreignId('agendamento_id')->nullable()->constrained('agendamentos')->nullOnDelete();
+            $table->foreignId('guia_id')->nullable()->constrained('guias')->cascadeOnDelete();
+            $table->foreignId('procedimento_solicitado_id')->nullable()->constrained('guia_procedimento_solicitados')->cascadeOnDelete();
             $table->foreignId('tuss_id')->nullable()->constrained('tuss')->nullOnDelete();
             $table->decimal('valor', 10, 2)->nullable();
-            $table->string('carteira', 100)->nullable();
             $table->string('numero_autorizacao', 100)->nullable();
             $table->enum('status', ['SOLICITADA', 'AUTORIZADA', 'Pendente', 'Aprovada', 'Negada', 'Expirada', 'Cancelada'])->default('Pendente');
             $table->date('validade')->nullable();

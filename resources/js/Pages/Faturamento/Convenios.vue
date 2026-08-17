@@ -146,10 +146,12 @@
                                     <td>{{ formatCurrency(guia.valor_total) }}</td>
                                     <td>
                                         <div v-if="guia.status === 'GLOSADA'">
-                                            <input type="number" step="0.01" class="form-control form-control-sm" style="min-width: 90px; max-width: 100px;"
-                                                v-model="guia.valor_glosado" @blur="atualizarValorGlosado(lote.id, guia.id, guia.valor_glosado)">
+                                            <input type="number" step="0.01" class="form-control form-control-sm"
+                                                style="min-width: 90px; max-width: 100px;" v-model="guia.valor_glosado"
+                                                @blur="atualizarValorGlosado(lote.id, guia.id, guia.valor_glosado)">
                                         </div>
-                                        <span v-else-if="guia.valor_glosado > 0" class="text-danger fw-medium">{{ formatCurrency(guia.valor_glosado) }}</span>
+                                        <span v-else-if="guia.valor_glosado > 0" class="text-danger fw-medium">{{
+                                            formatCurrency(guia.valor_glosado) }}</span>
                                         <span v-else class="text-muted">-</span>
                                     </td>
                                     <td>
@@ -236,7 +238,7 @@
 
         <!-- Modal Adicionar Nova Guia -->
         <Modal v-model="showAddModal" :title="'Adicionar Guias - Lote #' + (gerenciarLote?.id || '')" size="xl"
-            :show-footer="false">
+            customWidth="98vw" :show-footer="false">
             <div v-if="loadingDisponiveisAdd" class="text-center py-4">
                 <div class="spinner-border text-primary" role="status"></div>
                 <p class="mt-2 text-muted">Buscando guias disponíveis...</p>
@@ -267,6 +269,7 @@
                                     <th>Senha/Aut.</th>
                                     <th>Status</th>
                                     <th>Valor</th>
+                                    <th>Ação</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -279,16 +282,16 @@
                                     </td>
                                     <td>#{{ guia.id }}</td>
                                     <td>
-                                        <a v-if="guia.atendimento?.agendamento_id"
-                                            :href="route('guias.imprimirDaAgenda', guia.atendimento.agendamento_id)"
-                                            target="_blank" class="text-primary fw-medium text-decoration-underline">
+                                        <a v-if="guia.agendamento_id"
+                                            :href="route('guias.imprimirDaAgenda', guia.agendamento_id)" target="_blank"
+                                            class="text-primary fw-medium text-decoration-underline">
                                             {{ guia.numero_guia_prestador || guia.numero_guia_operadora || 'Ver Guia' }}
                                         </a>
                                         <span v-else class="text-primary fw-medium">{{ guia.numero_guia_prestador ||
                                             guia.numero_guia_operadora || '-' }}</span>
                                     </td>
                                     <td>
-                                        {{ guia.atendimento?.agendamento?.paciente?.nome || 'Não informado' }}<br>
+                                        {{ guia.paciente_nome }}<br>
                                     </td>
                                     <td>{{ guia.numero_carteira || '-' }}</td>
                                     <td>{{ guia.procedimento_solicitado_descricao || '-' }}</td>
@@ -298,6 +301,14 @@
                                     <td><span class="badge" :class="getBadgeClass(guia.status)">{{ guia.status }}</span>
                                     </td>
                                     <td>{{ formatCurrency(guia.valor_total) }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-soft-danger"
+                                            @click="devolverGuiaParaContasMedicas(guia.id)"
+                                            title="Devolver para Contas Médicas"
+                                            :disabled="devolvendoGuiaId === guia.id">
+                                            <i class="ri-arrow-go-back-line"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -317,6 +328,11 @@
 
         <ModalDelete v-model="deleteModal" title="Remover Guia" :subTitle="deleteSubTitle" @save="confirmDeleteGuia" />
 
+        <ModalConfirm v-model="confirmDevolverModal" title="Devolver Guia"
+            subTitle="Deseja realmente devolver esta guia para a equipe de Contas Médicas?"
+            message="Esta guia será removida desta lista e voltará para a fila de validação."
+            nameButton="Sim, devolver guia" buttonClass="btn-warning" @save="executarDevolverGuia" />
+
     </Layout>
 </template>
 
@@ -327,6 +343,7 @@ import { Head, useForm, router } from "@inertiajs/vue3";
 import { ref, computed } from "vue";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
+import ModalConfirm from "@/Components/ModalConfirm.vue";
 import Multiselect from '@vueform/multiselect';
 import "@vueform/multiselect/themes/default.css";
 import axios from "axios";
@@ -444,7 +461,9 @@ function confirmDeleteGuia() {
 }
 
 const statusOptions = [
-    { value: 'ATENDIDO', label: 'ATENDIDO' },
+    // { value: 'PRONTA_FATURAMENTO', label: 'PRONTA FATURAMENTO' },
+    // { value: 'ENVIADA_FATURAMENTO', label: 'ENVIADA FATURAMENTO' },
+    { value: 'FATURADA', label: 'FATURADA' },
     { value: 'PAGA', label: 'PAGA' },
     { value: 'GLOSADA', label: 'GLOSADA' },
     { value: 'DEVOLVIDA', label: 'DEVOLVIDA' }
@@ -454,7 +473,9 @@ function atualizarStatusGuia(loteId, guiaId, novoStatus) {
     router.patch(route('faturamentos.guias.updateStatus', { lote: loteId, guia: guiaId }), { status: novoStatus }, {
         preserveScroll: true,
         onError: () => {
-            alert('Erro ao atualizar o status da guia.');
+            window.dispatchEvent(new CustomEvent('flash:show', {
+                detail: { type: 'danger', message: 'Erro ao atualizar o status da guia.' }
+            }));
         }
     });
 }
@@ -463,7 +484,9 @@ function atualizarValorGlosado(loteId, guiaId, valorGlosado) {
     router.patch(route('faturamentos.guias.updateGlosa', { lote: loteId, guia: guiaId }), { valor_glosado: valorGlosado }, {
         preserveScroll: true,
         onError: () => {
-            alert('Erro ao atualizar o valor glosado.');
+            window.dispatchEvent(new CustomEvent('flash:show', {
+                detail: { type: 'danger', message: 'Erro ao atualizar o valor glosado.' }
+            }));
         }
     });
 }
@@ -475,6 +498,9 @@ const guiasDisponiveisAdd = ref([]);
 const loadingDisponiveisAdd = ref(false);
 const guiasParaAdicionar = ref([]);
 const adicionandoGuias = ref(false);
+const devolvendoGuiaId = ref(null);
+const confirmDevolverModal = ref(false);
+const guiaIdParaDevolver = ref(null);
 
 function abrirAddModal(lote) {
     gerenciarLote.value = lote;
@@ -521,16 +547,49 @@ function adicionarGuiasAoLote() {
     });
 }
 
+const devolverGuiaParaContasMedicas = (id) => {
+    guiaIdParaDevolver.value = id;
+    confirmDevolverModal.value = true;
+};
+
+const executarDevolverGuia = async () => {
+    if (!guiaIdParaDevolver.value) return;
+    const id = guiaIdParaDevolver.value;
+    try {
+        confirmDevolverModal.value = false;
+        devolvendoGuiaId.value = id;
+        await axios.post(route('faturamento.guias.devolver', id));
+        guiasDisponiveisAdd.value = guiasDisponiveisAdd.value.filter(g => g.id !== id);
+        window.dispatchEvent(new CustomEvent('flash:show', {
+            detail: { type: 'success', message: 'Guia devolvida para o Contas Médicas com sucesso!' }
+        }));
+    } catch (error) {
+        console.error(error);
+        window.dispatchEvent(new CustomEvent('flash:show', {
+            detail: { type: 'danger', message: error.response?.data?.message || 'Erro ao devolver a guia.' }
+        }));
+    } finally {
+        devolvendoGuiaId.value = null;
+        guiaIdParaDevolver.value = null;
+    }
+};
+
 // Helpers
 function getBadgeClass(status) {
-    switch (status) {
+    const s = String(status || '').toUpperCase();
+    switch (s) {
         case 'CRIADA': return 'bg-secondary';
         case 'ATENDIDO': return 'bg-info';
+        case 'VALIDADA': return 'bg-primary';
         case 'EM_ANALISE': return 'bg-warning text-dark';
         case 'AUTORIZADA': return 'bg-success';
-        case 'GLOSADA': return 'bg-danger';
+        case 'PRONTA_FATURAMENTO': return 'bg-success-subtle text-success';
+        case 'ENVIADA_FATURAMENTO': return 'bg-warning-subtle text-warning';
+        case 'FATURADA': return 'bg-dark-subtle text-dark';
+        case 'GLOSADA': return 'bg-danger-subtle text-danger';
         case 'DEVOLVIDA': return 'bg-dark';
         case 'PAGA': return 'bg-primary';
+        case 'CANCELADA': return 'bg-danger';
         default: return 'bg-info';
     }
 }

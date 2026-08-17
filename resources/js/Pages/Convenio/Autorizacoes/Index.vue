@@ -3,7 +3,7 @@
 
     <Head title="Autorizações" />
     <PageHeader title="Autorizações" pageTitle="Convênios" />
-    <TableGrid :columns="columns" :data="autorizacoes" :tableTitle="'Todas as Autorizações'" :showStatus="false"
+    <TableGrid :columns="columns" :data="mappedAutorizacoes" :tableTitle="'Todas as Autorizações'" :showStatus="false"
       :showCheckbox="false" :showImage="false" :searchPlaceholder="'Buscar autorização'" @add="openModalAdd"
       @delete="openModalDelete" @edit="openModalEdit" @show="openModalShow" />
     <Modal v-model="showModal" :title="modalTitle" size="xl" :name-button="saveButtonText" :processing="saveProcessing"
@@ -136,16 +136,16 @@
         
         <div class="row mb-4">
           <div class="col-md-4 mb-3">
-            <p class="text-muted mb-1 fs-12">ID Atendimento</p>
-            <h6 class="fs-14 mb-0 fw-medium text-dark">{{ selectedAutorizacao.agendamento_id ? '#' + selectedAutorizacao.agendamento_id : '-' }}</h6>
+            <p class="text-muted mb-1 fs-12">ID Guia</p>
+            <h6 class="fs-14 mb-0 fw-medium text-dark">{{ selectedAutorizacao.guia_id ? '#' + selectedAutorizacao.guia_id : '-' }}</h6>
           </div>
           <div class="col-md-4 mb-3">
-            <p class="text-muted mb-1 fs-12">Status do Atendimento</p>
-            <h6 class="fs-14 mb-0 fw-medium text-dark">{{ selectedAutorizacao.agendamento?.status?.descricao || '-' }}</h6>
+            <p class="text-muted mb-1 fs-12">Status da Guia</p>
+            <h6 class="fs-14 mb-0 fw-medium text-dark">{{ selectedAutorizacao.guia?.status || '-' }}</h6>
           </div>
           <div class="col-md-4 mb-3">
             <p class="text-muted mb-1 fs-12">Nome do Médico</p>
-            <h6 class="fs-14 mb-0 fw-medium text-dark">{{ selectedAutorizacao.agendamento?.agenda_medica?.profissional_saude?.nome || '-' }}</h6>
+            <h6 class="fs-14 mb-0 fw-medium text-dark">{{ selectedAutorizacao.guia?.agendamento?.agenda_medica?.profissional_saude?.nome || '-' }}</h6>
           </div>
         </div>
 
@@ -164,6 +164,7 @@
 </template>
 <script setup>
 import "gridjs/dist/theme/mermaid.css";
+import { html } from "gridjs";
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import { Head, useForm, router } from '@inertiajs/vue3';
@@ -172,22 +173,41 @@ import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import { ref, computed } from "vue";
 
-const { autorizacoes, convenios, usuarios } = defineProps({
+const props = defineProps({
   autorizacoes: { type: Array, default: () => [] },
   convenios: { type: Array, default: () => [] },
   usuarios: { type: Array, default: () => [] },
 });
 
+const mappedAutorizacoes = computed(() => {
+  return props.autorizacoes.map(a => ({
+    ...a,
+    medico: a.guia?.agendamento?.agenda_medica?.profissional_saude?.nome || "-"
+  }));
+});
+
 const columns = [
   { id: "id", name: "ID" },
   { id: "protocolo", name: "Protocolo" },
-  { id: "convenio_id", name: "Convênio", formatter: (cell) => convenios.find(c => c.id == cell)?.descricao || cell || "" },
-  { id: "agendamento", name: "Paciente", formatter: (cell) => cell?.paciente?.nome || "-" },
+  { id: "convenio_id", name: "Convênio", formatter: (cell) => props.convenios.find(c => c.id == cell)?.descricao || cell || "" },
+  { id: "guia", name: "Paciente", formatter: (cell) => cell?.agendamento?.paciente?.nome || "-" },
+  { id: "medico", name: "Médico" },
   { id: "tuss", name: "Procedimento", formatter: (cell) => cell ? `${cell.codigo} - ${cell.descricao}` : "-" },
   { id: "numero_autorizacao", name: "Nº Autorização" },
-  { id: "status", name: "Status" },
-  { id: "validade", name: "Validade" },
-  { id: "data_solicitacao", name: "Data Solicitação" },
+  { 
+    id: "status", 
+    name: "Status",
+    formatter: (cell) => {
+      let cls = 'bg-secondary-subtle text-secondary';
+      const s = String(cell || '').toLowerCase();
+      if (s === 'autorizada' || s === 'aprovada') cls = 'bg-success-subtle text-success';
+      else if (s === 'solicitada' || s === 'pendente') cls = 'bg-warning-subtle text-warning';
+      else if (s === 'negada' || s === 'cancelada' || s === 'expirada') cls = 'bg-danger-subtle text-danger';
+      
+      return html(`<span class="badge ${cls} fs-12 px-2 py-1">${cell || 'N/A'}</span>`);
+    }
+  },
+  { id: "data_solicitacao", name: "Data Solicitação", formatter: (cell) => cell ? new Date(cell).toLocaleDateString('pt-BR') : "-" },
 ];
 
 const showModal = ref(false);
@@ -268,7 +288,7 @@ function confirmDelete() {
 }
 
 async function openModalEdit(id) {
-  const a = autorizacoes.find(au => String(au.id) === String(id));
+  const a = props.autorizacoes.find(au => String(au.id) === String(id));
   if (!a) return;
   isEditing.value = true;
   editingId.value = a.id;
@@ -289,11 +309,11 @@ const showDetailsModal = ref(false);
 const selectedAutorizacao = ref(null);
 
 function getConvenioNome(id) {
-  return convenios.find(c => String(c.id) === String(id))?.descricao || '-';
+  return props.convenios.find(c => String(c.id) === String(id))?.descricao || '-';
 }
 
 function getUsuarioNome(id) {
-  return usuarios.find(u => String(u.id) === String(id))?.nome || '-';
+  return props.usuarios.find(u => String(u.id) === String(id))?.nome || '-';
 }
 
 function formatDate(dateString) {
@@ -309,7 +329,7 @@ function formatDateTime(dateString) {
 }
 
 function openModalShow(id) {
-  const a = autorizacoes.find(au => String(au.id) === String(id));
+  const a = props.autorizacoes.find(au => String(au.id) === String(id));
   if (!a) return;
   selectedAutorizacao.value = a;
   showDetailsModal.value = true;

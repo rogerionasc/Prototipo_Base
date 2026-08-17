@@ -11,8 +11,8 @@ class GuiaProfissionalExecutante extends Model
 
     protected $guarded = ['id'];
 
-    public function guia()
+    public function procedimentoRealizado()
     {
-        return $this->belongsTo(Guia::class);
+        return $this->belongsTo(GuiaProcedimentoRealizado::class, 'procedimento_realizado_id');
     }
 }

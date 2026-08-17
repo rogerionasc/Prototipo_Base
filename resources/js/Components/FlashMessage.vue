@@ -1,5 +1,6 @@
 <template>
-  <transition name="fade">
+  <Teleport to="body">
+    <transition name="fade">
     <div
       v-if="visible && currentMessage"
       :class="alertClasses"
@@ -11,7 +12,8 @@
       <strong class="me-1">{{ alertTitle }}</strong> {{ currentMessage }}
       <button type="button" class="btn-close" @click="visible = false" aria-label="Close"></button>
     </div>
-  </transition>
+    </transition>
+  </Teleport>
 </template>
 
   <script setup>
@@ -132,6 +134,13 @@
 
   onMounted(() => {
     pickMessage()
+
+    window.addEventListener('flash:show', (e) => {
+      const { type: t, message: msg } = e.detail
+      currentType.value = t
+      currentMessage.value = msg
+      triggerShow()
+    })
   })
 
   watch(() => page.props.flash, () => {

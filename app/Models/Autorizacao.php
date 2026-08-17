@@ -15,10 +15,10 @@ class Autorizacao extends Model
     protected $fillable = [
         'protocolo',
         'convenio_id',
-        'agendamento_id',
+        'guia_id',
+        'procedimento_solicitado_id',
         'tuss_id',
         'valor',
-        'carteira',
         'numero_autorizacao',
         'status',
         'validade',
@@ -55,8 +55,13 @@ class Autorizacao extends Model
         return $this->belongsTo(Tuss::class, 'tuss_id');
     }
 
-    public function agendamento()
+    public function guia()
     {
-        return $this->belongsTo(Agendamento::class, 'agendamento_id');
+        return $this->belongsTo(Guia::class, 'guia_id');
+    }
+
+    public function procedimentoSolicitado()
+    {
+        return $this->belongsTo(GuiaProcedimentoSolicitado::class, 'procedimento_solicitado_id');
     }
 }

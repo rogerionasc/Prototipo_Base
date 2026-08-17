@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('convenio_id')->constrained('convenios');
             $table->string('numero_carteira', 30)->nullable();
             $table->string('plano', 60)->nullable();
-            $table->date('validade')->nullable();
+            $table->date('validade_carteira')->nullable();
             $table->boolean('ativo')->default(true);
             $table->timestamps();
             $table->softDeletes();

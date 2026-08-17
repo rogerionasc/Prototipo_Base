@@ -25,10 +25,6 @@
                             <div class="mt-4">
                                 <h4 class="mb-3">{{ subTitle }}</h4>
                                 <p class="text-muted" v-if="message" v-html="message"></p>
-                                <p class="text-muted" v-else-if="itemDelete && itemDelete.nome"> Esta ação não poderá
-                                    ser desfeita. "<span class="text-danger fs-5">{{ itemDelete.nome }}</span>" será
-                                    removido permanentemente do sistema.</p>
-
                             </div>
                         </div>
 
@@ -54,7 +50,7 @@
 import { ref, watch, nextTick, computed } from 'vue';
 // Importação do componente de animação Lottie
 import Lottie from "@/Components/widgets/lottie.vue";
-import defaultAnimationData from "@/Components/widgets/gsqxdxog.json";
+import defaultAnimationData from "@/Components/widgets/tdrtiskw.json";
 
 // Definição das propriedades recebidas pelo componente
 const props = defineProps({
@@ -71,9 +67,9 @@ const props = defineProps({
     // Subtítulo exibido na mensagem de confirmação
     subTitle: {
         type: String,
-        default: 'Deseja realmente excluir'
+        default: 'Deseja realmente prosseguir'
     },
-    // Objeto do item a ser excluído
+    // Objeto do item (opcional)
     itemDelete: {
         type: Object,
         default: () => ({})
@@ -81,7 +77,7 @@ const props = defineProps({
     // Texto do botão de confirmação
     nameButton: {
         type: String,
-        default: 'Sim, desejo excluir'
+        default: 'Confirmar'
     },
     // Mensagem customizada
     message: {

@@ -15,4 +15,14 @@ class GuiaProcedimentoRealizado extends Model
     {
         return $this->belongsTo(Guia::class);
     }
+
+    public function procedimentoSolicitado()
+    {
+        return $this->belongsTo(GuiaProcedimentoSolicitado::class, 'procedimento_solicitado_id');
+    }
+
+    public function profissionaisExecutantes()
+    {
+        return $this->hasMany(GuiaProfissionalExecutante::class, 'procedimento_realizado_id');
+    }
 }

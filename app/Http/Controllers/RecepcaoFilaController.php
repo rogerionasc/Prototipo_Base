@@ -34,10 +34,13 @@ class RecepcaoFilaController extends Controller
             ->orWhereExists(function ($query) use ($hoje) {
                 $query->select(DB::raw(1))
                       ->from('autorizacoes')
-                      ->whereColumn('autorizacoes.agendamento_id', 'agendamentos.id')
+                      ->join('guias', 'guias.id', '=', 'autorizacoes.guia_id')
+                      ->whereColumn('guias.agendamento_id', 'agendamentos.id')
                       ->where('autorizacoes.status', 'AUTORIZADA')
-                      ->whereNotNull('autorizacoes.numero_autorizacao')
-                      ->where('autorizacoes.validade', '>=', $hoje);
+                      ->where(function ($q) use ($hoje) {
+                          $q->whereNull('autorizacoes.validade')
+                            ->orWhere('autorizacoes.validade', '>=', $hoje);
+                      });
             });
         })
         ->orderBy('hora', 'asc')
@@ -135,7 +138,7 @@ class RecepcaoFilaController extends Controller
             $defaultCategoria = \App\Models\CategoriaProcedimento::firstOrCreate(['nome' => 'Geral']);
             $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : $defaultCategoria->id;
 
-            $autorizacao = \App\Models\Autorizacao::where('agendamento_id', $agendamento->id)->latest()->first();
+            $autorizacao = \App\Models\Autorizacao::whereHas('guia', function($q) use ($agendamento) { $q->where('agendamento_id', $agendamento->id); })->latest()->first();
 
             Atendimento::create([
                 'paciente_id'               => $agendamento->paciente_id,
@@ -183,7 +186,7 @@ class RecepcaoFilaController extends Controller
             $defaultCategoria = \App\Models\CategoriaProcedimento::firstOrCreate(['nome' => 'Geral']);
             $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : $defaultCategoria->id;
 
-            $autorizacao = \App\Models\Autorizacao::where('agendamento_id', $agendamento->id)->latest()->first();
+            $autorizacao = \App\Models\Autorizacao::whereHas('guia', function($q) use ($agendamento) { $q->where('agendamento_id', $agendamento->id); })->latest()->first();
 
             $atendimento = Atendimento::create([
                 'paciente_id' => $agendamento->paciente_id,
