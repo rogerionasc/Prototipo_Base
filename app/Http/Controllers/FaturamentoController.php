@@ -172,7 +172,7 @@ class FaturamentoController extends Controller
             'convenio_id' => $data['convenio_id'],
             'valor_total' => $total,
             'valor_cobrado' => $total,
-            'status' => 'AGUARDANDO_ENVIO',
+            'status' => 'ABERTA',
             'data_faturamento' => now(),
             'paciente_id' => 1 // Temporary fallback until patient logic is refined
         ]);
@@ -280,10 +280,23 @@ class FaturamentoController extends Controller
         return back()->with('success', 'Valor glosado atualizado com sucesso!');
     }
 
+    public function fecharLote(string $id)
+    {
+        $faturamento = \App\Models\Faturamento::findOrFail($id);
+
+        if ($faturamento->status === 'ABERTA') {
+            $faturamento->update(['status' => 'FECHADA']);
+            return back()->with('success', 'Lote fechado com sucesso!');
+        } else {
+            $faturamento->update(['status' => 'ABERTA']);
+            return back()->with('success', 'Lote reaberto com sucesso!');
+        }
+    }
+
     public function updateConvenio(Request $request, string $id)
     {
         $data = $request->validate([
-            'status' => ['required', 'string', 'in:AGUARDANDO_ENVIO,ENVIADO,EM_ANALISE,APROVADO,GLOSADO,RECEBIDO,CANCELADO'],
+            'status' => ['required', 'string', 'in:ABERTA,FECHADA'],
             'valor_cobrado' => ['nullable', 'numeric', 'min:0'],
             'valor_aprovado' => ['nullable', 'numeric', 'min:0'],
             'valor_glosado' => ['nullable', 'numeric', 'min:0'],

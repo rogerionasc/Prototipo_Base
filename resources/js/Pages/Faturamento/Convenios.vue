@@ -21,7 +21,8 @@
                     <!-- Convênio -->
                     <div class="col-md-2 col-12">
                         <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Convênio</label>
-                        <select v-model="filtros.convenio" class="form-select form-select-sm" data-choices data-choices-search-true>
+                        <select v-model="filtros.convenio" class="form-select form-select-sm" data-choices
+                            data-choices-search-true>
                             <option value="">Todos</option>
                             <option v-for="c in conveniosOptions" :key="c.value" :value="c.label">{{ c.label }}</option>
                         </select>
@@ -30,11 +31,11 @@
                     <!-- Status -->
                     <div class="col-md-2 col-12">
                         <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Status</label>
-                        <select v-model="filtros.status" class="form-select form-select-sm" data-choices data-choices-search-false>
+                        <select v-model="filtros.status" class="form-select form-select-sm" data-choices
+                            data-choices-search-false>
                             <option value="">Todos</option>
-                            <option value="AGUARDANDO_ENVIO">AGUARDANDO ENVIO</option>
-                            <option value="ENVIADO">ENVIADO</option>
-                            <option value="RECEBIDO">RECEBIDO</option>
+                            <option value="ABERTA">ABERTA</option>
+                            <option value="FECHADA">FECHADA</option>
                             <option value="COM_GLOSA">COM GLOSA</option>
                         </select>
                     </div>
@@ -42,27 +43,28 @@
                     <!-- Data Início -->
                     <div class="col-md-2 col-6">
                         <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Data Início</label>
-                        <flatPickr v-model="filtros.dataInicio" class="form-control"
-                            :config="flatpickrOptions" placeholder="Selecione..." />
+                        <flatPickr v-model="filtros.dataInicio" class="form-control" :config="flatpickrOptions"
+                            placeholder="Selecione..." />
                     </div>
 
                     <!-- Data Fim -->
                     <div class="col-md-2 col-6">
                         <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Data Fim</label>
-                        <flatPickr v-model="filtros.dataFim" class="form-control"
-                            :config="flatpickrOptions" placeholder="Selecione..." />
+                        <flatPickr v-model="filtros.dataFim" class="form-control" :config="flatpickrOptions"
+                            placeholder="Selecione..." />
                     </div>
 
                     <!-- Botão Criar Lote -->
                     <div class="col-md-auto col-12 text-end d-flex align-items-end">
                         <button class="btn btn-primary" @click="openCriarLoteModal">
-                            <i class="ri-add-line align-bottom me-1"></i> Criar
+                            <i class="ri-add-line align-bottom me-1"></i> Criar Lote
                         </button>
                     </div>
                 </div>
 
                 <!-- Limpar filtros -->
-                <div class="mt-2 text-end" v-if="filtros.busca || filtros.convenio || filtros.status || filtros.dataInicio || filtros.dataFim">
+                <div class="mt-2 text-end"
+                    v-if="filtros.busca || filtros.convenio || filtros.status || filtros.dataInicio || filtros.dataFim">
                     <button class="btn btn-sm btn-ghost-danger shadow-none" @click="limparFiltros">
                         <i class="ri-close-line align-bottom me-1"></i> Limpar Filtros
                     </button>
@@ -80,22 +82,53 @@
         <div class="card ribbon-box border shadow-none mb-3" v-for="lote in faturamentosFiltrados" :key="lote.id">
             <div class="card-body pb-3 position-relative">
                 <div class="ribbon ribbon-primary ribbon-shape" style="z-index: 10;">Lote #{{ lote.id }}</div>
-                
-                <!-- Status no canto superior direito -->
-                <div class="position-absolute top-0 end-0 p-2 d-none d-md-block" style="z-index: 5;">
+
+                <!-- Status + Menu no canto superior direito (Desktop) -->
+                <div class="position-absolute top-0 end-0 p-2 d-none d-md-flex align-items-center gap-2" style="z-index: 5;">
                     <span class="badge px-3 py-1 fs-12 shadow-sm rounded-pill" :class="getLoteStatusClass(lote.status)">
                         {{ lote.status.replace('_', ' ') }}
                     </span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-ghost-secondary rounded-circle shadow-none p-0"
+                            style="width: 28px; height: 28px; line-height: 28px;"
+                            type="button" :id="'dropdownLote' + lote.id" data-bs-toggle="dropdown" aria-expanded="false"
+                            @click.stop>
+                            <i class="ri-more-2-fill fs-16"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" :aria-labelledby="'dropdownLote' + lote.id">
+                            <li>
+                                <a class="dropdown-item" href="#" @click.prevent.stop="baixarXml(lote.id)">
+                                    <i class="ri-file-code-line align-bottom me-2 text-muted"></i> Baixar XML
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
 
-                <!-- Status visível em mobile (sem absolute) -->
-                <div class="d-md-none text-end mt-2 mb-2 me-2">
+                <!-- Status + Menu visível em mobile -->
+                <div class="d-md-none text-end mt-2 mb-2 me-2 d-flex justify-content-end align-items-center gap-2">
                     <span class="badge px-3 py-1 fs-12 shadow-sm rounded-pill" :class="getLoteStatusClass(lote.status)">
                         {{ lote.status.replace('_', ' ') }}
                     </span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-ghost-secondary rounded-circle shadow-none p-0"
+                            style="width: 28px; height: 28px; line-height: 28px;"
+                            type="button" :id="'dropdownLoteMob' + lote.id" data-bs-toggle="dropdown" aria-expanded="false"
+                            @click.stop>
+                            <i class="ri-more-2-fill fs-16"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" :aria-labelledby="'dropdownLoteMob' + lote.id">
+                            <li>
+                                <a class="dropdown-item" href="#" @click.prevent.stop="baixarXml(lote.id)">
+                                    <i class="ri-file-code-line align-bottom me-2 text-muted"></i> Baixar XML
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
 
-                <div class="row align-items-center mt-3 mt-md-0" style="cursor: pointer;" @click="toggleCollapse(lote.id)">
+                <div class="row align-items-center mt-3 mt-md-0" style="cursor: pointer;"
+                    @click="toggleCollapse(lote.id)">
 
                     <!-- Convênio Icone e Nome -->
                     <div class="col-md-3 col-12 mb-3 mb-md-0 border-end-md pe-md-4 text-center text-md-start">
@@ -161,7 +194,8 @@
                             </div>
                             <div class="col-4">
                                 <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Glosado</p>
-                                <h6 class="text-danger fw-bold mb-0">{{ formatCurrency(calcularValorGlosado(lote)) }}</h6>
+                                <h6 class="text-danger fw-bold mb-0">{{ formatCurrency(calcularValorGlosado(lote)) }}
+                                </h6>
                             </div>
                             <div class="col-4">
                                 <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Pago</p>
@@ -183,21 +217,28 @@
                 <div v-show="isExpanded(lote.id)" class="mt-4 ms-md-4 border-top pt-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fs-13 fw-semibold text-muted text-uppercase mb-0">Guias Atreladas ao Lote</h6>
-                        <button v-if="lote.status === 'AGUARDANDO_ENVIO'" class="btn btn-sm btn-soft-success" @click.stop="abrirAddModal(lote)">
-                            <i class="ri-add-line align-bottom me-1"></i> Adicionar Guias
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button v-if="lote.status === 'ABERTA'" class="btn btn-sm btn-soft-success"
+                                @click.stop="abrirAddModal(lote)">
+                                <i class="ri-add-line align-bottom me-1"></i> Adicionar Guias
+                            </button>
+                            <button v-if="lote.status === 'ABERTA'" class="btn btn-sm btn-soft-warning"
+                                @click.stop="askFecharLote(lote.id)"
+                                :disabled="fechandoLote === lote.id">
+                                <i class="ri-lock-line align-bottom me-1"></i> Fechar Lote
+                            </button>
+                            <button v-else class="btn btn-sm btn-soft-info"
+                                @click.stop="askReabrirLote(lote.id)"
+                                :disabled="fechandoLote === lote.id">
+                                <i class="ri-lock-unlock-line align-bottom me-1"></i> Reabrir Lote
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="table-wrapper-choices">
-                        <SimpleTable
-                            :items="lote.guias || []"
-                            :columns="guiasLoteColumns"
-                            :hasActions="true"
-                            actionsLabel="Ação"
-                            variant="borderless"
-                            :compact="true"
-                            emptyTitle="Nenhuma guia atrelada a este lote."
-                        >
+                    <div class="table-wrapper-choices" :key="'table-' + lote.id + '-' + lote.status">
+                        <SimpleTable :items="lote.guias || []" :columns="guiasLoteColumns" :hasActions="true"
+                            actionsLabel="Ação" variant="borderless" :compact="true"
+                            emptyTitle="Nenhuma guia atrelada a este lote.">
                             <template #cell(id)="{ item }">
                                 <span class="fw-medium text-primary">#{{ item.id }}</span>
                             </template>
@@ -207,7 +248,8 @@
                                     class="text-primary fw-medium text-decoration-underline">
                                     {{ item.numero_guia_prestador || item.numero_guia_operadora || 'Ver Guia' }}
                                 </a>
-                                <span v-else class="text-primary fw-medium">{{ item.numero_guia_prestador || item.numero_guia_operadora || '-' }}</span>
+                                <span v-else class="text-primary fw-medium">{{ item.numero_guia_prestador ||
+                                    item.numero_guia_operadora || '-' }}</span>
                             </template>
                             <template #cell(tipo)="{ item }">
                                 {{ item.tipo || 'Guia de Consulta' }}
@@ -219,8 +261,9 @@
                                 {{ formatCurrency(item.valor_total) }}
                             </template>
                             <template #cell(glosa)="{ item }">
-                                <template v-if="lote.status === 'AGUARDANDO_ENVIO'">
-                                    <span v-if="item.valor_glosado > 0" class="text-danger fw-medium">{{ formatCurrency(item.valor_glosado) }}</span>
+                                <template v-if="lote.status === 'ABERTA'">
+                                    <span v-if="item.valor_glosado > 0" class="text-danger fw-medium">{{
+                                        formatCurrency(item.valor_glosado) }}</span>
                                     <span v-else class="text-muted">-</span>
                                 </template>
                                 <template v-else>
@@ -229,16 +272,17 @@
                                             style="min-width: 90px; max-width: 100px;" v-model="item.valor_glosado"
                                             @blur="atualizarValorGlosado(lote.id, item.id, item.valor_glosado)">
                                     </div>
-                                    <span v-else-if="item.valor_glosado > 0" class="text-danger fw-medium">{{ formatCurrency(item.valor_glosado) }}</span>
+                                    <span v-else-if="item.valor_glosado > 0" class="text-danger fw-medium">{{
+                                        formatCurrency(item.valor_glosado) }}</span>
                                     <span v-else class="text-muted">-</span>
                                 </template>
                             </template>
                             <template #cell(status)="{ item }">
-                                <span v-if="lote.status === 'AGUARDANDO_ENVIO'">
+                                <span v-if="lote.status === 'ABERTA'">
                                     {{ item.status ? item.status.replace(/_/g, ' ') : 'PENDENTE' }}
                                 </span>
-                                <select v-else :value="item.status" data-choices data-choices-search-false style="min-width: 150px;"
-                                    class="form-select form-select-sm"
+                                <select v-else :value="item.status" data-choices data-choices-search-false
+                                    style="min-width: 150px;" class="form-select form-select-sm"
                                     :disabled="updatingStatus[item.id]"
                                     @change="atualizarStatusGuia(lote.id, item.id, $event.detail ? $event.detail.value : $event.target.value)">
                                     <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
@@ -247,9 +291,9 @@
                                 </select>
                             </template>
                             <template #actions="{ item }">
-                                <button v-if="lote.status === 'AGUARDANDO_ENVIO'" class="btn btn-sm btn-soft-danger shadow-none"
-                                    @click.stop="askDeleteGuia(lote.id, item.id)"
-                                    :disabled="removendoGuia === item.id">
+                                <button v-if="lote.status === 'ABERTA'"
+                                    class="btn btn-sm btn-soft-danger shadow-none"
+                                    @click.stop="askDeleteGuia(lote.id, item.id)" :disabled="removendoGuia === item.id">
                                     <i class="ri-delete-bin-line"></i>
                                 </button>
                             </template>
@@ -416,6 +460,16 @@
             subTitle="Deseja realmente devolver esta guia para a equipe de Contas Médicas?"
             message="Esta guia será removida desta lista e voltará para a fila de validação."
             nameButton="Sim, devolver guia" buttonClass="btn-warning" @save="executarDevolverGuia" />
+
+        <ModalConfirm v-model="confirmFecharLoteModal" title="Fechar Lote"
+            subTitle="Deseja realmente fechar este lote?"
+            message="Ao fechar o lote, não será mais possível adicionar ou remover guias. Porém, você poderá alterar o status e valor da glosa das guias."
+            nameButton="Sim, fechar lote" buttonClass="btn-warning" @save="executarFecharLote" />
+
+        <ModalConfirm v-model="confirmReabrirLoteModal" title="Reabrir Lote"
+            subTitle="Deseja realmente reabrir este lote?"
+            message="Ao reabrir o lote, será possível adicionar e remover guias novamente. Porém, a edição de status e glosa das guias ficará bloqueada."
+            nameButton="Sim, reabrir lote" buttonClass="btn-info" @save="executarReabrirLote" />
 
     </Layout>
 </template>
@@ -628,7 +682,7 @@ const updatingStatus = ref({});
 function atualizarStatusGuia(loteId, guiaId, novoStatus) {
     const lote = props.faturamentos.find(l => l.id === loteId);
     const guia = lote?.guias?.find(g => g.id === guiaId);
-    
+
     // Evita loop infinito caso o evento dispare repetidamente com o mesmo valor
     if (guia && guia.status === novoStatus) return;
 
@@ -744,6 +798,48 @@ const executarDevolverGuia = async () => {
     }
 };
 
+// Fechar / Reabrir Lote Logic
+const fechandoLote = ref(null);
+const confirmFecharLoteModal = ref(false);
+const confirmReabrirLoteModal = ref(false);
+const loteIdParaFechar = ref(null);
+
+function askFecharLote(loteId) {
+    loteIdParaFechar.value = loteId;
+    confirmFecharLoteModal.value = true;
+}
+
+function askReabrirLote(loteId) {
+    loteIdParaFechar.value = loteId;
+    confirmReabrirLoteModal.value = true;
+}
+
+function executarFecharLote() {
+    if (!loteIdParaFechar.value) return;
+    fechandoLote.value = loteIdParaFechar.value;
+    router.patch(route('faturamentos.fechar', loteIdParaFechar.value), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            fechandoLote.value = null;
+            confirmFecharLoteModal.value = false;
+            loteIdParaFechar.value = null;
+        }
+    });
+}
+
+function executarReabrirLote() {
+    if (!loteIdParaFechar.value) return;
+    fechandoLote.value = loteIdParaFechar.value;
+    router.patch(route('faturamentos.fechar', loteIdParaFechar.value), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            fechandoLote.value = null;
+            confirmReabrirLoteModal.value = false;
+            loteIdParaFechar.value = null;
+        }
+    });
+}
+
 // Helpers
 function getBadgeClass(status) {
     const s = String(status || '').toUpperCase();
@@ -791,9 +887,8 @@ function getProgressTextClass(status) {
 }
 
 function getLoteStatusClass(status) {
-    if (status === 'ENVIADO') return 'bg-primary';
-    if (status === 'RECEBIDO') return 'bg-success';
-    if (status === 'AGUARDANDO_ENVIO') return 'bg-warning text-dark';
+    if (status === 'FECHADA') return 'bg-dark';
+    if (status === 'ABERTA') return 'bg-warning text-dark';
     return 'bg-secondary';
 }
 
