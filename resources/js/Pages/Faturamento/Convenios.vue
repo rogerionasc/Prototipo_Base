@@ -4,25 +4,98 @@
         <Head title="Lotes de Faturamento" />
         <PageHeader title="Lotes de Faturamento" pageTitle="Faturamento" />
 
-        <div class="row mb-4">
-            <div class="col-12 text-end">
-                <button class="btn btn-primary" @click="openCriarLoteModal">
-                    <i class="ri-add-line align-bottom me-1"></i> Criar Lote
-                </button>
+        <!-- Filtros -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body py-3">
+                <div class="row g-3 align-items-end">
+                    <!-- Buscar -->
+                    <div class="col-md-3 col-12">
+                        <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Buscar</label>
+                        <div class="search-box">
+                            <input type="text" class="form-control search" placeholder="Buscar por convênio, lote..."
+                                v-model="filtros.busca">
+                            <i class="ri-search-line search-icon"></i>
+                        </div>
+                    </div>
+
+                    <!-- Convênio -->
+                    <div class="col-md-2 col-12">
+                        <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Convênio</label>
+                        <select v-model="filtros.convenio" class="form-select form-select-sm" data-choices data-choices-search-true>
+                            <option value="">Todos</option>
+                            <option v-for="c in conveniosOptions" :key="c.value" :value="c.label">{{ c.label }}</option>
+                        </select>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="col-md-2 col-12">
+                        <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Status</label>
+                        <select v-model="filtros.status" class="form-select form-select-sm" data-choices data-choices-search-false>
+                            <option value="">Todos</option>
+                            <option value="AGUARDANDO_ENVIO">AGUARDANDO ENVIO</option>
+                            <option value="ENVIADO">ENVIADO</option>
+                            <option value="RECEBIDO">RECEBIDO</option>
+                            <option value="COM_GLOSA">COM GLOSA</option>
+                        </select>
+                    </div>
+
+                    <!-- Data Início -->
+                    <div class="col-md-2 col-6">
+                        <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Data Início</label>
+                        <flatPickr v-model="filtros.dataInicio" class="form-control"
+                            :config="flatpickrOptions" placeholder="Selecione..." />
+                    </div>
+
+                    <!-- Data Fim -->
+                    <div class="col-md-2 col-6">
+                        <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Data Fim</label>
+                        <flatPickr v-model="filtros.dataFim" class="form-control"
+                            :config="flatpickrOptions" placeholder="Selecione..." />
+                    </div>
+
+                    <!-- Botão Criar Lote -->
+                    <div class="col-md-auto col-12 text-end d-flex align-items-end">
+                        <button class="btn btn-primary" @click="openCriarLoteModal">
+                            <i class="ri-add-line align-bottom me-1"></i> Criar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Limpar filtros -->
+                <div class="mt-2 text-end" v-if="filtros.busca || filtros.convenio || filtros.status || filtros.dataInicio || filtros.dataFim">
+                    <button class="btn btn-sm btn-ghost-danger shadow-none" @click="limparFiltros">
+                        <i class="ri-close-line align-bottom me-1"></i> Limpar Filtros
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="card" v-if="faturamentos.length === 0">
+        <div class="card" v-if="faturamentosFiltrados.length === 0">
             <div class="card-body text-center p-5">
                 <h5 class="text-muted">Nenhum lote de faturamento encontrado.</h5>
-                <p class="text-muted mb-0">Clique em "Criar Lote" para começar.</p>
+                <p class="text-muted mb-0">Clique em "Criar" para começar.</p>
             </div>
         </div>
 
-        <div class="card ribbon-box border shadow-none mb-3" v-for="lote in faturamentos" :key="lote.id">
-            <div class="card-body pb-3">
+        <div class="card ribbon-box border shadow-none mb-3" v-for="lote in faturamentosFiltrados" :key="lote.id">
+            <div class="card-body pb-3 position-relative">
                 <div class="ribbon ribbon-primary ribbon-shape" style="z-index: 10;">Lote #{{ lote.id }}</div>
-                <div class="row align-items-center mt-3" style="cursor: pointer;" @click="toggleCollapse(lote.id)">
+                
+                <!-- Status no canto superior direito -->
+                <div class="position-absolute top-0 end-0 p-2 d-none d-md-block" style="z-index: 5;">
+                    <span class="badge px-3 py-1 fs-12 shadow-sm rounded-pill" :class="getLoteStatusClass(lote.status)">
+                        {{ lote.status.replace('_', ' ') }}
+                    </span>
+                </div>
+
+                <!-- Status visível em mobile (sem absolute) -->
+                <div class="d-md-none text-end mt-2 mb-2 me-2">
+                    <span class="badge px-3 py-1 fs-12 shadow-sm rounded-pill" :class="getLoteStatusClass(lote.status)">
+                        {{ lote.status.replace('_', ' ') }}
+                    </span>
+                </div>
+
+                <div class="row align-items-center mt-3 mt-md-0" style="cursor: pointer;" @click="toggleCollapse(lote.id)">
 
                     <!-- Convênio Icone e Nome -->
                     <div class="col-md-3 col-12 mb-3 mb-md-0 border-end-md pe-md-4 text-center text-md-start">
@@ -46,7 +119,7 @@
                     </div>
 
                     <!-- Barra de Progresso das Guias -->
-                    <div class="col-md-5 col-12 mb-3 mb-md-0 px-md-4">
+                    <div class="col-md-4 col-12 mb-3 mb-md-0 px-md-4">
                         <div class="d-flex justify-content-between align-items-end mb-2">
                             <span class="text-uppercase fw-semibold fs-11 text-muted">Progresso das Guias</span>
                             <span class="badge bg-info-subtle text-info fw-semibold px-2 py-1 fs-11">
@@ -80,13 +153,21 @@
                     </div>
 
                     <!-- Status e Total do Lote -->
-                    <div class="col-md-3 col-12 text-center border-start-md ps-md-4">
-                        <p class="text-muted text-uppercase fw-semibold fs-11 mb-1">Valor Total</p>
-                        <h4 class="text-success fw-bold mb-2">{{ formatCurrency(lote.valor_total) }}</h4>
-                        <span class="badge px-3 py-1 fs-12 shadow-sm rounded-pill"
-                            :class="getLoteStatusClass(lote.status)">
-                            {{ lote.status.replace('_', ' ') }}
-                        </span>
+                    <div class="col-md-4 col-12 text-center border-start-md ps-md-4">
+                        <div class="row g-2 mb-2">
+                            <div class="col-4">
+                                <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Total</p>
+                                <h6 class="text-primary fw-bold mb-0">{{ formatCurrency(lote.valor_total) }}</h6>
+                            </div>
+                            <div class="col-4">
+                                <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Glosado</p>
+                                <h6 class="text-danger fw-bold mb-0">{{ formatCurrency(calcularValorGlosado(lote)) }}</h6>
+                            </div>
+                            <div class="col-4">
+                                <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Pago</p>
+                                <h6 class="text-success fw-bold mb-0">{{ formatCurrency(calcularValorPago(lote)) }}</h6>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-md-1 col-12 text-center text-md-end mt-3 mt-md-0">
@@ -102,74 +183,77 @@
                 <div v-show="isExpanded(lote.id)" class="mt-4 ms-md-4 border-top pt-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fs-13 fw-semibold text-muted text-uppercase mb-0">Guias Atreladas ao Lote</h6>
-                        <button class="btn btn-sm btn-soft-success" @click.stop="abrirAddModal(lote)">
+                        <button v-if="lote.status === 'AGUARDANDO_ENVIO'" class="btn btn-sm btn-soft-success" @click.stop="abrirAddModal(lote)">
                             <i class="ri-add-line align-bottom me-1"></i> Adicionar Guias
                         </button>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-sm table-nowrap table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>ID Guia</th>
-                                    <th>Nº da Guia</th>
-                                    <th>Data</th>
-                                    <th>Paciente</th>
-                                    <th>Tipo</th>
-                                    <th>Senha/Aut.</th>
-                                    <th>Valor</th>
-                                    <th>Glosa</th>
-                                    <th>Status</th>
-                                    <th class="text-end">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-if="!lote.guias || lote.guias.length === 0">
-                                    <td colspan="8" class="text-center p-3 text-muted">Nenhuma guia atrelada a este
-                                        lote.</td>
-                                </tr>
-                                <tr v-for="guia in lote.guias" :key="guia.id">
-                                    <td><span class="fw-medium text-primary">#{{ guia.id }}</span></td>
-                                    <td>
-                                        <a v-if="guia.agendamento_id"
-                                            :href="route('guias.imprimirDaAgenda', guia.agendamento_id)" target="_blank"
-                                            class="text-primary fw-medium text-decoration-underline">
-                                            {{ guia.numero_guia_prestador || guia.numero_guia_operadora || 'Ver Guia' }}
-                                        </a>
-                                        <span v-else class="text-primary fw-medium">{{ guia.numero_guia_prestador ||
-                                            guia.numero_guia_operadora || '-' }}</span>
-                                    </td>
-                                    <td>{{ guia.data_atendimento }}</td>
-                                    <td>{{ guia.paciente_nome }}</td>
-                                    <td>{{ guia.tipo || 'Guia de Consulta' }}</td>
-                                    <td>{{ guia.senha || '-' }}</td>
-                                    <td>{{ formatCurrency(guia.valor_total) }}</td>
-                                    <td>
-                                        <div v-if="guia.status === 'GLOSADA'">
-                                            <input type="number" step="0.01" class="form-control form-control-sm"
-                                                style="min-width: 90px; max-width: 100px;" v-model="guia.valor_glosado"
-                                                @blur="atualizarValorGlosado(lote.id, guia.id, guia.valor_glosado)">
-                                        </div>
-                                        <span v-else-if="guia.valor_glosado > 0" class="text-danger fw-medium">{{
-                                            formatCurrency(guia.valor_glosado) }}</span>
-                                        <span v-else class="text-muted">-</span>
-                                    </td>
-                                    <td>
-                                        <Multiselect v-model="guia.status" :options="statusOptions" :canClear="false"
-                                            :searchable="false" :append-to-body="true" style="min-width: 150px;"
-                                            class="form-select-sm"
-                                            @change="atualizarStatusGuia(lote.id, guia.id, $event)" />
-                                    </td>
-                                    <td class="text-end">
-                                        <button class="btn btn-sm btn-soft-danger shadow-none"
-                                            @click.stop="askDeleteGuia(lote.id, guia.id)"
-                                            :disabled="removendoGuia === guia.id">
-                                            <i class="ri-delete-bin-line"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="table-wrapper-choices">
+                        <SimpleTable
+                            :items="lote.guias || []"
+                            :columns="guiasLoteColumns"
+                            :hasActions="true"
+                            actionsLabel="Ação"
+                            variant="borderless"
+                            :compact="true"
+                            emptyTitle="Nenhuma guia atrelada a este lote."
+                        >
+                            <template #cell(id)="{ item }">
+                                <span class="fw-medium text-primary">#{{ item.id }}</span>
+                            </template>
+                            <template #cell(numero)="{ item }">
+                                <a v-if="item.agendamento_id"
+                                    :href="route('guias.imprimirDaAgenda', item.agendamento_id)" target="_blank"
+                                    class="text-primary fw-medium text-decoration-underline">
+                                    {{ item.numero_guia_prestador || item.numero_guia_operadora || 'Ver Guia' }}
+                                </a>
+                                <span v-else class="text-primary fw-medium">{{ item.numero_guia_prestador || item.numero_guia_operadora || '-' }}</span>
+                            </template>
+                            <template #cell(tipo)="{ item }">
+                                {{ item.tipo || 'Guia de Consulta' }}
+                            </template>
+                            <template #cell(senha)="{ item }">
+                                {{ item.senha || '-' }}
+                            </template>
+                            <template #cell(valor_total)="{ item }">
+                                {{ formatCurrency(item.valor_total) }}
+                            </template>
+                            <template #cell(glosa)="{ item }">
+                                <template v-if="lote.status === 'AGUARDANDO_ENVIO'">
+                                    <span v-if="item.valor_glosado > 0" class="text-danger fw-medium">{{ formatCurrency(item.valor_glosado) }}</span>
+                                    <span v-else class="text-muted">-</span>
+                                </template>
+                                <template v-else>
+                                    <div v-if="item.status === 'GLOSADA'">
+                                        <input type="number" step="0.01" class="form-control form-control-sm"
+                                            style="min-width: 90px; max-width: 100px;" v-model="item.valor_glosado"
+                                            @blur="atualizarValorGlosado(lote.id, item.id, item.valor_glosado)">
+                                    </div>
+                                    <span v-else-if="item.valor_glosado > 0" class="text-danger fw-medium">{{ formatCurrency(item.valor_glosado) }}</span>
+                                    <span v-else class="text-muted">-</span>
+                                </template>
+                            </template>
+                            <template #cell(status)="{ item }">
+                                <span v-if="lote.status === 'AGUARDANDO_ENVIO'">
+                                    {{ item.status ? item.status.replace(/_/g, ' ') : 'PENDENTE' }}
+                                </span>
+                                <select v-else :value="item.status" data-choices data-choices-search-false style="min-width: 150px;"
+                                    class="form-select form-select-sm"
+                                    :disabled="updatingStatus[item.id]"
+                                    @change="atualizarStatusGuia(lote.id, item.id, $event.detail ? $event.detail.value : $event.target.value)">
+                                    <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
+                                        {{ opt.label }}
+                                    </option>
+                                </select>
+                            </template>
+                            <template #actions="{ item }">
+                                <button v-if="lote.status === 'AGUARDANDO_ENVIO'" class="btn btn-sm btn-soft-danger shadow-none"
+                                    @click.stop="askDeleteGuia(lote.id, item.id)"
+                                    :disabled="removendoGuia === item.id">
+                                    <i class="ri-delete-bin-line"></i>
+                                </button>
+                            </template>
+                        </SimpleTable>
                     </div>
                 </div>
 
@@ -344,13 +428,83 @@ import { ref, computed } from "vue";
 import Modal from "@/Components/Modal.vue";
 import ModalDelete from "@/Components/ModalDelete.vue";
 import ModalConfirm from "@/Components/ModalConfirm.vue";
+import SimpleTable from "@/Components/Tables/SimpleTable.vue";
 import Multiselect from '@vueform/multiselect';
 import "@vueform/multiselect/themes/default.css";
+import flatPickr from "vue-flatpickr-component";
+import "flatpickr/dist/flatpickr.min.css";
+import "flatpickr/dist/l10n/pt.js";
 import axios from "axios";
+
+const flatpickrOptions = { altInput: true, altInputClass: "form-control", altFormat: "d M, Y", dateFormat: "Y-m-d", locale: "pt", static: true };
+
+const guiasLoteColumns = [
+    { key: 'id', label: 'ID Guia' },
+    { key: 'numero', label: 'Nº da Guia' },
+    { key: 'data_atendimento', label: 'Data' },
+    { key: 'paciente_nome', label: 'Paciente' },
+    { key: 'tipo', label: 'Tipo' },
+    { key: 'senha', label: 'Senha/Aut.' },
+    { key: 'valor_total', label: 'Valor' },
+    { key: 'glosa', label: 'Glosa' },
+    { key: 'status', label: 'Status' }
+];
 
 const props = defineProps({
     faturamentos: { type: Array, default: () => [] },
     convenios_list: { type: Array, default: () => [] },
+});
+
+// Filtros
+const filtros = ref({
+    busca: '',
+    convenio: '',
+    status: '',
+    dataInicio: '',
+    dataFim: ''
+});
+
+function limparFiltros() {
+    filtros.value = { busca: '', convenio: '', status: '', dataInicio: '', dataFim: '' };
+}
+
+const faturamentosFiltrados = computed(() => {
+    let resultado = props.faturamentos;
+
+    // Filtro por busca
+    if (filtros.value.busca) {
+        const q = filtros.value.busca.toLowerCase();
+        resultado = resultado.filter(lote =>
+            (lote.convenio && lote.convenio.toLowerCase().includes(q)) ||
+            String(lote.id).includes(q)
+        );
+    }
+
+    // Filtro por convênio
+    if (filtros.value.convenio) {
+        resultado = resultado.filter(lote => lote.convenio === filtros.value.convenio);
+    }
+
+    // Filtro por status
+    if (filtros.value.status) {
+        if (filtros.value.status === 'COM_GLOSA') {
+            resultado = resultado.filter(lote => calcularValorGlosado(lote) > 0);
+        } else {
+            resultado = resultado.filter(lote => lote.status === filtros.value.status);
+        }
+    }
+
+    // Filtro por data início
+    if (filtros.value.dataInicio) {
+        resultado = resultado.filter(lote => lote.data_faturamento >= filtros.value.dataInicio);
+    }
+
+    // Filtro por data fim
+    if (filtros.value.dataFim) {
+        resultado = resultado.filter(lote => lote.data_faturamento <= filtros.value.dataFim);
+    }
+
+    return resultado;
 });
 
 function formatCurrency(n) {
@@ -469,9 +623,25 @@ const statusOptions = [
     { value: 'DEVOLVIDA', label: 'DEVOLVIDA' }
 ];
 
+const updatingStatus = ref({});
+
 function atualizarStatusGuia(loteId, guiaId, novoStatus) {
+    const lote = props.faturamentos.find(l => l.id === loteId);
+    const guia = lote?.guias?.find(g => g.id === guiaId);
+    
+    // Evita loop infinito caso o evento dispare repetidamente com o mesmo valor
+    if (guia && guia.status === novoStatus) return;
+
+    // Evita requisições concorrentes ou loops de re-inicialização do Choices.js
+    if (updatingStatus.value[guiaId]) return;
+
+    updatingStatus.value[guiaId] = true;
+
     router.patch(route('faturamentos.guias.updateStatus', { lote: loteId, guia: guiaId }), { status: novoStatus }, {
         preserveScroll: true,
+        onFinish: () => {
+            updatingStatus.value[guiaId] = false;
+        },
         onError: () => {
             window.dispatchEvent(new CustomEvent('flash:show', {
                 detail: { type: 'danger', message: 'Erro ao atualizar o status da guia.' }
@@ -626,4 +796,40 @@ function getLoteStatusClass(status) {
     if (status === 'AGUARDANDO_ENVIO') return 'bg-warning text-dark';
     return 'bg-secondary';
 }
+
+function calcularValorGlosado(lote) {
+    if (!lote || !lote.guias) return 0;
+    return lote.guias.reduce((sum, guia) => sum + (parseFloat(guia.valor_glosado) || 0), 0);
+}
+
+function calcularValorPago(lote) {
+    if (!lote || !lote.guias) return 0;
+    return lote.guias.reduce((sum, guia) => {
+        if (guia.status === 'PAGA') {
+            const glosa = parseFloat(guia.valor_glosado) || 0;
+            const total = parseFloat(guia.valor_total) || 0;
+            return sum + (total - glosa);
+        }
+        return sum;
+    }, 0);
+}
+
+function getBgColorLote(status) {
+    if (status === 'PAGA') return 'bg-success';
+    if (status === 'GLOSADA') return 'bg-danger';
+    return 'bg-secondary';
+}
 </script>
+
+<style scoped>
+/* Corrige o corte do dropdown Choices.js dentro de tabelas responsivas */
+:deep(.table-wrapper-choices .table-responsive) {
+    overflow: visible !important;
+}
+
+/* Corrige alinhamento do flatpickr static wrapper nos filtros */
+:deep(.flatpickr-wrapper) {
+    display: block !important;
+    width: 100%;
+}
+</style>

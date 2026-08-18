@@ -56,6 +56,9 @@ import { ref, watch, nextTick, computed } from 'vue';
 import Lottie from "@/Components/widgets/lottie.vue";
 import defaultAnimationData from "@/Components/widgets/gsqxdxog.json";
 
+// Declaração de eventos emitidos
+defineEmits(['update:modelValue', 'save']);
+
 // Definição das propriedades recebidas pelo componente
 const props = defineProps({
     // Controla a visibilidade do modal

@@ -12,7 +12,11 @@ class ContasMedicasController extends Controller
     public function validacaoGuias()
     {
         // 1. Fetch Guias where faturamento_id is null
-        $guias = Guia::with(['agendamento.paciente', 'agendamento.convenio'])
+        $guias = Guia::with([
+            'agendamento.paciente',
+            'agendamento.convenio',
+            'agendamento.agendaMedica.profissionalSaude'
+        ])
             ->whereNull('faturamento_id')
             ->orderBy('id', 'desc')
             ->get();
@@ -25,6 +29,8 @@ class ContasMedicasController extends Controller
                 'convenio_nome' => $guia->agendamento?->convenio?->descricao ?? 'Particular',
                 'numero_guia_operadora' => $guia->numero_guia_operadora,
                 'numero_guia_prestador' => $guia->numero_guia_prestador,
+                'tipo' => $guia->tipo ?? 'Guia de Consulta',
+                'medico_nome' => $guia->agendamento?->agendaMedica?->profissionalSaude?->nome ?? $guia->profissional_solicitante_nome,
                 'status' => $guia->status ?: 'CRIADA', // Default to CRIADA se null
                 'agendamento_id' => $guia->agendamento_id,
             ];

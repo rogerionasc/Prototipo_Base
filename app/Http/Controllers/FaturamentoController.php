@@ -254,9 +254,13 @@ class FaturamentoController extends Controller
 
         $guia = \App\Models\Guia::where('id', $guia_id)->where('faturamento_id', $lote_id)->firstOrFail();
         
-        $guia->update([
-            'status' => $data['status']
-        ]);
+        $updateData = ['status' => $data['status']];
+        
+        if ($data['status'] !== 'GLOSADA') {
+            $updateData['valor_glosado'] = 0;
+        }
+
+        $guia->update($updateData);
 
         return back()->with('success', 'Status da guia atualizado com sucesso!');
     }

@@ -8,42 +8,30 @@
             <div class="col-lg-12">
                 <div class="card" id="guiasList">
                     <div class="card-body">
-                        <!-- Nav tabs -->
-                        <ul class="nav nav-tabs nav-tabs-custom nav-success mb-3" role="tablist">
-                            <li class="nav-item">
-                                <a class="nav-link" :class="{ active: activeTab === 'pendentes' }"
-                                    @click.prevent="mudarAba('pendentes')" href="#">
-                                    <i class="ri-file-list-3-line me-1 align-bottom"></i> A Validar
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" :class="{ active: activeTab === 'encaminhadas' }"
-                                    @click.prevent="mudarAba('encaminhadas')" href="#">
-                                    <i class="ri-check-double-line me-1 align-bottom"></i> Prontas / Encaminhadas
-                                </a>
-                            </li>
-                        </ul>
-
-                        <TableGrid ref="tableGridRef" :columns="columns" :data="guiasFiltradas"
-                            :tableTitle="activeTab === 'pendentes' ? 'Guias a Validar' : 'Guias Prontas para Faturar'"
-                            :showStatus="false" :showCheckbox="activeTab === 'pendentes'" :showMultiDelete="false"
-                            :showImage="false" :search="true" :showAddButton="false"
-                            :searchPlaceholder="'Buscar guia, paciente ou convênio...'" @show="abrirGuia">
+                        <TableGrid ref="tableGridPendentesRef" :columns="columnsPendentes" :data="guiasPendentes"
+                            tableTitle="Guias a Validar" :showStatus="false" :showCheckbox="true"
+                            :showMultiDelete="false" :showImage="false" :search="true" :showAddButton="false"
+                            :searchPlaceholder="'Buscar guia, paciente ou convênio...'" 
+                            :actionsConfig="{ delete: false, edit: false, show: true }"
+                            :actionsLabels="{ show: 'Validar' }"
+                            :actionsButtonText="{ show: 'Validar' }"
+                            :actionsIcons="{ show: 'ri-edit-2-line' }"
+                            @show="abrirGuia">
                             <template #custom-actions="{ selectedRows }">
                                 <div class="d-flex align-items-center gap-2">
-                                    <button v-if="activeTab === 'pendentes' && selectedRows && selectedRows.length > 0"
-                                        class="btn btn-success" @click="encaminharSelecionadas" :disabled="processando">
+                                    <button v-if="selectedRows && selectedRows.length > 0" class="btn btn-success"
+                                        @click="encaminharSelecionadas" :disabled="processando">
                                         <i class="ri-send-plane-fill align-bottom me-1"></i> Encaminhar Selecionadas ({{
                                             selectedRows.length }})
                                     </button>
-                                    <select ref="selConvenio" class="form-select" v-model="filterConvenio"
-                                        style="width: 200px;">
+                                    <select ref="selConvenioPendentes" class="form-select"
+                                        v-model="filterConvenioPendentes" style="width: 200px;">
                                         <option value="">Todos os Convênios</option>
                                         <option v-for="c in conveniosDisponiveis" :key="c" :value="c">{{ c }}</option>
                                     </select>
-                                    <div v-show="activeTab === 'pendentes'">
-                                        <select ref="selStatus" class="form-select" v-model="filterStatus"
-                                            style="width: 200px;">
+                                    <div>
+                                        <select ref="selStatusPendentes" class="form-select"
+                                            v-model="filterStatusPendentes" style="width: 200px;">
                                             <option value="">Todos os Status</option>
                                             <option value="CRIADA">Criada</option>
                                             <option value="EM_ATENDIMENTO">Em Atendimento</option>
@@ -51,10 +39,10 @@
                                             <option value="VALIDADA">Validada</option>
                                         </select>
                                     </div>
-
                                 </div>
                             </template>
                         </TableGrid>
+
 
                     </div>
                 </div>
@@ -62,7 +50,7 @@
         </div>
 
         <GuiaSADTModal v-if="showGuiaSADTModal" v-model="showGuiaSADTModal" :agendamento-id="selectedAgendamentoForGuia"
-            :ignorar-bloqueios="true" :permitir-validacao-faturamento="activeTab === 'pendentes'" @saved="reloadPage" />
+            :ignorar-bloqueios="true" :permitir-validacao-faturamento="true" @saved="reloadPage" />
 
         <ModalConfirm v-model="confirmEncaminharModal" title="Confirmação"
             :subTitle="`Deseja encaminhar ${guiasParaEncaminhar.length} guia(s) selecionada(s) para o faturamento?`"
@@ -93,42 +81,32 @@ const page = usePage();
 
 const showGuiaSADTModal = ref(false);
 const selectedAgendamentoForGuia = ref(null);
-const activeTab = ref('pendentes');
 const processando = ref(false);
-const tableGridRef = ref(null);
-const selConvenio = ref(null);
-const selStatus = ref(null);
+const tableGridPendentesRef = ref(null);
+
+const selConvenioPendentes = ref(null);
+const selStatusPendentes = ref(null);
 
 const confirmEncaminharModal = ref(false);
 const guiasParaEncaminhar = ref([]);
 
-const filterConvenio = ref('');
-const filterStatus = ref('');
+const filterConvenioPendentes = ref('');
+const filterStatusPendentes = ref('');
 
 const conveniosDisponiveis = computed(() => {
     const convs = props.guias.map(g => g.convenio_nome).filter(Boolean);
     return [...new Set(convs)].sort();
 });
 
-function mudarAba(aba) {
-    activeTab.value = aba;
-}
+const guiasPendentes = computed(() => {
+    let result = props.guias.filter(g => String(g.status).toUpperCase() !== 'PRONTA_FATURAMENTO');
 
-const guiasFiltradas = computed(() => {
-    let result = props.guias;
-
-    if (activeTab.value === 'pendentes') {
-        result = result.filter(g => String(g.status).toUpperCase() !== 'PRONTA_FATURAMENTO');
-    } else {
-        result = result.filter(g => String(g.status).toUpperCase() === 'PRONTA_FATURAMENTO');
+    if (filterConvenioPendentes.value) {
+        result = result.filter(g => g.convenio_nome === filterConvenioPendentes.value);
     }
 
-    if (filterConvenio.value) {
-        result = result.filter(g => g.convenio_nome === filterConvenio.value);
-    }
-
-    if (activeTab.value === 'pendentes' && filterStatus.value) {
-        let statusCheck = filterStatus.value.toUpperCase();
+    if (filterStatusPendentes.value) {
+        let statusCheck = filterStatusPendentes.value.toUpperCase();
         if (statusCheck === 'CRIADA') {
             result = result.filter(g => !g.status || String(g.status).toUpperCase() === 'CRIADA');
         } else {
@@ -139,17 +117,17 @@ const guiasFiltradas = computed(() => {
     return result;
 });
 
+
 onMounted(() => {
-    // Configurar Choices manualmente usando um pequeno timeout para aguardar a renderização do TableGrid
     setTimeout(() => {
         nextTick(() => {
-            if (selConvenio.value) {
-                new Choices(selConvenio.value, { searchEnabled: false, itemSelectText: '' });
-                selConvenio.value.addEventListener('change', (e) => filterConvenio.value = e.target.value);
+            if (selConvenioPendentes.value) {
+                new Choices(selConvenioPendentes.value, { searchEnabled: false, itemSelectText: '' });
+                selConvenioPendentes.value.addEventListener('change', (e) => filterConvenioPendentes.value = e.target.value);
             }
-            if (selStatus.value) {
-                new Choices(selStatus.value, { searchEnabled: false, itemSelectText: '' });
-                selStatus.value.addEventListener('change', (e) => filterStatus.value = e.target.value);
+            if (selStatusPendentes.value) {
+                new Choices(selStatusPendentes.value, { searchEnabled: false, itemSelectText: '' });
+                selStatusPendentes.value.addEventListener('change', (e) => filterStatusPendentes.value = e.target.value);
             }
         });
     }, 500);
@@ -187,12 +165,13 @@ function formatStatusLabel(status) {
     return s.replace(/_/g, ' ');
 }
 
-const columns = [
-    { id: "id", name: "ID Guia", formatter: (cell) => html(`<b>#${cell}</b>`) },
-    { id: "data_solicitacao", name: "Data", formatter: (cell) => formatData(cell) },
+const columnsPendentes = [
+    { id: "id", name: "ID" },
+    { id: "numero_guia_prestador", name: "Numero da Guia", formatter: (cell) => cell || "-" },
+    { id: "convenio_nome", name: "Convenio" },
+    { id: "tipo", name: "Tipo", formatter: (cell) => cell || "-" },
     { id: "paciente_nome", name: "Paciente" },
-    { id: "convenio_nome", name: "Convênio" },
-    { id: "numero_guia_operadora", name: "Guia Operadora", formatter: (cell) => cell || "-" },
+    { id: "medico_nome", name: "Médico", formatter: (cell) => cell || "-" },
     {
         id: "status",
         name: "Status",
@@ -201,24 +180,9 @@ const columns = [
             const label = formatStatusLabel(cell);
             return html(`<span class="${cls} fs-12 px-2 py-1">${label}</span>`);
         }
-    },
-    {
-        name: "Ação",
-        formatter: (cell, row) => {
-            const idIndex = activeTab.value === 'pendentes' ? 1 : 0;
-            const idVal = row.cells[idIndex].data;
-            return html(`
-        <ul class="list-inline hstack gap-2 mb-0">
-          <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Validar / Editar">
-            <button type="button" class="btn btn-sm btn-soft-primary" data-action="show" data-id="${idVal}">
-              <i class="ri-edit-2-line"></i> Validar
-            </button>
-          </li>
-        </ul>
-      `);
-        }
     }
 ];
+
 
 function abrirGuia(id) {
     const guiaObj = props.guias.find(g => g.id == id);
@@ -233,9 +197,9 @@ function abrirGuia(id) {
 }
 
 function encaminharSelecionadas() {
-    if (!tableGridRef.value) return;
+    if (!tableGridPendentesRef.value) return;
 
-    const ids = tableGridRef.value.getSelectedRowIds();
+    const ids = tableGridPendentesRef.value.getSelectedRowIds();
 
     if (!ids || ids.length === 0) {
         window.dispatchEvent(new CustomEvent('flash:show', {
@@ -257,7 +221,7 @@ function executarEncaminharSelecionadas() {
         preserveScroll: true,
         onSuccess: () => {
             processando.value = false;
-            tableGridRef.value?.clearSelection();
+            tableGridPendentesRef.value?.clearSelection();
             guiasParaEncaminhar.value = [];
         },
         onError: () => {
