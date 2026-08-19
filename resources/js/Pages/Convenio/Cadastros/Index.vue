@@ -39,6 +39,7 @@ const columns = [
   { id: "descricao", name: "Descrição" },
   { id: "tipo", name: "Tipo" },
   { id: "ans", name: "ANS" },
+  { id: "dias_para_faturar", name: "Dias p/ Faturar" },
 ];
 
 const showModal = ref(false);
@@ -128,6 +129,7 @@ async function openModalEdit(id) {
     convenioFormRef.value.form.ans = c.ans ?? null;
     convenioFormRef.value.form.dias_recebimento = c.dias_recebimento ?? null;
     convenioFormRef.value.form.dias_retorno = c.dias_retorno ?? null;
+    convenioFormRef.value.form.dias_para_faturar = c.dias_para_faturar ?? 30;
     convenioFormRef.value.form.config_spsadt.visivel = Object.values(c.config_spsadt?.visivel || []);
     convenioFormRef.value.form.config_spsadt.obrigatorio = Object.values(c.config_spsadt?.obrigatorio || []);
     convenioFormRef.value.form.config_spsadt.bloqueado = Object.values(c.config_spsadt?.bloqueado || []);

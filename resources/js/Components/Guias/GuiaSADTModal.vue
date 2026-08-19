@@ -335,17 +335,18 @@
                   <th
                     v-if="isExibido('39_tabela_realizado') || isExibido('40_codigo_procedimento_realizado') || isExibido('41_descricao_realizado')">
                     39-Tab / 40/41-Procedimento</th>
-                  <th v-if="isExibido('42_quantidade_realizada')" style="width: 80px;">42-Qtd</th>
-                  <th v-if="isExibido('43_via_acesso')" style="width: 80px;">43-Via</th>
-                  <th v-if="isExibido('44_tecnica_utilizada')" style="width: 80px;">44-Téc</th>
-                  <th v-if="isExibido('45_fator_reducao_acrescimo')" style="width: 80px;">45-Fat</th>
-                  <th v-if="isExibido('46_valor_unitario')" style="width: 80px;">46-V.Unit</th>
-                  <th v-if="isExibido('47_valor_total')" style="width: 80px;">47-V.Tot</th>
+                  <th v-if="isExibido('42_quantidade_realizada')" style="width: 90px;">42-Qtd</th>
+                  <th v-if="isExibido('43_via_acesso')" style="width: 90px;">43-Via</th>
+                  <th v-if="isExibido('44_tecnica_utilizada')" style="width: 90px;">44-Téc</th>
+                  <th v-if="isExibido('45_fator_reducao_acrescimo')" style="width: 90px;">45-Fat</th>
+                  <th v-if="isExibido('46_valor_unitario')" style="width: 110px;">46-V.Unit</th>
+                  <th v-if="isExibido('47_valor_total')" style="width: 110px;">47-V.Tot</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(item, index) in form.procedimentos_realizados" :key="'real-' + index">
+                <tr v-for="(item, index) in form.procedimentos_realizados" :key="'real-' + index" 
+                    v-show="!item.id || item.data_realizacao || item.hora_inicial || item.tabela_procedimento_realizado || item.procedimento_realizado_codigo || item.procedimento_realizado_descricao">
                   <td v-if="isExibido('36_data_hora_execucao')">
                     <flatPickr
                       :modelValue="item.data_realizacao ? (item.hora_inicial ? item.data_realizacao + ' ' + item.hora_inicial : item.data_realizacao) : null"
@@ -371,7 +372,7 @@
                   <td v-if="isExibido('42_quantidade_realizada')">
                     <input v-model="item.quantidade_realizada" type="number"
                       class="form-control form-control-sm px-1 text-center"
-                      :disabled="isBloqueado('42_quantidade_realizada')" />
+                      :disabled="isBloqueado('42_quantidade_realizada')" @input="calcularTotalProcedimento(item)" />
                   </td>
                   <td v-if="isExibido('43_via_acesso')">
                     <input v-model="item.via_acesso" type="text" class="form-control form-control-sm px-1 text-center"
@@ -385,11 +386,11 @@
                   <td v-if="isExibido('45_fator_reducao_acrescimo')">
                     <input v-model="item.fator_reducao_acrescimo" type="text"
                       class="form-control form-control-sm px-1 text-center"
-                      :disabled="isBloqueado('45_fator_reducao_acrescimo')" />
+                      :disabled="isBloqueado('45_fator_reducao_acrescimo')" @input="calcularTotalProcedimento(item)" />
                   </td>
                   <td v-if="isExibido('46_valor_unitario')">
                     <input v-model="item.valor_unitario" type="number"
-                      class="form-control form-control-sm px-1 text-end" :disabled="isBloqueado('46_valor_unitario')" />
+                      class="form-control form-control-sm px-1 text-end" :disabled="isBloqueado('46_valor_unitario')" @input="calcularTotalProcedimento(item)" />
                   </td>
                   <td v-if="isExibido('47_valor_total')">
                     <input v-model="item.valor_total" type="number" class="form-control form-control-sm px-1 text-end"
@@ -427,7 +428,8 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(item, index) in form.profissionais_executantes" :key="'prof-' + index">
+                <tr v-for="(item, index) in form.profissionais_executantes" :key="'prof-' + index"
+                    v-show="!item.id || item.profissional_executante_codigo || item.profissional_executante_nome || item.numero_conselho_executante || item.cbo_executante">
                   <td v-if="isExibido('48_sequencial_referencia')">
                     <input v-model="item.sequencial_referencia" type="text" class="form-control form-control-sm"
                       :disabled="isBloqueado('48_sequencial_referencia')" />
@@ -612,6 +614,18 @@ export default {
     };
   },
   watch: {
+    'form.procedimentos_realizados': {
+      deep: true,
+      handler() {
+        this.calcularTotalGeral();
+      }
+    },
+    'form.total_procedimentos': 'calcularTotalGeral',
+    'form.total_taxas_alugueis': 'calcularTotalGeral',
+    'form.total_materiais': 'calcularTotalGeral',
+    'form.total_opme': 'calcularTotalGeral',
+    'form.total_medicamentos': 'calcularTotalGeral',
+    'form.total_gases_medicinais': 'calcularTotalGeral',
     modelValue: {
       immediate: true,
       handler(val) {
@@ -649,8 +663,39 @@ export default {
         const proc = this.procedimentos.find(p => String(p.codigo) === String(item.procedimento_realizado_codigo));
         if (proc) {
           item.procedimento_realizado_descricao = proc.descricao;
+          item.valor_unitario = proc.total || 0;
+          this.calcularTotalProcedimento(item);
         }
       }
+    },
+    calcularTotalProcedimento(item) {
+      if (!item) return;
+      const qtd = parseFloat(item.quantidade_realizada) || 0;
+      const vUnit = parseFloat(item.valor_unitario) || 0;
+      
+      let fatorStr = String(item.fator_reducao_acrescimo || '').trim().replace(',', '.');
+      let fator = fatorStr === '' ? 1 : (parseFloat(fatorStr) || 0);
+
+      item.valor_total = (qtd * vUnit * fator).toFixed(2);
+    },
+    calcularTotalGeral() {
+      if (!this.form) return;
+      let total = 0;
+      
+      if (Array.isArray(this.form.procedimentos_realizados)) {
+        this.form.procedimentos_realizados.forEach(p => {
+          total += parseFloat(p.valor_total) || 0;
+        });
+      }
+
+      total += parseFloat(this.form.total_procedimentos) || 0;
+      total += parseFloat(this.form.total_taxas_alugueis) || 0;
+      total += parseFloat(this.form.total_materiais) || 0;
+      total += parseFloat(this.form.total_opme) || 0;
+      total += parseFloat(this.form.total_medicamentos) || 0;
+      total += parseFloat(this.form.total_gases_medicinais) || 0;
+
+      this.form.valor_total_geral = total.toFixed(2);
     },
     addProcSol() {
       if (!this.form.procedimentos_solicitados) this.form.procedimentos_solicitados = [];

@@ -14,6 +14,7 @@ class Pagamento extends Model
     protected $fillable = [
         'nu_pagamento',
         'faturamento_id',
+        'agendamento_id',
         'caixa_id',
         'movimentacao_id',
         'valor',

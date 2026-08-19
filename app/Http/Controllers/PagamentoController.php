@@ -595,11 +595,16 @@ class PagamentoController extends Controller
             ]);
 
             if ($quitado) {
-                // Fetch the agendamento_id from faturamento
-                $agendamentoId = DB::table('faturamentos')->where('id', $fatId)->value('agendamento_id');
-                if ($agendamentoId) {
+                // Fetch the agendamento_ids from pagamentos linked to this faturamento
+                $agendamentoIds = DB::table('pagamentos')
+                    ->where('faturamento_id', $fatId)
+                    ->whereNotNull('agendamento_id')
+                    ->pluck('agendamento_id')
+                    ->toArray();
+
+                if (!empty($agendamentoIds)) {
                     $statusAguardando = \App\Models\StatusAgendamento::firstOrCreate(['descricao' => 'Aguardando Atendimento']);
-                    DB::table('agendamentos')->where('id', $agendamentoId)->update([
+                    DB::table('agendamentos')->whereIn('id', $agendamentoIds)->update([
                         'status_id' => $statusAguardando->id,
                         'updated_at' => now(),
                     ]);

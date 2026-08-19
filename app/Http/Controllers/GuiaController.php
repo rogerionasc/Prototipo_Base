@@ -99,6 +99,8 @@ class GuiaController extends Controller
                             'quantidade_realizada' => 1,
                             'data_realizacao' => $ag->data,
                             'hora_inicial' => $ag->hora,
+                            'valor_unitario' => $ag->tuss->total ?? 0,
+                            'valor_total' => $ag->tuss->total ?? 0,
                         ]);
                     }
                 }
@@ -214,6 +216,8 @@ class GuiaController extends Controller
                             'quantidade_realizada' => 1,
                             'data_realizacao' => $ag->data,
                             'hora_inicial' => $ag->hora,
+                            'valor_unitario' => $ag->tuss->total ?? 0,
+                            'valor_total' => $ag->tuss->total ?? 0,
                         ]);
                     }
                 }
@@ -224,7 +228,7 @@ class GuiaController extends Controller
         $especialidades = \App\Models\Especialidade::orderBy('nome')->get();
         $carateresAtendimento = \App\Models\CaraterAtendimento::all();
         $tabelasReferencia = \App\Models\TabelaReferencia::all();
-        $procedimentosTuss = \App\Models\Tuss::select('codigo', 'descricao')->orderBy('descricao')->get();
+        $procedimentosTuss = \App\Models\Tuss::select('codigo', 'descricao', 'total')->orderBy('descricao')->get();
         $tiposAtendimento = \App\Models\TipoAtendimento::orderBy('codigo')->get();
         $indicacoesAcidente = \App\Models\IndicacaoIncidencia::orderBy('codigo')->get();
         $tiposConsulta = \App\Models\TipoConsulta::orderBy('codigo')->get();
@@ -307,8 +311,6 @@ class GuiaController extends Controller
             $data['carater_atendimento'] = (string) (int) $data['carater_atendimento'];
         }
 
-        $guia->update($data);
-
         // Sync relationships
         if ($request->has('procedimentos_solicitados')) {
             $keepIds = [];
@@ -324,10 +326,20 @@ class GuiaController extends Controller
             $guia->procedimentosSolicitados()->whereNotIn('id', $keepIds)->delete();
         }
 
+        $totalProcedimentos = 0;
         if ($request->has('procedimentos_realizados')) {
             $keepIds = [];
             foreach ($request->input('procedimentos_realizados', []) as $proc) {
                 unset($proc['created_at'], $proc['updated_at']);
+                
+                $qtd = floatval($proc['quantidade_realizada'] ?? 0);
+                $vUnit = floatval($proc['valor_unitario'] ?? 0);
+                $fatorStr = trim(str_replace(',', '.', $proc['fator_reducao_acrescimo'] ?? ''));
+                $fator = $fatorStr === '' ? 1 : floatval($fatorStr);
+                
+                $proc['valor_total'] = round($qtd * $vUnit * $fator, 2);
+                $totalProcedimentos += $proc['valor_total'];
+
                 if (!empty($proc['id'])) {
                     $guia->procedimentosRealizados()->where('id', $proc['id'])->update($proc);
                     $keepIds[] = $proc['id'];
@@ -337,6 +349,15 @@ class GuiaController extends Controller
             }
             $guia->procedimentosRealizados()->whereNotIn('id', $keepIds)->delete();
         }
+
+        $data['total_procedimentos'] = $totalProcedimentos;
+        $data['valor_total_geral'] = 
+            $totalProcedimentos +
+            floatval($data['total_taxas_alugueis'] ?? 0) +
+            floatval($data['total_materiais'] ?? 0) +
+            floatval($data['total_opme'] ?? 0) +
+            floatval($data['total_medicamentos'] ?? 0) +
+            floatval($data['total_gases_medicinais'] ?? 0);
 
         if ($request->has('profissionais_executantes')) {
             $keepIds = [];
@@ -352,6 +373,8 @@ class GuiaController extends Controller
             $guia->profissionaisExecutantes()->whereNotIn('guia_profissional_executantes.id', $keepIds)->delete();
         }
         
+        $guia->update($data);
+
         return response()->json([
             'message' => 'Guia atualizada com sucesso',
             'guia' => $guia->load(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes'])

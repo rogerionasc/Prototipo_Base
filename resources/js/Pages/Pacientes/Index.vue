@@ -94,9 +94,9 @@
                     <div class="mt-2">
                         <SimpleTable variant="borderless" compact tableClass="table-sm align-middle"
                             :items="agendamentosPaciente"
-                            :columns="[{ key: 'nu_pagamento', label: 'Nº Pgto' }, { key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'convenio_nome', label: 'Convênio' }, { key: 'numero_autorizacao', label: 'Autorização' }, { key: 'status_autorizacao', label: 'St. Aut.' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }, { key: 'status_pagamento', label: 'Pagamento' }]"
-                            has-actions :searchable="true" searchPlaceholder="Buscar agendamento..."
-                            :searchFields="['procedimento', 'profissional', 'status', 'nu_pagamento', 'status_pagamento', 'convenio_nome', 'numero_autorizacao', 'status_autorizacao']"
+                            :columns="[{ key: 'nu_pagamento', label: 'Nº Pgto' }, { key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' }, { key: 'convenio_nome', label: 'Convênio' }, { key: 'autorizacao_id', label: 'Id Autorização' }, { key: 'status_autorizacao', label: 'St. Aut.' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'profissional', label: 'Profissional' }, { key: 'status', label: 'Status' }, { key: 'status_pagamento', label: 'Pagamento' }]"
+                            has-actions :searchable="true" pagination :perPage="5" searchPlaceholder="Buscar agendamento..."
+                            :searchFields="['procedimento', 'profissional', 'status', 'nu_pagamento', 'status_pagamento', 'convenio_nome', 'autorizacao_id', 'status_autorizacao']"
                             emptyTitle="Nenhum agendamento encontrado">
 
                             <template #cell(data)="{ item }">
@@ -112,6 +112,13 @@
                                     {{ item.numero_autorizacao || 'N/A' }}
                                 </span>
                                 <span v-else class="text-muted">—</span>
+                            </template>
+
+                            <template #cell(autorizacao_id)="{ item }">
+                                <span v-if="String(item.convenio_tipo || '').toUpperCase() !== 'PARTICULAR'">
+                                    {{ item.autorizacao_id ? '#' + item.autorizacao_id : 'N/A' }}
+                                </span>
+                                <span v-else class="text-muted">-</span>
                             </template>
 
                             <template #cell(status)="{ item }">

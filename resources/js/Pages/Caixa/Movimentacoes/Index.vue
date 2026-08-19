@@ -107,38 +107,42 @@
                       </div>
 
                       <div class="table-responsive flex-grow-1" style="overflow-y: auto;">
-                        <table class="table table-hover table-borderless align-middle mb-0" style="cursor: pointer;">
-                          <thead class="table-light text-muted sticky-top">
-                            <tr class="border-bottom border-light">
-                              <th scope="col" class="py-3">Nº</th>
-                              <th scope="col" class="py-3">Nº Pagamento</th>
-                              <th scope="col" class="py-3">Paciente</th>
-                              <th scope="col" class="py-3">Documento</th>
-                              <th scope="col" class="py-3">Emissão</th>
-                              <th scope="col" class="py-3 text-end">Valor</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr v-for="row in pagamentosFiltered" :key="row.faturamento_id"
-                              @click="selectedPendente = row"
-                              :class="{ 'table-primary border-primary': selectedPendente?.faturamento_id === row.faturamento_id, 'border-bottom border-bottom-dashed': selectedPendente?.faturamento_id !== row.faturamento_id }">
-                              <td>{{ row.pagamento_id || "—" }}</td>
-                              <td>{{ row.nu_pagamento || "—" }}</td>
-                              <td class="fw-medium text-dark">{{ row.paciente }}</td>
-                              <td class="text-muted">{{ row.paciente_documento || "—" }}</td>
-                              <td>{{ row.data_faturamento || "—" }}</td>
-                              <td class="text-end fw-semibold text-success">{{ formatCurrency(row.valor) }}</td>
-                            </tr>
-                            <tr v-if="!pagamentosFiltered || pagamentosFiltered.length === 0">
-                              <td colspan="6" class="text-center text-muted p-5">
-                                <i class="ri-inbox-line fs-1 mb-3 d-block text-light"></i>
-                                <h5 class="fw-medium">Nenhum pagamento na fila</h5>
-                                <p class="mb-0">Todos os atendimentos foram recebidos ou a data selecionada está vazia.
-                                </p>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
+                        <SimpleTable
+                            :items="pagamentosFiltered"
+                            :columns="[
+                              { key: 'pagamento_id', label: 'Nº' },
+                              { key: 'nu_pagamento', label: 'Nº Pagamento' },
+                              { key: 'paciente', label: 'Paciente' },
+                              { key: 'paciente_documento', label: 'Documento' },
+                              { key: 'data_faturamento', label: 'Emissão' },
+                              { key: 'valor', label: 'Valor', tdClass: 'text-end fw-semibold text-success', thClass: 'text-end' }
+                            ]"
+                            :rowClass="(row) => selectedPendente?.faturamento_id === row.faturamento_id ? 'table-primary border-primary' : 'border-bottom border-bottom-dashed'"
+                            @row-click="(row) => selectedPendente = row"
+                            emptyTitle="Nenhum pagamento na fila"
+                            emptyIcon="ri-inbox-line"
+                            tableClass="table-hover table-borderless align-middle mb-0"
+                            style="cursor: pointer;"
+                        >
+                          <template #cell(pagamento_id)="{ item }">
+                            {{ item.pagamento_id || "—" }}
+                          </template>
+                          <template #cell(nu_pagamento)="{ item }">
+                            {{ item.nu_pagamento || "—" }}
+                          </template>
+                          <template #cell(paciente)="{ item }">
+                            <span class="fw-medium text-dark">{{ item.paciente }}</span>
+                          </template>
+                          <template #cell(paciente_documento)="{ item }">
+                            <span class="text-muted">{{ item.paciente_documento || "—" }}</span>
+                          </template>
+                          <template #cell(data_faturamento)="{ item }">
+                            {{ item.data_faturamento || "—" }}
+                          </template>
+                          <template #cell(valor)="{ item }">
+                            {{ formatCurrency(item.valor) }}
+                          </template>
+                        </SimpleTable>
                       </div>
                     </div>
                   </div>

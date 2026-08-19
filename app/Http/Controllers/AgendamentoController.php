@@ -427,6 +427,45 @@ class AgendamentoController extends Controller
                             'total_taxas_alugueis' => null,
                             'total_materiais' => null,
                         ]);
+
+                        // Gerar registros complementares iniciais da guia
+                        if ($isConvenio && $procId) {
+                            $tussItem = \App\Models\Tuss::find($procId);
+                            if ($tussItem) {
+                                $masterGuia->procedimentosSolicitados()->firstOrCreate(
+                                    ['procedimento_solicitado_codigo' => $tussItem->codigo],
+                                    [
+                                        'tabela_procedimento_solicitado' => '22',
+                                        'procedimento_solicitado_descricao' => $tussItem->descricao,
+                                        'quantidade_solicitada' => 1,
+                                        'quantidade_autorizada' => $requerAutorizacao ? 0 : 1,
+                                    ]
+                                );
+
+                                $procRealizado = $masterGuia->procedimentosRealizados()->create([
+                                    'tabela_procedimento_realizado' => null,
+                                    'procedimento_realizado_codigo' => null,
+                                    'procedimento_realizado_descricao' => null,
+                                    'quantidade_realizada' => null,
+                                    'valor_unitario' => null,
+                                    'valor_total' => null,
+                                    'data_realizacao' => null,
+                                    'hora_inicial' => null,
+                                ]);
+
+                                $procRealizado->profissionaisExecutantes()->create([
+                                    'sequencial_referencia' => null,
+                                    'grau_participacao' => null,
+                                    'profissional_executante_codigo' => null,
+                                    'profissional_executante_nome' => null,
+                                    'conselho_executante' => null,
+                                    'numero_conselho_executante' => null,
+                                    'uf_conselho_executante' => null,
+                                    'cbo_executante' => null,
+                                    'data_realizacao_serie' => null,
+                                ]);
+                            }
+                        }
                     }
 
                     // Se não for master mas precisarmos de uma guia, garantimos que tenha a master
@@ -447,6 +486,45 @@ class AgendamentoController extends Controller
                             'usuario_id' => Auth::id() ?? 1,
                             'usuario_id_validou' => null,
                         ]);
+
+                        // Gerar registros complementares para os procedimentos adicionais
+                        if (!$item['is_master'] && $isConvenio && $procId) {
+                            $tussItem = \App\Models\Tuss::find($procId);
+                            if ($tussItem) {
+                                $masterGuia->procedimentosSolicitados()->firstOrCreate(
+                                    ['procedimento_solicitado_codigo' => $tussItem->codigo],
+                                    [
+                                        'tabela_procedimento_solicitado' => '22',
+                                        'procedimento_solicitado_descricao' => $tussItem->descricao,
+                                        'quantidade_solicitada' => 1,
+                                        'quantidade_autorizada' => $requerAutorizacao ? 0 : 1,
+                                    ]
+                                );
+
+                                $procRealizado = $masterGuia->procedimentosRealizados()->create([
+                                    'tabela_procedimento_realizado' => null,
+                                    'procedimento_realizado_codigo' => null,
+                                    'procedimento_realizado_descricao' => null,
+                                    'quantidade_realizada' => null,
+                                    'valor_unitario' => null,
+                                    'valor_total' => null,
+                                    'data_realizacao' => null,
+                                    'hora_inicial' => null,
+                                ]);
+
+                                $procRealizado->profissionaisExecutantes()->create([
+                                    'sequencial_referencia' => null,
+                                    'grau_participacao' => null,
+                                    'profissional_executante_codigo' => null,
+                                    'profissional_executante_nome' => null,
+                                    'conselho_executante' => null,
+                                    'numero_conselho_executante' => null,
+                                    'uf_conselho_executante' => null,
+                                    'cbo_executante' => null,
+                                    'data_realizacao_serie' => null,
+                                ]);
+                            }
+                        }
                     }
                 }
 
@@ -479,6 +557,7 @@ class AgendamentoController extends Controller
 
                     Pagamento::create([
                         'faturamento_id'  => $fatId,
+                        'agendamento_id'  => $agendamento->id,
                         'caixa_id'        => null,
                         'movimentacao_id' => null,
                         'valor'           => (float)$valorItem,
@@ -966,6 +1045,7 @@ class AgendamentoController extends Controller
                 DB::raw('CASE WHEN at.status = "ATENDIDO" THEN "ATENDIDO" ELSE COALESCE(s.descricao, "") END AS status'),
                 'pag.nu_pagamento',
                 DB::raw('COALESCE(pag.status, "N/A") AS status_pagamento'),
+                'aut.id as autorizacao_id',
                 'aut.numero_autorizacao',
                 'aut.status as status_autorizacao',
                 'conv.tipo as convenio_tipo'
@@ -1015,6 +1095,7 @@ class AgendamentoController extends Controller
                 'pessoa_id' => $ag->pessoa_id,
                 'is_virtual' => false,
                 'numero_autorizacao' => $ag->numero_autorizacao,
+                'autorizacao_id' => $ag->autorizacao_id,
                 'status_autorizacao' => $ag->status_autorizacao,
                 'convenio_tipo' => $ag->convenio_tipo,
             ];

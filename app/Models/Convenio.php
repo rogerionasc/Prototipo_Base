@@ -21,6 +21,7 @@ class Convenio extends Model
         'ans',
         'dias_recebimento',
         'dias_retorno',
+        'dias_para_faturar',
         'config_spsadt',
     ];
 

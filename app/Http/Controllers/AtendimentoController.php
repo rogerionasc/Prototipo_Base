@@ -189,10 +189,137 @@ class AtendimentoController extends Controller
                 ->update(['status_id' => $statusConcluido->id]);
         }
 
-        // Atualizar status da Guia para ATENDIDA se existir
+        // Atualizar status da Guia para ATENDIDA se existir e persistir procedimentos
+        $guia = null;
+        $agendamento = null;
+        
         if ($atendimento->guia_id) {
-            \App\Models\Guia::where('id', $atendimento->guia_id)
-                ->update(['status' => 'ATENDIDA']);
+            $guia = \App\Models\Guia::find($atendimento->guia_id);
+            $agendamento = \App\Models\Agendamento::with('tuss')->find($atendimento->agendamento_id);
+        } else if ($atendimento->agendamento_id) {
+            $agendamento = \App\Models\Agendamento::with('tuss')->find($atendimento->agendamento_id);
+            if ($agendamento) {
+                $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+                $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
+                $guia = \App\Models\Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+                if ($guia) {
+                    $atendimento->update(['guia_id' => $guia->id]);
+                }
+            }
+        }
+
+        if ($guia) {
+            $guia->update(['status' => 'ATENDIDA']);
+            
+            if ($agendamento) {
+                $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+                $allAgendamentos = \App\Models\Agendamento::where('id', $origemId)
+                                            ->orWhere('agendamento_origem_id', $origemId)
+                                            ->with('tuss')
+                                            ->get();
+                
+                $totalProcedimentos = $guia->total_procedimentos ?? 0;
+                $changed = false;
+
+                foreach ($allAgendamentos as $ag) {
+                    if ($ag->tuss) {
+                        $procRealizado = $guia->procedimentosRealizados()->where('procedimento_realizado_codigo', $ag->tuss->codigo)->first();
+                        
+                        // Se não encontrou pelo código, procura o primeiro esqueleto vazio
+                        if (!$procRealizado) {
+                            $procRealizado = $guia->procedimentosRealizados()->whereNull('procedimento_realizado_codigo')->first();
+                        }
+                        
+                        $vUnit = floatval($ag->tuss->total ?? 0);
+                        $procValorTotal = round(1 * $vUnit * 1, 2);
+
+                        if (!$procRealizado) {
+                            $procRealizado = $guia->procedimentosRealizados()->create([
+                                'tabela_procedimento_realizado' => '22',
+                                'procedimento_realizado_codigo' => $ag->tuss->codigo,
+                                'procedimento_realizado_descricao' => $ag->tuss->descricao,
+                                'quantidade_realizada' => 1,
+                                'data_realizacao' => $ag->data,
+                                'hora_inicial' => $ag->hora,
+                                'valor_unitario' => $vUnit,
+                                'valor_total' => $procValorTotal,
+                            ]);
+                            $totalProcedimentos += $procValorTotal;
+                            $changed = true;
+                        } else {
+                            if (!$procRealizado->valor_total) {
+                                $procRealizado->update([
+                                    'tabela_procedimento_realizado' => '22',
+                                    'procedimento_realizado_codigo' => $ag->tuss->codigo,
+                                    'procedimento_realizado_descricao' => $ag->tuss->descricao,
+                                    'quantidade_realizada' => 1,
+                                    'data_realizacao' => $ag->data,
+                                    'hora_inicial' => $ag->hora,
+                                    'valor_unitario' => $vUnit,
+                                    'valor_total' => $procValorTotal,
+                                ]);
+                                $totalProcedimentos += $procValorTotal;
+                                $changed = true;
+                            }
+                        }
+
+                        // Adicionar profissional executante
+                        $atendimentoMedico = \App\Models\Atendimento::where('agendamento_id', $ag->id)->with(['medico.conselho', 'medico.especialidades'])->first();
+                        if ($atendimentoMedico && $atendimentoMedico->medico) {
+                            $profissional = $atendimentoMedico->medico;
+                            $cpf = $profissional->cpf ?? '00000000000';
+                            
+                            $profExecutante = $procRealizado->profissionaisExecutantes()->first();
+                            if ($profExecutante && !$profExecutante->profissional_executante_codigo) {
+                                // Atualiza o esqueleto vazio criado no agendamento
+                                $profExecutante->update([
+                                    'sequencial_referencia' => 1,
+                                    'grau_participacao' => '01',
+                                    'profissional_executante_codigo' => $cpf,
+                                    'profissional_executante_nome' => $profissional->nome ?? 'Profissional',
+                                    'conselho_executante' => $profissional->conselho?->codigo ?? 'CR',
+                                    'numero_conselho_executante' => $profissional->numero_conselho ?? '000000',
+                                    'uf_conselho_executante' => $profissional->uf_conselho ?? 'SP',
+                                    'cbo_executante' => $profissional->especialidades?->first()?->codigo ?? '2251',
+                                    'data_realizacao_serie' => $atendimentoMedico->hora_inicio ? \Carbon\Carbon::parse($atendimentoMedico->hora_inicio)->format('Y-m-d') : $ag->data,
+                                ]);
+                            } else {
+                                $existeProf = $procRealizado->profissionaisExecutantes()->where('profissional_executante_codigo', $cpf)->exists();
+                                
+                                if (!$existeProf) {
+                                    $count = $procRealizado->profissionaisExecutantes()->count();
+                                    $procRealizado->profissionaisExecutantes()->create([
+                                        'sequencial_referencia' => $count + 1,
+                                        'grau_participacao' => '01',
+                                        'profissional_executante_codigo' => $cpf,
+                                        'profissional_executante_nome' => $profissional->nome ?? 'Profissional',
+                                        'conselho_executante' => $profissional->conselho?->codigo ?? 'CR',
+                                        'numero_conselho_executante' => $profissional->numero_conselho ?? '000000',
+                                        'uf_conselho_executante' => $profissional->uf_conselho ?? 'SP',
+                                        'cbo_executante' => $profissional->especialidades?->first()?->codigo ?? '2251',
+                                        'data_realizacao_serie' => $atendimentoMedico->hora_inicio ? \Carbon\Carbon::parse($atendimentoMedico->hora_inicio)->format('Y-m-d') : $ag->data,
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if ($changed) {
+                    $valorTotalGeral = 
+                        $totalProcedimentos +
+                        floatval($guia->total_taxas_alugueis ?? 0) +
+                        floatval($guia->total_materiais ?? 0) +
+                        floatval($guia->total_opme ?? 0) +
+                        floatval($guia->total_medicamentos ?? 0) +
+                        floatval($guia->total_gases_medicinais ?? 0);
+
+                    $guia->update([
+                        'total_procedimentos' => $totalProcedimentos,
+                        'valor_total_geral' => $valorTotalGeral,
+                    ]);
+                }
+            }
         }
 
         return redirect()->route('atendimentos.index')->with('success', 'Atendimento finalizado com sucesso.');

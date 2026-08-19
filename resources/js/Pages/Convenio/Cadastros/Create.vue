@@ -61,6 +61,12 @@
             <input v-model.number="form.dias_retorno" type="number" class="form-control" id="diasRet"
               placeholder="Ex.: 7" />
           </div>
+
+          <div class="col-md-2">
+            <label for="diasFaturar" class="form-label">Dias p/ Faturar</label>
+            <input v-model.number="form.dias_para_faturar" type="number" class="form-control" id="diasFaturar"
+              placeholder="Ex.: 30" />
+          </div>
         </div>
       </BTab>
 
@@ -454,6 +460,7 @@ const form = useForm({
   ans: null,
   dias_recebimento: null,
   dias_retorno: null,
+  dias_para_faturar: 30,
   _method: null,
 });
 

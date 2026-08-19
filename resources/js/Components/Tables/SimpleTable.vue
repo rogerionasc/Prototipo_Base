@@ -17,12 +17,15 @@ const props = defineProps({
     tableClass: { type: String, default: 'table-borderless' },
     hasActions: { type: Boolean, default: false },
     actions: { type: Array, default: () => [] },
-    actionsLabel: { type: String, default: 'Ações' }
+    actionsLabel: { type: String, default: 'Ações' },
+    pagination: { type: Boolean, default: false },
+    perPage: { type: Number, default: 10 }
 });
 
-const emit = defineEmits(['action']);
+const emit = defineEmits(['action', 'row-click']);
 
 const searchQuery = ref('');
+const currentPage = ref(1);
 
 const filteredItems = computed(() => {
     if (!props.searchable || !searchQuery.value || props.searchFields.length === 0) {
@@ -33,12 +36,29 @@ const filteredItems = computed(() => {
     
     return props.items.filter(item => {
         return props.searchFields.some(field => {
-            // Suporte para campos aninhados como 'paciente.nome'
             const value = field.split('.').reduce((o, i) => (o ? o[i] : null), item);
             return value && String(value).toLowerCase().includes(query);
         });
     });
 });
+
+const paginatedItems = computed(() => {
+    if (!props.pagination) return filteredItems.value;
+    const start = (currentPage.value - 1) * props.perPage;
+    return filteredItems.value.slice(start, start + props.perPage);
+});
+
+const totalPages = computed(() => Math.ceil(filteredItems.value.length / props.perPage));
+
+import { watch } from 'vue';
+
+watch(searchQuery, () => {
+    currentPage.value = 1;
+});
+
+watch(() => props.items, () => {
+    currentPage.value = 1;
+}, { deep: true });
 
 const slots = useSlots();
 </script>
@@ -76,8 +96,8 @@ const slots = useSlots();
                         </tr>
                     </thead>
                     <tbody>
-                        <slot name="body" :items="filteredItems" :columns="columns">
-                            <tr v-for="(item, index) in filteredItems" :key="item.id || index" :class="rowClass(item)">
+                        <slot name="body" :items="paginatedItems" :columns="columns">
+                            <tr v-for="(item, index) in paginatedItems" :key="item.id || index" :class="rowClass(item)" @click="$emit('row-click', item)">
                                 <td v-for="(col, colIndex) in columns" :key="colIndex" :class="col.tdClass || ''">
                                     <slot :name="'cell(' + col.key + ')'" :item="item" :index="index">
                                         {{ item[col.key] }}
@@ -115,6 +135,21 @@ const slots = useSlots();
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div v-if="pagination && totalPages > 1" class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top px-3 pb-3">
+                <span class="text-muted small">Mostrando {{ (currentPage - 1) * perPage + 1 }} a {{ Math.min(currentPage * perPage, filteredItems.length) }} de {{ filteredItems.length }} registros</span>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                        <button class="page-link" @click="currentPage--" :disabled="currentPage === 1">Anterior</button>
+                    </li>
+                    <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
+                        <button class="page-link" @click="currentPage = page">{{ page }}</button>
+                    </li>
+                    <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                        <button class="page-link" @click="currentPage++" :disabled="currentPage === totalPages">Próxima</button>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>

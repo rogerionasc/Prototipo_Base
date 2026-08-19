@@ -24,6 +24,11 @@ class RecepcaoFilaController extends Controller
             'atendimentos' // Para checar se já virou atendimento
         ])
         ->where('data', $hoje)
+        ->where(function($q) {
+            $q->whereHas('status', function($sub) {
+                $sub->where('descricao', 'not like', '%cancel%');
+            })->orWhereNull('status_id');
+        })
         ->where(function($q) use ($hoje) {
             $q->whereExists(function ($query) {
                 $query->select(DB::raw(1))

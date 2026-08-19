@@ -30,6 +30,7 @@ class ConvenioController extends Controller
             'ans' => ['nullable', 'integer'],
             'dias_recebimento' => ['nullable', 'integer'],
             'dias_retorno' => ['nullable', 'integer'],
+            'dias_para_faturar' => ['nullable', 'integer'],
             'config_spsadt' => ['nullable', 'array'],
         ];
     }
@@ -37,7 +38,7 @@ class ConvenioController extends Controller
     public function index()
     {
         $convenios = Convenio::with(['medicos:id,nome,conselho_id,numero_conselho,uf_conselho', 'medicos.conselho', 'medicos.especialidades:id,nome', 'medicoTuss:id'])
-            ->select('id', 'descricao', 'logo_path', 'tuss_tabela', 'tipo', 'empresa_id', 'ans', 'dias_recebimento', 'dias_retorno', 'config_spsadt')
+            ->select('id', 'descricao', 'logo_path', 'tuss_tabela', 'tipo', 'empresa_id', 'ans', 'dias_recebimento', 'dias_retorno', 'dias_para_faturar', 'config_spsadt')
             ->get();
         $contas = Conta::select('id', 'nome')->orderBy('nome')->get();
         $profissionaisSaude = Pessoa::with(['especialidades:id,nome', 'conselho'])->select('id', 'nome', 'conselho_id', 'numero_conselho', 'uf_conselho')->orderBy('nome')->get();
