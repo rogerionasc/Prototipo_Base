@@ -21,7 +21,8 @@ class RecepcaoFilaController extends Controller
             'procedimento',
             'tuss',
             'status',
-            'atendimentos' // Para checar se já virou atendimento
+            'atendimentos', // Para checar se já virou atendimento
+            'sessaoTratamento'
         ])
         ->where('data', $hoje)
         ->where(function($q) {
@@ -40,7 +41,10 @@ class RecepcaoFilaController extends Controller
                 $query->select(DB::raw(1))
                       ->from('autorizacoes')
                       ->join('guias', 'guias.id', '=', 'autorizacoes.guia_id')
-                      ->whereColumn('guias.agendamento_id', 'agendamentos.id')
+                      ->where(function($q) {
+                          $q->whereColumn('guias.agendamento_id', 'agendamentos.id')
+                            ->orWhereColumn('guias.agendamento_id', 'agendamentos.agendamento_origem_id');
+                      })
                       ->where('autorizacoes.status', 'AUTORIZADA')
                       ->where(function ($q) use ($hoje) {
                           $q->whereNull('autorizacoes.validade')
@@ -70,6 +74,21 @@ class RecepcaoFilaController extends Controller
                 default          => 6
             };
 
+            $baseProcNome = $ag->procedimento 
+                              ? $ag->procedimento->nome 
+                              : ($ag->tuss ? $ag->tuss->descricao : 'N/A');
+            $sessN = $ag->sessaoTratamento ? $ag->sessaoTratamento->numero_sessao : null;
+            $sessT = $ag->procedimento ? $ag->procedimento->quantidade_sessoes : ($ag->tuss ? $ag->tuss->quantidade_sessoes : null);
+
+            $procNome = $baseProcNome;
+            if ($sessN !== null) {
+                if ($sessT !== null && $sessT > 0) {
+                    $procNome .= " (Sessão {$sessN}/{$sessT})";
+                } else {
+                    $procNome .= " (Sessão {$sessN})";
+                }
+            }
+
             return [
                 'id' => $ag->id,
                 'hora' => date('H:i', strtotime($ag->hora)),
@@ -81,9 +100,7 @@ class RecepcaoFilaController extends Controller
                 'super_prioridade' => $idade >= 80,
                 'prioridade_idade' => $idade >= 60 && $idade < 80,
                 'emergencia' => $emergencia,
-                'procedimento' => $ag->procedimento 
-                                  ? $ag->procedimento->nome 
-                                  : ($ag->tuss ? $ag->tuss->descricao : 'N/A'),
+                'procedimento' => $procNome,
                 'medico' => $ag->agendaMedica && $ag->agendaMedica->profissionalSaude 
                             ? $ag->agendaMedica->profissionalSaude->nome 
                             : 'N/A',
@@ -143,7 +160,10 @@ class RecepcaoFilaController extends Controller
             $defaultCategoria = \App\Models\CategoriaProcedimento::firstOrCreate(['nome' => 'Geral']);
             $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : $defaultCategoria->id;
 
-            $autorizacao = \App\Models\Autorizacao::whereHas('guia', function($q) use ($agendamento) { $q->where('agendamento_id', $agendamento->id); })->latest()->first();
+            $autorizacao = \App\Models\Autorizacao::whereHas('guia', function($q) use ($agendamento) { 
+                $q->where('agendamento_id', $agendamento->id)
+                  ->orWhere('agendamento_id', $agendamento->agendamento_origem_id); 
+            })->latest()->first();
 
             Atendimento::create([
                 'paciente_id'               => $agendamento->paciente_id,
@@ -191,7 +211,10 @@ class RecepcaoFilaController extends Controller
             $defaultCategoria = \App\Models\CategoriaProcedimento::firstOrCreate(['nome' => 'Geral']);
             $catId = $agendamento->procedimento ? $agendamento->procedimento->categoria_id : $defaultCategoria->id;
 
-            $autorizacao = \App\Models\Autorizacao::whereHas('guia', function($q) use ($agendamento) { $q->where('agendamento_id', $agendamento->id); })->latest()->first();
+            $autorizacao = \App\Models\Autorizacao::whereHas('guia', function($q) use ($agendamento) { 
+                $q->where('agendamento_id', $agendamento->id)
+                  ->orWhere('agendamento_id', $agendamento->agendamento_origem_id); 
+            })->latest()->first();
 
             $atendimento = Atendimento::create([
                 'paciente_id' => $agendamento->paciente_id,

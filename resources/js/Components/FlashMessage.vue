@@ -6,7 +6,7 @@
       :class="alertClasses"
       class="alert alert-dismissible alert-label-icon rounded-label fade show material-shadow position-fixed top-0 end-0 m-4 z-50"
       role="alert"
-      style="z-index: 9999"
+      style="z-index: 99999 !important;"
     >
       <i :class="iconClass + ' label-icon'"></i>
       <strong class="me-1">{{ alertTitle }}</strong> {{ currentMessage }}

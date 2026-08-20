@@ -592,7 +592,7 @@ const finalizarAtendimento = () => {
                                 <div class="row">
                                     <div class="col-md-4">
                                         <p class="text-muted mb-1">Procedimento:</p>
-                                        <h6 class="fs-14 mb-0">{{ atendimento?.procedimento?.nome || atendimento?.tuss?.descricao || 'N/A' }}</h6>
+                                        <h6 class="fs-14 mb-0">{{ atendimento?.procedimento_nome || atendimento?.procedimento?.nome || atendimento?.tuss?.descricao || 'N/A' }}</h6>
                                     </div>
                                     <div class="col-md-4">
                                         <p class="text-muted mb-1">Médico Responsável:</p>
@@ -748,8 +748,8 @@ const finalizarAtendimento = () => {
                                                                     </div>
                                                                     <div>
                                                                         <span class="fw-semibold text-dark fs-14">Atendimento em {{ formatDate(hist.aberto_em) }}</span>
-                                                                        <span v-if="hist.atendimento?.procedimento?.nome || hist.atendimento?.tuss?.descricao" class="badge bg-info-subtle text-info ms-2 fs-11">
-                                                                            {{ hist.atendimento?.procedimento?.nome || hist.atendimento?.tuss?.descricao }}
+                                                                        <span v-if="hist.atendimento?.procedimento_nome" class="badge bg-info-subtle text-info ms-2 fs-11">
+                                                                            {{ hist.atendimento?.procedimento_nome }}
                                                                         </span>
                                                                     </div>
                                                                 </div>

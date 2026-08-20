@@ -164,11 +164,19 @@ class AgendamentoController extends Controller
                 ->first();
 
             if (!$pacienteConvenio || !$pacienteConvenio->validade_carteira) {
-                return redirect()->back()->with('error', 'A carteira do convênio não possui uma data de validade informada.');
+                return response()->json([
+                    'errors' => [
+                        'validade_carteira' => ['A carteira do convênio não possui uma data de validade informada.']
+                    ]
+                ], 422);
             }
 
             if (\Carbon\Carbon::parse($pacienteConvenio->validade_carteira)->startOfDay()->lt(\Carbon\Carbon::parse($data['data'])->startOfDay())) {
-                return redirect()->back()->with('error', 'A carteira do convênio está com a validade expirada para a data deste agendamento.');
+                return response()->json([
+                    'errors' => [
+                        'validade_carteira' => ['A carteira do convênio está com a validade expirada para a data deste agendamento.']
+                    ]
+                ], 422);
             }
         }
 
@@ -294,6 +302,7 @@ class AgendamentoController extends Controller
 
             $masterId = null;
             $agendamentosInseridos = [];
+            $sessoesLocalCount = [];
 
             foreach ($itemsToCreate as $item) {
                 $procId = (int)$item['procedimento_id'];
@@ -311,16 +320,13 @@ class AgendamentoController extends Controller
 
                 $sessaoId = null;
                 if ($proc && (bool)$proc->eh_tratamento) {
-                    $lastNumQuery = DB::table('sessoes_tratamento')->where('paciente_id', $pacId);
-
-                    if ($isConvenio) {
-                        $lastNumQuery->where('tuss_id', $procId);
+                    if (!isset($sessoesLocalCount[$procId])) {
+                        $sessoesLocalCount[$procId] = 1;
                     } else {
-                        $lastNumQuery->where('procedimento_id', $procId);
+                        $sessoesLocalCount[$procId]++;
                     }
+                    $nextNum = $sessoesLocalCount[$procId];
 
-                    $lastNum = $lastNumQuery->max('numero_sessao');
-                    $nextNum = (int)($lastNum ?? 0) + 1;
                     $sessaoId = DB::table('sessoes_tratamento')->insertGetId([
                         'procedimento_id' => $isConvenio ? null : $procId,
                         'tuss_id' => $isConvenio ? $procId : null,
@@ -427,20 +433,75 @@ class AgendamentoController extends Controller
                             'total_taxas_alugueis' => null,
                             'total_materiais' => null,
                         ]);
+                    }
 
-                        // Gerar registros complementares iniciais da guia
+                    $procSolicitado = null;
+
+                    if ($item['is_master']) {
                         if ($isConvenio && $procId) {
                             $tussItem = \App\Models\Tuss::find($procId);
                             if ($tussItem) {
-                                $masterGuia->procedimentosSolicitados()->firstOrCreate(
-                                    ['procedimento_solicitado_codigo' => $tussItem->codigo],
-                                    [
-                                        'tabela_procedimento_solicitado' => '22',
-                                        'procedimento_solicitado_descricao' => $tussItem->descricao,
-                                        'quantidade_solicitada' => 1,
-                                        'quantidade_autorizada' => $requerAutorizacao ? 0 : 1,
-                                    ]
-                                );
+                                $descSuffix = "";
+                                if (isset($proc) && $proc && (bool)$proc->eh_tratamento && isset($nextNum)) {
+                                    $qtd = (int)($proc->quantidade_sessoes ?? 0);
+                                    $qtdStr = $qtd > 0 ? $qtd : '?';
+                                    $descSuffix = " (Sessão {$nextNum}/{$qtdStr})";
+                                }
+
+                                $procSolicitado = $masterGuia->procedimentosSolicitados()->create([
+                                    'procedimento_solicitado_codigo' => $tussItem->codigo,
+                                    'tabela_procedimento_solicitado' => '22',
+                                    'procedimento_solicitado_descricao' => $tussItem->descricao . $descSuffix,
+                                    'quantidade_solicitada' => 1,
+                                    'quantidade_autorizada' => $requerAutorizacao ? 0 : 1,
+                                ]);
+
+                                $procRealizado = $masterGuia->procedimentosRealizados()->create([
+                                    'tabela_procedimento_realizado' => null,
+                                    'procedimento_realizado_codigo' => null,
+                                    'procedimento_realizado_descricao' => null,
+                                    'quantidade_realizada' => null,
+                                    'valor_unitario' => null,
+                                    'valor_total' => null,
+                                    'data_realizacao' => null,
+                                    'hora_inicial' => null,
+                                ]);
+
+                                $procRealizado->profissionaisExecutantes()->create([
+                                    'sequencial_referencia' => null,
+                                    'grau_participacao' => null,
+                                    'profissional_executante_codigo' => null,
+                                    'profissional_executante_nome' => null,
+                                    'conselho_executante' => null,
+                                    'numero_conselho_executante' => null,
+                                    'uf_conselho_executante' => null,
+                                    'cbo_executante' => null,
+                                    'data_realizacao_serie' => null,
+                                ]);
+                            }
+                        }
+                    } else {
+                        // Se não for master mas precisarmos de uma guia, garantimos que tenha a master
+                        $guiaIdParaAutorizacao = isset($masterGuia) ? $masterGuia->id : null;
+                        
+                        // Gerar registros complementares para os procedimentos adicionais ANTES de criar a autorização
+                        if ($isConvenio && $procId && $guiaIdParaAutorizacao) {
+                            $tussItem = \App\Models\Tuss::find($procId);
+                            if ($tussItem) {
+                                $descSuffix = "";
+                                if (isset($proc) && $proc && (bool)$proc->eh_tratamento && isset($nextNum)) {
+                                    $qtd = (int)($proc->quantidade_sessoes ?? 0);
+                                    $qtdStr = $qtd > 0 ? $qtd : '?';
+                                    $descSuffix = " (Sessão {$nextNum}/{$qtdStr})";
+                                }
+
+                                $procSolicitado = $masterGuia->procedimentosSolicitados()->create([
+                                    'procedimento_solicitado_codigo' => $tussItem->codigo,
+                                    'tabela_procedimento_solicitado' => '22',
+                                    'procedimento_solicitado_descricao' => $tussItem->descricao . $descSuffix,
+                                    'quantidade_solicitada' => 1,
+                                    'quantidade_autorizada' => $requerAutorizacao ? 0 : 1,
+                                ]);
 
                                 $procRealizado = $masterGuia->procedimentosRealizados()->create([
                                     'tabela_procedimento_realizado' => null,
@@ -468,13 +529,13 @@ class AgendamentoController extends Controller
                         }
                     }
 
-                    // Se não for master mas precisarmos de uma guia, garantimos que tenha a master
                     $guiaIdParaAutorizacao = isset($masterGuia) ? $masterGuia->id : null;
 
                     if ($guiaIdParaAutorizacao) {
                         $aut = Autorizacao::create([
                             'convenio_id' => $convenioId,
                             'guia_id' => $guiaIdParaAutorizacao,
+                            'procedimento_solicitado_id' => $procSolicitado ? $procSolicitado->id : null,
                             'tuss_id' => $isConvenio ? $procId : null,
                             'valor' => $valorItem,
                             'numero_autorizacao' => $data['numero_autorizacao'] ?? null,
@@ -486,45 +547,6 @@ class AgendamentoController extends Controller
                             'usuario_id' => Auth::id() ?? 1,
                             'usuario_id_validou' => null,
                         ]);
-
-                        // Gerar registros complementares para os procedimentos adicionais
-                        if (!$item['is_master'] && $isConvenio && $procId) {
-                            $tussItem = \App\Models\Tuss::find($procId);
-                            if ($tussItem) {
-                                $masterGuia->procedimentosSolicitados()->firstOrCreate(
-                                    ['procedimento_solicitado_codigo' => $tussItem->codigo],
-                                    [
-                                        'tabela_procedimento_solicitado' => '22',
-                                        'procedimento_solicitado_descricao' => $tussItem->descricao,
-                                        'quantidade_solicitada' => 1,
-                                        'quantidade_autorizada' => $requerAutorizacao ? 0 : 1,
-                                    ]
-                                );
-
-                                $procRealizado = $masterGuia->procedimentosRealizados()->create([
-                                    'tabela_procedimento_realizado' => null,
-                                    'procedimento_realizado_codigo' => null,
-                                    'procedimento_realizado_descricao' => null,
-                                    'quantidade_realizada' => null,
-                                    'valor_unitario' => null,
-                                    'valor_total' => null,
-                                    'data_realizacao' => null,
-                                    'hora_inicial' => null,
-                                ]);
-
-                                $procRealizado->profissionaisExecutantes()->create([
-                                    'sequencial_referencia' => null,
-                                    'grau_participacao' => null,
-                                    'profissional_executante_codigo' => null,
-                                    'profissional_executante_nome' => null,
-                                    'conselho_executante' => null,
-                                    'numero_conselho_executante' => null,
-                                    'uf_conselho_executante' => null,
-                                    'cbo_executante' => null,
-                                    'data_realizacao_serie' => null,
-                                ]);
-                            }
-                        }
                     }
                 }
 
@@ -613,7 +635,16 @@ class AgendamentoController extends Controller
                 DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
                 DB::raw('COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes, NULL) AS sessao_total'),
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
-                DB::raw("COALESCE(pr.nome, t.descricao, '') AS procedimento"),
+                DB::raw("CONCAT(
+                    COALESCE(pr.nome, t.descricao, ''),
+                    IF(st.numero_sessao IS NOT NULL,
+                        IF(COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes) IS NOT NULL,
+                            CONCAT(' (Sessão ', st.numero_sessao, '/', COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes), ')'),
+                            CONCAT(' (Sessão ', st.numero_sessao, ')')
+                        ),
+                        ''
+                    )
+                ) AS procedimento"),
                 DB::raw("COALESCE(s.descricao,'') AS status"),
                 'prof.id AS pessoa_id',
                 'prof.nome AS medico',
@@ -1035,12 +1066,13 @@ class AgendamentoController extends Controller
                 'a.id',
                 'a.data',
                 'a.hora',
+                'a.created_at',
                 'a.procedimento_id',
                 'a.tuss_id',
                 DB::raw('COALESCE(at.convenio_id, a.convenio_id) AS convenio_id'),
                 DB::raw('COALESCE(conv.descricao, conv.tipo, "Particular") AS convenio_nome'),
                 'am.pessoa_id',
-                DB::raw('COALESCE(CONCAT(pr.nome, CASE WHEN st.numero_sessao IS NOT NULL AND pr.quantidade_sessoes IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, "/", pr.quantidade_sessoes, ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END), t.descricao, "") AS procedimento_nome'),
+                DB::raw('CONCAT(COALESCE(pr.nome, t.descricao, ""), CASE WHEN st.numero_sessao IS NOT NULL AND COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes) IS NOT NULL AND COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes) > 0 THEN CONCAT(" (Sessão ", st.numero_sessao, "/", COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes), ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END) AS procedimento_nome'),
                 DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),
                 DB::raw('CASE WHEN at.status = "ATENDIDO" THEN "ATENDIDO" ELSE COALESCE(s.descricao, "") END AS status'),
                 'pag.nu_pagamento',
@@ -1050,12 +1082,9 @@ class AgendamentoController extends Controller
                 'aut.status as status_autorizacao',
                 'conv.tipo as convenio_tipo'
             )
-            ->orderByRaw("CASE WHEN LOWER(COALESCE(s.descricao, '')) LIKE '%atendido%' OR LOWER(COALESCE(s.descricao, '')) LIKE '%cancelado%' THEN 1 ELSE 0 END ASC")
-            ->orderByRaw("CASE WHEN LOWER(COALESCE(s.descricao, '')) LIKE '%atendido%' OR LOWER(COALESCE(s.descricao, '')) LIKE '%cancelado%' THEN a.data END DESC")
-            ->orderByRaw("CASE WHEN a.data IS NULL THEN 0 ELSE 1 END ASC")
-            ->orderBy('a.data', 'asc')
-            ->orderBy('st.numero_sessao', 'asc')
-            ->orderBy('a.hora', 'asc')
+            ->orderBy('a.data', 'desc')
+            ->orderBy('a.hora', 'desc')
+            ->orderBy('st.numero_sessao', 'desc')
             ->get();
 
         $convenioParticularId = DB::table('convenios')

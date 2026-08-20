@@ -100,13 +100,10 @@
             <h6 class="fs-14 mb-0 fw-medium text-dark">{{ selectedAutorizacao.carteira || '-' }}</h6>
           </div>
           <div class="col-md-4 mb-3">
-            <p class="text-muted mb-1 fs-12">Procedimento TUSS</p>
-            <h6 class="fs-14 mb-0 fw-medium text-dark">
-              <span v-if="selectedAutorizacao.tuss">
-                {{ selectedAutorizacao.tuss.codigo }} - {{ selectedAutorizacao.tuss.descricao }}
-              </span>
-              <span v-else>Não informado</span>
-            </h6>
+              <p class="text-muted mb-1 fs-12">Procedimento</p>
+              <h6 class="fs-14 mb-0 fw-medium text-dark">
+                <span>{{ selectedAutorizacao.procedimento_nome || 'Não informado' }}</span>
+              </h6>
           </div>
           <div class="col-md-4 mb-3">
             <p class="text-muted mb-1 fs-12">Valor da Coparticipação</p>
@@ -192,7 +189,7 @@ const columns = [
   { id: "convenio_id", name: "Convênio", formatter: (cell) => props.convenios.find(c => c.id == cell)?.descricao || cell || "" },
   { id: "guia", name: "Paciente", formatter: (cell) => cell?.agendamento?.paciente?.nome || "-" },
   { id: "medico", name: "Médico" },
-  { id: "tuss", name: "Procedimento", formatter: (cell) => cell ? `${cell.codigo} - ${cell.descricao}` : "-" },
+  { id: "procedimento_nome", name: "Procedimento", formatter: (cell) => cell || "-" },
   { id: "numero_autorizacao", name: "Nº Autorização" },
   { 
     id: "status", 

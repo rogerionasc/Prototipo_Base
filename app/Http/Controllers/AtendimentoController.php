@@ -12,7 +12,7 @@ class AtendimentoController extends Controller
     {
         $hoje = \Carbon\Carbon::today()->format('Y-m-d');
 
-        $query = Atendimento::with(['paciente.comorbidades', 'medico', 'procedimento', 'tuss', 'agendamento'])
+        $query = Atendimento::with(['paciente.comorbidades', 'medico', 'procedimento', 'tuss', 'agendamento.sessaoTratamento'])
             ->whereDate('data_atendimento', $hoje);
 
         if (auth()->check() && auth()->id() !== 1 && auth()->user()->pessoa_id) {
@@ -32,9 +32,27 @@ class AtendimentoController extends Controller
                 $atendimento->prioridade_idade = $idade >= 60 && $idade < 80;
                 $atendimento->idade_paciente = $idade;
                 
-                $atendimento->procedimento_nome = $atendimento->procedimento 
+                $baseProcNome = $atendimento->procedimento 
                     ? $atendimento->procedimento->nome 
                     : ($atendimento->tuss ? $atendimento->tuss->descricao : 'N/A');
+                
+                $sessN = $atendimento->agendamento && $atendimento->agendamento->sessaoTratamento 
+                            ? $atendimento->agendamento->sessaoTratamento->numero_sessao 
+                            : null;
+                $sessT = $atendimento->procedimento 
+                            ? $atendimento->procedimento->quantidade_sessoes 
+                            : ($atendimento->tuss ? $atendimento->tuss->quantidade_sessoes : null);
+
+                $procNome = $baseProcNome;
+                if ($sessN !== null) {
+                    if ($sessT !== null && $sessT > 0) {
+                        $procNome .= " (Sessão {$sessN}/{$sessT})";
+                    } else {
+                        $procNome .= " (Sessão {$sessN})";
+                    }
+                }
+                
+                $atendimento->procedimento_nome = $procNome;
                 
                 return $atendimento;
             });

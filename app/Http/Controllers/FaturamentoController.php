@@ -432,8 +432,9 @@ class FaturamentoController extends Controller
         }
 
         $agendamentos = DB::table('agendamentos as a')
-            ->join('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
-            ->join('guias as g', 'g.id', '=', 'at.guia_id')
+            ->leftJoin('pagamentos as pag', 'pag.agendamento_id', '=', 'a.id')
+            ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
+            ->leftJoin('guias as g', 'g.id', '=', 'at.guia_id')
             ->leftJoin('pacientes as p', 'p.id', '=', 'a.paciente_id')
             ->leftJoin('procedimentos as pr', 'pr.id', '=', 'a.procedimento_id')
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
@@ -449,8 +450,12 @@ class FaturamentoController extends Controller
                 'doc.nome as medico_nome',
                 'st.descricao as status_nome'
             )
-            ->where('g.faturamento_id', $id)
+            ->where(function($q) use ($id) {
+                $q->where('pag.faturamento_id', $id)
+                  ->orWhere('g.faturamento_id', $id);
+            })
             ->whereNull('a.deleted_at')
+            ->distinct()
             ->get();
 
         return response()->json([

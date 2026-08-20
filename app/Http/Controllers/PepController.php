@@ -90,19 +90,67 @@ class PepController extends Controller
 
         // Carrega o histórico de PEPs do paciente (incluindo o atual caso já esteja finalizado/encerrado)
         $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'atendimento.procedimento', 'atendimento.tuss', 'atendimento.agendamento.sessaoTratamento', 'diagnosticos.profissional', 'diagnosticos.cid'])
-            ->where('paciente_id', $paciente->id)
-            ->where(function($q) use ($pep) {
-                if ($pep->status === 'Aberto') {
-                    $q->where('id', '!=', $pep->id);
+        ->where('paciente_id', $paciente->id)
+        ->where(function($q) use ($pep) {
+            if ($pep->status === 'Aberto') {
+                $q->where('id', '!=', $pep->id);
+            }
+        })
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function($pepHist) {
+            if ($pepHist->atendimento) {
+                $baseProcNome = $pepHist->atendimento->procedimento 
+                    ? $pepHist->atendimento->procedimento->nome 
+                    : ($pepHist->atendimento->tuss ? $pepHist->atendimento->tuss->descricao : 'N/A');
+                
+                $sessN = $pepHist->atendimento->agendamento && $pepHist->atendimento->agendamento->sessaoTratamento 
+                            ? $pepHist->atendimento->agendamento->sessaoTratamento->numero_sessao 
+                            : null;
+                $sessT = $pepHist->atendimento->procedimento 
+                            ? $pepHist->atendimento->procedimento->quantidade_sessoes 
+                            : ($pepHist->atendimento->tuss ? $pepHist->atendimento->tuss->quantidade_sessoes : null);
+
+                $procNome = $baseProcNome;
+                if ($sessN !== null) {
+                    if ($sessT !== null && $sessT > 0) {
+                        $procNome .= " (Sessão {$sessN}/{$sessT})";
+                    } else {
+                        $procNome .= " (Sessão {$sessN})";
+                    }
                 }
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
+                
+                $pepHist->atendimento->procedimento_nome = $procNome;
+            }
+            return $pepHist;
+        });
 
         // Verifica se o médico possui algum atendimento em andamento
         $hasAtendimentoEmAndamento = Atendimento::where('medico_id', $user->pessoa_id)
             ->where('status', 'EM ATENDIMENTO')
             ->exists();
+
+        $baseProcNome = $atendimento->procedimento 
+            ? $atendimento->procedimento->nome 
+            : ($atendimento->tuss ? $atendimento->tuss->descricao : 'N/A');
+        
+        $sessN = $atendimento->agendamento && $atendimento->agendamento->sessaoTratamento 
+                    ? $atendimento->agendamento->sessaoTratamento->numero_sessao 
+                    : null;
+        $sessT = $atendimento->procedimento 
+                    ? $atendimento->procedimento->quantidade_sessoes 
+                    : ($atendimento->tuss ? $atendimento->tuss->quantidade_sessoes : null);
+
+        $procNome = $baseProcNome;
+        if ($sessN !== null) {
+            if ($sessT !== null && $sessT > 0) {
+                $procNome .= " (Sessão {$sessN}/{$sessT})";
+            } else {
+                $procNome .= " (Sessão {$sessN})";
+            }
+        }
+        
+        $atendimento->procedimento_nome = $procNome;
 
         return Inertia::render('Consultorio/Pep/Show', [
             'atendimento' => $atendimento,

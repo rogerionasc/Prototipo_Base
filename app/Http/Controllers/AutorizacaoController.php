@@ -13,9 +13,43 @@ class AutorizacaoController extends Controller
 {
     public function index()
     {
-        $autorizacoes = Autorizacao::with(['convenio', 'tuss', 'guia', 'guia.agendamento.paciente', 'guia.agendamento.agendaMedica.profissionalSaude', 'guia.agendamento.status', 'usuario', 'usuarioValidou'])
+        $autorizacoes = Autorizacao::with(['convenio', 'tuss', 'guia', 'guia.agendamento.paciente', 'guia.agendamento.agendaMedica.profissionalSaude', 'guia.agendamento.status', 'guia.agendamento.sessaoTratamento', 'guia.agendamento.procedimento', 'usuario', 'usuarioValidou', 'procedimentoSolicitado'])
             ->orderBy('id', 'desc')
-            ->get();
+            ->get()
+            ->map(function($aut) {
+                if ($aut->procedimentoSolicitado && $aut->procedimentoSolicitado->procedimento_solicitado_descricao) {
+                    $aut->procedimento_nome = $aut->procedimentoSolicitado->procedimento_solicitado_descricao;
+                    return $aut;
+                }
+
+                $baseProcNome = '';
+                if ($aut->tuss) {
+                    $baseProcNome = $aut->tuss->codigo . ' - ' . $aut->tuss->descricao;
+                } elseif ($aut->guia && $aut->guia->agendamento && $aut->guia->agendamento->procedimento) {
+                    $baseProcNome = $aut->guia->agendamento->procedimento->nome;
+                } else {
+                    $baseProcNome = 'N/A';
+                }
+
+                $sessN = $aut->guia && $aut->guia->agendamento && $aut->guia->agendamento->sessaoTratamento 
+                            ? $aut->guia->agendamento->sessaoTratamento->numero_sessao 
+                            : null;
+                $sessT = $aut->guia && $aut->guia->agendamento && $aut->guia->agendamento->procedimento 
+                            ? $aut->guia->agendamento->procedimento->quantidade_sessoes 
+                            : ($aut->tuss ? $aut->tuss->quantidade_sessoes : null);
+
+                $procNome = $baseProcNome;
+                if ($sessN !== null) {
+                    if ($sessT !== null && $sessT > 0) {
+                        $procNome .= " (Sessão {$sessN}/{$sessT})";
+                    } else {
+                        $procNome .= " (Sessão {$sessN})";
+                    }
+                }
+                
+                $aut->procedimento_nome = $procNome;
+                return $aut;
+            });
         $convenios = Convenio::select('id', 'descricao')->get();
         $usuarios = User::with('pessoa:id,nome')->select('id', 'pessoa_id')->get();
 

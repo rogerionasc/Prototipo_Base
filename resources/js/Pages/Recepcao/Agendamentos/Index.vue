@@ -668,14 +668,6 @@ export default {
                         const st = String(ev?.extendedProps?.status || "").trim();
                         const medNome = String(ev?.extendedProps?.profissional_nome || "").trim();
 
-                        const sessN = ev?.extendedProps?.sessao_numero ?? null;
-                        const sessT = ev?.extendedProps?.sessao_total ?? null;
-                        if (sessN != null && sessT != null) {
-                            procNome += ` (Sessão ${sessN}/${sessT})`;
-                        } else if (sessN != null) {
-                            procNome += ` (Sessão ${sessN})`;
-                        }
-
                         const convTipo = String(ev?.extendedProps?.convenio_tipo || "Particular").trim();
 
                         return {
@@ -685,7 +677,8 @@ export default {
                             procedimento: procNome || "Procedimento",
                             hora: this.formatHora24(ev?.start) || "--:--",
                             status: st || "Agendado",
-                            medico: medNome || "Profissional"
+                            medico: medNome || "Profissional",
+                            criado_em: ev?.extendedProps?.createdEm || "--/-- --:--"
                         };
                     });
             } catch (e) {
@@ -1618,7 +1611,7 @@ export default {
                 } catch (_) { }
 
                 // Sem profissional selecionado: nada a verificar
-                if (pid == null || pid === "") return;
+                if (pid == null || pid === "" || pid === "null" || pid === "Selecione") return;
 
                 // Sem data selecionada no formulário: não é possível validar
                 if (!dataForm) return;
@@ -2046,37 +2039,55 @@ export default {
             };
             this.processandoCriacao = true;
             try {
-                let sessions = [];
+                let payload = { ...basePayload };
                 const pSel = (this.procedimentosFiltrados || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id)) || (this.procedimentosLocal || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id));
                 const isTrat = !!pSel?.eh_tratamento;
-                if (isTrat && Array.isArray(this.sessoesCriacao) && this.sessoesCriacao.length > 0) {
-                    sessions = this.sessoesCriacao.filter(s => (s.data && s.hora));
-                }
-                if (!sessions.length) {
-                    sessions = [{ data: this.agendamentoForm.data, hora: this.agendamentoForm.hora }];
-                }
-                let createdCount = 0;
-                for (const s of sessions) {
-                    const payload = { ...basePayload, data: s.data, hora: s.hora };
-                    const resp = await window.axios.post("/agendamentos", payload);
-                    
-                    const ags = resp?.data?.agendamentos || [];
-                    if (ags.length === 0 && resp?.data?.agendamento) {
-                        ags.push(resp.data.agendamento);
-                    }
 
-                    for (const ag of ags) {
-                        createdCount++;
-                        const pLocal = (this.procedimentosLocal || []).find(pr => String(pr.id) === String(ag.procedimento_id));
-                        const pFilt = (this.procedimentosFiltrados || []).find(pr => String(pr.id) === String(ag.procedimento_id));
-                        const procNome = pFilt?.nome || pLocal?.nome || 'Procedimento';
-                        const pacNome = (this.pacientesLocal.find(p => String(p.id) === String(ag.paciente_id))?.nome || 'Paciente');
-                        const title = `${pacNome} - ${procNome}`;
-                        const calendarApi = this.$refs.fullCalendar.getApi();
-                        calendarApi.addEvent({
-                            id: ag.id,
-                            title,
-                            start: `${ag.data}T${ag.hora}:00`,
+                if (isTrat && Array.isArray(this.sessoesCriacao) && this.sessoesCriacao.length > 0) {
+                    const validSessions = this.sessoesCriacao.filter(s => (s.data && s.hora));
+                    if (validSessions.length > 0) {
+                        payload.data = validSessions[0].data;
+                        payload.hora = validSessions[0].hora;
+                        
+                        if (validSessions.length > 1) {
+                            const additionalSessions = validSessions.slice(1).map(s => ({
+                                procedimento_id: this.agendamentoForm.procedimento_id,
+                                data: s.data,
+                                hora: s.hora,
+                                pessoa_id: this.agendamentoForm.pessoa_id,
+                                valor_cobrado: this.agendamentoForm.valor_cobrado
+                            }));
+                            payload.procedimentosAdicionais = [...(payload.procedimentosAdicionais || []), ...additionalSessions];
+                        }
+                    } else {
+                        payload.data = this.agendamentoForm.data;
+                        payload.hora = this.agendamentoForm.hora;
+                    }
+                } else {
+                    payload.data = this.agendamentoForm.data;
+                    payload.hora = this.agendamentoForm.hora;
+                }
+
+                let createdCount = 0;
+                const resp = await window.axios.post("/agendamentos", payload);
+                
+                const ags = resp?.data?.agendamentos || [];
+                if (ags.length === 0 && resp?.data?.agendamento) {
+                    ags.push(resp.data.agendamento);
+                }
+
+                for (const ag of ags) {
+                    createdCount++;
+                    const pLocal = (this.procedimentosLocal || []).find(pr => String(pr.id) === String(ag.procedimento_id));
+                    const pFilt = (this.procedimentosFiltrados || []).find(pr => String(pr.id) === String(ag.procedimento_id));
+                    const procNome = pFilt?.nome || pLocal?.nome || 'Procedimento';
+                    const pacNome = (this.pacientesLocal.find(p => String(p.id) === String(ag.paciente_id))?.nome || 'Paciente');
+                    const title = `${pacNome} - ${procNome}`;
+                    const calendarApi = this.$refs.fullCalendar.getApi();
+                    calendarApi.addEvent({
+                        id: ag.id,
+                        title,
+                        start: `${ag.data}T${ag.hora}:00`,
                             allDay: false,
                             className: "bg-success-subtle",
                             classNames: ["bg-success-subtle"],
@@ -2084,10 +2095,6 @@ export default {
                         });
                         try { calendarApi.gotoDate(ag.data); } catch (e) { }
                     }
-
-                    // Limpa procedimentos adicionais para não duplicar se houver múltiplas sessões do procedimento principal
-                    basePayload.procedimentosAdicionais = [];
-                }
                 try {
                     const fp = (this.$page?.props?.flash ?? {});
                     this.$page.props.flash = { ...fp, success: createdCount > 1 ? "Agendamentos criados" : "Agendamento criado" };
@@ -2206,11 +2213,6 @@ export default {
             try {
                 const ep = event?.extendedProps || {};
                 if (ep?.procedimento_nome) {
-                    const n = ep?.sessao_numero != null ? Number(ep.sessao_numero) : null;
-                    const t = ep?.sessao_total != null ? Number(ep.sessao_total) : null;
-                    if (n != null && t != null && t > 0) {
-                        return `${ep.procedimento_nome} ${n}/${t}`;
-                    }
                     return ep.procedimento_nome;
                 }
                 const t = String(event?.title || "");
@@ -2559,7 +2561,7 @@ export default {
             :processing="false" :disableClose="bloquearAcoesModalEventosDia" size="xl" customWidth="95vw"
             @update:modelValue="modalEventosDiaVisivel = $event">
             <SimpleTable :key="chaveTabelaEventosDia" title="Lista de agendamentos" :items="eventosDiaGrid()"
-                :columns="[{ key: 'id', label: 'ID', width: '50px' }, { key: 'paciente', label: 'Paciente' }, { key: 'convenio_tipo', label: 'Convênio' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'medico', label: 'Médico' }, { key: 'hora', label: 'Hora' }, { key: 'status', label: 'Status' }]"
+                :columns="[{ key: 'id', label: 'ID', width: '50px' }, { key: 'paciente', label: 'Paciente' }, { key: 'convenio_tipo', label: 'Convênio' }, { key: 'procedimento', label: 'Procedimento' }, { key: 'medico', label: 'Médico' }, { key: 'hora', label: 'Hora' }, { key: 'status', label: 'Status' }, { key: 'criado_em', label: 'Criado em' }]"
                 has-actions :searchable="true" searchPlaceholder="Buscar agendamento..."
                 :searchFields="['paciente', 'convenio_tipo', 'procedimento', 'medico']" emptyTitle="Nenhum agendamento encontrado">
 

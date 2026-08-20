@@ -653,7 +653,10 @@ export default {
       if (item && item.procedimento_solicitado_codigo) {
         const proc = this.procedimentos.find(p => String(p.codigo) === String(item.procedimento_solicitado_codigo));
         if (proc) {
-          item.procedimento_solicitado_descricao = proc.descricao;
+          const currentDesc = item.procedimento_solicitado_descricao || '';
+          if (!currentDesc.toLowerCase().includes('sessão') && !currentDesc.toLowerCase().includes('sessao') && !currentDesc.startsWith(proc.descricao)) {
+            item.procedimento_solicitado_descricao = proc.descricao;
+          }
           item.tabela_procedimento_solicitado = '22';
         }
       }
@@ -662,8 +665,12 @@ export default {
       if (item && item.procedimento_realizado_codigo) {
         const proc = this.procedimentos.find(p => String(p.codigo) === String(item.procedimento_realizado_codigo));
         if (proc) {
-          item.procedimento_realizado_descricao = proc.descricao;
-          item.valor_unitario = proc.total || 0;
+          const currentDesc = item.procedimento_realizado_descricao || '';
+          if (!currentDesc.toLowerCase().includes('sessão') && !currentDesc.toLowerCase().includes('sessao') && !currentDesc.startsWith(proc.descricao)) {
+            item.procedimento_realizado_descricao = proc.descricao;
+            item.valor_unitario = proc.total || 0;
+          }
+          item.tabela_procedimento_realizado = '22';
           this.calcularTotalProcedimento(item);
         }
       }

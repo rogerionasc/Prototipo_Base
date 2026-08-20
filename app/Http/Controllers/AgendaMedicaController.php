@@ -65,10 +65,13 @@ class AgendaMedicaController extends Controller
                         continue;
                     }
                     $diasSubmitted[] = $dia;
-                    AgendaMedica::updateOrCreate(
+                    $agenda = AgendaMedica::withTrashed()->updateOrCreate(
                         ['pessoa_id' => $psId, 'dia_semana' => $dia],
                         ['hora_inicio' => $hi, 'hora_fim' => $hf]
                     );
+                    if ($agenda->trashed()) {
+                        $agenda->restore();
+                    }
                 }
                 $diasSubmitted = array_unique(array_filter($diasSubmitted, fn($d) => $d !== null));
                 AgendaMedica::where('pessoa_id', $psId)
