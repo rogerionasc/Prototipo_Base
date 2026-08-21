@@ -63,76 +63,8 @@ class GuiaController extends Controller
             abort(404, 'Nenhuma guia foi gerada para este agendamento.');
         }
 
-        if ($guia->procedimentosSolicitados()->count() === 0) {
-            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
-            $allAgendamentos = Agendamento::where('id', $origemId)
-                                          ->orWhere('agendamento_origem_id', $origemId)
-                                          ->with('tuss')
-                                          ->get();
-            foreach ($allAgendamentos as $ag) {
-                if ($ag->tuss) {
-                    $guia->procedimentosSolicitados()->create([
-                        'tabela_procedimento_solicitado' => '22',
-                        'procedimento_solicitado_codigo' => $ag->tuss->codigo,
-                        'procedimento_solicitado_descricao' => $ag->tuss->descricao,
-                        'quantidade_solicitada' => 1,
-                        'quantidade_autorizada' => 1,
-                    ]);
-                }
-            }
-        }
-
-        if ($guia->procedimentosRealizados()->count() === 0 && $atendimento && $atendimento->status === 'ATENDIDO') {
-            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
-            $allAgendamentos = Agendamento::where('id', $origemId)
-                                          ->orWhere('agendamento_origem_id', $origemId)
-                                          ->with('tuss')
-                                          ->get();
-            foreach ($allAgendamentos as $ag) {
-                if ($ag->tuss) {
-                    $agAtendimento = \App\Models\Atendimento::where('agendamento_id', $ag->id)->where('status', 'ATENDIDO')->first();
-                    if ($agAtendimento) {
-                        $guia->procedimentosRealizados()->create([
-                            'tabela_procedimento_realizado' => '22',
-                            'procedimento_realizado_codigo' => $ag->tuss->codigo,
-                            'procedimento_realizado_descricao' => $ag->tuss->descricao,
-                            'quantidade_realizada' => 1,
-                            'data_realizacao' => $ag->data,
-                            'hora_inicial' => $ag->hora,
-                            'valor_unitario' => $ag->tuss->total ?? 0,
-                            'valor_total' => $ag->tuss->total ?? 0,
-                        ]);
-                    }
-                }
-            }
-        }
-
-        $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
-        $allAgendamentos = Agendamento::where('id', $origemId)
-                                      ->orWhere('agendamento_origem_id', $origemId)
-                                      ->get();
-        foreach ($allAgendamentos as $ag) {
-            $agAtendimento = \App\Models\Atendimento::where('agendamento_id', $ag->id)->with(['medico.conselho', 'medico.especialidades'])->first();
-            if ($agAtendimento && $agAtendimento->medico) {
-                $profissional = $agAtendimento->medico;
-                $cpf = $profissional->cpf ?? '00000000000';
-                $existe = $guia->profissionaisExecutantes()->where('profissional_executante_codigo', $cpf)->exists();
-                if (!$existe) {
-                    $count = $guia->profissionaisExecutantes()->count();
-                    $guia->profissionaisExecutantes()->create([
-                        'sequencial_referencia' => $count + 1,
-                        'grau_participacao' => '01',
-                        'profissional_executante_codigo' => $cpf,
-                        'profissional_executante_nome' => $profissional->nome ?? 'Profissional',
-                        'conselho_executante' => $profissional->conselho?->codigo ?? 'CR',
-                        'numero_conselho_executante' => $profissional->numero_conselho ?? '000000',
-                        'uf_conselho_executante' => $profissional->uf_conselho ?? 'SP',
-                        'cbo_executante' => $profissional->especialidades?->first()?->codigo ?? '2251',
-                        'data_realizacao_serie' => $agAtendimento->hora_inicio ? \Carbon\Carbon::parse($agAtendimento->hora_inicio)->format('Y-m-d') : $ag->data,
-                    ]);
-                }
-            }
-        }
+        // Removido o bloco que forçava inserção de dados no banco durante a visualização da guia,
+        // já que a impressão deve ser estritamente de leitura (read-only).
 
         $guia->load(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes']);
 

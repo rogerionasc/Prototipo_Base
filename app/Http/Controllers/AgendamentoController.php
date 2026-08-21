@@ -457,6 +457,7 @@ class AgendamentoController extends Controller
                                 ]);
 
                                 $procRealizado = $masterGuia->procedimentosRealizados()->create([
+                                    'procedimento_solicitado_id' => $procSolicitado->id,
                                     'tabela_procedimento_realizado' => null,
                                     'procedimento_realizado_codigo' => null,
                                     'procedimento_realizado_descricao' => null,
@@ -504,6 +505,7 @@ class AgendamentoController extends Controller
                                 ]);
 
                                 $procRealizado = $masterGuia->procedimentosRealizados()->create([
+                                    'procedimento_solicitado_id' => $procSolicitado->id,
                                     'tabela_procedimento_realizado' => null,
                                     'procedimento_realizado_codigo' => null,
                                     'procedimento_realizado_descricao' => null,
@@ -1060,10 +1062,10 @@ class AgendamentoController extends Controller
             ->leftJoin('faturamentos as f', 'f.id', '=', 'pag.faturamento_id')
             ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
             ->leftJoin('convenios as conv', 'conv.id', '=', DB::raw('COALESCE(at.convenio_id, a.convenio_id)'))
-            ->leftJoin('guias as g_aut', 'g_aut.agendamento_id', '=', 'a.id')->leftJoin('autorizacoes as aut', 'aut.guia_id', '=', 'g_aut.id')
             ->where('a.paciente_id', $paciente_id)
             ->select(
                 'a.id',
+                'a.agendamento_origem_id',
                 'a.data',
                 'a.hora',
                 'a.created_at',
@@ -1077,14 +1079,21 @@ class AgendamentoController extends Controller
                 DB::raw('CASE WHEN at.status = "ATENDIDO" THEN "ATENDIDO" ELSE COALESCE(s.descricao, "") END AS status'),
                 'pag.nu_pagamento',
                 DB::raw('COALESCE(pag.status, "N/A") AS status_pagamento'),
-                'aut.id as autorizacao_id',
-                'aut.numero_autorizacao',
-                'aut.status as status_autorizacao',
                 'conv.tipo as convenio_tipo'
             )
             ->orderBy('a.data', 'desc')
             ->orderBy('a.hora', 'desc')
             ->orderBy('st.numero_sessao', 'desc')
+            ->get();
+
+        $agendamentoIds = $agendamentos->pluck('id')->merge($agendamentos->pluck('agendamento_origem_id'))->filter()->unique()->toArray();
+        $guias = DB::table('guias')->whereIn('agendamento_id', $agendamentoIds)->get(['id', 'agendamento_id']);
+        
+        $guiaIds = $guias->pluck('id')->toArray();
+        $autorizacoes = DB::table('autorizacoes')
+            ->leftJoin('guia_procedimento_solicitados as ps', 'ps.id', '=', 'autorizacoes.procedimento_solicitado_id')
+            ->whereIn('autorizacoes.guia_id', $guiaIds)
+            ->select('autorizacoes.*', 'ps.procedimento_solicitado_descricao as desc')
             ->get();
 
         $convenioParticularId = DB::table('convenios')
@@ -1095,7 +1104,23 @@ class AgendamentoController extends Controller
             })
             ->value('id');
 
-        $result = $agendamentos->map(function ($ag) use ($convenioParticularId) {
+        $result = $agendamentos->map(function ($ag) use ($convenioParticularId, $guias, $autorizacoes) {
+            $origemId = $ag->agendamento_origem_id ?? $ag->id;
+            $guia = $guias->firstWhere('agendamento_id', $origemId);
+            $aut = null;
+            if ($guia) {
+                $matchedAut = $autorizacoes->where('guia_id', $guia->id)->firstWhere('desc', $ag->procedimento_nome);
+                if ($matchedAut) {
+                    $aut = $matchedAut;
+                } else {
+                    $aut = $autorizacoes->where('guia_id', $guia->id)->first();
+                }
+            }
+
+            $ag->autorizacao_id = $aut->id ?? null;
+            $ag->numero_autorizacao = $aut->numero_autorizacao ?? null;
+            $ag->status_autorizacao = $aut->status ?? null;
+
             $stRaw = strtolower(trim((string)$ag->status));
             $atendido = str_contains($stRaw, 'atendido');
 

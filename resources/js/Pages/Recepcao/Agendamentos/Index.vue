@@ -1425,6 +1425,11 @@ export default {
             } catch (e) { }
         },
         async salvarEdicaoAgendamento() {
+            if (!this.agendamentoForm.data || !this.agendamentoForm.hora) {
+                this.$page.props.flash = { error: "A data e a hora do agendamento são obrigatórias." };
+                return;
+            }
+
             if (moment(this.agendamentoForm.data).isBefore(moment(), 'day')) {
                 this.$page.props.flash = { error: "A data do agendamento não pode ser retroativa a hoje." };
                 return;
@@ -2007,6 +2012,22 @@ export default {
             try { this.valorCobradoAutoCriacaoProcId = null; } catch (_) { }
         },
         async salvarAgendamento() {
+            const pSelValidacao = (this.procedimentosFiltrados || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id)) || (this.procedimentosLocal || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id));
+            const isTratValidacao = !!pSelValidacao?.eh_tratamento;
+
+            if (isTratValidacao && Array.isArray(this.sessoesCriacao) && this.sessoesCriacao.length > 0) {
+                const invalidSessions = this.sessoesCriacao.filter(s => !s.data || !s.hora);
+                if (invalidSessions.length > 0) {
+                    this.$page.props.flash = { error: "A data e a hora de todas as sessões são obrigatórias." };
+                    return;
+                }
+            } else {
+                if (!this.agendamentoForm.data || !this.agendamentoForm.hora) {
+                    this.$page.props.flash = { error: "A data e a hora do agendamento são obrigatórias." };
+                    return;
+                }
+            }
+
             if (moment(this.agendamentoForm.data).isBefore(moment(), 'day')) {
                 this.$page.props.flash = { error: "A data do agendamento não pode ser retroativa a hoje." };
                 return;
@@ -2426,7 +2447,7 @@ export default {
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">Data *</label>
+                    <label class="form-label">Data <span class="text-danger">*</span></label>
                     <div v-if="!isEditMode">
                         <flatPickr v-model="agendamentoForm.data" class="form-control" :config="opcoesFlatpickrData"
                             placeholder="Selecione a data" :disabled="agendamentoFoiAtendido" />
@@ -2437,7 +2458,7 @@ export default {
                     </div>
                 </div>
                 <div class="col-md-1">
-                    <label class="form-label">Hora</label>
+                    <label class="form-label">Hora <span class="text-danger">*</span></label>
                     <div v-if="!isEditMode">
                         <flatPickr v-model="agendamentoForm.hora" class="form-control" :config="opcoesFlatpickrHora"
                             placeholder="Hora" :disabled="agendamentoFoiAtendido" />
@@ -2477,11 +2498,11 @@ export default {
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Data *</label>
+                            <label class="form-label">Data <span class="text-danger">*</span></label>
                             <flatPickr v-model="pAdicional.data" class="form-control" :config="opcoesFlatpickrData" placeholder="Data" />
                         </div>
                         <div class="col-md-1">
-                            <label class="form-label">Hora</label>
+                            <label class="form-label">Hora <span class="text-danger">*</span></label>
                             <flatPickr v-model="pAdicional.hora" class="form-control" :config="opcoesFlatpickrHora" placeholder="Hora" />
                         </div>
                         <div class="col-md-1">
@@ -2529,12 +2550,12 @@ export default {
                                 <div class="row g-2 align-items-end">
                                     <div class="col-md-6">
                                         <label class="form-label"><span class="session-badge">Sessão {{ idx + 1 }}/{{
-                                            sessoesCriacao.length }}</span> Data</label>
+                                            sessoesCriacao.length }}</span> Data <span class="text-danger">*</span></label>
                                         <flatPickr v-model="s.data" class="form-control" :config="opcoesFlatpickrData"
                                             placeholder="Selecione a data" />
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Hora</label>
+                                        <label class="form-label">Hora <span class="text-danger">*</span></label>
                                         <flatPickr v-model="s.hora" class="form-control" :config="opcoesFlatpickrHora"
                                             placeholder="Selecione a hora" />
                                     </div>

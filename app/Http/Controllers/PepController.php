@@ -261,16 +261,8 @@ class PepController extends Controller
             'tratamento_id' => $request->tratamento_id
         ]);
 
-        if ($request->tratamento_id) {
-            $tratamento = \App\Models\PepTratamento::find($request->tratamento_id);
-            if ($tratamento) {
-                $tratamento->increment('quantidade_sessoes_realizadas');
-                // Se atingiu o total, marcar como concluído
-                if ($tratamento->quantidade_sessoes_realizadas >= $tratamento->quantidade_sessoes_previstas) {
-                    $tratamento->update(['status' => 'Concluído']);
-                }
-            }
-        }
+        // A contagem de sessões agora é feita no momento em que o atendimento é finalizado
+        // em AtendimentoController::finalizar().
 
         return redirect()->back()->with('success', 'Evolução adicionada com sucesso.');
     }
@@ -283,15 +275,8 @@ class PepController extends Controller
             abort(403, 'Você não pode excluir uma evolução criada por outro profissional.');
         }
         
-        if ($evolucao->tratamento_id) {
-            $tratamento = \App\Models\PepTratamento::find($evolucao->tratamento_id);
-            if ($tratamento && $tratamento->quantidade_sessoes_realizadas > 0) {
-                $tratamento->decrement('quantidade_sessoes_realizadas');
-                if ($tratamento->status === 'Concluído' && $tratamento->quantidade_sessoes_realizadas < $tratamento->quantidade_sessoes_previstas) {
-                    $tratamento->update(['status' => 'Em andamento']);
-                }
-            }
-        }
+        // A contagem de sessões agora é baseada apenas na finalização do atendimento,
+        // então não decrementamos mais ao excluir evoluções.
 
         $evolucao->delete();
         return redirect()->back()->with('success', 'Evolução removida com sucesso.');

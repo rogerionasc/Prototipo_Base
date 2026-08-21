@@ -186,10 +186,39 @@ class AtendimentoController extends Controller
             return redirect()->back()->with('error', 'Apenas o médico responsável pode realizar esta ação.');
         }
 
+        if ($atendimento->status === 'ATENDIDO') {
+            return redirect()->back()->with('error', 'Este atendimento já foi finalizado.');
+        }
+
         $atendimento->update([
             'status' => 'ATENDIDO',
             'hora_fim' => now(),
         ]);
+
+        $atendimento->load(['procedimento', 'tuss']);
+        $ehTratamento = false;
+        $nomeTratamento = '';
+        if ($atendimento->procedimento && $atendimento->procedimento->eh_tratamento) {
+            $ehTratamento = true;
+            $nomeTratamento = $atendimento->procedimento->nome;
+        } else if ($atendimento->tuss && $atendimento->tuss->eh_tratamento) {
+            $ehTratamento = true;
+            $nomeTratamento = $atendimento->tuss->descricao;
+        }
+
+        if ($ehTratamento) {
+            $tratamento = \App\Models\PepTratamento::where('paciente_id', $atendimento->paciente_id)
+                ->where('nome_tratamento', $nomeTratamento)
+                ->where('status', 'Em andamento')
+                ->first();
+                
+            if ($tratamento) {
+                $tratamento->increment('quantidade_sessoes_realizadas');
+                if ($tratamento->quantidade_sessoes_realizadas >= $tratamento->quantidade_sessoes_previstas) {
+                    $tratamento->update(['status' => 'Concluído']);
+                }
+            }
+        }
 
         // Encerrar o PEP associado se existir
         $pep = \App\Models\Pep::where('atendimento_id', $atendimento->id)->where('status', 'Aberto')->first();
@@ -239,59 +268,82 @@ class AtendimentoController extends Controller
                 $totalProcedimentos = $guia->total_procedimentos ?? 0;
                 $changed = false;
 
-                foreach ($allAgendamentos as $ag) {
-                    if ($ag->tuss) {
-                        $procRealizado = $guia->procedimentosRealizados()->where('procedimento_realizado_codigo', $ag->tuss->codigo)->first();
-                        
-                        // Se não encontrou pelo código, procura o primeiro esqueleto vazio
-                        if (!$procRealizado) {
-                            $procRealizado = $guia->procedimentosRealizados()->whereNull('procedimento_realizado_codigo')->first();
-                        }
-                        
-                        $vUnit = floatval($ag->tuss->total ?? 0);
-                        $procValorTotal = round(1 * $vUnit * 1, 2);
+                $ag = $agendamento;
+                if ($ag->tuss) {
+                    // Procura o primeiro esqueleto vazio na guia
+                    $procRealizado = $guia->procedimentosRealizados()->whereNull('procedimento_realizado_codigo')->first();
+                    
+                    $vUnit = floatval($ag->tuss->total ?? 0);
+                    $procValorTotal = round(1 * $vUnit * 1, 2);
+                    
+                    $descricaoParaSalvar = $ag->tuss->descricao;
+                    if ($procRealizado && $procRealizado->procedimentoSolicitado) {
+                        $descricaoParaSalvar = $procRealizado->procedimentoSolicitado->procedimento_solicitado_descricao;
+                    }
 
-                        if (!$procRealizado) {
-                            $procRealizado = $guia->procedimentosRealizados()->create([
-                                'tabela_procedimento_realizado' => '22',
-                                'procedimento_realizado_codigo' => $ag->tuss->codigo,
-                                'procedimento_realizado_descricao' => $ag->tuss->descricao,
-                                'quantidade_realizada' => 1,
-                                'data_realizacao' => $ag->data,
-                                'hora_inicial' => $ag->hora,
-                                'valor_unitario' => $vUnit,
-                                'valor_total' => $procValorTotal,
+                    if (!$procRealizado) {
+                        $procSolicitado = $guia->procedimentosSolicitados()->where('procedimento_solicitado_codigo', $ag->tuss->codigo)->first();
+                        $procSolicitadoId = $procSolicitado ? $procSolicitado->id : null;
+                        
+                        $descricaoParaSalvar = $procSolicitado ? $procSolicitado->procedimento_solicitado_descricao : $ag->tuss->descricao;
+                        
+                        $procRealizado = $guia->procedimentosRealizados()->create([
+                            'procedimento_solicitado_id' => $procSolicitadoId,
+                            'tabela_procedimento_realizado' => '22',
+                            'procedimento_realizado_codigo' => $ag->tuss->codigo,
+                            'procedimento_realizado_descricao' => $descricaoParaSalvar,
+                            'quantidade_realizada' => 1,
+                            'data_realizacao' => $ag->data,
+                            'hora_inicial' => $ag->hora,
+                            'hora_final' => now()->format('H:i:s'),
+                            'valor_unitario' => $vUnit,
+                            'valor_total' => $procValorTotal,
+                        ]);
+                        $totalProcedimentos += $procValorTotal;
+                        $changed = true;
+                    } else {
+                        $procRealizado->update([
+                            'tabela_procedimento_realizado' => '22',
+                            'procedimento_realizado_codigo' => $ag->tuss->codigo,
+                            'procedimento_realizado_descricao' => $descricaoParaSalvar,
+                            'quantidade_realizada' => 1,
+                            'data_realizacao' => $ag->data,
+                            'hora_inicial' => $ag->hora,
+                            'hora_final' => now()->format('H:i:s'),
+                            'valor_unitario' => $vUnit,
+                            'valor_total' => $procValorTotal,
+                        ]);
+                        $totalProcedimentos += $procValorTotal;
+                        $changed = true;
+                    }
+
+                    // Adicionar profissional executante
+                    $atendimentoMedico = \App\Models\Atendimento::where('agendamento_id', $ag->id)->with(['medico.conselho', 'medico.especialidades'])->first();
+                    if ($atendimentoMedico && $atendimentoMedico->medico) {
+                        $profissional = $atendimentoMedico->medico;
+                        $cpf = $profissional->cpf ?? '00000000000';
+                        
+                        $profExecutante = $procRealizado->profissionaisExecutantes()->first();
+                        if ($profExecutante && !$profExecutante->profissional_executante_codigo) {
+                            // Atualiza o esqueleto vazio criado no agendamento
+                            $profExecutante->update([
+                                'sequencial_referencia' => 1,
+                                'grau_participacao' => '01',
+                                'profissional_executante_codigo' => $cpf,
+                                'profissional_executante_nome' => $profissional->nome ?? 'Profissional',
+                                'conselho_executante' => $profissional->conselho?->codigo ?? 'CR',
+                                'numero_conselho_executante' => $profissional->numero_conselho ?? '000000',
+                                'uf_conselho_executante' => $profissional->uf_conselho ?? 'SP',
+                                'cbo_executante' => $profissional->especialidades?->first()?->codigo ?? '2251',
+                                'data_realizacao_serie' => $atendimentoMedico->hora_inicio ? \Carbon\Carbon::parse($atendimentoMedico->hora_inicio)->format('Y-m-d') : $ag->data,
                             ]);
-                            $totalProcedimentos += $procValorTotal;
-                            $changed = true;
                         } else {
-                            if (!$procRealizado->valor_total) {
-                                $procRealizado->update([
-                                    'tabela_procedimento_realizado' => '22',
-                                    'procedimento_realizado_codigo' => $ag->tuss->codigo,
-                                    'procedimento_realizado_descricao' => $ag->tuss->descricao,
-                                    'quantidade_realizada' => 1,
-                                    'data_realizacao' => $ag->data,
-                                    'hora_inicial' => $ag->hora,
-                                    'valor_unitario' => $vUnit,
-                                    'valor_total' => $procValorTotal,
-                                ]);
-                                $totalProcedimentos += $procValorTotal;
-                                $changed = true;
-                            }
-                        }
-
-                        // Adicionar profissional executante
-                        $atendimentoMedico = \App\Models\Atendimento::where('agendamento_id', $ag->id)->with(['medico.conselho', 'medico.especialidades'])->first();
-                        if ($atendimentoMedico && $atendimentoMedico->medico) {
-                            $profissional = $atendimentoMedico->medico;
-                            $cpf = $profissional->cpf ?? '00000000000';
+                            $existeProf = $procRealizado->profissionaisExecutantes()->where('profissional_executante_codigo', $cpf)->exists();
                             
-                            $profExecutante = $procRealizado->profissionaisExecutantes()->first();
-                            if ($profExecutante && !$profExecutante->profissional_executante_codigo) {
-                                // Atualiza o esqueleto vazio criado no agendamento
-                                $profExecutante->update([
-                                    'sequencial_referencia' => 1,
+                            if (!$existeProf) {
+                                $count = $procRealizado->profissionaisExecutantes()->count();
+                                $procRealizado->profissionaisExecutantes()->create([
+                                    'sequencial_referencia' => $count + 1,
                                     'grau_participacao' => '01',
                                     'profissional_executante_codigo' => $cpf,
                                     'profissional_executante_nome' => $profissional->nome ?? 'Profissional',
@@ -301,23 +353,6 @@ class AtendimentoController extends Controller
                                     'cbo_executante' => $profissional->especialidades?->first()?->codigo ?? '2251',
                                     'data_realizacao_serie' => $atendimentoMedico->hora_inicio ? \Carbon\Carbon::parse($atendimentoMedico->hora_inicio)->format('Y-m-d') : $ag->data,
                                 ]);
-                            } else {
-                                $existeProf = $procRealizado->profissionaisExecutantes()->where('profissional_executante_codigo', $cpf)->exists();
-                                
-                                if (!$existeProf) {
-                                    $count = $procRealizado->profissionaisExecutantes()->count();
-                                    $procRealizado->profissionaisExecutantes()->create([
-                                        'sequencial_referencia' => $count + 1,
-                                        'grau_participacao' => '01',
-                                        'profissional_executante_codigo' => $cpf,
-                                        'profissional_executante_nome' => $profissional->nome ?? 'Profissional',
-                                        'conselho_executante' => $profissional->conselho?->codigo ?? 'CR',
-                                        'numero_conselho_executante' => $profissional->numero_conselho ?? '000000',
-                                        'uf_conselho_executante' => $profissional->uf_conselho ?? 'SP',
-                                        'cbo_executante' => $profissional->especialidades?->first()?->codigo ?? '2251',
-                                        'data_realizacao_serie' => $atendimentoMedico->hora_inicio ? \Carbon\Carbon::parse($atendimentoMedico->hora_inicio)->format('Y-m-d') : $ag->data,
-                                    ]);
-                                }
                             }
                         }
                     }

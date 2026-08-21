@@ -72,8 +72,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get('empregados', 'empregados');
         Route::get('componentes', 'componentes')->name('componentes');
         Route::get('configuracao', 'configuracao')->name('configuracao.index');
-        Route::get('configuracao/parametrizacao', 'configuracaoParametrizacao')->name('configuracao.parametrizacao');
-        Route::get('configuracao/parametrizacao/tiss', 'configuracaoTiss')->name('configuracao.tiss');
+        Route::get('parametrizacao/sistema', 'configuracaoParametrizacao')->name('configuracao.parametrizacao');
+        Route::get('parametrizacao/tiss', 'configuracaoTiss')->name('configuracao.tiss');
         Route::get('configuracao/especialidades', 'configuracaoEspecialidades')->name('configuracao.especialidades');
         Route::get('configuracao/tuss', 'configuracaoTuss')->name('configuracao.tuss');
         Route::get('configuracao/cid', 'configuracaoCid')->name('configuracao.cid');

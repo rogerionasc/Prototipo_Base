@@ -106,7 +106,13 @@ const saveAnamnese = () => {
 const evolucaoForm = useForm({
     tipo: 'Evolução Clínica',
     descricao: '',
-    tratamento_id: null
+    tratamento_id: (() => {
+        if (props.tratamentos && props.atendimento) {
+            const matching = props.tratamentos.filter(t => t.status === 'Em andamento' && (t.nome_tratamento || '').trim().toLowerCase() === (props.atendimento?.procedimento?.nome || props.atendimento?.tuss?.descricao || '').trim().toLowerCase());
+            if (matching.length === 1) return matching[0].id;
+        }
+        return null;
+    })()
 });
 
 const evolucaoTipoSelect = ref(null);
