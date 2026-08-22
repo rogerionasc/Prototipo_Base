@@ -73,7 +73,7 @@ class GuiaController extends Controller
             'agendamento' => $agendamento
         ]);
     }
-    public function getDadosDaAgenda($agendamentoId)
+    public function getDadosDaAgenda(Request $request, $agendamentoId)
     {
         $agendamento = Agendamento::with(['paciente', 'convenio', 'procedimento', 'tuss', 'agendaMedica.profissionalSaude.conselho', 'agendaMedica.profissionalSaude.especialidades'])->findOrFail($agendamentoId);
 
@@ -93,11 +93,14 @@ class GuiaController extends Controller
         $dataValidadeSenha = $autorizacao?->validade;
         $dataAutorizacao = $autorizacao ? ($autorizacao->data_resposta ?? $autorizacao->data_solicitacao ?? $autorizacao->created_at?->format('Y-m-d')) : null;
 
+        $guiaId = $request->query('guia_id');
         $guia = null;
-        if ($atendimento && $atendimento->guia_id) {
-            $guia = Guia::find($atendimento->guia_id);
-            // We do NOT update the basic data here automatically when just fetching to edit,
-            // otherwise we'd overwrite what the user might have saved previously.
+        if ($guiaId) {
+            $guia = Guia::find($guiaId);
+        } else {
+            if ($atendimento && $atendimento->guia_id) {
+                $guia = Guia::find($atendimento->guia_id);
+            }
         }
 
         if (!$guia) {
@@ -231,6 +234,8 @@ class GuiaController extends Controller
     {
         $guia = Guia::findOrFail($id);
         
+        \Log::info("Update Guia", ['id' => $id, 'status_request' => $request->input('status')]);
+
         $data = $request->except(['procedimentos_solicitados', 'procedimentos_realizados', 'profissionais_executantes']);
         
         // A tabela guias não possui campos nullable. O Laravel converte strings vazias ('') 
@@ -326,6 +331,60 @@ class GuiaController extends Controller
         return response()->json([
             'message' => 'Guia atualizada com sucesso',
             'guia' => $guia->load(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes'])
+        ]);
+    }
+
+    public function devolver($id)
+    {
+        $guiaOriginal = Guia::with(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes'])->findOrFail($id);
+        
+        if ($guiaOriginal->status === 'DEVOLVIDA') {
+            return response()->json(['message' => 'Esta guia já foi devolvida e não pode ser devolvida novamente.'], 403);
+        }
+
+        $guiaOriginal->status = 'DEVOLVIDA';
+        $guiaOriginal->save();
+
+        if ($guiaOriginal->faturamento_id) {
+            $fat = \App\Models\Faturamento::find($guiaOriginal->faturamento_id);
+            if ($fat) {
+                $guias = \App\Models\Guia::where('faturamento_id', $fat->id)->where('status', '!=', 'DEVOLVIDA')->get();
+                $novoTotal = $guias->sum('valor_total_geral');
+                $novoGlosado = $guias->sum('valor_glosado');
+                $novoAprovado = max(0, $novoTotal - $novoGlosado);
+
+                $fat->update([
+                    'valor_total' => $novoTotal,
+                    'valor_cobrado' => $novoTotal,
+                    'valor_aprovado' => $novoAprovado
+                ]);
+            }
+        }
+
+        $novaGuia = $guiaOriginal->replicate();
+        $novaGuia->guia_origem_id = $guiaOriginal->id;
+        $novaGuia->status = 'DEVOLVIDA';
+        $novaGuia->faturamento_id = null; // Remove a guia do lote atual para ir ao contas médicas
+        $novaGuia->save();
+
+        foreach ($guiaOriginal->procedimentosSolicitados as $procSolicitado) {
+            $novaGuia->procedimentosSolicitados()->create($procSolicitado->toArray());
+        }
+
+        foreach ($guiaOriginal->procedimentosRealizados as $procRealizado) {
+            $novoProc = $novaGuia->procedimentosRealizados()->create($procRealizado->toArray());
+            
+            // Replicate the pivot/professionals for this specific realized procedure
+            foreach ($procRealizado->profissionaisExecutantes as $profExecutante) {
+                $novoProf = $profExecutante->toArray();
+                $novoProf['procedimento_realizado_id'] = $novoProc->id;
+                \App\Models\GuiaProfissionalExecutante::create($novoProf);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Guia devolvida e clonada com sucesso',
+            'guia' => $novaGuia->load(['procedimentosSolicitados', 'procedimentosRealizados', 'profissionaisExecutantes'])
         ]);
     }
 }

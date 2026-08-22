@@ -46,4 +46,14 @@ class Guia extends Model
     {
         return $this->hasManyThrough(GuiaProfissionalExecutante::class, GuiaProcedimentoRealizado::class, 'guia_id', 'procedimento_realizado_id');
     }
+
+    public function guiaOrigem()
+    {
+        return $this->belongsTo(Guia::class, 'guia_origem_id');
+    }
+
+    public function guiasDerivadas()
+    {
+        return $this->hasMany(Guia::class, 'guia_origem_id');
+    }
 }

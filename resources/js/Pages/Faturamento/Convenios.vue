@@ -214,8 +214,8 @@
                                         </h6>
                                     </div>
                                     <div class="col-4">
-                                        <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Pago</p>
-                                        <h6 class="text-success fw-bold mb-0">{{ formatCurrency(calcularValorPago(lote)) }}</h6>
+                                        <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Aprovado</p>
+                                        <h6 class="text-success fw-bold mb-0">{{ formatCurrency(calcularValorAprovado(lote)) }}</h6>
                                     </div>
                                 </div>
                             </div>
@@ -254,7 +254,8 @@
                             <div class="table-wrapper-choices" :key="'table-' + lote.id + '-' + lote.status">
                                 <SimpleTable :items="lote.guias || []" :columns="guiasLoteColumns" :hasActions="true"
                                     actionsLabel="Ação" variant="borderless" :compact="true"
-                                    emptyTitle="Nenhuma guia atrelada a este lote.">
+                                    emptyTitle="Nenhuma guia atrelada a este lote."
+                                    :row-class="getGuiaRowClass">
                                     <template #cell(id)="{ item }">
                                         <span class="fw-medium text-primary">#{{ item.id }}</span>
                                     </template>
@@ -294,7 +295,7 @@
                                         </template>
                                     </template>
                                     <template #cell(status)="{ item }">
-                                        <span v-if="lote.status === 'ABERTA'">
+                                        <span v-if="lote.status === 'ABERTA' || item.status === 'DEVOLVIDA'">
                                             {{ item.status ? item.status.replace(/_/g, ' ') : 'PENDENTE' }}
                                         </span>
                                         <select v-else :value="item.status" data-choices data-choices-search-false
@@ -309,8 +310,12 @@
                                     <template #actions="{ item }">
                                         <button v-if="lote.status === 'ABERTA'"
                                             class="btn btn-sm btn-soft-danger shadow-none"
-                                            @click.stop="askDeleteGuia(lote.id, item.id)" :disabled="removendoGuia === item.id">
+                                            @click.stop="askDeleteGuia(lote.id, item.id)" :disabled="removendoGuia === item.id || item.status === 'DEVOLVIDA'">
                                             <i class="ri-delete-bin-line"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-soft-dark shadow-none ms-1"
+                                            @click.stop="askDevolverGuiaLote(item.id)" :disabled="devolvendoGuiaId === item.id || item.status === 'DEVOLVIDA'" title="Devolver Guia">
+                                            <i class="ri-arrow-go-back-line"></i>
                                         </button>
                                     </template>
                                 </SimpleTable>
@@ -510,7 +515,7 @@
                                         <button class="btn btn-sm btn-soft-danger"
                                             @click="devolverGuiaParaContasMedicas(guia.id)"
                                             title="Devolver para Contas Médicas"
-                                            :disabled="devolvendoGuiaId === guia.id">
+                                            :disabled="devolvendoGuiaId === guia.id || guia.status === 'DEVOLVIDA'">
                                             <i class="ri-arrow-go-back-line"></i>
                                         </button>
                                     </td>
@@ -537,6 +542,11 @@
             subTitle="Deseja realmente devolver esta guia para a equipe de Contas Médicas?"
             message="Esta guia será removida desta lista e voltará para a fila de validação."
             nameButton="Sim, devolver guia" buttonClass="btn-warning" @save="executarDevolverGuia" />
+
+        <ModalConfirm v-model="confirmDevolverLoteModal" title="Devolver Guia"
+            subTitle="Deseja realmente devolver esta guia para a equipe de Contas Médicas?"
+            message="Esta guia será clonada e retornará para a fila de validação, mantendo o histórico original intacto."
+            nameButton="Sim, devolver guia" buttonClass="btn-warning" @save="executarDevolverGuiaLote" />
 
         <ModalConfirm v-model="confirmFecharLoteModal" title="Fechar Lote"
             subTitle="Deseja realmente fechar este lote?"
@@ -750,7 +760,6 @@ const statusOptions = [
     // { value: 'PRONTA_FATURAMENTO', label: 'PRONTA FATURAMENTO' },
     // { value: 'ENVIADA_FATURAMENTO', label: 'ENVIADA FATURAMENTO' },
     { value: 'FATURADA', label: 'FATURADA' },
-    { value: 'PAGA', label: 'PAGA' },
     { value: 'GLOSADA', label: 'GLOSADA' },
     { value: 'DEVOLVIDA', label: 'DEVOLVIDA' }
 ];
@@ -782,6 +791,10 @@ function atualizarStatusGuia(loteId, guiaId, novoStatus) {
     });
 }
 
+const getGuiaRowClass = (item) => {
+    return item.status === 'DEVOLVIDA' ? 'row-devolvida' : '';
+};
+
 function atualizarValorGlosado(loteId, guiaId, valorGlosado) {
     router.patch(route('faturamentos.guias.updateGlosa', { lote: loteId, guia: guiaId }), { valor_glosado: valorGlosado }, {
         preserveScroll: true,
@@ -802,6 +815,7 @@ const guiasParaAdicionar = ref([]);
 const adicionandoGuias = ref(false);
 const devolvendoGuiaId = ref(null);
 const confirmDevolverModal = ref(false);
+const confirmDevolverLoteModal = ref(false);
 const guiaIdParaDevolver = ref(null);
 
 function abrirAddModal(lote) {
@@ -847,6 +861,34 @@ function adicionarGuiasAoLote() {
             adicionandoGuias.value = false;
         }
     });
+}
+
+function askDevolverGuiaLote(guiaId) {
+    guiaIdParaDevolver.value = guiaId;
+    confirmDevolverLoteModal.value = true;
+}
+
+function executarDevolverGuiaLote() {
+    if (!guiaIdParaDevolver.value) return;
+    devolvendoGuiaId.value = guiaIdParaDevolver.value;
+    confirmDevolverLoteModal.value = false;
+    
+    axios.post(route('guias.devolver', guiaIdParaDevolver.value))
+        .then(res => {
+            window.dispatchEvent(new CustomEvent('flash:show', {
+                detail: { type: 'success', message: 'Guia devolvida com sucesso.' }
+            }));
+            router.reload({ preserveScroll: true });
+        })
+        .catch(err => {
+            window.dispatchEvent(new CustomEvent('flash:show', {
+                detail: { type: 'danger', message: 'Erro ao devolver guia.' }
+            }));
+        })
+        .finally(() => {
+            devolvendoGuiaId.value = null;
+            guiaIdParaDevolver.value = null;
+        });
 }
 
 const devolverGuiaParaContasMedicas = (id) => {
@@ -989,16 +1031,18 @@ function calcularValorGlosado(lote) {
     return lote.guias.reduce((sum, guia) => sum + (parseFloat(guia.valor_glosado) || 0), 0);
 }
 
-function calcularValorPago(lote) {
-    if (!lote || !lote.guias) return 0;
-    return lote.guias.reduce((sum, guia) => {
-        if (guia.status === 'PAGA') {
-            const glosa = parseFloat(guia.valor_glosado) || 0;
-            const total = parseFloat(guia.valor_total) || 0;
-            return sum + (total - glosa);
-        }
-        return sum;
-    }, 0);
+function calcularValorAprovado(lote) {
+    if (!lote) return 0;
+    
+    // If it is saved in the database
+    if (lote.valor_aprovado !== undefined && lote.valor_aprovado !== null) {
+        return parseFloat(lote.valor_aprovado);
+    }
+    
+    // Dynamic fallback
+    const total = parseFloat(lote.valor_total) || 0;
+    const glosado = calcularValorGlosado(lote);
+    return total - glosado;
 }
 
 function getBgColorLote(status) {
@@ -1018,5 +1062,24 @@ function getBgColorLote(status) {
 :deep(.flatpickr-wrapper) {
     display: block !important;
     width: 100%;
+}
+</style>
+
+<style scoped>
+:deep(.row-devolvida) {
+    opacity: 0.6;
+    background-color: rgba(var(--vz-secondary-rgb), 0.05);
+}
+:deep(.row-devolvida td) {
+    position: relative;
+}
+:deep(.row-devolvida td::after) {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px solid var(--vz-danger);
+    pointer-events: none;
 }
 </style>

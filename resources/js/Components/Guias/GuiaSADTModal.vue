@@ -584,6 +584,10 @@ export default {
       type: [String, Number],
       default: null
     },
+    guiaId: {
+      type: [String, Number],
+      default: null
+    },
     permitirValidacaoFaturamento: {
       type: Boolean,
       default: false
@@ -775,7 +779,9 @@ export default {
     },
     async fetchGuiaDados() {
       try {
-        const response = await window.axios.get(`/guias/${this.agendamentoId}/dados`);
+        const params = {};
+        if (this.guiaId) params.guia_id = this.guiaId;
+        const response = await window.axios.get(`/guias/${this.agendamentoId}/dados`, { params });
 
         // Carrega as listas de opções primeiro
         this.conselhos = response.data.conselhos || [];

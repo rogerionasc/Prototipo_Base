@@ -49,7 +49,7 @@
             </div>
         </div>
 
-        <GuiaSADTModal v-if="showGuiaSADTModal" v-model="showGuiaSADTModal" :agendamento-id="selectedAgendamentoForGuia"
+        <GuiaSADTModal v-if="showGuiaSADTModal" v-model="showGuiaSADTModal" :agendamento-id="selectedAgendamentoForGuia" :guia-id="selectedGuiaId"
             :ignorar-bloqueios="true" :permitir-validacao-faturamento="true" @saved="reloadPage" />
 
         <ModalConfirm v-model="confirmEncaminharModal" title="Confirmação"
@@ -81,6 +81,7 @@ const page = usePage();
 
 const showGuiaSADTModal = ref(false);
 const selectedAgendamentoForGuia = ref(null);
+const selectedGuiaId = ref(null);
 const processando = ref(false);
 const tableGridPendentesRef = ref(null);
 
@@ -184,17 +185,14 @@ const columnsPendentes = [
 ];
 
 
-function abrirGuia(id) {
-    const guiaObj = props.guias.find(g => g.id == id);
-    if (!guiaObj || !guiaObj.agendamento_id) {
-        window.dispatchEvent(new CustomEvent('flash:show', {
-            detail: { type: 'warning', message: 'Esta guia não possui agendamento vinculado.' }
-        }));
-        return;
+const abrirGuia = (id) => {
+    const guia = props.guias.find(g => g.id === parseInt(id));
+    if (guia && guia.agendamento_id) {
+        selectedAgendamentoForGuia.value = guia.agendamento_id;
+        selectedGuiaId.value = guia.id;
+        showGuiaSADTModal.value = true;
     }
-    selectedAgendamentoForGuia.value = guiaObj.agendamento_id;
-    showGuiaSADTModal.value = true;
-}
+};
 
 function encaminharSelecionadas() {
     if (!tableGridPendentesRef.value) return;

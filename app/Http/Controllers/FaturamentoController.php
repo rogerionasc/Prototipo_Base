@@ -70,6 +70,7 @@ class FaturamentoController extends Controller
                 'data_faturamento' => $fat->data_faturamento ? \Carbon\Carbon::parse($fat->data_faturamento)->format('d-m-Y H:i') : null,
                 'vencimento' => $fat->vencimento ? \Carbon\Carbon::parse($fat->vencimento)->format('d-m-Y') : null,
                 'valor_total' => $fat->valor_total,
+                'valor_aprovado' => $fat->valor_aprovado,
                 'status' => $fat->status,
                 'total_guias' => $totalGuias,
                 'guias_timeline' => $timeline,
@@ -220,12 +221,13 @@ class FaturamentoController extends Controller
             $guias = \App\Models\Guia::whereIn('id', $data['guias'])->get();
         }
         
-        $total = $guias->sum('valor_total_geral');
+        $total = $guias->where('status', '!=', 'DEVOLVIDA')->sum('valor_total_geral');
 
         $fat = \App\Models\Faturamento::create([
             'convenio_id' => $data['convenio_id'],
             'valor_total' => $total,
             'valor_cobrado' => $total,
+            'valor_aprovado' => $total,
             'status' => 'ABERTA',
             'data_faturamento' => now(),
             'paciente_id' => 1 // Temporary fallback until patient logic is refined
@@ -272,11 +274,7 @@ class FaturamentoController extends Controller
             'status' => 'FATURADA'
         ]);
         
-        $novoTotal = \App\Models\Guia::where('faturamento_id', $fat->id)->sum('valor_total_geral');
-        $fat->update([
-            'valor_total' => $novoTotal,
-            'valor_cobrado' => $novoTotal
-        ]);
+        $this->recalcularLote($fat);
 
         return back()->with('success', 'Guias adicionadas ao lote com sucesso!');
     }
@@ -291,11 +289,7 @@ class FaturamentoController extends Controller
             'status' => 'PRONTA_FATURAMENTO'
         ]);
 
-        $novoTotal = \App\Models\Guia::where('faturamento_id', $fat->id)->sum('valor_total_geral');
-        $fat->update([
-            'valor_total' => $novoTotal,
-            'valor_cobrado' => $novoTotal
-        ]);
+        $this->recalcularLote($fat);
 
         return back()->with('success', 'Guia removida do lote com sucesso!');
     }
@@ -316,6 +310,9 @@ class FaturamentoController extends Controller
 
         $guia->update($updateData);
 
+        $fat = \App\Models\Faturamento::findOrFail($lote_id);
+        $this->recalcularLote($fat);
+
         return back()->with('success', 'Status da guia atualizado com sucesso!');
     }
 
@@ -330,6 +327,9 @@ class FaturamentoController extends Controller
         $guia->update([
             'valor_glosado' => $data['valor_glosado']
         ]);
+
+        $fat = \App\Models\Faturamento::findOrFail($lote_id);
+        $this->recalcularLote($fat);
 
         return back()->with('success', 'Valor glosado atualizado com sucesso!');
     }
@@ -461,6 +461,20 @@ class FaturamentoController extends Controller
         return response()->json([
             'faturamento' => $faturamento,
             'agendamentos' => $agendamentos,
+        ]);
+    }
+
+    private function recalcularLote($fat)
+    {
+        $guias = \App\Models\Guia::where('faturamento_id', $fat->id)->where('status', '!=', 'DEVOLVIDA')->get();
+        $novoTotal = $guias->sum('valor_total_geral');
+        $novoGlosado = $guias->sum('valor_glosado');
+        $novoAprovado = max(0, $novoTotal - $novoGlosado);
+
+        $fat->update([
+            'valor_total' => $novoTotal,
+            'valor_cobrado' => $novoTotal,
+            'valor_aprovado' => $novoAprovado
         ]);
     }
 }

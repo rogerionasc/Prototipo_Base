@@ -348,3 +348,4 @@ Route::get('/app/painel/data', function () {
 Route::get('/guias/{agendamento}/imprimir', [App\Http\Controllers\GuiaController::class, 'imprimirDaAgenda'])->name('guias.imprimirDaAgenda');
 Route::get('/guias/{agendamento}/dados', [App\Http\Controllers\GuiaController::class, 'getDadosDaAgenda'])->name('guias.dados');
 Route::put('/guias/{id}', [App\Http\Controllers\GuiaController::class, 'update'])->name('guias.update');
+Route::post('/guias/{id}/devolver', [App\Http\Controllers\GuiaController::class, 'devolver'])->name('guias.devolver');
