@@ -160,7 +160,23 @@ class GuiaController extends Controller
         $especialidades = \App\Models\Especialidade::orderBy('nome')->get();
         $carateresAtendimento = \App\Models\CaraterAtendimento::all();
         $tabelasReferencia = \App\Models\TabelaReferencia::all();
-        $procedimentosTuss = \App\Models\Tuss::select('codigo', 'descricao', 'total')->orderBy('descricao')->get();
+        $codigosTuss = collect();
+        if ($guia) {
+            $codigosTuss = $codigosTuss->merge($guia->procedimentosSolicitados()->pluck('procedimento_solicitado_codigo'));
+            $codigosTuss = $codigosTuss->merge($guia->procedimentosRealizados()->pluck('procedimento_realizado_codigo'));
+        }
+        $origemIdParaTuss = $agendamento->agendamento_origem_id ?? $agendamento->id;
+        $agsTuss = Agendamento::where('id', $origemIdParaTuss)->orWhere('agendamento_origem_id', $origemIdParaTuss)->with('tuss')->get();
+        foreach ($agsTuss as $ag) {
+            if ($ag->tuss) {
+                $codigosTuss->push($ag->tuss->codigo);
+            }
+        }
+        
+        $procedimentosTuss = \App\Models\Tuss::select('codigo', 'descricao', 'total')
+            ->whereIn('codigo', $codigosTuss->filter()->unique()->values()->all())
+            ->orderBy('descricao')
+            ->get();
         $tiposAtendimento = \App\Models\TipoAtendimento::orderBy('codigo')->get();
         $indicacoesAcidente = \App\Models\IndicacaoIncidencia::orderBy('codigo')->get();
         $tiposConsulta = \App\Models\TipoConsulta::orderBy('codigo')->get();

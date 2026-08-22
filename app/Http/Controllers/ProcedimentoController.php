@@ -503,13 +503,26 @@ class ProcedimentoController extends Controller
         $perPage = max(1, min(100, $perPage));
         $offset = ($limit > 0) ? max(0, $offset) : (($page - 1) * $perPage);
 
-        $base = DB::table('tuss')->where('tabela', $tabela)->whereNull('deleted_at');
-        if ($q !== '') {
-            $base->where(function ($w) use ($q) {
-                $w->where('codigo', 'like', '%' . $q . '%')
-                    ->orWhere('descricao', 'like', '%' . $q . '%');
-            });
+        if ($q === '') {
+            return response()->json([
+                'data' => [],
+                'meta' => [
+                    'tabela' => $tabela,
+                    'q' => $q,
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total' => 0,
+                    'total_pages' => 0,
+                ],
+                'total' => 0,
+            ]);
         }
+
+        $base = DB::table('tuss')->where('tabela', $tabela)->whereNull('deleted_at');
+        $base->where(function ($w) use ($q) {
+            $w->where('codigo', 'like', '%' . $q . '%')
+                ->orWhere('descricao', 'like', '%' . $q . '%');
+        });
 
         $total = (clone $base)->count();
         $rows = $base
