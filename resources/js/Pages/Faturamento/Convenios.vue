@@ -261,7 +261,7 @@
                                     </template>
                                     <template #cell(numero)="{ item }">
                                         <a v-if="item.agendamento_id"
-                                            :href="route('guias.imprimirDaAgenda', item.agendamento_id)" target="_blank"
+                                            :href="route('guias.imprimirDaAgenda', item.agendamento_id) + '?guia_id=' + item.id" target="_blank"
                                             class="text-primary fw-medium text-decoration-underline">
                                             {{ item.numero_guia_prestador || item.numero_guia_operadora || 'Ver Guia' }}
                                         </a>
@@ -493,7 +493,7 @@
                                     <td>#{{ guia.id }}</td>
                                     <td>
                                         <a v-if="guia.agendamento_id"
-                                            :href="route('guias.imprimirDaAgenda', guia.agendamento_id)" target="_blank"
+                                            :href="route('guias.imprimirDaAgenda', guia.agendamento_id) + '?guia_id=' + guia.id" target="_blank"
                                             class="text-primary fw-medium text-decoration-underline">
                                             {{ guia.numero_guia_prestador || guia.numero_guia_operadora || 'Ver Guia' }}
                                         </a>

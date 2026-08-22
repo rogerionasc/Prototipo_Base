@@ -29,10 +29,16 @@ class GuiaController extends Controller
         $dataValidadeSenha = $autorizacao?->validade;
         $dataAutorizacao = $autorizacao ? ($autorizacao->data_resposta ?? $autorizacao->data_solicitacao ?? $autorizacao->created_at?->format('Y-m-d')) : null;
 
+        $guiaId = request()->query('guia_id');
         $guia = null;
-        if ($atendimento && $atendimento->guia_id) {
+        
+        if ($guiaId) {
+            $guia = Guia::find($guiaId);
+        } elseif ($atendimento && $atendimento->guia_id) {
             $guia = Guia::find($atendimento->guia_id);
-            if ($guia) {
+        }
+
+        if ($guia) {
                 // Sincroniza dados básicos de convênio caso tenham sido alterados/não carregados
                 $guia->update([
                     'ans_registro' => $registroAns,
@@ -51,8 +57,6 @@ class GuiaController extends Controller
                     'cbo_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->especialidades?->first()?->codigo ?? '2251',
                 ]);
             }
-        }
-
         if (!$guia) {
             $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
             $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);

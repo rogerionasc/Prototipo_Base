@@ -470,9 +470,11 @@ export default {
                 if (isTrat && total > 0) {
                     const baseData = this.agendamentoForm?.data || "";
                     const baseHora = this.agendamentoForm?.hora || "";
+                    const baseValor = this.agendamentoForm?.valor_cobrado || "";
                     this.sessoesCriacao = Array.from({ length: total }).map((_, i) => ({
                         data: i === 0 ? baseData : "",
-                        hora: i === 0 ? baseHora : ""
+                        hora: i === 0 ? baseHora : "",
+                        valor_cobrado: baseValor
                     }));
                 } else {
                     this.sessoesCriacao = [];
@@ -507,7 +509,8 @@ export default {
                 data: this.agendamentoForm.data,
                 hora: this.agendamentoForm.hora,
                 valor_cobrado: '',
-                profissionais: []
+                profissionais: [],
+                sessoes: []
             });
             this.$nextTick(() => {
                 const elsProc = this.$refs.selProcedimentoAdicional;
@@ -539,9 +542,28 @@ export default {
                     const proc = ((this.procedimentosFiltrados || []).find(p => String(p.id) === String(val)) || 
                         (this.procedimentosLocal || []).find(p => String(p.id) === String(val)));
                     const v = proc?.valor ?? null;
-                    const valCobrado = this.agendamentoForm.procedimentosAdicionais[idx].valor_cobrado;
+                    let valCobrado = this.agendamentoForm.procedimentosAdicionais[idx].valor_cobrado;
                     if (v != null && (!valCobrado || String(valCobrado).trim() === "")) {
-                        this.agendamentoForm.procedimentosAdicionais[idx].valor_cobrado = String(Number(v).toFixed(2)).replace('.', ',');
+                        valCobrado = String(Number(v).toFixed(2)).replace('.', ',');
+                        this.agendamentoForm.procedimentosAdicionais[idx].valor_cobrado = valCobrado;
+                    }
+
+                    const isTrat = !!proc?.eh_tratamento;
+                    const totalSessoes = isTrat ? Math.max(0, Number(proc?.quantidade_sessoes || 0)) : 0;
+                    if (isTrat && totalSessoes > 0) {
+                        if (this.agendamentoForm.procedimentosAdicionais[idx].sessoes && this.agendamentoForm.procedimentosAdicionais[idx].sessoes.length) {
+                            this.agendamentoForm.procedimentosAdicionais[idx].sessoes.forEach(s => s.valor_cobrado = valCobrado);
+                        } else {
+                            const baseData = this.agendamentoForm.procedimentosAdicionais[idx].data || this.agendamentoForm.data || "";
+                            const baseHora = this.agendamentoForm.procedimentosAdicionais[idx].hora || this.agendamentoForm.hora || "";
+                            this.agendamentoForm.procedimentosAdicionais[idx].sessoes = Array.from({ length: totalSessoes }).map((_, i) => ({
+                                data: i === 0 ? baseData : "",
+                                hora: i === 0 ? baseHora : "",
+                                valor_cobrado: valCobrado
+                            }));
+                        }
+                    } else {
+                        this.agendamentoForm.procedimentosAdicionais[idx].sessoes = [];
                     }
                 } catch (_) {}
 
@@ -2005,11 +2027,22 @@ export default {
                 if (v != null && deveAutopreencher) {
                     this.agendamentoForm.valor_cobrado = String(Number(v).toFixed(2));
                     this.valorCobradoAutoCriacaoProcId = pid != null ? String(pid) : null;
+                    if (this.sessoesCriacao && this.sessoesCriacao.length) {
+                        this.sessoesCriacao.forEach(s => s.valor_cobrado = this.agendamentoForm.valor_cobrado);
+                    }
                 }
             } catch (_) { }
         },
         aoDigitarValorCobradoCriacao() {
             try { this.valorCobradoAutoCriacaoProcId = null; } catch (_) { }
+            if (this.sessoesCriacao && this.sessoesCriacao.length) {
+                this.sessoesCriacao.forEach(s => s.valor_cobrado = this.agendamentoForm.valor_cobrado);
+            }
+        },
+        onBlurInputValorCobrado() {
+            if (this.sessoesCriacao && this.sessoesCriacao.length) {
+                this.sessoesCriacao.forEach(s => s.valor_cobrado = this.agendamentoForm.valor_cobrado);
+            }
         },
         async salvarAgendamento() {
             const pSelValidacao = (this.procedimentosFiltrados || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id)) || (this.procedimentosLocal || []).find(x => String(x.id) === String(this.agendamentoForm.procedimento_id));
@@ -2045,6 +2078,34 @@ export default {
                 }
             }
 
+            let flatProcedimentosAdicionais = [];
+            for (const pAdd of (this.agendamentoForm.procedimentosAdicionais || [])) {
+                // Sessão 1 (Procedimento Adicional Principal)
+                flatProcedimentosAdicionais.push({
+                    procedimento_id: pAdd.procedimento_id,
+                    pessoa_id: pAdd.pessoa_id,
+                    data: pAdd.data,
+                    hora: pAdd.hora,
+                    valor_cobrado: pAdd.valor_cobrado ? Number(String(pAdd.valor_cobrado).replace(/[^\d.,-]/g, '').replace(',', '.')) : null
+                });
+
+                // Sessões Extras (Ignora o índice 0, que é a sessão 1)
+                if (pAdd.sessoes && pAdd.sessoes.length > 1) {
+                    for (let i = 1; i < pAdd.sessoes.length; i++) {
+                        const s = pAdd.sessoes[i];
+                        if (s.data && s.hora) {
+                            flatProcedimentosAdicionais.push({
+                                procedimento_id: pAdd.procedimento_id,
+                                pessoa_id: pAdd.pessoa_id,
+                                data: s.data,
+                                hora: s.hora,
+                                valor_cobrado: s.valor_cobrado ? Number(String(s.valor_cobrado).replace(/[^\d.,-]/g, '').replace(',', '.')) : null
+                            });
+                        }
+                    }
+                }
+            }
+
             let basePayload = {
                 paciente_id: this.agendamentoForm.paciente_id,
                 pessoa_id: this.agendamentoForm.pessoa_id,
@@ -2056,7 +2117,7 @@ export default {
                 is_retorno: this.agendamentoForm.is_retorno,
                 numero_autorizacao: this.agendamentoForm.numero_autorizacao || null,
                 validade_autorizacao: this.agendamentoForm.validade_autorizacao || null,
-                procedimentosAdicionais: this.agendamentoForm.procedimentosAdicionais || [],
+                procedimentosAdicionais: flatProcedimentosAdicionais,
             };
             this.processandoCriacao = true;
             try {
@@ -2076,7 +2137,7 @@ export default {
                                 data: s.data,
                                 hora: s.hora,
                                 pessoa_id: this.agendamentoForm.pessoa_id,
-                                valor_cobrado: this.agendamentoForm.valor_cobrado
+                                valor_cobrado: s.valor_cobrado ? Number(String(s.valor_cobrado).replace(/[^\d.,-]/g, '').replace(',', '.')) : null
                             }));
                             payload.procedimentosAdicionais = [...(payload.procedimentosAdicionais || []), ...additionalSessions];
                         }
@@ -2459,23 +2520,48 @@ export default {
                 </div>
                 <div class="col-md-1">
                     <label class="form-label">Hora <span class="text-danger">*</span></label>
-                    <div v-if="!isEditMode">
-                        <flatPickr v-model="agendamentoForm.hora" class="form-control" :config="opcoesFlatpickrHora"
-                            placeholder="Hora" :disabled="agendamentoFoiAtendido" />
-                    </div>
-                    <div v-else>
-                        <input type="time" class="form-control bg-light" :value="agendamentoForm.hora" disabled />
-                    </div>
+                    <flatPickr v-model="agendamentoForm.hora" class="form-control" :config="opcoesFlatpickrHora"
+                        placeholder="Hora" :disabled="agendamentoFoiAtendido" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Valor Cobrado</label>
                     <input v-model="agendamentoForm.valor_cobrado" @input="aoDigitarValorCobradoCriacao"
                         @blur="onBlurInputValorCobrado" @focus="$event.target.select()" type="text" class="form-control"
                         placeholder="0,00" :disabled="agendamentoForm.is_retorno || isEdicaoBloqueada" />
-                    <div v-if="!isEditMode" class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="isRetornoCheckbox"
-                            v-model="agendamentoForm.is_retorno">
-                        <label class="form-check-label" for="isRetornoCheckbox">É Retorno?</label>
+                </div>
+
+                <template v-if="!isEditMode && sessoesCriacao && sessoesCriacao.length">
+                    <div class="col-12">
+                        <template v-for="(s, idx) in sessoesCriacao" :key="'sess-row-' + idx">
+                            <div v-if="idx > 0">
+                                <div class="row g-3 align-items-end mb-2">
+                                    <div class="col-md-7 d-flex justify-content-end align-items-center pb-2">
+                                        <span class="session-badge mb-0">Sessão {{ idx + 1 }}/{{ sessoesCriacao.length }}</span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <flatPickr v-model="s.data" class="form-control" :config="opcoesFlatpickrData" placeholder="Selecione a data" />
+                                    </div>
+                                    <div class="col-md-1">
+                                        <flatPickr v-model="s.hora" class="form-control" :config="opcoesFlatpickrHora" placeholder="Hora" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" class="form-control" v-model="s.valor_cobrado" v-maska data-maska="9,99" data-maska-tokens="9:[0-9]:repeated" data-maska-reversed placeholder="0,00" />
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <div class="col-12" v-if="!isEditMode">
+                    <div class="row g-3">
+                        <div class="col-md-10"></div>
+                        <div class="col-md-2">
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="isRetornoCheckbox" v-model="agendamentoForm.is_retorno">
+                                <label class="form-check-label" for="isRetornoCheckbox">É Retorno?</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -2514,6 +2600,31 @@ export default {
                                 <i class="ri-delete-bin-line"></i>
                             </button>
                         </div>
+
+                        <template v-if="!isEditMode && pAdicional.sessoes && pAdicional.sessoes.length">
+
+                            <div class="col-12">
+                                <template v-for="(s, sIdx) in pAdicional.sessoes" :key="'p-add-sess-' + idx + '-' + sIdx">
+                                    <div v-if="sIdx > 0">
+                                        <div class="row g-3 align-items-end mb-2">
+                                            <div class="col-md-7 d-flex justify-content-end align-items-center pb-2">
+                                                <span class="session-badge mb-0">Sessão {{ sIdx + 1 }}/{{ pAdicional.sessoes.length }}</span>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <flatPickr v-model="s.data" class="form-control" :config="opcoesFlatpickrData" placeholder="Data" />
+                                            </div>
+                                            <div class="col-md-1">
+                                                <flatPickr v-model="s.hora" class="form-control" :config="opcoesFlatpickrHora" placeholder="Hora" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="text" class="form-control" v-model="s.valor_cobrado" v-maska data-maska="9,99" data-maska-tokens="9:[0-9]:repeated" data-maska-reversed placeholder="0,00" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
                     </div>
                     <button type="button" class="btn btn-sm btn-soft-success mt-2" @click="adicionarProcedimentoAdicional()">
                         + Adicionar Procedimento
@@ -2536,34 +2647,7 @@ export default {
                     <textarea v-model="agendamentoForm.observacoes" class="form-control" rows="3" maxlength="500"
                         placeholder="Anotações gerais" :disabled="isEdicaoBloqueada"></textarea>
                 </div>
-                <template v-if="!isEditMode && sessoesCriacao && sessoesCriacao.length">
-                    <div class="col-12">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="ri-calendar-line text-primary"></i>
-                            <span class="fw-medium">Sessões do tratamento</span>
-                            <span class="text-muted">({{ sessoesCriacao.length }} sessões)</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <template v-for="(s, idx) in sessoesCriacao" :key="'sess-row-' + idx">
-                            <div v-if="idx > 0" class="session-item">
-                                <div class="row g-2 align-items-end">
-                                    <div class="col-md-6">
-                                        <label class="form-label"><span class="session-badge">Sessão {{ idx + 1 }}/{{
-                                            sessoesCriacao.length }}</span> Data <span class="text-danger">*</span></label>
-                                        <flatPickr v-model="s.data" class="form-control" :config="opcoesFlatpickrData"
-                                            placeholder="Selecione a data" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Hora <span class="text-danger">*</span></label>
-                                        <flatPickr v-model="s.hora" class="form-control" :config="opcoesFlatpickrHora"
-                                            placeholder="Selecione a hora" />
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </template>
+
             </div>
             <template #extraFooterLeft>
                 <button v-if="isEditMode && agendamentoForm.autorizacao_id" type="button" class="btn btn-info" title="Guia SP/SADT" @click="imprimirGuiaAgendamento(agendamentoForm.id)">
@@ -2638,18 +2722,6 @@ export default {
     display: none !important;
 }
 
-.session-item {
-    background-color: rgba(9, 152, 133, 0.1) !important;
-    border: 1px solid rgba(9, 152, 133, 0.15);
-    border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 10px;
-}
-
-.session-item .form-label {
-    font-size: 12px;
-    color: #6c757d;
-}
 
 .session-badge {
     display: inline-block;

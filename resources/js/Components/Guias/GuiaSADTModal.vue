@@ -495,12 +495,12 @@
               <input v-model="form.observacao_justificativa" type="text" class="form-control form-control-sm"
                 :disabled="isBloqueado('58_observacao')" :required="isObrigatorio('58_observacao')" />
             </div>
-            <div class="col-md-2 tiss-modern-col" v-if="isExibido('59_valor_total_honorarios')">
-              <label>59 - Honorários <span class="text-danger"
-                  v-if="isObrigatorio('59_valor_total_honorarios')">*</span></label>
+            <div class="col-md-2 tiss-modern-col" v-if="isExibido('59_valor_total_procedimentos')">
+              <label>59 - Procedimentos <span class="text-danger"
+                  v-if="isObrigatorio('59_valor_total_procedimentos')">*</span></label>
               <input v-model="form.total_procedimentos" type="number" class="form-control form-control-sm"
-                :disabled="isBloqueado('59_valor_total_honorarios')"
-                :required="isObrigatorio('59_valor_total_honorarios')" />
+                :disabled="isBloqueado('59_valor_total_procedimentos')"
+                :required="isObrigatorio('59_valor_total_procedimentos')" />
             </div>
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('60_valor_total_taxas')">
               <label>60 - Taxas <span class="text-danger" v-if="isObrigatorio('60_valor_total_taxas')">*</span></label>
@@ -618,18 +618,7 @@ export default {
     };
   },
   watch: {
-    'form.procedimentos_realizados': {
-      deep: true,
-      handler() {
-        this.calcularTotalGeral();
-      }
-    },
-    'form.total_procedimentos': 'calcularTotalGeral',
-    'form.total_taxas_alugueis': 'calcularTotalGeral',
-    'form.total_materiais': 'calcularTotalGeral',
-    'form.total_opme': 'calcularTotalGeral',
-    'form.total_medicamentos': 'calcularTotalGeral',
-    'form.total_gases_medicinais': 'calcularTotalGeral',
+
     modelValue: {
       immediate: true,
       handler(val) {
@@ -689,25 +678,7 @@ export default {
 
       item.valor_total = (qtd * vUnit * fator).toFixed(2);
     },
-    calcularTotalGeral() {
-      if (!this.form) return;
-      let total = 0;
-      
-      if (Array.isArray(this.form.procedimentos_realizados)) {
-        this.form.procedimentos_realizados.forEach(p => {
-          total += parseFloat(p.valor_total) || 0;
-        });
-      }
 
-      total += parseFloat(this.form.total_procedimentos) || 0;
-      total += parseFloat(this.form.total_taxas_alugueis) || 0;
-      total += parseFloat(this.form.total_materiais) || 0;
-      total += parseFloat(this.form.total_opme) || 0;
-      total += parseFloat(this.form.total_medicamentos) || 0;
-      total += parseFloat(this.form.total_gases_medicinais) || 0;
-
-      this.form.valor_total_geral = total.toFixed(2);
-    },
     addProcSol() {
       if (!this.form.procedimentos_solicitados) this.form.procedimentos_solicitados = [];
       this.form.procedimentos_solicitados.push({

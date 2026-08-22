@@ -268,7 +268,7 @@
                         (R$)</span></div>
             </div>
             <!-- Linhas de itens realizados -->
-            <div v-for="(proc, i) in (guia.procedimentos_realizados && guia.procedimentos_realizados.length ? guia.procedimentos_realizados : [{}])"
+            <div v-for="(proc, i) in ((guia.procedimentos_realizados || guia.procedimentosRealizados)?.length ? (guia.procedimentos_realizados || guia.procedimentosRealizados) : [{}])"
                 :key="'real-' + i" class="g-row" style="border-bottom:none;">
                 <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">{{ i + 1 }} -</span>
                 </div>
@@ -300,10 +300,10 @@
                     formatCurrency(proc.valor_total) || '&nbsp;' }}</span></div>
             </div>
             <!-- Linhas extras em branco para fechar 5 linhas -->
-            <div v-for="n in Math.max(0, 5 - (guia.procedimentos_realizados ? guia.procedimentos_realizados.length : 1))"
+            <div v-for="n in Math.max(0, 5 - ((guia.procedimentos_realizados || guia.procedimentosRealizados) ? (guia.procedimentos_realizados || guia.procedimentosRealizados).length : 1))"
                 :key="'exec-blank-' + n" class="g-row" style="border-bottom:none;">
                 <div class="g-cell" style="width:3%; border-right:none;"><span class="cell-value">{{
-                    (guia.procedimentos_realizados ? guia.procedimentos_realizados.length : 1) + n }} -</span></div>
+                    ((guia.procedimentos_realizados || guia.procedimentosRealizados) ? (guia.procedimentos_realizados || guia.procedimentosRealizados).length : 1) + n }} -</span></div>
                 <div class="g-cell" style="width:9%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:8%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
@@ -333,7 +333,7 @@
                         CBO</span></div>
             </div>
             <!-- Linhas de profissionais -->
-            <div v-for="(prof, i) in (guia.profissionais_executantes && guia.profissionais_executantes.length ? guia.profissionais_executantes : [{}])"
+            <div v-for="(prof, i) in ((guia.profissionais_executantes || guia.profissionaisExecutantes)?.length ? (guia.profissionais_executantes || guia.profissionaisExecutantes) : [{}])"
                 :key="'prof-exec-' + i" class="g-row" style="border-bottom:none;">
                 <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ prof.sequencial_referencia || (i + 1) }}</span></div>
                 <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">{{ prof.grau_participacao || '&nbsp;' }}</span></div>
@@ -345,9 +345,9 @@
                 <div class="g-cell" style="width:15%; border-right:none;"><span class="cell-value">{{ prof.cbo_executante || '&nbsp;' }}</span></div>
             </div>
             <!-- Linhas extras -->
-            <div v-for="n in Math.max(0, 4 - (guia.profissionais_executantes ? (guia.profissionais_executantes.length - 1) : 0))"
-                :key="'prof-blank-' + n" class="g-row" :style="n < Math.max(0, 4 - (guia.profissionais_executantes ? (guia.profissionais_executantes.length - 1) : 0)) ? 'border-bottom:none;' : ''">
-                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ (guia.profissionais_executantes ? guia.profissionais_executantes.length : 1) + n }}</span></div>
+            <div v-for="n in Math.max(0, 4 - ((guia.profissionais_executantes || guia.profissionaisExecutantes) ? ((guia.profissionais_executantes || guia.profissionaisExecutantes).length - 1) : 0))"
+                :key="'prof-blank-' + n" class="g-row" :style="n < Math.max(0, 4 - ((guia.profissionais_executantes || guia.profissionaisExecutantes) ? ((guia.profissionais_executantes || guia.profissionaisExecutantes).length - 1) : 0)) ? 'border-bottom:none;' : ''">
+                <div class="g-cell" style="width:5%; border-right:none;"><span class="cell-value">{{ ((guia.profissionais_executantes || guia.profissionaisExecutantes) ? (guia.profissionais_executantes || guia.profissionaisExecutantes).length : 1) + n }}</span></div>
                 <div class="g-cell" style="width:7%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:17%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
                 <div class="g-cell" style="width:25%; border-right:none;"><span class="cell-value">&nbsp;</span></div>
@@ -365,7 +365,7 @@
             </div>
             <div class="g-row" style="border-bottom:none;">
                 <div class="g-cell" style="width:16%; border-right:none;">
-                    <span class="cell-value-sm">1 - {{ formatDate(guia.profissionais_executantes?.[0]?.data_realizacao_serie) }}</span>
+                    <span class="cell-value-sm">1 - {{ formatDate((guia.profissionais_executantes || guia.profissionaisExecutantes)?.[0]?.data_realizacao_serie) }}</span>
                 </div>
                 <div class="g-cell" style="width:16%; border-right:none;">
                     <span class="cell-value-sm">3 - {{ formatDate(guia.profissionais_executantes?.[2]?.data_realizacao_serie) }}</span>

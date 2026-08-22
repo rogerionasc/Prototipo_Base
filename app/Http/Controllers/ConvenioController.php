@@ -342,7 +342,7 @@ class ConvenioController extends Controller
             return response()->json(['procedimentos' => $out]);
         }
 
-        $select = ['t.id', 't.tabela', 't.codigo', 't.descricao', 't.total', 'ct.requer_autorizacao'];
+        $select = ['t.id', 't.tabela', 't.codigo', 't.descricao', 't.total', 't.ch', 't.co', 'ct.requer_autorizacao'];
         if (Schema::hasColumn('tuss', 'eh_tratamento')) $select[] = 't.eh_tratamento';
         if (Schema::hasColumn('tuss', 'quantidade_sessoes')) $select[] = 't.quantidade_sessoes';
 
@@ -367,7 +367,7 @@ class ConvenioController extends Controller
             'codigo' => $t->codigo ?? '',
             'nome' => trim((string)($t->descricao ?? '')),
             'descricao' => (trim((string)($t->tabela ?? '')) !== '' && trim((string)($t->codigo ?? '')) !== '') ? (trim((string)$t->tabela) . ' ' . trim((string)$t->codigo)) : null,
-            'valor' => $t->total ?? 0,
+            'valor' => (((float)($t->ch ?? 0) + (float)($t->co ?? 0)) > 0) ? ((float)($t->ch ?? 0) + (float)($t->co ?? 0)) : (float)($t->total ?? 0),
             'eh_tratamento' => (bool)($t->eh_tratamento ?? false),
             'quantidade_sessoes' => $t->quantidade_sessoes ?? null,
             'requer_autorizacao' => (bool)($t->requer_autorizacao ?? false),
