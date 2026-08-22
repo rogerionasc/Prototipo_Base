@@ -171,6 +171,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');
         Route::post("/faturamento/guias/{id}/devolver", [FaturamentoController::class, "devolverGuia"])->whereNumber('id')->name('faturamento.guias.devolver');
         Route::patch("/faturamentos/{id}/fechar", [FaturamentoController::class, "fecharLote"])->whereNumber('id')->name('faturamentos.fechar');
+        Route::post("/faturamentos/{id}/processar", [FaturamentoController::class, "processarLote"])->whereNumber('id')->name('faturamento.processar_lote');
 
         // Financeiro
         // Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');

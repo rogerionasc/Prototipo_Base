@@ -58,9 +58,13 @@ class GuiaController extends Controller
                 ]);
             }
         if (!$guia) {
-            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
-            $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
-            $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+            $guia = Guia::where('agendamento_id', $agendamento->id)->first();
+            
+            if (!$guia) {
+                $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+                $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
+                $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+            }
         }
 
         if (!$guia) {
@@ -108,9 +112,13 @@ class GuiaController extends Controller
         }
 
         if (!$guia) {
-            $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
-            $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
-            $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+            $guia = Guia::where('agendamento_id', $agendamento->id)->first();
+            
+            if (!$guia) {
+                $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
+                $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
+                $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+            }
         }
 
         if (!$guia) {

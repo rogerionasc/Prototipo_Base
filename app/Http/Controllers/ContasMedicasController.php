@@ -24,6 +24,7 @@ class ContasMedicasController extends Controller
         $guiasData = $guias->map(function ($guia) {
             return [
                 'id' => $guia->id,
+                'data_criacao' => $guia->created_at ? $guia->created_at->format('d/m/Y H:i') : '-',
                 'data_solicitacao' => $guia->data_solicitacao ?? $guia->created_at?->format('Y-m-d'),
                 'paciente_nome' => $guia->agendamento?->paciente?->nome ?? $guia->beneficiario_nome,
                 'convenio_nome' => $guia->agendamento?->convenio?->descricao ?? 'Particular',
@@ -47,6 +48,11 @@ class ContasMedicasController extends Controller
             'guias' => 'required|array',
             'guias.*' => 'exists:guias,id'
         ]);
+
+        $guiasNaoValidadas = Guia::whereIn('id', $data['guias'])->where('status', '!=', 'VALIDADA')->count();
+        if ($guiasNaoValidadas > 0) {
+            return back()->with('error', 'Apenas guias com status VALIDADA podem ser encaminhadas para o faturamento.');
+        }
 
         Guia::whereIn('id', $data['guias'])->update([
             'status' => 'PRONTA_FATURAMENTO'

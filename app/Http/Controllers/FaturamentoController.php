@@ -255,6 +255,10 @@ class FaturamentoController extends Controller
     {
         $fat = \App\Models\Faturamento::findOrFail($id);
         
+        if ($fat->status !== 'ABERTA') {
+            return back()->with('error', 'Lote fechado ou processado não pode receber novas guias.');
+        }
+        
         $data = $request->validate([
             'guias' => 'required|array|min:1',
             'guias.*' => 'exists:guias,id'
@@ -345,6 +349,19 @@ class FaturamentoController extends Controller
             $faturamento->update(['status' => 'ABERTA']);
             return back()->with('success', 'Lote reaberto com sucesso!');
         }
+    }
+
+    public function processarLote(string $id)
+    {
+        $faturamento = \App\Models\Faturamento::findOrFail($id);
+
+        if ($faturamento->status !== 'FECHADA') {
+            return back()->with('error', 'Apenas lotes fechados podem ser processados!');
+        }
+
+        $faturamento->update(['status' => 'PROCESSADA']);
+
+        return back()->with('success', 'Lote processado com sucesso!');
     }
 
     public function updateConvenio(Request $request, string $id)

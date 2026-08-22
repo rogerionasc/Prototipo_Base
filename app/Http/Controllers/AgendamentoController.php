@@ -153,6 +153,7 @@ class AgendamentoController extends Controller
             'procedimentosAdicionais.*.pessoa_id' => ['required', 'integer', 'exists:pessoas,id'],
             'procedimentosAdicionais.*.data' => ['required', 'date_format:Y-m-d'],
             'procedimentosAdicionais.*.hora' => ['required', 'regex:/^\d{2}:\d{2}$/'],
+            'procedimentosAdicionais.*.grupo_id' => ['nullable', 'string'],
         ]);
 
         if ($isConvenio) {
@@ -189,6 +190,7 @@ class AgendamentoController extends Controller
             'hora' => $data['hora'],
             'pessoa_id' => $data['pessoa_id'],
             'is_master' => true,
+            'grupo_id' => 'main',
         ];
 
         if (!empty($data['procedimentosAdicionais'])) {
@@ -201,6 +203,7 @@ class AgendamentoController extends Controller
                         'pessoa_id' => $add['pessoa_id'],
                         'valor_cobrado' => isset($add['valor_cobrado']) && $add['valor_cobrado'] !== '' ? (float)str_replace(['.', ','], ['', '.'], $add['valor_cobrado']) : null,
                         'is_master' => false,
+                        'grupo_id' => $add['grupo_id'] ?? null,
                     ];
                 }
             }
@@ -304,6 +307,10 @@ class AgendamentoController extends Controller
             $agendamentosInseridos = [];
             $sessoesLocalCount = [];
 
+            $masterGuia = null;
+            $guiaAtual = null;
+            $procedimentosNaGuiaAtual = 0;
+
             foreach ($itemsToCreate as $item) {
                 $procId = (int)$item['procedimento_id'];
 
@@ -320,12 +327,13 @@ class AgendamentoController extends Controller
 
                 $sessaoId = null;
                 if ($proc && (bool)$proc->eh_tratamento) {
-                    if (!isset($sessoesLocalCount[$procId])) {
-                        $sessoesLocalCount[$procId] = 1;
+                    $grupoId = $item['grupo_id'] ?? 'main';
+                    if (!isset($sessoesLocalCount[$grupoId])) {
+                        $sessoesLocalCount[$grupoId] = 1;
                     } else {
-                        $sessoesLocalCount[$procId]++;
+                        $sessoesLocalCount[$grupoId]++;
                     }
-                    $nextNum = $sessoesLocalCount[$procId];
+                    $nextNum = $sessoesLocalCount[$grupoId];
 
                     $sessaoId = DB::table('sessoes_tratamento')->insertGetId([
                         'procedimento_id' => $isConvenio ? null : $procId,
@@ -433,105 +441,69 @@ class AgendamentoController extends Controller
                             'total_taxas_alugueis' => null,
                             'total_materiais' => null,
                         ]);
+                        $guiaAtual = $masterGuia;
+                        $procedimentosNaGuiaAtual = 0;
                     }
 
                     $procSolicitado = null;
 
-                    if ($item['is_master']) {
-                        if ($isConvenio && $procId) {
-                            $tussItem = \App\Models\Tuss::find($procId);
-                            if ($tussItem) {
-                                $descSuffix = "";
-                                if (isset($proc) && $proc && (bool)$proc->eh_tratamento && isset($nextNum)) {
-                                    $qtd = (int)($proc->quantidade_sessoes ?? 0);
-                                    $qtdStr = $qtd > 0 ? $qtd : '?';
-                                    $descSuffix = " (Sessão {$nextNum}/{$qtdStr})";
-                                }
-
-                                $procSolicitado = $masterGuia->procedimentosSolicitados()->create([
-                                    'procedimento_solicitado_codigo' => $tussItem->codigo,
-                                    'tabela_procedimento_solicitado' => '22',
-                                    'procedimento_solicitado_descricao' => $tussItem->descricao . $descSuffix,
-                                    'quantidade_solicitada' => 1,
-                                    'quantidade_autorizada' => $requerAutorizacao ? 0 : 1,
-                                ]);
-
-                                $procRealizado = $masterGuia->procedimentosRealizados()->create([
-                                    'procedimento_solicitado_id' => $procSolicitado->id,
-                                    'tabela_procedimento_realizado' => null,
-                                    'procedimento_realizado_codigo' => null,
-                                    'procedimento_realizado_descricao' => null,
-                                    'quantidade_realizada' => null,
-                                    'valor_unitario' => null,
-                                    'valor_total' => null,
-                                    'data_realizacao' => null,
-                                    'hora_inicial' => null,
-                                ]);
-
-                                $procRealizado->profissionaisExecutantes()->create([
-                                    'sequencial_referencia' => null,
-                                    'grau_participacao' => null,
-                                    'profissional_executante_codigo' => null,
-                                    'profissional_executante_nome' => null,
-                                    'conselho_executante' => null,
-                                    'numero_conselho_executante' => null,
-                                    'uf_conselho_executante' => null,
-                                    'cbo_executante' => null,
-                                    'data_realizacao_serie' => null,
-                                ]);
+                    if ($isConvenio && $procId && isset($guiaAtual)) {
+                        $tussItem = \App\Models\Tuss::find($procId);
+                        if ($tussItem) {
+                            if ($procedimentosNaGuiaAtual >= 5) {
+                                $novaGuia = $masterGuia->replicate();
+                                $novaGuia->agendamento_id = $agendamento->id;
+                                $novaGuia->numero_guia_prestador = 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT) . '-' . substr(uniqid(), -4);
+                                $novaGuia->numero_guia_principal = $masterGuia->numero_guia_prestador;
+                                $novaGuia->save();
+                                $guiaAtual = $novaGuia;
+                                $procedimentosNaGuiaAtual = 0;
                             }
-                        }
-                    } else {
-                        // Se não for master mas precisarmos de uma guia, garantimos que tenha a master
-                        $guiaIdParaAutorizacao = isset($masterGuia) ? $masterGuia->id : null;
-                        
-                        // Gerar registros complementares para os procedimentos adicionais ANTES de criar a autorização
-                        if ($isConvenio && $procId && $guiaIdParaAutorizacao) {
-                            $tussItem = \App\Models\Tuss::find($procId);
-                            if ($tussItem) {
-                                $descSuffix = "";
-                                if (isset($proc) && $proc && (bool)$proc->eh_tratamento && isset($nextNum)) {
-                                    $qtd = (int)($proc->quantidade_sessoes ?? 0);
-                                    $qtdStr = $qtd > 0 ? $qtd : '?';
-                                    $descSuffix = " (Sessão {$nextNum}/{$qtdStr})";
-                                }
 
-                                $procSolicitado = $masterGuia->procedimentosSolicitados()->create([
-                                    'procedimento_solicitado_codigo' => $tussItem->codigo,
-                                    'tabela_procedimento_solicitado' => '22',
-                                    'procedimento_solicitado_descricao' => $tussItem->descricao . $descSuffix,
-                                    'quantidade_solicitada' => 1,
-                                    'quantidade_autorizada' => $requerAutorizacao ? 0 : 1,
-                                ]);
-
-                                $procRealizado = $masterGuia->procedimentosRealizados()->create([
-                                    'procedimento_solicitado_id' => $procSolicitado->id,
-                                    'tabela_procedimento_realizado' => null,
-                                    'procedimento_realizado_codigo' => null,
-                                    'procedimento_realizado_descricao' => null,
-                                    'quantidade_realizada' => null,
-                                    'valor_unitario' => null,
-                                    'valor_total' => null,
-                                    'data_realizacao' => null,
-                                    'hora_inicial' => null,
-                                ]);
-
-                                $procRealizado->profissionaisExecutantes()->create([
-                                    'sequencial_referencia' => null,
-                                    'grau_participacao' => null,
-                                    'profissional_executante_codigo' => null,
-                                    'profissional_executante_nome' => null,
-                                    'conselho_executante' => null,
-                                    'numero_conselho_executante' => null,
-                                    'uf_conselho_executante' => null,
-                                    'cbo_executante' => null,
-                                    'data_realizacao_serie' => null,
-                                ]);
+                            $descSuffix = "";
+                            if (isset($proc) && $proc && (bool)$proc->eh_tratamento && isset($nextNum)) {
+                                $qtd = (int)($proc->quantidade_sessoes ?? 0);
+                                $qtdStr = $qtd > 0 ? $qtd : '?';
+                                $descSuffix = " (Sessão {$nextNum}/{$qtdStr})";
                             }
+
+                            $procSolicitado = $guiaAtual->procedimentosSolicitados()->create([
+                                'procedimento_solicitado_codigo' => $tussItem->codigo,
+                                'tabela_procedimento_solicitado' => '22',
+                                'procedimento_solicitado_descricao' => $tussItem->descricao . $descSuffix,
+                                'quantidade_solicitada' => 1,
+                                'quantidade_autorizada' => $requerAutorizacao ? 0 : 1,
+                            ]);
+
+                            $procRealizado = $guiaAtual->procedimentosRealizados()->create([
+                                'procedimento_solicitado_id' => $procSolicitado->id,
+                                'tabela_procedimento_realizado' => null,
+                                'procedimento_realizado_codigo' => null,
+                                'procedimento_realizado_descricao' => null,
+                                'quantidade_realizada' => null,
+                                'valor_unitario' => null,
+                                'valor_total' => null,
+                                'data_realizacao' => null,
+                                'hora_inicial' => null,
+                            ]);
+
+                            $procRealizado->profissionaisExecutantes()->create([
+                                'sequencial_referencia' => null,
+                                'grau_participacao' => null,
+                                'profissional_executante_codigo' => null,
+                                'profissional_executante_nome' => null,
+                                'conselho_executante' => null,
+                                'numero_conselho_executante' => null,
+                                'uf_conselho_executante' => null,
+                                'cbo_executante' => null,
+                                'data_realizacao_serie' => null,
+                            ]);
+                            
+                            $procedimentosNaGuiaAtual++;
                         }
                     }
 
-                    $guiaIdParaAutorizacao = isset($masterGuia) ? $masterGuia->id : null;
+                    $guiaIdParaAutorizacao = isset($guiaAtual) ? $guiaAtual->id : null;
 
                     if ($guiaIdParaAutorizacao) {
                         $aut = Autorizacao::create([

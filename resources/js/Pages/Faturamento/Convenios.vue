@@ -117,6 +117,14 @@
                                             <i class="ri-file-code-line align-bottom me-2 text-muted"></i> Baixar XML
                                         </a>
                                     </li>
+                                    <li v-if="lote.status === 'FECHADA'">
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li v-if="lote.status === 'FECHADA'">
+                                        <a class="dropdown-item fw-medium text-primary" href="#" @click.prevent.stop="askProcessarLote(lote.id)">
+                                            <i class="ri-settings-4-line align-bottom me-2"></i> Processar Lote
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </div>
@@ -137,6 +145,14 @@
                                     <li>
                                         <a class="dropdown-item" href="#" @click.prevent.stop="baixarXml(lote.id)">
                                             <i class="ri-file-code-line align-bottom me-2 text-muted"></i> Baixar XML
+                                        </a>
+                                    </li>
+                                    <li v-if="lote.status === 'FECHADA'">
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li v-if="lote.status === 'FECHADA'">
+                                        <a class="dropdown-item fw-medium text-primary" href="#" @click.prevent.stop="askProcessarLote(lote.id)">
+                                            <i class="ri-settings-4-line align-bottom me-2"></i> Processar Lote
                                         </a>
                                     </li>
                                 </ul>
@@ -243,7 +259,7 @@
                                         :disabled="fechandoLote === lote.id">
                                         <i class="ri-lock-line align-bottom me-1"></i> Fechar Lote
                                     </button>
-                                    <button v-else class="btn btn-sm btn-soft-info"
+                                    <button v-else-if="lote.status === 'FECHADA'" class="btn btn-sm btn-soft-info"
                                         @click.stop="askReabrirLote(lote.id)"
                                         :disabled="fechandoLote === lote.id">
                                         <i class="ri-lock-unlock-line align-bottom me-1"></i> Reabrir Lote
@@ -278,7 +294,7 @@
                                         {{ formatCurrency(item.valor_total) }}
                                     </template>
                                     <template #cell(glosa)="{ item }">
-                                        <template v-if="lote.status === 'ABERTA'">
+                                        <template v-if="lote.status === 'ABERTA' || lote.status === 'PROCESSADA'">
                                             <span v-if="item.valor_glosado > 0" class="text-danger fw-medium">{{
                                                 formatCurrency(item.valor_glosado) }}</span>
                                             <span v-else class="text-muted">-</span>
@@ -295,17 +311,19 @@
                                         </template>
                                     </template>
                                     <template #cell(status)="{ item }">
-                                        <span v-if="lote.status === 'ABERTA' || item.status === 'DEVOLVIDA'">
+                                        <span v-if="lote.status === 'ABERTA' || item.status === 'DEVOLVIDA' || lote.status === 'PROCESSADA'">
                                             {{ item.status ? item.status.replace(/_/g, ' ') : 'PENDENTE' }}
                                         </span>
-                                        <select v-else :value="item.status" data-choices data-choices-search-false
-                                            style="min-width: 150px;" class="form-select form-select-sm"
-                                            :disabled="updatingStatus[item.id]"
-                                            @change="atualizarStatusGuia(lote.id, item.id, $event.detail ? $event.detail.value : $event.target.value)">
-                                            <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                                                {{ opt.label }}
-                                            </option>
-                                        </select>
+                                        <div v-else>
+                                            <select :value="item.status" data-choices data-choices-search-false
+                                                style="min-width: 150px;" class="form-select form-select-sm"
+                                                :disabled="updatingStatus[item.id]"
+                                                @change="atualizarStatusGuia(lote.id, item.id, $event.detail ? $event.detail.value : $event.target.value)">
+                                                <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
+                                                    {{ opt.label }}
+                                                </option>
+                                            </select>
+                                        </div>
                                     </template>
                                     <template #actions="{ item }">
                                         <button v-if="lote.status === 'ABERTA'"
@@ -313,7 +331,7 @@
                                             @click.stop="askDeleteGuia(lote.id, item.id)" :disabled="removendoGuia === item.id || item.status === 'DEVOLVIDA'">
                                             <i class="ri-delete-bin-line"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-soft-dark shadow-none ms-1"
+                                        <button v-if="lote.status !== 'PROCESSADA'" class="btn btn-sm btn-soft-dark shadow-none ms-1"
                                             @click.stop="askDevolverGuiaLote(item.id)" :disabled="devolvendoGuiaId === item.id || item.status === 'DEVOLVIDA'" title="Devolver Guia">
                                             <i class="ri-arrow-go-back-line"></i>
                                         </button>
@@ -395,55 +413,7 @@
                     placeholder="Escolha um convênio..." @change="carregarGuias" />
             </div>
 
-            <div v-if="loadingGuias" class="text-center py-4">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-2 text-muted">Buscando guias disponíveis...</p>
-            </div>
 
-            <div v-if="!loadingGuias && loteForm.convenio_id" class="mt-4">
-                <h6 class="fs-14 mb-3">Guias Disponíveis para Faturamento ({{ guiasDisponiveis.length }})</h6>
-
-                <div v-if="guiasDisponiveis.length === 0" class="alert alert-info">
-                    Nenhuma guia pendente encontrada para este convênio.
-                </div>
-
-                <div v-else class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th scope="col" style="width: 50px;">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" @change="toggleAllGuias"
-                                            :checked="allGuiasSelected">
-                                    </div>
-                                </th>
-                                <th>ID/Código</th>
-                                <th>Paciente</th>
-                                <th>Senha/Aut.</th>
-                                <th>Status</th>
-                                <th>Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="guia in guiasDisponiveis" :key="guia.id">
-                                <td>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" :value="guia.id"
-                                            v-model="loteForm.guias">
-                                    </div>
-                                </td>
-                                <td>#{{ guia.id }}</td>
-                                <td>{{ guia.atendimento?.agendamento?.paciente?.nome || 'Não informado' }}</td>
-                                <td>{{ guia.senha || '-' }}</td>
-                                <td>
-                                    <span class="badge" :class="getBadgeClass(guia.status)">{{ guia.status }}</span>
-                                </td>
-                                <td>{{ formatCurrency(guia.valor_total) }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </Modal>
 
         <!-- Modal Adicionar Nova Guia -->
@@ -555,8 +525,13 @@
 
         <ModalConfirm v-model="confirmReabrirLoteModal" title="Reabrir Lote"
             subTitle="Deseja realmente reabrir este lote?"
-            message="Ao reabrir o lote, será possível adicionar e remover guias novamente. Porém, a edição de status e glosa das guias ficará bloqueada."
-            nameButton="Sim, reabrir lote" buttonClass="btn-info" @save="executarReabrirLote" />
+            message="O lote voltará a receber edições e ficará com o status de ABERTA." nameButton="Sim, reabrir"
+            buttonClass="btn-info" @save="executarReabrirLote" />
+
+        <ModalConfirm v-model="confirmProcessarLoteModal" title="Processar Lote"
+            subTitle="Deseja realmente processar este lote?"
+            message="Esta ação é irreversível. O lote e as guias não poderão mais ser alterados e os lançamentos no financeiro (Contas a Receber) serão gerados." nameButton="Sim, processar"
+            buttonClass="btn-primary" @save="executarProcessarLote" />
 
     </Layout>
 </template>
@@ -681,34 +656,6 @@ function openCriarLoteModal() {
     showLoteModal.value = true;
 }
 
-function carregarGuias(val) {
-    if (!val) {
-        guiasDisponiveis.value = [];
-        return;
-    }
-    loadingGuias.value = true;
-    axios.get(route('faturamento.guias_disponiveis'), { params: { convenio_id: val } })
-        .then(res => {
-            guiasDisponiveis.value = res.data || [];
-            loteForm.guias = [];
-        })
-        .finally(() => {
-            loadingGuias.value = false;
-        });
-}
-
-const allGuiasSelected = computed(() => {
-    return guiasDisponiveis.value.length > 0 && loteForm.guias.length === guiasDisponiveis.value.length;
-});
-
-function toggleAllGuias(e) {
-    if (e.target.checked) {
-        loteForm.guias = guiasDisponiveis.value.map(g => g.id);
-    } else {
-        loteForm.guias = [];
-    }
-}
-
 function salvarLote() {
     loteForm.post(route('faturamento.store_lote'), {
         onSuccess: () => {
@@ -760,8 +707,7 @@ const statusOptions = [
     // { value: 'PRONTA_FATURAMENTO', label: 'PRONTA FATURAMENTO' },
     // { value: 'ENVIADA_FATURAMENTO', label: 'ENVIADA FATURAMENTO' },
     { value: 'FATURADA', label: 'FATURADA' },
-    { value: 'GLOSADA', label: 'GLOSADA' },
-    { value: 'DEVOLVIDA', label: 'DEVOLVIDA' }
+    { value: 'GLOSADA', label: 'GLOSADA' }
 ];
 
 const updatingStatus = ref({});
@@ -922,40 +868,72 @@ const executarDevolverGuia = async () => {
 const fechandoLote = ref(null);
 const confirmFecharLoteModal = ref(false);
 const confirmReabrirLoteModal = ref(false);
-const loteIdParaFechar = ref(null);
+const confirmProcessarLoteModal = ref(false);
+const loteParaFechar = ref(null);
+const loteParaReabrir = ref(null);
+const loteParaProcessar = ref(null);
 
 function askFecharLote(loteId) {
-    loteIdParaFechar.value = loteId;
+    loteParaFechar.value = loteId;
     confirmFecharLoteModal.value = true;
 }
 
 function askReabrirLote(loteId) {
-    loteIdParaFechar.value = loteId;
+    loteParaReabrir.value = loteId;
     confirmReabrirLoteModal.value = true;
 }
 
 function executarFecharLote() {
-    if (!loteIdParaFechar.value) return;
-    fechandoLote.value = loteIdParaFechar.value;
-    router.patch(route('faturamentos.fechar', loteIdParaFechar.value), {}, {
+    if (!loteParaFechar.value) return;
+    fechandoLote.value = loteParaFechar.value;
+    router.patch(route('faturamentos.fechar', loteParaFechar.value), {}, {
         preserveScroll: true,
         onFinish: () => {
             fechandoLote.value = null;
             confirmFecharLoteModal.value = false;
-            loteIdParaFechar.value = null;
+            loteParaFechar.value = null;
         }
     });
 }
 
 function executarReabrirLote() {
-    if (!loteIdParaFechar.value) return;
-    fechandoLote.value = loteIdParaFechar.value;
-    router.patch(route('faturamentos.fechar', loteIdParaFechar.value), {}, {
+    if (!loteParaReabrir.value) return;
+    fechandoLote.value = loteParaReabrir.value;
+    router.patch(route('faturamentos.fechar', loteParaReabrir.value), {}, {
         preserveScroll: true,
         onFinish: () => {
             fechandoLote.value = null;
             confirmReabrirLoteModal.value = false;
-            loteIdParaFechar.value = null;
+            loteParaReabrir.value = null;
+        }
+    });
+}
+
+function askProcessarLote(loteId) {
+    loteParaProcessar.value = loteId;
+    confirmProcessarLoteModal.value = true;
+}
+
+function executarProcessarLote() {
+    if (!loteParaProcessar.value) return;
+    fechandoLote.value = loteParaProcessar.value;
+    confirmProcessarLoteModal.value = false;
+
+    router.post(route('faturamento.processar_lote', loteParaProcessar.value), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            window.dispatchEvent(new CustomEvent('flash:show', {
+                detail: { type: 'success', message: 'Lote processado com sucesso.' }
+            }));
+            loteParaProcessar.value = null;
+        },
+        onError: () => {
+            window.dispatchEvent(new CustomEvent('flash:show', {
+                detail: { type: 'danger', message: 'Erro ao processar lote.' }
+            }));
+        },
+        onFinish: () => {
+            fechandoLote.value = null;
         }
     });
 }

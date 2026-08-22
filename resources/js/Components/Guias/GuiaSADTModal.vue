@@ -495,7 +495,7 @@
               <input v-model="form.observacao_justificativa" type="text" class="form-control form-control-sm"
                 :disabled="isBloqueado('58_observacao')" :required="isObrigatorio('58_observacao')" />
             </div>
-            <div class="col-md-2 tiss-modern-col" v-if="isExibido('59_valor_total_procedimentos')">
+            <div class="col-md-2 tiss-modern-col">
               <label>59 - Procedimentos <span class="text-danger"
                   v-if="isObrigatorio('59_valor_total_procedimentos')">*</span></label>
               <input v-model="form.total_procedimentos" type="number" class="form-control form-control-sm"

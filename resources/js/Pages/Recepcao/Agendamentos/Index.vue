@@ -2078,10 +2078,15 @@ export default {
                 }
             }
 
+            let blockIdx = 1;
             let flatProcedimentosAdicionais = [];
             for (const pAdd of (this.agendamentoForm.procedimentosAdicionais || [])) {
+                const currentGrupo = 'add_' + blockIdx;
+                blockIdx++;
+                
                 // Sessão 1 (Procedimento Adicional Principal)
                 flatProcedimentosAdicionais.push({
+                    grupo_id: currentGrupo,
                     procedimento_id: pAdd.procedimento_id,
                     pessoa_id: pAdd.pessoa_id,
                     data: pAdd.data,
@@ -2095,6 +2100,7 @@ export default {
                         const s = pAdd.sessoes[i];
                         if (s.data && s.hora) {
                             flatProcedimentosAdicionais.push({
+                                grupo_id: pAdd._grupo_id || currentGrupo,
                                 procedimento_id: pAdd.procedimento_id,
                                 pessoa_id: pAdd.pessoa_id,
                                 data: s.data,
@@ -2133,6 +2139,7 @@ export default {
                         
                         if (validSessions.length > 1) {
                             const additionalSessions = validSessions.slice(1).map(s => ({
+                                grupo_id: 'main',
                                 procedimento_id: this.agendamentoForm.procedimento_id,
                                 data: s.data,
                                 hora: s.hora,

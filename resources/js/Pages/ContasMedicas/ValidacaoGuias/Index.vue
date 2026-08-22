@@ -11,12 +11,10 @@
                         <TableGrid ref="tableGridPendentesRef" :columns="columnsPendentes" :data="guiasPendentes"
                             tableTitle="Guias a Validar" :showStatus="false" :showCheckbox="true"
                             :showMultiDelete="false" :showImage="false" :search="true" :showAddButton="false"
-                            :searchPlaceholder="'Buscar guia, paciente ou convênio...'" 
+                            :searchPlaceholder="'Buscar guia, paciente ou convênio...'"
                             :actionsConfig="{ delete: false, edit: false, show: true }"
-                            :actionsLabels="{ show: 'Validar' }"
-                            :actionsButtonText="{ show: 'Validar' }"
-                            :actionsIcons="{ show: 'ri-edit-2-line' }"
-                            @show="abrirGuia">
+                            :actionsLabels="{ show: 'Validar' }" :actionsButtonText="{ show: 'Validar' }"
+                            :actionsIcons="{ show: 'ri-edit-2-line' }" @show="abrirGuia">
                             <template #custom-actions="{ selectedRows }">
                                 <div class="d-flex align-items-center gap-2">
                                     <button v-if="selectedRows && selectedRows.length > 0" class="btn btn-success"
@@ -49,8 +47,9 @@
             </div>
         </div>
 
-        <GuiaSADTModal v-if="showGuiaSADTModal" v-model="showGuiaSADTModal" :agendamento-id="selectedAgendamentoForGuia" :guia-id="selectedGuiaId"
-            :ignorar-bloqueios="true" :permitir-validacao-faturamento="true" @saved="reloadPage" />
+        <GuiaSADTModal v-if="showGuiaSADTModal" v-model="showGuiaSADTModal" :agendamento-id="selectedAgendamentoForGuia"
+            :guia-id="selectedGuiaId" :ignorar-bloqueios="true" :permitir-validacao-faturamento="true"
+            @saved="reloadPage" />
 
         <ModalConfirm v-model="confirmEncaminharModal" title="Confirmação"
             :subTitle="`Deseja encaminhar ${guiasParaEncaminhar.length} guia(s) selecionada(s) para o faturamento?`"
@@ -147,12 +146,13 @@ function getStatusBadgeClass(status) {
     const s = String(status || '').toUpperCase();
     switch (s) {
         case 'CRIADA': return 'badge bg-light text-dark border';
-        case 'VALIDADA': return 'badge bg-success-subtle text-success';
+        case 'VALIDADA': return 'badge bg-primary-subtle text-primary';
         case 'EM_ATENDIMENTO': return 'badge bg-info-subtle text-info';
         case 'ATENDIMENTO_REALIZADO': return 'badge bg-primary-subtle text-primary';
         case 'PRONTA_FATURAMENTO': return 'badge bg-success-subtle text-success';
         case 'ENVIADA_FATURAMENTO': return 'badge bg-warning-subtle text-warning';
         case 'FATURADA': return 'badge bg-dark-subtle text-dark';
+        case 'DEVOLVIDA': return 'badge bg-danger-subtle text-danger';
         case 'GLOSADA': return 'badge bg-danger-subtle text-danger';
         case 'CANCELADA': return 'badge bg-danger text-white';
         default: return 'badge bg-light text-dark border';
@@ -173,6 +173,7 @@ const columnsPendentes = [
     { id: "tipo", name: "Tipo", formatter: (cell) => cell || "-" },
     { id: "paciente_nome", name: "Paciente" },
     { id: "medico_nome", name: "Médico", formatter: (cell) => cell || "-" },
+    { id: "data_criacao", name: "Criado em" },
     {
         id: "status",
         name: "Status",
@@ -202,6 +203,14 @@ function encaminharSelecionadas() {
     if (!ids || ids.length === 0) {
         window.dispatchEvent(new CustomEvent('flash:show', {
             detail: { type: 'warning', message: 'Selecione pelo menos uma guia na tabela para encaminhar.' }
+        }));
+        return;
+    }
+
+    const invalidas = props.guias.filter(g => ids.includes(String(g.id)) && g.status !== 'VALIDADA');
+    if (invalidas.length > 0) {
+        window.dispatchEvent(new CustomEvent('flash:show', {
+            detail: { type: 'warning', message: 'Apenas guias com status VALIDADA podem ser encaminhadas para faturamento.' }
         }));
         return;
     }
