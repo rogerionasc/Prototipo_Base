@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToAccount;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Paciente extends Model
 {
-    use HasFactory, SoftDeletes;
+    use BelongsToAccount;
+    use HasFactory, SoftDeletes, \App\Traits\BelongsToAccount;
 
     protected $table = 'pacientes';
 

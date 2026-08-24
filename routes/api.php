@@ -21,4 +21,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::post('/pre-cadastro', [PreCadastroController::class, 'store']);
-Route::get('/pacientes', [PacienteController::class, 'apiIndex']);
+
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/pacientes', [PacienteController::class, 'apiIndex']);
+});

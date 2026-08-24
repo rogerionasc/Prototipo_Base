@@ -9,7 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles; // Adicione esta linha
+use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable implements MustVerifyEmail
@@ -19,7 +19,7 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasProfilePhoto;
     use Notifiable;
     use TwoFactorAuthenticatable;
-    use HasRoles; // Adicione esta linha
+    use HasRoles;
     use SoftDeletes;
 
     /**
@@ -32,6 +32,7 @@ class User extends Authenticatable implements MustVerifyEmail
         // 'email',
         // 'password',
         'conta_id',
+        'account_id',
         'pessoa_id',
         'is_active',
         'email',
@@ -43,14 +44,19 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Conta::class);
     }
 
+    public function account()
+    {
+        return $this->belongsTo(Account::class);
+    }
+
     public function profissionalSaude()
     {
-        return $this->belongsTo(Pessoa::class, 'pessoa_id', 'id');
+        return $this->belongsTo(Pessoa::class, 'pessoa_id', 'id')->withoutGlobalScope('account');
     }
 
     public function pessoa()
     {
-        return $this->belongsTo(Pessoa::class, 'pessoa_id', 'id');
+        return $this->belongsTo(Pessoa::class, 'pessoa_id', 'id')->withoutGlobalScope('account');
     }
 
     public function getNomeAttribute()

@@ -40,6 +40,7 @@ class AgendamentoController extends Controller
                 'a.hora_fim',
                 DB::raw("GROUP_CONCAT(DISTINCT e.nome ORDER BY e.nome SEPARATOR ', ') AS especialidades")
             )
+            ->where('a.account_id', session('current_account_id', auth()->user()->account_id))
             ->where('a.dia_semana', $weekday)
             ->groupBy('a.pessoa_id', 'ps.nome', 'a.hora_inicio', 'a.hora_fim')
             ->orderBy('ps.nome')
@@ -70,6 +71,7 @@ class AgendamentoController extends Controller
                 DB::raw("MAX(a.hora_fim) AS hora_fim"),
                 DB::raw("GROUP_CONCAT(DISTINCT e.nome ORDER BY e.nome SEPARATOR ', ') AS especialidades")
             )
+            ->where('a.account_id', session('current_account_id', auth()->user()->account_id))
             ->where('a.dia_semana', $weekday)
             ->groupBy('a.pessoa_id', 'ps.nome')
             ->orderBy('ps.nome')
@@ -82,6 +84,7 @@ class AgendamentoController extends Controller
     public function countsByWeekday()
     {
         $rows = DB::table('agenda_medica')
+            ->where('account_id', session('current_account_id', auth()->user()->account_id))
             ->select('dia_semana', DB::raw('COUNT(DISTINCT pessoa_id) AS cnt'))
             ->groupBy('dia_semana')
             ->get();
@@ -101,6 +104,7 @@ class AgendamentoController extends Controller
             'ids.*' => ['integer', 'exists:pessoas,id'],
         ]);
         $rows = DB::table('agenda_medica')
+            ->where('account_id', session('current_account_id', auth()->user()->account_id))
             ->select('dia_semana', DB::raw('GROUP_CONCAT(DISTINCT pessoa_id) AS prof_ids'))
             ->whereIn('pessoa_id', $data['ids'])
             ->groupBy('dia_semana')
@@ -405,29 +409,29 @@ class AgendamentoController extends Controller
                             'agendamento_id' => $agendamento->id,
                             'faturamento_id' => null,
                             'ans_registro' => $registroAns,
-                            'numero_guia_prestador' => 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT),
+                            'numero_guia_prestador' => date('Y') . date('m') . date('d') . (auth()->user() ? auth()->user()->account_id : '0') . date('s') . str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT) . (auth()->user() ? auth()->user()->id : '0'),
                             'numero_guia_principal' => null,
                             'data_autorizacao' => $requerAutorizacao ? null : Carbon::now(),
                             'numero_guia_operadora' => null,
                             'numero_carteira' => $numeroCarteira,
                             'validade_carteira' => $validadeCarteira,
-                            'beneficiario_nome' => $agendamento->paciente?->nome ?? 'Paciente',
+                            'beneficiario_nome' => $agendamento->paciente?->nome,
                             'cns' => $agendamento->paciente?->cns,
                             'atendimento_rn' => false,
-                            'contratado_solicitante_codigo' => $agendamento->agendaMedica?->profissionalSaude?->cpf ?? '000000000',
-                            'contratado_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome ?? 'Profissional',
-                            'profissional_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome ?? 'Profissional',
-                            'conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->conselho?->codigo ?? 'CR',
-                            'numero_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->numero_conselho ?? '000000',
-                            'uf_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->uf_conselho ?? 'SP',
-                            'cbo_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->especialidades?->first()?->codigo ?? '2251',
+                            'contratado_solicitante_codigo' => $agendamento->agendaMedica?->profissionalSaude?->cpf,
+                            'contratado_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome,
+                            'profissional_solicitante_nome' => $agendamento->agendaMedica?->profissionalSaude?->nome,
+                            'conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->conselho?->codigo,
+                            'numero_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->numero_conselho,
+                            'uf_conselho_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->uf_conselho,
+                            'cbo_solicitante' => $agendamento->agendaMedica?->profissionalSaude?->especialidades?->first()?->codigo,
                             'assinatura_profissional_solicitante' => '',
                             'carater_atendimento' => $agendamento->emergencia ? '2' : '1',
                             'data_solicitacao' => $agendamento->data,
                             'indicacao_clinica' => $agendamento->observacoes,
-                            'contratado_executante_codigo' => '000000000',
-                            'contratado_executante_nome' => 'CLINICA PADRAO',
-                            'cnes_executante' => '0000000',
+                            'contratado_executante_codigo' => preg_replace('/[^0-9]/', '', $agendamento->account?->cnpj),
+                            'contratado_executante_nome' => $agendamento->account?->name,
+                            'cnes_executante' => preg_replace('/[^0-9]/', '', $agendamento->account?->cnes),
                             'tipo_atendimento' => '01',
                             'indicacao_acidente' => '9',
                             'tipo_consulta' => null,
@@ -453,7 +457,7 @@ class AgendamentoController extends Controller
                             if ($procedimentosNaGuiaAtual >= 5) {
                                 $novaGuia = $masterGuia->replicate();
                                 $novaGuia->agendamento_id = $agendamento->id;
-                                $novaGuia->numero_guia_prestador = 'G' . str_pad($agendamento->id, 8, '0', STR_PAD_LEFT) . '-' . substr(uniqid(), -4);
+                                $novaGuia->numero_guia_prestador = date('Y') . date('m') . date('d') . (auth()->user() ? auth()->user()->account_id : '0') . date('s') . str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT) . (auth()->user() ? auth()->user()->id : '0');
                                 $novaGuia->numero_guia_principal = $masterGuia->numero_guia_prestador;
                                 $novaGuia->save();
                                 $guiaAtual = $novaGuia;
@@ -498,7 +502,7 @@ class AgendamentoController extends Controller
                                 'cbo_executante' => null,
                                 'data_realizacao_serie' => null,
                             ]);
-                            
+
                             $procedimentosNaGuiaAtual++;
                         }
                     }
@@ -588,6 +592,7 @@ class AgendamentoController extends Controller
             ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
             ->leftJoin('convenios as c', 'c.id', '=', 'a.convenio_id')
             ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
+            ->where('a.account_id', session('current_account_id', auth()->user()->account_id))
             ->where(function ($q) {
                 $q->where(function ($sub) {
                     $sub->where('s.descricao', 'NOT LIKE', '%Atendido%')
@@ -597,6 +602,7 @@ class AgendamentoController extends Controller
                         ->orWhereNull('at.status');
                 });
             })
+            ->where('a.account_id', session('current_account_id', auth()->user()->account_id))
             ->select(
                 'a.id',
                 'a.data',
@@ -1034,6 +1040,7 @@ class AgendamentoController extends Controller
             ->leftJoin('faturamentos as f', 'f.id', '=', 'pag.faturamento_id')
             ->leftJoin('atendimentos as at', 'at.agendamento_id', '=', 'a.id')
             ->leftJoin('convenios as conv', 'conv.id', '=', DB::raw('COALESCE(at.convenio_id, a.convenio_id)'))
+            ->where('a.account_id', session('current_account_id', auth()->user()->account_id))
             ->where('a.paciente_id', $paciente_id)
             ->select(
                 'a.id',
@@ -1060,7 +1067,7 @@ class AgendamentoController extends Controller
 
         $agendamentoIds = $agendamentos->pluck('id')->merge($agendamentos->pluck('agendamento_origem_id'))->filter()->unique()->toArray();
         $guias = DB::table('guias')->whereIn('agendamento_id', $agendamentoIds)->get(['id', 'agendamento_id']);
-        
+
         $guiaIds = $guias->pluck('id')->toArray();
         $autorizacoes = DB::table('autorizacoes')
             ->leftJoin('guia_procedimento_solicitados as ps', 'ps.id', '=', 'autorizacoes.procedimento_solicitado_id')

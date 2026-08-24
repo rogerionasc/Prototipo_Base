@@ -24,7 +24,7 @@ class TotemController extends Controller
         ]);
 
         Totem::create($validated);
-        return redirect()->route('totens.index')->with('success', 'Totem criado com sucesso.');
+        return redirect()->back()->with('success', 'Totem criado com sucesso.');
     }
 
     public function update(Request $request, Totem $totem)
@@ -35,12 +35,12 @@ class TotemController extends Controller
         ]);
 
         $totem->update($validated);
-        return redirect()->route('totens.index')->with('success', 'Totem atualizado com sucesso.');
+        return redirect()->back()->with('success', 'Totem atualizado com sucesso.');
     }
 
     public function destroy(Totem $totem)
     {
         $totem->delete();
-        return redirect()->route('totens.index')->with('success', 'Totem excluído com sucesso.');
+        return redirect()->back()->with('success', 'Totem excluído com sucesso.');
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Faturamento extends Model
 {
     use HasFactory;
+    use \App\Traits\BelongsToAccount;
 
     protected $guarded = ['id'];
 

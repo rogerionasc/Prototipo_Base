@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToAccount;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Atendimento extends Model
 {
+    use BelongsToAccount;
     use HasFactory, SoftDeletes;
+    use \App\Traits\BelongsToAccount;
 
     protected $table = 'atendimentos';
 
@@ -85,6 +88,11 @@ class Atendimento extends Model
     public function atualizadoPor()
     {
         return $this->belongsTo(User::class, 'atualizado_por');
+    }
+
+    public function guia()
+    {
+        return $this->belongsTo(Guia::class, 'guia_id');
     }
 
     public function pep()

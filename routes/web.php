@@ -37,6 +37,8 @@ use App\Http\Controllers\TipoAtendimentoController;
 */
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',])->group(function () {
+    Route::post("/conta/switch/{id}", [\App\Http\Controllers\AccountController::class, "switch"])->name('conta.switch');
+    Route::resource('clinicas', \App\Http\Controllers\AccountController::class)->names('clinicas');
 
     Route::get('/usuarios/pessoas-disponiveis', [UserController::class, 'pessoasDisponiveis'])->name('usuarios.pessoas_disponiveis');
     Route::put('/usuarios/{usuario}/toggle-status', [UserController::class, 'toggleStatus'])->name('usuarios.toggle_status');
@@ -171,6 +173,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::put("/faturamentos/{id}/convenio", [FaturamentoController::class, "updateConvenio"])->whereNumber('id')->name('faturamentos.convenio.update');
         Route::post("/faturamento/guias/{id}/devolver", [FaturamentoController::class, "devolverGuia"])->whereNumber('id')->name('faturamento.guias.devolver');
         Route::patch("/faturamentos/{id}/fechar", [FaturamentoController::class, "fecharLote"])->whereNumber('id')->name('faturamentos.fechar');
+        Route::get("/faturamentos/{id}/xml", [FaturamentoController::class, "gerarXml"])->whereNumber('id')->name('faturamento.xml');
         Route::post("/faturamentos/{id}/processar", [FaturamentoController::class, "processarLote"])->whereNumber('id')->name('faturamento.processar_lote');
 
         // Financeiro

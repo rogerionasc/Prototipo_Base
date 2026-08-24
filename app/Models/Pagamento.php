@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToAccount;
 
 class Pagamento extends Model
 {
+    use BelongsToAccount;
     use HasFactory;
+    use \App\Traits\BelongsToAccount;
 
     protected $table = 'pagamentos';
 

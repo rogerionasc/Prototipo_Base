@@ -25,7 +25,7 @@ class GuicheController extends Controller
         ]);
 
         Guiche::create($validated);
-        return redirect()->route('guiches.index')->with('success', 'Guichê criado com sucesso.');
+        return redirect()->back()->with('success', 'Guichê criado com sucesso.');
     }
 
     public function update(Request $request, Guiche $guiche)
@@ -37,12 +37,12 @@ class GuicheController extends Controller
         ]);
 
         $guiche->update($validated);
-        return redirect()->route('guiches.index')->with('success', 'Guichê atualizado com sucesso.');
+        return redirect()->back()->with('success', 'Guichê atualizado com sucesso.');
     }
 
     public function destroy(Guiche $guiche)
     {
         $guiche->delete();
-        return redirect()->route('guiches.index')->with('success', 'Guichê excluído com sucesso.');
+        return redirect()->back()->with('success', 'Guichê excluído com sucesso.');
     }
 }

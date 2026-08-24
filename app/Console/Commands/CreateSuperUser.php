@@ -19,8 +19,20 @@ class CreateSuperUser extends Command
     {
         $email = 'su@sistema.com';
 
-        if (User::where('email', $email)->exists()) {
-            $this->error("O usuário com email {$email} já existe.");
+        $account = \App\Models\Account::firstOrCreate(
+            ['cnpj' => '00000000000000'],
+            ['name' => 'Clínica Matriz', 'cnes' => '0000000']
+        );
+
+        $existingUser = User::where('email', $email)->first();
+        if ($existingUser) {
+            if (!$existingUser->account_id) {
+                $existingUser->account_id = $account->id;
+                $existingUser->save();
+                $this->info("Usuário {$email} já existia. A Clínica Matriz foi vinculada a ele para liberar o acesso.");
+            } else {
+                $this->error("O usuário com email {$email} já existe.");
+            }
             return;
         }
 
@@ -30,12 +42,15 @@ class CreateSuperUser extends Command
             'telefone' => '11999999999',
             'data_nascimento' => '2000-01-01',
             'email' => $email,
+            'account_id' => $account->id,
         ]);
+
 
         $user = User::create([
             'pessoa_id' => $pessoa->id,
             'email' => $email,
             'password' => Hash::make('12345678'),
+            'account_id' => $account->id,
         ]);
         $user->email_verified_at = now();
 

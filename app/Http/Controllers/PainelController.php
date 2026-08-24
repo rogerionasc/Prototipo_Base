@@ -24,7 +24,7 @@ class PainelController extends Controller
         ]);
 
         Painel::create($validated);
-        return redirect()->route('paineis.index')->with('success', 'Painel criado com sucesso.');
+        return redirect()->back()->with('success', 'Painel criado com sucesso.');
     }
 
     public function update(Request $request, Painel $painel)
@@ -35,12 +35,12 @@ class PainelController extends Controller
         ]);
 
         $painel->update($validated);
-        return redirect()->route('paineis.index')->with('success', 'Painel atualizado com sucesso.');
+        return redirect()->back()->with('success', 'Painel atualizado com sucesso.');
     }
 
     public function destroy(Painel $painel)
     {
         $painel->delete();
-        return redirect()->route('paineis.index')->with('success', 'Painel excluído com sucesso.');
+        return redirect()->back()->with('success', 'Painel excluído com sucesso.');
     }
 }

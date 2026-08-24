@@ -12,7 +12,7 @@ class AtendimentoController extends Controller
     {
         $hoje = \Carbon\Carbon::today()->format('Y-m-d');
 
-        $query = Atendimento::with(['paciente.comorbidades', 'medico', 'procedimento', 'tuss', 'agendamento.sessaoTratamento'])
+        $query = Atendimento::with(['paciente.comorbidades', 'medico', 'procedimento', 'tuss', 'agendamento.sessaoTratamento', 'guia'])
             ->whereDate('data_atendimento', $hoje);
 
         if (auth()->check() && auth()->id() !== 1 && auth()->user()->pessoa_id) {
@@ -20,7 +20,7 @@ class AtendimentoController extends Controller
         }
 
         $atendimentos = $query->get()
-            ->map(function($atendimento) {
+            ->map(function ($atendimento) {
                 $idade = 0;
                 if ($atendimento->paciente && $atendimento->paciente->data_nascimento) {
                     $idade = \Carbon\Carbon::parse($atendimento->paciente->data_nascimento)->age;
@@ -31,17 +31,17 @@ class AtendimentoController extends Controller
                 $atendimento->tem_comorbidade = $atendimento->paciente && $atendimento->paciente->comorbidades->count() > 0;
                 $atendimento->prioridade_idade = $idade >= 60 && $idade < 80;
                 $atendimento->idade_paciente = $idade;
-                
-                $baseProcNome = $atendimento->procedimento 
-                    ? $atendimento->procedimento->nome 
+
+                $baseProcNome = $atendimento->procedimento
+                    ? $atendimento->procedimento->nome
                     : ($atendimento->tuss ? $atendimento->tuss->descricao : 'N/A');
-                
-                $sessN = $atendimento->agendamento && $atendimento->agendamento->sessaoTratamento 
-                            ? $atendimento->agendamento->sessaoTratamento->numero_sessao 
-                            : null;
-                $sessT = $atendimento->procedimento 
-                            ? $atendimento->procedimento->quantidade_sessoes 
-                            : ($atendimento->tuss ? $atendimento->tuss->quantidade_sessoes : null);
+
+                $sessN = $atendimento->agendamento && $atendimento->agendamento->sessaoTratamento
+                    ? $atendimento->agendamento->sessaoTratamento->numero_sessao
+                    : null;
+                $sessT = $atendimento->procedimento
+                    ? $atendimento->procedimento->quantidade_sessoes
+                    : ($atendimento->tuss ? $atendimento->tuss->quantidade_sessoes : null);
 
                 $procNome = $baseProcNome;
                 if ($sessN !== null) {
@@ -51,29 +51,39 @@ class AtendimentoController extends Controller
                         $procNome .= " (Sessão {$sessN})";
                     }
                 }
-                
+
                 $atendimento->procedimento_nome = $procNome;
-                
+
+                $isGuiaValidada = false;
+                if ($atendimento->guia && $atendimento->guia->status === 'VALIDADA') {
+                    $isGuiaValidada = true;
+                } else if ($atendimento->agendamento) {
+                    $isGuiaValidada = \App\Models\Guia::where('agendamento_id', $atendimento->agendamento_id)
+                        ->where('status', 'VALIDADA')
+                        ->exists();
+                }
+                $atendimento->is_guia_validada = $isGuiaValidada;
+
                 return $atendimento;
             });
 
         $emAtendimento = $atendimentos->where('status', 'EM ATENDIMENTO')->sortBy('created_at')->values();
         $chamados = $atendimentos->where('status', 'CHAMADO')->sortBy('created_at')->values();
-        
+
         $aguardando = $atendimentos->where('status', 'AGUARDANDO');
         $emergencias = $aguardando->where('emergencia', true)->sortBy('created_at')->values();
         $restoAguardando = $aguardando->where('emergencia', false);
 
-        $preferenciais = $restoAguardando->filter(function($a) {
+        $preferenciais = $restoAguardando->filter(function ($a) {
             return $a->super_prioridade || $a->tem_comorbidade || $a->prioridade_idade;
-        })->sort(function($a, $b) {
+        })->sort(function ($a, $b) {
             if ($a->super_prioridade !== $b->super_prioridade) return $a->super_prioridade ? -1 : 1;
             if ($a->tem_comorbidade !== $b->tem_comorbidade) return $a->tem_comorbidade ? -1 : 1;
             if ($a->prioridade_idade !== $b->prioridade_idade) return $a->prioridade_idade ? -1 : 1;
             return $a->created_at <=> $b->created_at;
         })->values();
 
-        $normais = $restoAguardando->reject(function($a) {
+        $normais = $restoAguardando->reject(function ($a) {
             return $a->super_prioridade || $a->tem_comorbidade || $a->prioridade_idade;
         })->sortBy('created_at')->values();
 
@@ -91,10 +101,10 @@ class AtendimentoController extends Controller
         $outros = $atendimentos->whereNotIn('status', ['EM ATENDIMENTO', 'CHAMADO', 'AGUARDANDO', 'NÃO ATENDIDO', 'CANCELADO'])->sortBy('created_at')->values();
 
         $finalList = $emAtendimento->concat($chamados)
-                                   ->concat($emergencias)
-                                   ->concat($interleavedAguardando)
-                                   ->concat($outros)
-                                   ->values();
+            ->concat($emergencias)
+            ->concat($interleavedAguardando)
+            ->concat($outros)
+            ->values();
 
         return Inertia::render('Consultorio/Atendimentos/Index', [
             'atendimentos' => $finalList
@@ -107,10 +117,23 @@ class AtendimentoController extends Controller
             return redirect()->back()->with('error', 'Apenas o médico responsável pode realizar esta ação.');
         }
 
+        // Verifica se a guia está validada
+        $isGuiaValidada = false;
+        if ($atendimento->guia_id) {
+            $isGuiaValidada = \App\Models\Guia::where('id', $atendimento->guia_id)->where('status', 'VALIDADA')->exists();
+        }
+        if (!$isGuiaValidada && $atendimento->agendamento_id) {
+            $isGuiaValidada = \App\Models\Guia::where('agendamento_id', $atendimento->agendamento_id)->where('status', 'VALIDADA')->exists();
+        }
+
+        if ($isGuiaValidada) {
+            return redirect()->back()->with('error', 'A guia deste atendimento já está validada no Contas Médicas. Não é possível chamá-lo.');
+        }
+
         // Verifica se o médico está alocado em alguma sala
         $sala = \App\Models\Sala::where('pessoa_id', $atendimento->medico_id)->first();
         if (!$sala && auth()->id() !== 1) {
-            $msg = (auth()->user()->pessoa_id != $atendimento->medico_id) 
+            $msg = (auth()->user()->pessoa_id != $atendimento->medico_id)
                 ? 'O médico responsável precisa estar alocado em um consultório/sala para chamar o paciente.'
                 : 'Você precisa estar alocado em um consultório/sala para chamar o paciente.';
             return redirect()->back()->with('error', $msg);
@@ -131,7 +154,7 @@ class AtendimentoController extends Controller
         $atendimento->save();
 
         // Aqui também iria o código para disparar o evento no painel (broadcast)
-        
+
         return redirect()->back()->with('success', 'Paciente chamado com sucesso!');
     }
 
@@ -141,10 +164,23 @@ class AtendimentoController extends Controller
             return redirect()->back()->with('error', 'Apenas o médico responsável pode realizar esta ação.');
         }
 
+        // Verifica se a guia está validada
+        $isGuiaValidada = false;
+        if ($atendimento->guia_id) {
+            $isGuiaValidada = \App\Models\Guia::where('id', $atendimento->guia_id)->where('status', 'VALIDADA')->exists();
+        }
+        if (!$isGuiaValidada && $atendimento->agendamento_id) {
+            $isGuiaValidada = \App\Models\Guia::where('agendamento_id', $atendimento->agendamento_id)->where('status', 'VALIDADA')->exists();
+        }
+
+        if ($isGuiaValidada) {
+            return redirect()->back()->with('error', 'A guia deste atendimento já está validada no Contas Médicas. Não é possível iniciar o atendimento.');
+        }
+
         // Verifica se o médico está alocado em alguma sala
         $sala = \App\Models\Sala::where('pessoa_id', $atendimento->medico_id)->first();
         if (!$sala && auth()->id() !== 1) {
-            $msg = (auth()->user()->pessoa_id != $atendimento->medico_id) 
+            $msg = (auth()->user()->pessoa_id != $atendimento->medico_id)
                 ? 'O médico responsável precisa estar alocado em um consultório/sala para iniciar o atendimento.'
                 : 'Você precisa estar alocado em um consultório/sala para iniciar o atendimento.';
             return redirect()->back()->with('error', $msg);
@@ -211,7 +247,7 @@ class AtendimentoController extends Controller
                 ->where('nome_tratamento', $nomeTratamento)
                 ->where('status', 'Em andamento')
                 ->first();
-                
+
             if ($tratamento) {
                 $tratamento->increment('quantidade_sessoes_realizadas');
                 if ($tratamento->quantidade_sessoes_realizadas >= $tratamento->quantidade_sessoes_previstas) {
@@ -239,7 +275,7 @@ class AtendimentoController extends Controller
         // Atualizar status da Guia para ATENDIDA se existir e persistir procedimentos
         $guia = null;
         $agendamento = null;
-        
+
         if ($atendimento->guia_id) {
             $guia = \App\Models\Guia::find($atendimento->guia_id);
             $agendamento = \App\Models\Agendamento::with('tuss')->find($atendimento->agendamento_id);
@@ -247,8 +283,11 @@ class AtendimentoController extends Controller
             $agendamento = \App\Models\Agendamento::with('tuss')->find($atendimento->agendamento_id);
             if ($agendamento) {
                 $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
-                $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
-                $guia = \App\Models\Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+                $guia = \App\Models\Guia::where('agendamento_id', $origemId)->first();
+                if (!$guia) {
+                    $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
+                    $guia = \App\Models\Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+                }
                 if ($guia) {
                     $atendimento->update(['guia_id' => $guia->id]);
                 }
@@ -257,14 +296,14 @@ class AtendimentoController extends Controller
 
         if ($guia) {
             $guia->update(['status' => 'ATENDIDA']);
-            
+
             if ($agendamento) {
                 $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
                 $allAgendamentos = \App\Models\Agendamento::where('id', $origemId)
-                                            ->orWhere('agendamento_origem_id', $origemId)
-                                            ->with('tuss')
-                                            ->get();
-                
+                    ->orWhere('agendamento_origem_id', $origemId)
+                    ->with('tuss')
+                    ->get();
+
                 $totalProcedimentos = $guia->total_procedimentos ?? 0;
                 $changed = false;
 
@@ -272,10 +311,10 @@ class AtendimentoController extends Controller
                 if ($ag->tuss) {
                     // Procura o primeiro esqueleto vazio na guia
                     $procRealizado = $guia->procedimentosRealizados()->whereNull('procedimento_realizado_codigo')->first();
-                    
+
                     $vUnit = floatval($ag->tuss->total ?? 0);
                     $procValorTotal = round(1 * $vUnit * 1, 2);
-                    
+
                     $descricaoParaSalvar = $ag->tuss->descricao;
                     if ($procRealizado && $procRealizado->procedimentoSolicitado) {
                         $descricaoParaSalvar = $procRealizado->procedimentoSolicitado->procedimento_solicitado_descricao;
@@ -284,9 +323,9 @@ class AtendimentoController extends Controller
                     if (!$procRealizado) {
                         $procSolicitado = $guia->procedimentosSolicitados()->where('procedimento_solicitado_codigo', $ag->tuss->codigo)->first();
                         $procSolicitadoId = $procSolicitado ? $procSolicitado->id : null;
-                        
+
                         $descricaoParaSalvar = $procSolicitado ? $procSolicitado->procedimento_solicitado_descricao : $ag->tuss->descricao;
-                        
+
                         $procRealizado = $guia->procedimentosRealizados()->create([
                             'procedimento_solicitado_id' => $procSolicitadoId,
                             'tabela_procedimento_realizado' => '22',
@@ -322,7 +361,7 @@ class AtendimentoController extends Controller
                     if ($atendimentoMedico && $atendimentoMedico->medico) {
                         $profissional = $atendimentoMedico->medico;
                         $cpf = $profissional->cpf ?? '00000000000';
-                        
+
                         $profExecutante = $procRealizado->profissionaisExecutantes()->first();
                         if ($profExecutante && !$profExecutante->profissional_executante_codigo) {
                             // Atualiza o esqueleto vazio criado no agendamento
@@ -339,7 +378,7 @@ class AtendimentoController extends Controller
                             ]);
                         } else {
                             $existeProf = $procRealizado->profissionaisExecutantes()->where('profissional_executante_codigo', $cpf)->exists();
-                            
+
                             if (!$existeProf) {
                                 $count = $procRealizado->profissionaisExecutantes()->count();
                                 $procRealizado->profissionaisExecutantes()->create([
@@ -359,7 +398,7 @@ class AtendimentoController extends Controller
                 }
 
                 if ($changed) {
-                    $valorTotalGeral = 
+                    $valorTotalGeral =
                         $totalProcedimentos +
                         floatval($guia->total_taxas_alugueis ?? 0) +
                         floatval($guia->total_materiais ?? 0) +

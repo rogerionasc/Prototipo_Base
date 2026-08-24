@@ -550,7 +550,7 @@
         <button type="button" class="btn btn-light" @click="closeModal" :disabled="isSalvando || isImprimindo">
           <i class="ri-close-line me-1"></i> Cancelar
         </button>
-        <button v-if="permitirValidacaoFaturamento" type="button" class="btn btn-info" @click="validarParaFaturamento" :disabled="isSalvando || isImprimindo">
+        <button v-if="permitirValidacaoFaturamento" type="button" class="btn btn-info" @click="preValidarParaFaturamento" :disabled="isSalvando || isImprimindo">
           <span v-if="isSalvando" class="spinner-border spinner-border-sm me-1"></span>
           <i v-else class="ri-check-double-line me-1"></i> Validar Guia
         </button>
@@ -565,16 +565,21 @@
       </div>
     </div>
   </Modal>
+
+  <ModalConfirm v-model="showValidacaoModal" title="Atenção: Procedimentos Pendentes" subTitle="Procedimentos solicitados não executados"
+    message="Existem procedimentos solicitados que ainda não constam como realizados nesta guia. Se a guia for validada, <b>não será possível atender esses procedimentos posteriormente</b>.<br><br>Deseja realmente validar a guia?"
+    nameButton="Sim, Validar" buttonClass="btn-warning" @save="validarParaFaturamento" :z-index="10020" :backdrop-z-index="10015" />
 </template>
 
 <script>
 import Modal from "@/Components/Modal.vue";
+import ModalConfirm from "@/Components/ModalConfirm.vue";
 import flatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.min.css";
 import { Portuguese } from "flatpickr/dist/l10n/pt.js";
 
 export default {
-  components: { Modal, flatPickr },
+  components: { Modal, ModalConfirm, flatPickr },
   props: {
     modelValue: {
       type: Boolean,
@@ -599,6 +604,7 @@ export default {
   },
   data() {
     return {
+      showValidacaoModal: false,
       internalShow: false,
       form: null,
       conselhos: [],
@@ -774,6 +780,20 @@ export default {
           profissionais_executantes: response.data.guia.profissionaisExecutantes || response.data.guia.profissionais_executantes || []
         };
 
+        if (this.$page.props.current_account) {
+          const acc = this.$page.props.current_account;
+          
+          if (!this.form.contratado_executante_codigo || this.form.contratado_executante_codigo === '000000000') {
+            this.form.contratado_executante_codigo = acc.cnpj ? acc.cnpj.replace(/\D/g, '') : '000000000';
+          }
+          if (!this.form.contratado_executante_nome || this.form.contratado_executante_nome === 'CLINICA PADRAO') {
+            this.form.contratado_executante_nome = acc.name || 'CLINICA PADRAO';
+          }
+          if (!this.form.cnes_executante || this.form.cnes_executante === '0000000') {
+            this.form.cnes_executante = acc.cnes ? acc.cnes.replace(/\D/g, '') : '0000000';
+          }
+        }
+
         // Garantir que códigos numéricos sejam string para o match do select
         if (!this.form.procedimentos_solicitados) this.form.procedimentos_solicitados = [];
         else {
@@ -848,7 +868,41 @@ export default {
         this.isImprimindo = false;
       }
     },
+    async preValidarParaFaturamento() {
+      if (!this.form) return;
+      
+      const solicitados = this.form.procedimentos_solicitados || [];
+      const realizados = this.form.procedimentos_realizados || [];
+      
+      const totaisSolicitados = {};
+      solicitados.forEach(s => {
+          if (!s.procedimento_solicitado_codigo) return;
+          const cod = String(s.procedimento_solicitado_codigo).trim();
+          totaisSolicitados[cod] = (totaisSolicitados[cod] || 0) + (Number(s.quantidade_solicitada) || 1);
+      });
+
+      const totaisRealizados = {};
+      realizados.forEach(r => {
+          if (!r.procedimento_realizado_codigo) return;
+          const cod = String(r.procedimento_realizado_codigo).trim();
+          totaisRealizados[cod] = (totaisRealizados[cod] || 0) + (Number(r.quantidade_realizada) || 1);
+      });
+
+      const pendentes = Object.keys(totaisSolicitados).filter(cod => {
+          const solicitado = totaisSolicitados[cod];
+          const realizado = totaisRealizados[cod] || 0;
+          return realizado < solicitado;
+      });
+      
+      if (pendentes.length > 0) {
+          this.showValidacaoModal = true;
+          return;
+      }
+      
+      await this.validarParaFaturamento();
+    },
     async validarParaFaturamento() {
+      this.showValidacaoModal = false;
       if (!this.form) return;
       this.form.status = 'VALIDADA';
       await this.salvarGuia('Guia validada com sucesso!');

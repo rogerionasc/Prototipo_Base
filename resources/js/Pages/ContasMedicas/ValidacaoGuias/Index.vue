@@ -33,7 +33,7 @@
                                             <option value="">Todos os Status</option>
                                             <option value="CRIADA">Criada</option>
                                             <option value="EM_ATENDIMENTO">Em Atendimento</option>
-                                            <option value="ATENDIMENTO_REALIZADO">Atendimento Realizado</option>
+                                            <option value="ATENDIDA">Atendimento Realizado</option>
                                             <option value="VALIDADA">Validada</option>
                                         </select>
                                     </div>
@@ -148,7 +148,7 @@ function getStatusBadgeClass(status) {
         case 'CRIADA': return 'badge bg-light text-dark border';
         case 'VALIDADA': return 'badge bg-primary-subtle text-primary';
         case 'EM_ATENDIMENTO': return 'badge bg-info-subtle text-info';
-        case 'ATENDIMENTO_REALIZADO': return 'badge bg-primary-subtle text-primary';
+        case 'ATENDIDA': return 'badge bg-info-subtle text-info';
         case 'PRONTA_FATURAMENTO': return 'badge bg-success-subtle text-success';
         case 'ENVIADA_FATURAMENTO': return 'badge bg-warning-subtle text-warning';
         case 'FATURADA': return 'badge bg-dark-subtle text-dark';

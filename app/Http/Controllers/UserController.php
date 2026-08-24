@@ -13,7 +13,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $usuarios = User::with('profissionalSaude')->get();
+        $usuarios = User::where('id', '!=', 1)->with(['profissionalSaude', 'pessoa', 'account'])->get();
 
         return Inertia::render('Usuarios/Index', [
             'usuarios' => $usuarios,
@@ -36,6 +36,7 @@ class UserController extends Controller
         }
         
         $pessoas = Pessoa::whereNotIn('id', $usadas)
+            ->where('id', '!=', 1)
             ->when($query, function($q) use ($query) {
                 $q->where(function($q2) use ($query) {
                     $q2->where('nome', 'like', "%{$query}%")
@@ -61,6 +62,7 @@ class UserController extends Controller
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
+        $validated['account_id'] = session('current_account_id', auth()->user()->account_id);
 
         User::create($validated);
 

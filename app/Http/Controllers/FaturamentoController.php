@@ -14,6 +14,7 @@ class FaturamentoController extends Controller
             ->leftJoin('pacientes as p', 'p.id', '=', 'f.paciente_id')
             ->select(
                 'f.id',
+                'f.numero_lote',
                 'f.paciente_id',
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE(p.cpf,'') AS paciente_documento"),
@@ -24,9 +25,9 @@ class FaturamentoController extends Controller
                 'f.status'
             )
             ->leftJoin('convenios as c', 'c.id', '=', 'f.convenio_id')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->whereRaw('UPPER(c.tipo) = ?', ['PARTICULAR'])
-                  ->orWhereNull('f.convenio_id');
+                    ->orWhereNull('f.convenio_id');
             })
             ->orderByDesc('f.updated_at')
             ->orderByDesc('f.id')
@@ -41,7 +42,7 @@ class FaturamentoController extends Controller
     public function convenios()
     {
         $faturamentos = \App\Models\Faturamento::with(['guias.atendimento.agendamento.paciente', 'guias.agendamento.paciente', 'guias.procedimentosSolicitados', 'convenio'])
-            ->whereHas('convenio', function($q) {
+            ->whereHas('convenio', function ($q) {
                 $q->where('tipo', 'CONVENIO');
             })
             ->orderByDesc('updated_at')
@@ -52,9 +53,9 @@ class FaturamentoController extends Controller
         $rows = $faturamentos->map(function ($fat) {
             $totalGuias = $fat->guias->count();
             $statusCounts = $fat->guias->groupBy('status')->map->count();
-            
+
             $timeline = [];
-            foreach($statusCounts as $status => $count) {
+            foreach ($statusCounts as $status => $count) {
                 $timeline[] = [
                     'status' => $status,
                     'count' => $count,
@@ -64,6 +65,7 @@ class FaturamentoController extends Controller
 
             return [
                 'id' => $fat->id,
+                'numero_lote' => $fat->numero_lote,
                 'convenio_id' => $fat->convenio_id,
                 'convenio' => $fat->convenio ? $fat->convenio->descricao : '',
                 'convenio_logo' => $fat->convenio ? $fat->convenio->logo_path : null,
@@ -74,7 +76,7 @@ class FaturamentoController extends Controller
                 'status' => $fat->status,
                 'total_guias' => $totalGuias,
                 'guias_timeline' => $timeline,
-                'guias' => $fat->guias->map(function($g) {
+                'guias' => $fat->guias->map(function ($g) {
                     return [
                         'id' => $g->id,
                         'senha' => $g->senha,
@@ -100,7 +102,7 @@ class FaturamentoController extends Controller
             ->where('status', 'PRONTA_FATURAMENTO')
             ->whereNull('faturamento_id')
             ->get()
-            ->map(function($g) {
+            ->map(function ($g) {
                 $convenio = $g->atendimento?->agendamento?->convenio ?? $g->agendamento?->convenio;
                 $diasParaFaturar = $convenio?->dias_para_faturar ?? 30;
 
@@ -111,14 +113,14 @@ class FaturamentoController extends Controller
                         $dataExecucaoMaisAntiga = \Carbon\Carbon::parse($minData);
                     }
                 }
-                
+
                 if (!$dataExecucaoMaisAntiga) {
                     $dataExecucaoMaisAntiga = $g->created_at->copy();
                 }
 
                 $dataLimite = $dataExecucaoMaisAntiga->copy()->addDays($diasParaFaturar);
                 $diasVencer = (int) ceil(\Carbon\Carbon::now()->floatDiffInDays($dataLimite, false));
-                
+
                 return [
                     'id' => $g->id,
                     'agendamento_id' => $g->atendimento?->agendamento_id ?? $g->agendamento_id,
@@ -140,7 +142,7 @@ class FaturamentoController extends Controller
                     ]
                 ];
             })
-            ->filter(function($item) {
+            ->filter(function ($item) {
                 // Aparecer apenas quando faltar 20% ou menos do prazo máximo (ou se já estiver atrasado)
                 return $item['dias_vencer'] <= $item['limite_20_porcento'];
             })
@@ -158,23 +160,23 @@ class FaturamentoController extends Controller
     public function getGuiasDisponiveis(Request $request)
     {
         $convenioId = $request->query('convenio_id');
-        
+
         $guias = \App\Models\Guia::whereNull('faturamento_id')
             ->where('status', 'PRONTA_FATURAMENTO')
             ->where(function ($query) use ($convenioId) {
-                $query->whereHas('atendimento', function($q) use ($convenioId) {
+                $query->whereHas('atendimento', function ($q) use ($convenioId) {
                     $q->where('convenio_id', $convenioId)
-                      ->orWhereHas('agendamento', function($q2) use ($convenioId) {
-                          $q2->where('convenio_id', $convenioId);
-                      });
-                })->orWhereHas('agendamento', function($q) use ($convenioId) {
+                        ->orWhereHas('agendamento', function ($q2) use ($convenioId) {
+                            $q2->where('convenio_id', $convenioId);
+                        });
+                })->orWhereHas('agendamento', function ($q) use ($convenioId) {
                     $q->where('convenio_id', $convenioId);
                 });
             })
             ->with(['atendimento.agendamento.paciente', 'agendamento.paciente', 'procedimentosSolicitados']) // Include relation to display data in frontend
             ->get();
-            
-        $mapped = $guias->map(function($g) {
+
+        $mapped = $guias->map(function ($g) {
             return [
                 'id' => $g->id,
                 'senha' => $g->senha,
@@ -220,7 +222,7 @@ class FaturamentoController extends Controller
         if (!empty($data['guias'])) {
             $guias = \App\Models\Guia::whereIn('id', $data['guias'])->get();
         }
-        
+
         $total = $guias->where('status', '!=', 'DEVOLVIDA')->sum('valor_total_geral');
 
         $fat = \App\Models\Faturamento::create([
@@ -232,6 +234,11 @@ class FaturamentoController extends Controller
             'data_faturamento' => now(),
             'paciente_id' => 1 // Temporary fallback until patient logic is refined
         ]);
+
+        $accId = str_pad(session('current_account_id'), 2, '0', STR_PAD_LEFT);
+        $fatId = str_pad($fat->id, 4, '0', STR_PAD_LEFT);
+        $fat->numero_lote = date('ymd') . $accId . $fatId;
+        $fat->save();
 
         if (!empty($data['guias'])) {
             \App\Models\Guia::whereIn('id', $data['guias'])->update([
@@ -254,21 +261,21 @@ class FaturamentoController extends Controller
     public function addGuiasLote(Request $request, string $id)
     {
         $fat = \App\Models\Faturamento::findOrFail($id);
-        
+
         if ($fat->status !== 'ABERTA') {
             return back()->with('error', 'Lote fechado ou processado não pode receber novas guias.');
         }
-        
+
         $data = $request->validate([
             'guias' => 'required|array|min:1',
             'guias.*' => 'exists:guias,id'
         ]);
 
         $guias = \App\Models\Guia::with(['atendimento.agendamento', 'agendamento'])->whereIn('id', $data['guias'])->get();
-        
-        foreach($guias as $guia) {
+
+        foreach ($guias as $guia) {
             $convId = $guia->atendimento?->convenio_id ?? $guia->atendimento?->agendamento?->convenio_id ?? $guia->agendamento?->convenio_id;
-            if($convId != $fat->convenio_id) {
+            if ($convId != $fat->convenio_id) {
                 return back()->with('error', 'Uma ou mais guias não pertencem ao convênio deste lote.');
             }
         }
@@ -277,7 +284,7 @@ class FaturamentoController extends Controller
             'faturamento_id' => $fat->id,
             'status' => 'FATURADA'
         ]);
-        
+
         $this->recalcularLote($fat);
 
         return back()->with('success', 'Guias adicionadas ao lote com sucesso!');
@@ -305,9 +312,9 @@ class FaturamentoController extends Controller
         ]);
 
         $guia = \App\Models\Guia::where('id', $guia_id)->where('faturamento_id', $lote_id)->firstOrFail();
-        
+
         $updateData = ['status' => $data['status']];
-        
+
         if ($data['status'] !== 'GLOSADA') {
             $updateData['valor_glosado'] = 0;
         }
@@ -327,7 +334,7 @@ class FaturamentoController extends Controller
         ]);
 
         $guia = \App\Models\Guia::where('id', $guia_id)->where('faturamento_id', $lote_id)->firstOrFail();
-        
+
         $guia->update([
             'valor_glosado' => $data['valor_glosado']
         ]);
@@ -362,6 +369,152 @@ class FaturamentoController extends Controller
         $faturamento->update(['status' => 'PROCESSADA']);
 
         return back()->with('success', 'Lote processado com sucesso!');
+    }
+
+    public function gerarXml(string $id)
+    {
+        $faturamento = \App\Models\Faturamento::with(['guias.agendamento.paciente', 'guias.atendimento', 'convenio'])->findOrFail($id);
+
+        // dd($faturamento);
+
+        $account = \App\Models\Account::find(session('current_account_id'));
+        $cnpjOrigem = preg_replace('/[^0-9]/', '', $account->cnpj);
+        $numeroLote = $faturamento->numero_lote;
+
+        $xmlString = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xmlString .= '<ans:mensagemTISS xmlns:ans="http://www.ans.gov.br/padroes/tiss/schemas" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.ans.gov.br/padroes/tiss/schemas http://www.ans.gov.br/padroes/tiss/schemas/tissV4_02_00.xsd">' . "\n";
+        $xmlString .= '    <ans:cabecalho>' . "\n";
+        $xmlString .= '        <ans:identificacaoTransacao>' . "\n";
+        $xmlString .= '            <ans:tipoTransacao>ENVIO_LOTE_GUIAS</ans:tipoTransacao>' . "\n";
+        $xmlString .= '            <ans:sequencialTransacao>' . str_pad($faturamento->id, 7, '0', STR_PAD_LEFT) . '</ans:sequencialTransacao>' . "\n";
+        $xmlString .= '            <ans:dataRegistroTransacao>' . date('Y-m-d') . '</ans:dataRegistroTransacao>' . "\n";
+        $xmlString .= '            <ans:horaRegistroTransacao>' . date('H:i:s') . '</ans:horaRegistroTransacao>' . "\n";
+        $xmlString .= '        </ans:identificacaoTransacao>' . "\n";
+        $xmlString .= '        <ans:origem>' . "\n";
+        $xmlString .= '            <ans:identificacaoPrestador>' . "\n";
+        $xmlString .= '                <ans:CNPJ>' . $cnpjOrigem . '</ans:CNPJ>' . "\n";
+        $xmlString .= '            </ans:identificacaoPrestador>' . "\n";
+        $xmlString .= '        </ans:origem>' . "\n";
+        $xmlString .= '        <ans:destino>' . "\n";
+        $xmlString .= '            <ans:registroANS>' . $faturamento->convenio->registro_ans . '</ans:registroANS>' . "\n";
+        $xmlString .= '        </ans:destino>' . "\n";
+        $xmlString .= '        <ans:Padrao>4.02.00</ans:Padrao>' . "\n";
+        $xmlString .= '    </ans:cabecalho>' . "\n";
+        $xmlString .= '    <ans:prestadorParaOperadora>' . "\n";
+        $xmlString .= '        <ans:loteGuias>' . "\n";
+        $xmlString .= '            <ans:numeroLote>' . $numeroLote . '</ans:numeroLote>' . "\n";
+        $xmlString .= '            <ans:guiasTISS>' . "\n";
+
+        dd($faturamento->guias);
+
+        foreach ($faturamento->guias as $guia) {
+            $tipoGuia = $guia->tipo ?? 'SADT';
+            $registroANS = str_pad($faturamento->convenio->registro_ans ?? '000000', 6, '0', STR_PAD_LEFT);
+            $numeroGuia = $guia->numero_guia_prestador ?? $guia->id;
+            $carteira = $guia->atendimento->carteirinha ?? '0000000000000000';
+            $valorTotal = $guia->valor_total > 0 ? number_format($guia->valor_total, 2, '.', '') : '100.00';
+
+            $cnpj = $guia->contratado_executante_codigo ?? $cnpjOrigem;
+            $nome = $guia->contratado_executante_nome ?? ($account->name ?? 'CLINICA PADRAO');
+            $cnes = $guia->cnes_executante ?? preg_replace('/[^0-9]/', '', $account->cnes ?? '1234567');
+            $medico = $guia->medico_nome ?? 'MEDICO';
+
+            if ($tipoGuia == 'SADT') {
+                $xmlString .= '                <ans:guiaSP-SADT>' . "\n";
+                $xmlString .= '                    <ans:cabecalhoGuia>' . "\n";
+                $xmlString .= '                        <ans:registroANS>' . $registroANS . '</ans:registroANS>' . "\n";
+                $xmlString .= '                        <ans:numeroGuiaPrestador>' . $numeroGuia . '</ans:numeroGuiaPrestador>' . "\n";
+                $xmlString .= '                    </ans:cabecalhoGuia>' . "\n";
+                $xmlString .= '                    <ans:dadosBeneficiario>' . "\n";
+                $xmlString .= '                        <ans:numeroCarteira>' . $carteira . '</ans:numeroCarteira>' . "\n";
+                $xmlString .= '                        <ans:atendimentoRN>N</ans:atendimentoRN>' . "\n";
+                $xmlString .= '                    </ans:dadosBeneficiario>' . "\n";
+                $xmlString .= '                    <ans:dadosSolicitante>' . "\n";
+                $xmlString .= '                        <ans:contratadoSolicitante>' . "\n";
+                $xmlString .= '                            <ans:codigoPrestadorNaOperadora>' . $cnpj . '</ans:codigoPrestadorNaOperadora>' . "\n";
+                $xmlString .= '                        </ans:contratadoSolicitante>' . "\n";
+                $xmlString .= '                        <ans:nomeContratadoSolicitante>' . substr($nome, 0, 70) . '</ans:nomeContratadoSolicitante>' . "\n";
+                $xmlString .= '                        <ans:profissionalSolicitante>' . "\n";
+                $xmlString .= '                            <ans:nomeProfissional>' . substr($medico, 0, 70) . '</ans:nomeProfissional>' . "\n";
+                $xmlString .= '                            <ans:conselhoProfissional>06</ans:conselhoProfissional>' . "\n";
+                $xmlString .= '                            <ans:numeroConselhoProfissional>12345</ans:numeroConselhoProfissional>' . "\n";
+                $xmlString .= '                            <ans:UF>35</ans:UF>' . "\n";
+                $xmlString .= '                            <ans:CBOS>225125</ans:CBOS>' . "\n";
+                $xmlString .= '                        </ans:profissionalSolicitante>' . "\n";
+                $xmlString .= '                    </ans:dadosSolicitante>' . "\n";
+                $xmlString .= '                    <ans:dadosSolicitacao>' . "\n";
+                $xmlString .= '                        <ans:caraterAtendimento>1</ans:caraterAtendimento>' . "\n";
+                $xmlString .= '                    </ans:dadosSolicitacao>' . "\n";
+                $xmlString .= '                    <ans:dadosExecutante>' . "\n";
+                $xmlString .= '                        <ans:contratadoExecutante>' . "\n";
+                $xmlString .= '                            <ans:codigoPrestadorNaOperadora>' . $cnpj . '</ans:codigoPrestadorNaOperadora>' . "\n";
+                $xmlString .= '                        </ans:contratadoExecutante>' . "\n";
+                $xmlString .= '                        <ans:CNES>' . $cnes . '</ans:CNES>' . "\n";
+                $xmlString .= '                    </ans:dadosExecutante>' . "\n";
+                $xmlString .= '                    <ans:dadosAtendimento>' . "\n";
+                $xmlString .= '                        <ans:tipoAtendimento>01</ans:tipoAtendimento>' . "\n";
+                $xmlString .= '                        <ans:indicacaoAcidente>9</ans:indicacaoAcidente>' . "\n";
+                $xmlString .= '                        <ans:regimeAtendimento>01</ans:regimeAtendimento>' . "\n";
+                $xmlString .= '                    </ans:dadosAtendimento>' . "\n";
+                $xmlString .= '                    <ans:valorTotal>' . "\n";
+                $xmlString .= '                        <ans:valorTotalGeral>' . $valorTotal . '</ans:valorTotalGeral>' . "\n";
+                $xmlString .= '                    </ans:valorTotal>' . "\n";
+                $xmlString .= '                </ans:guiaSP-SADT>' . "\n";
+            } else {
+                $xmlString .= '                <ans:guiaConsulta>' . "\n";
+                $xmlString .= '                    <ans:cabecalhoConsulta>' . "\n";
+                $xmlString .= '                        <ans:registroANS>' . $registroANS . '</ans:registroANS>' . "\n";
+                $xmlString .= '                        <ans:numeroGuiaPrestador>' . $numeroGuia . '</ans:numeroGuiaPrestador>' . "\n";
+                $xmlString .= '                    </ans:cabecalhoConsulta>' . "\n";
+                $xmlString .= '                    <ans:dadosBeneficiario>' . "\n";
+                $xmlString .= '                        <ans:numeroCarteira>' . $carteira . '</ans:numeroCarteira>' . "\n";
+                $xmlString .= '                        <ans:atendimentoRN>N</ans:atendimentoRN>' . "\n";
+                $xmlString .= '                    </ans:dadosBeneficiario>' . "\n";
+                $xmlString .= '                    <ans:contratadoExecutante>' . "\n";
+                $xmlString .= '                        <ans:codigoPrestadorNaOperadora>' . $cnpj . '</ans:codigoPrestadorNaOperadora>' . "\n";
+                $xmlString .= '                        <ans:CNES>' . $cnes . '</ans:CNES>' . "\n";
+                $xmlString .= '                    </ans:contratadoExecutante>' . "\n";
+                $xmlString .= '                    <ans:profissionalExecutante>' . "\n";
+                $xmlString .= '                        <ans:nomeProfissional>' . substr($medico, 0, 70) . '</ans:nomeProfissional>' . "\n";
+                $xmlString .= '                        <ans:conselhoProfissional>06</ans:conselhoProfissional>' . "\n";
+                $xmlString .= '                        <ans:numeroConselhoProfissional>12345</ans:numeroConselhoProfissional>' . "\n";
+                $xmlString .= '                        <ans:UF>35</ans:UF>' . "\n";
+                $xmlString .= '                        <ans:CBOS>225125</ans:CBOS>' . "\n";
+                $xmlString .= '                    </ans:profissionalExecutante>' . "\n";
+                $xmlString .= '                    <ans:indicacaoAcidente>9</ans:indicacaoAcidente>' . "\n";
+                $xmlString .= '                    <ans:dadosAtendimento>' . "\n";
+                $xmlString .= '                        <ans:regimeAtendimento>01</ans:regimeAtendimento>' . "\n";
+                $xmlString .= '                        <ans:dataAtendimento>' . date('Y-m-d', strtotime($guia->data_solicitacao ?? now())) . '</ans:dataAtendimento>' . "\n";
+                $xmlString .= '                        <ans:tipoConsulta>1</ans:tipoConsulta>' . "\n";
+                $xmlString .= '                        <ans:procedimento>' . "\n";
+                $xmlString .= '                            <ans:codigoTabela>22</ans:codigoTabela>' . "\n";
+                $xmlString .= '                            <ans:codigoProcedimento>10101012</ans:codigoProcedimento>' . "\n";
+                $xmlString .= '                            <ans:valorProcedimento>' . $valorTotal . '</ans:valorProcedimento>' . "\n";
+                $xmlString .= '                        </ans:procedimento>' . "\n";
+                $xmlString .= '                    </ans:dadosAtendimento>' . "\n";
+                $xmlString .= '                </ans:guiaConsulta>' . "\n";
+            }
+        }
+
+        $xmlString .= '            </ans:guiasTISS>' . "\n";
+        $xmlString .= '        </ans:loteGuias>' . "\n";
+        $xmlString .= '    </ans:prestadorParaOperadora>' . "\n";
+        // TISS Hash: MD5 dos VALORES concatenados (sem tags), conforme especificação ANS
+        $stringToHash = strip_tags($xmlString);
+        $stringToHash = preg_replace('/\s+/', '', $stringToHash);
+        $hashCalculado = md5($stringToHash);
+
+        $xmlString .= '    <ans:epilogo>' . "\n";
+        $xmlString .= '        <ans:hash>' . $hashCalculado . '</ans:hash>' . "\n";
+        $xmlString .= '    </ans:epilogo>' . "\n";
+        $xmlString .= '</ans:mensagemTISS>';
+
+        return response($xmlString, 200, [
+            'Content-Type' => 'text/xml',
+            'Content-Disposition' => 'attachment; filename="Lote_Faturamento_' . str_pad($faturamento->id, 6, '0', STR_PAD_LEFT) . '.xml"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     public function updateConvenio(Request $request, string $id)
@@ -467,9 +620,9 @@ class FaturamentoController extends Controller
                 'doc.nome as medico_nome',
                 'st.descricao as status_nome'
             )
-            ->where(function($q) use ($id) {
+            ->where(function ($q) use ($id) {
                 $q->where('pag.faturamento_id', $id)
-                  ->orWhere('g.faturamento_id', $id);
+                    ->orWhere('g.faturamento_id', $id);
             })
             ->whereNull('a.deleted_at')
             ->distinct()

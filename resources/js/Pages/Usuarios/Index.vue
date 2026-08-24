@@ -20,12 +20,14 @@ const columns = [
     { id: "id", name: "ID", width: "70px" },
     { id: "nome_completo", name: "Nome" },
     { id: "email", name: "Email" },
+    { id: "account_name", name: "Clínica" },
 ];
 
 const usuariosFormatados = computed(() => {
     return props.usuarios.map(u => ({
         ...u,
         nome_completo: u.pessoa ? u.pessoa.nome : 'Sem Nome (Admin)',
+        account_name: u.account ? u.account.name : 'Nenhuma',
         status: u.is_active ? 'Desbloqueado' : 'Bloqueado'
     }));
 });

@@ -116,15 +116,9 @@ export default {
                 },
                 {
                     icon: "ri-building-line",
-                    title: "Clínica",
+                    title: "Clínicas",
                     type: "link",
-                    target: "#clinica",
-                    children: [
-                        { href: "/clinica/salas", label: "Salas" },
-                        { href: "/clinica/guiches", label: "Guichês" },
-                        { href: "/clinica/totens", label: "Totens" },
-                        { href: "/clinica/paineis", label: "Painéis" },
-                    ]
+                    target: "/clinicas",
                 },
                 {
                     icon: "ri-first-aid-kit-line",

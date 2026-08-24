@@ -30,7 +30,7 @@ class SalaController extends Controller
 
         Sala::create($validated);
 
-        return redirect()->route('salas.index')->with('success', 'Sala criada com sucesso.');
+        return redirect()->back()->with('success', 'Sala criada com sucesso.');
     }
 
     public function update(Request $request, Sala $sala)
@@ -43,13 +43,13 @@ class SalaController extends Controller
 
         $sala->update($validated);
 
-        return redirect()->route('salas.index')->with('success', 'Sala atualizada com sucesso.');
+        return redirect()->back()->with('success', 'Sala atualizada com sucesso.');
     }
 
     public function destroy(Sala $sala)
     {
         $sala->delete();
 
-        return redirect()->route('salas.index')->with('success', 'Sala excluída com sucesso.');
+        return redirect()->back()->with('success', 'Sala excluída com sucesso.');
     }
 }

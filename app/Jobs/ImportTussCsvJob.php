@@ -97,7 +97,7 @@ class ImportTussCsvJob implements ShouldQueue
 
     public function handle(): void
     {
-        $allowedTabelas = ['AMB1990', 'AMB1992', 'AMB1993', 'AMB1999', 'CBHPM3', 'CBHPM4', 'CBHPM5', 'TUSS'];
+        $allowedTabelas = ['AMB1990', 'AMB1992', 'AMB1993', 'AMB1999', 'CBHPM3', 'CBHPM4', 'CBHPM5', 'TUSS', '18', '19', '20', '22'];
         $forcedTabela = trim((string)$this->forcedTabela);
         if ($forcedTabela === '' || !in_array($forcedTabela, $allowedTabelas, true)) {
             $this->updateProgress(100, 'error', 'Tabela inválida.');
@@ -307,7 +307,8 @@ class ImportTussCsvJob implements ShouldQueue
         } catch (\Throwable $e) {
             if (is_resource($fh)) fclose($fh);
             if ($transactionStarted) DB::rollBack();
-            $this->updateProgress(100, 'error', 'Falha ao importar.');
+            $this->updateProgress(100, 'error', 'Falha ao importar: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Erro importacao TUSS: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return;
         } finally {
             Storage::disk('local')->delete($this->storedPath);

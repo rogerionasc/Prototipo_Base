@@ -10,9 +10,11 @@ import Lottie from 'lottie-web';
 import animationData from "@/Components/widgets/msoeawqm.json";
 import animationCube from "@/Components/widgets/auvicynv.json";
 import LottieComponent from "@/Components/widgets/lottie.vue";
+import { usePage } from '@inertiajs/vue3';
 
 // -------------------- PROPRIEDADES (PROPS) --------------------
 // Define as propriedades que o componente pode receber
+const page = usePage();
 const props = defineProps({
     data: { type: Array, default: () => [] },
     columns: { type: Array, default: () => ["ID", "Nome", "Email", "Cargo", "Empresa", "País"] },
@@ -703,6 +705,11 @@ watch(() => props.actionsLoading, () => {
 watch(() => props.disableActions, () => {
     nextTick(initGrid);
 });
+
+// Assiste mudanças globais de conta (Multi-tenant)
+watch(() => page.props.current_account, () => {
+    nextTick(initGrid);
+}, { deep: true });
 
 // Remove listeners ao desmontar o componente
 onBeforeUnmount(() => {

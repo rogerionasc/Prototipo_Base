@@ -131,7 +131,7 @@ class VelzonRoutesController extends Controller
 
     public function medico()
     {
-        $profissionais = \App\Models\Pessoa::select(
+        $profissionais = \App\Models\Pessoa::where('pessoas.id', '!=', 1)->select(
             'pessoas.id',
             'nome',
             'cpf',
@@ -176,7 +176,7 @@ class VelzonRoutesController extends Controller
 
     public function empregados()
     {
-        $pessoas = \App\Models\Pessoa::select(
+        $pessoas = \App\Models\Pessoa::where('pessoas.id', '!=', 1)->select(
             'pessoas.id',
             'nome',
             'cpf',

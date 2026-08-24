@@ -23,15 +23,28 @@ class ParametrizacaoTissSeeder extends Seeder
 
         // 2. Tabela de Referência (Tabela 62)
         $tabelas = [
-            ['codigo' => '16', 'descricao' => 'TUSS - Procedimentos e Eventos em Saúde'],
-            ['codigo' => '18', 'descricao' => 'TUSS - Taxas Diárias e Gases'],
-            ['codigo' => '19', 'descricao' => 'TUSS - Materiais e OPME'],
-            ['codigo' => '20', 'descricao' => 'TUSS - Medicamentos'],
-            ['codigo' => '22', 'descricao' => 'Tabela Própria das Operadoras'],
-            ['codigo' => '90', 'descricao' => 'Tabela Própria do Pacote'],
-            ['codigo' => '98', 'descricao' => 'Tabela Própria de Pacote Odontológico'],
-            ['codigo' => '99', 'descricao' => 'Outras Tabelas'],
-            ['codigo' => '00', 'descricao' => 'Tabela Própria da Operadora - Materiais, Medicamentos, e OPME'],
+            ['codigo' => '00', 'descricao' => 'Tabela própria das operadoras'],
+            ['codigo' => '18', 'descricao' => 'Diárias, taxas e gases medicinais'],
+            ['codigo' => '19', 'descricao' => 'Materiais e Órteses, Próteses e Materiais Especiais (OPME)'],
+            ['codigo' => '20', 'descricao' => 'Medicamentos'],
+            ['codigo' => '22', 'descricao' => 'Procedimentos e eventos em saúde'],
+            ['codigo' => '23', 'descricao' => 'Caráter do atendimento'],
+            ['codigo' => '24', 'descricao' => 'Classificação Brasileira de Ocupações (CBO)'],
+            ['codigo' => '25', 'descricao' => 'Código da despesa'],
+            ['codigo' => '26', 'descricao' => 'Conselho profissional'],
+            ['codigo' => '27', 'descricao' => 'Débitos e créditos'],
+            ['codigo' => '28', 'descricao' => 'Dentes'],
+            ['codigo' => '29', 'descricao' => 'Diagnóstico por imagem'],
+            ['codigo' => '30', 'descricao' => 'Escala de capacidade funcional (ECOG - Escala de Zubrod)'],
+            ['codigo' => '31', 'descricao' => 'Estadiamento do tumor'],
+            ['codigo' => '32', 'descricao' => 'Faces do dente'],
+            ['codigo' => '33', 'descricao' => 'Finalidade do tratamento'],
+            ['codigo' => '34', 'descricao' => 'Forma de pagamento'],
+            ['codigo' => '35', 'descricao' => 'Grau de participação'],
+            ['codigo' => '36', 'descricao' => 'Indicador de acidente'],
+            ['codigo' => '37', 'descricao' => 'Indicador de débito ou crédito'],
+            ['codigo' => '38', 'descricao' => 'Mensagens (glosas, negativas e outras)'],
+            ['codigo' => '39', 'descricao' => 'Motivo de encerramento'],
         ];
         foreach ($tabelas as $data) {
             \App\Models\TabelaReferencia::updateOrCreate(['codigo' => $data['codigo']], $data);

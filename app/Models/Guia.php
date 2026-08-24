@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Guia extends Model
 {
     use HasFactory, SoftDeletes;
+    use \App\Traits\BelongsToAccount;
     
     protected $guarded = ['id'];
 

@@ -4,6 +4,10 @@ import { Link, router } from '@inertiajs/vue3';
 const logout = () => {
   router.post(route('logout'));
 };
+
+const switchAccount = (accountId) => {
+  router.post(route('conta.switch', accountId));
+};
 </script>
 
 <script>
@@ -260,7 +264,7 @@ export default {
 </script>
 
 <template>
-  <header id="page-topbar" style="z-index: 1050;">
+  <header id="page-topbar" style="z-index: 1030;">
     <div class="layout-width">
       <div class="navbar-header">
         <div class="d-flex">
@@ -389,7 +393,8 @@ export default {
               <form class="p-3">
                 <div class="form-group m-0">
                   <div class="input-group">
-                    <input type="text" class="form-control" placeholder="Search ..." aria-label="Recipient's username" />
+                    <input type="text" class="form-control" placeholder="Search ..."
+                      aria-label="Recipient's username" />
                     <BButton variant="primary" type="submit">
                       <i class="mdi mdi-magnify"></i>
                     </BButton>
@@ -399,6 +404,35 @@ export default {
             </BDropdownItem>
           </BDropdown>
 
+          <!-- Seletor de Clínicas (Accounts) -->
+          <BDropdown v-if="$page.props.accounts && $page.props.accounts.length > 0" variant="ghost-secondary"
+            class="ms-1 header-item"
+            toggle-class="btn-topbar border-0 bg-transparent arrow-none d-flex align-items-center w-auto px-2 clinic-dropdown-toggle"
+            menu-class="dropdown-menu-end">
+            <template #button-content>
+              <span v-if="$page.props.current_account" class="d-none d-xl-inline-block me-2 fw-medium fs-14">{{
+                $page.props.current_account.name }}</span>
+              <i v-if="$page.props.current_account && $page.props.current_account.id == 1"
+                class="ri-hotel-line fs-22"></i>
+              <i v-else-if="$page.props.current_account" class="ri-building-line fs-22"></i>
+              <i v-else class="ri-building-line fs-22"></i>
+            </template>
+            <h6 class="dropdown-header">Selecione a Clínica</h6>
+            <form v-for="account in $page.props.accounts" :key="account.id" @submit.prevent="switchAccount(account.id)">
+              <button type="submit"
+                class="dropdown-item d-flex align-items-center justify-content-between clinic-dropdown-item"
+                :class="{ 'active-clinic': $page.props.current_account && $page.props.current_account.id === account.id }">
+                <div>
+                  <i
+                    :class="[account.id == 1 ? 'ri-hotel-line' : 'ri-building-line', 'fs-16 align-middle me-2 clinic-icon']"></i>
+                  <span class="align-middle">{{ account.name }}</span>
+                </div>
+                <i v-if="$page.props.current_account && $page.props.current_account.id === account.id"
+                  class="mdi mdi-check-circle fs-16 ms-3 clinic-icon"></i>
+              </button>
+            </form>
+          </BDropdown>
+
           <BDropdown class="dropdown" variant="ghost-secondary" dropstart
             :offset="{ alignmentAxis: 57, crossAxis: 0, mainAxis: -42 }"
             toggle-class="btn-icon btn-topbar rounded-circle mode-layout ms-1 arrow-none"
@@ -406,7 +440,8 @@ export default {
             <template #button-content>
               <i class="bx bx-category-alt fs-22"></i>
             </template>
-            <div class="p-3 border-top-0 dropdown-head border-start-0 border-end-0 border-dashed border dropdown-menu-lg">
+            <div
+              class="p-3 border-top-0 dropdown-head border-start-0 border-end-0 border-dashed border dropdown-menu-lg">
               <BRow class="align-items-center">
                 <BCol>
                   <h6 class="m-0 fw-semibold fs-15">Web Apps</h6>
@@ -423,23 +458,28 @@ export default {
             <div class="p-2">
               <BRow class="g-0 justify-content-center">
                 <BCol cols="6" class="text-center">
-                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.totem')" target="_blank">
+                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3"
+                    :href="route('apps.totem')" target="_blank">
                     <i class="ri-tablet-line text-primary" style="font-size: 32px;"></i>
                     <span class="mt-2 fw-medium">Totem</span>
                   </BLink>
                 </BCol>
                 <BCol cols="6" class="text-center">
-                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.painel_senha')" target="_blank">
+                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3"
+                    :href="route('apps.painel_senha')" target="_blank">
                     <i class="ri-tv-2-line text-success" style="font-size: 32px;"></i>
                     <span class="mt-2 fw-medium">Painel de Senhas</span>
                   </BLink>
                 </BCol>
                 <BCol cols="6" class="text-center">
-                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3" :href="route('apps.painel_atendimento')" target="_blank">
+                  <BLink class="dropdown-icon-item d-flex flex-column align-items-center p-3"
+                    :href="route('apps.painel_atendimento')" target="_blank">
                     <div class="position-relative d-inline-block mt-1 mb-1">
                       <i class="ri-macbook-line text-primary" style="font-size: 32px;"></i>
-                      <div class="position-absolute d-flex align-items-center justify-content-center" style="width: 22px; height: 22px; top: -2px; right: -8px;">
-                          <i class="ri-stethoscope-line text-danger fw-bold" style="font-size: 16px; text-shadow: -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff;"></i>
+                      <div class="position-absolute d-flex align-items-center justify-content-center"
+                        style="width: 22px; height: 22px; top: -2px; right: -8px;">
+                        <i class="ri-stethoscope-line text-danger fw-bold"
+                          style="font-size: 16px; text-shadow: -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff;"></i>
                       </div>
                     </div>
                     <span class="mt-2 fw-medium">Painel do Atendimento</span>
@@ -733,51 +773,63 @@ export default {
             </BTabs>
           </BDropdown>
 
-          <BDropdown variant="link" class="ms-sm-3 header-item topbar-user" toggle-class="rounded-circle arrow-none" menu-class="dropdown-menu-end" :offset="{ alignmentAxis: -14, crossAxis: 0, mainAxis: 0 }">
+
+          <BDropdown variant="link" class="ms-sm-3 header-item topbar-user" toggle-class="rounded-circle arrow-none"
+            menu-class="dropdown-menu-end" :offset="{ alignmentAxis: -14, crossAxis: 0, mainAxis: 0 }">
             <template #button-content>
               <span class="d-flex align-items-center">
-                <img v-if="$page.props.jetstream.managesProfilePhotos && $page.props.auth.user.profile_photo_path" class="rounded-circle header-profile-user" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.nome" style="width: 32px; height: 32px; object-fit: cover; object-position: center;">
-                <span v-else class="rounded-circle header-profile-user d-inline-flex align-items-center justify-content-center bg-light-subtle text-body border fw-semibold" style="width: 32px; height: 32px;">{{ userInitials }}</span>
+                <img v-if="$page.props.jetstream.managesProfilePhotos && $page.props.auth.user.profile_photo_path"
+                  class="rounded-circle header-profile-user" :src="$page.props.auth.user.profile_photo_url"
+                  :alt="$page.props.auth.user.nome"
+                  style="width: 32px; height: 32px; object-fit: cover; object-position: center;">
+                <span v-else
+                  class="rounded-circle header-profile-user d-inline-flex align-items-center justify-content-center bg-light-subtle text-body border fw-semibold"
+                  style="width: 32px; height: 32px;">{{ userInitials }}</span>
                 <span class="text-start ms-xl-2">
-                  <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $page.props.auth.user.nome || $page.props.auth.user.name }}</span>
+                  <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $page.props.auth.user.nome ||
+                    $page.props.auth.user.name }}</span>
                   <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">Dev</span>
                 </span>
               </span>
             </template>
             <h6 class="dropdown-header">Bem vindo {{ $page.props.auth.user.nome || $page.props.auth.user.name }}!</h6>
-            <Link class="dropdown-item" :href="route('profile.show')"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle">Perfil</span>
+            <Link class="dropdown-item" :href="route('profile.show')"><i
+                class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
+              <span class="align-middle">Perfil</span>
             </Link>
-            <Link class="dropdown-item" v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')"><i class="mdi mdi-key-variant text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle"> API Tokens</span>
+            <Link class="dropdown-item" v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')"><i
+                class="mdi mdi-key-variant text-muted fs-16 align-middle me-1"></i>
+              <span class="align-middle"> API Tokens</span>
             </Link>
             <div class="dropdown-divider"></div>
             <Link class="dropdown-item" href="#">
-            <i class=" mdi mdi-message-text-outline text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle"> Messages</span>
+              <i class=" mdi mdi-message-text-outline text-muted fs-16 align-middle me-1"></i>
+              <span class="align-middle"> Messages</span>
             </Link>
             <Link class="dropdown-item" href="#">
-            <i class="mdi mdi-calendar-check-outline text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle"> Taskboard</span>
+              <i class="mdi mdi-calendar-check-outline text-muted fs-16 align-middle me-1"></i>
+              <span class="align-middle"> Taskboard</span>
             </Link>
             <Link class="dropdown-item" href="#"><i class="mdi mdi-lifebuoy text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle"> Help</span>
+              <span class="align-middle"> Help</span>
             </Link>
             <div class="dropdown-divider"></div>
             <Link class="dropdown-item" href="#"><i class="mdi mdi-wallet text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle"> Balance : <b>$5971.67</b></span>
+              <span class="align-middle"> Balance : <b>$5971.67</b></span>
             </Link>
             <Link class="dropdown-item" :href="route('configuracao.index')">
-            <i class="mdi mdi-cog-outline text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle"> Configurações</span>
+              <i class="mdi mdi-cog-outline text-muted fs-16 align-middle me-1"></i>
+              <span class="align-middle"> Configurações</span>
             </Link>
-            <Link class="dropdown-item" href="/auth/lockscreen-basic"><i class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle"> Lock screen</span>
+            <Link class="dropdown-item" href="/auth/lockscreen-basic"><i
+                class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i>
+              <span class="align-middle"> Lock screen</span>
             </Link>
 
             <!-- Authentication -->
             <form method="POST" @submit.prevent="logout" class="dropdown-item">
-              <BButton variant="none" type="submit" class="btn p-0"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> Sair</BButton>
+              <BButton variant="none" type="submit" class="btn p-0"><i
+                  class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> Sair</BButton>
             </form>
           </BDropdown>
         </div>
@@ -785,3 +837,37 @@ export default {
     </div>
   </header>
 </template>
+
+<style scoped>
+.clinic-dropdown-toggle:hover,
+.clinic-dropdown-toggle:hover i,
+.clinic-dropdown-toggle:hover span,
+.clinic-dropdown-toggle:active,
+.clinic-dropdown-toggle:focus,
+.clinic-dropdown-toggle.show,
+.clinic-dropdown-toggle.show i,
+.clinic-dropdown-toggle.show span {
+  color: var(--vz-success) !important;
+}
+
+.clinic-dropdown-item.active-clinic,
+.clinic-dropdown-item:focus,
+.clinic-dropdown-item:active,
+.clinic-dropdown-item:hover {
+  background-color: var(--vz-success-subtle) !important;
+  color: var(--vz-success) !important;
+}
+
+.clinic-dropdown-item .clinic-icon {
+  color: var(--vz-body-color);
+  opacity: 0.7;
+}
+
+.clinic-dropdown-item.active-clinic .clinic-icon,
+.clinic-dropdown-item:focus .clinic-icon,
+.clinic-dropdown-item:active .clinic-icon,
+.clinic-dropdown-item:hover .clinic-icon {
+  color: var(--vz-success) !important;
+  opacity: 1;
+}
+</style>

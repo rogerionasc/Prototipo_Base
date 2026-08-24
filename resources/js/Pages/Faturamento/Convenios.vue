@@ -12,7 +12,8 @@
                         <div class="row g-3 align-items-end">
                             <!-- Buscar -->
                             <div class="col-12 col-md">
-                                <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Buscar</label>
+                                <label
+                                    class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Buscar</label>
                                 <div class="search-box">
                                     <input type="text" class="form-control search" placeholder="Buscar..."
                                         v-model="filtros.busca">
@@ -22,17 +23,20 @@
 
                             <!-- Convênio -->
                             <div class="col-12 col-md">
-                                <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Convênio</label>
+                                <label
+                                    class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Convênio</label>
                                 <select v-model="filtros.convenio" class="form-select form-select-sm" data-choices
                                     data-choices-search-true>
                                     <option value="">Todos</option>
-                                    <option v-for="c in conveniosOptions" :key="c.value" :value="c.label">{{ c.label }}</option>
+                                    <option v-for="c in conveniosOptions" :key="c.value" :value="c.label">{{ c.label }}
+                                    </option>
                                 </select>
                             </div>
 
                             <!-- Status -->
                             <div class="col-12 col-md">
-                                <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Status</label>
+                                <label
+                                    class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Status</label>
                                 <select v-model="filtros.status" class="form-select form-select-sm" data-choices
                                     data-choices-search-false>
                                     <option value="">Todos</option>
@@ -44,7 +48,8 @@
 
                             <!-- Data Início -->
                             <div class="col-6 col-md">
-                                <label class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Início</label>
+                                <label
+                                    class="form-label text-muted fs-11 text-uppercase fw-semibold mb-1">Início</label>
                                 <flatPickr v-model="filtros.dataInicio" class="form-control" :config="flatpickrOptions"
                                     placeholder="Selecione..." />
                             </div>
@@ -95,253 +100,293 @@
                     <div class="card-body bg-light-subtle p-3 p-md-4">
 
 
-                <div class="card ribbon-box border shadow-none mb-3" v-for="lote in faturamentosFiltrados" :key="lote.id">
-                    <div class="card-body pb-3 position-relative">
-                        <div class="ribbon ribbon-primary ribbon-shape" style="z-index: 10;">Lote #{{ lote.id }}</div>
+                        <div class="card ribbon-box border shadow-none mb-3" v-for="lote in faturamentosFiltrados"
+                            :key="lote.id">
+                            <div class="card-body pb-3 position-relative">
+                                <div class="ribbon ribbon-primary ribbon-shape" style="z-index: 10;">Lote {{
+                                    lote.numero_lote || lote.id }}</div>
 
-                        <!-- Status + Menu no canto superior direito (Desktop) -->
-                        <div class="position-absolute top-0 end-0 p-2 d-none d-md-flex align-items-center gap-2" style="z-index: 5;">
-                            <span class="badge px-3 py-1 fs-12 shadow-sm rounded-pill" :class="getLoteStatusClass(lote.status)">
-                                {{ lote.status.replace('_', ' ') }}
-                            </span>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-ghost-secondary rounded-circle shadow-none p-0"
-                                    style="width: 28px; height: 28px; line-height: 28px;"
-                                    type="button" :id="'dropdownLote' + lote.id" data-bs-toggle="dropdown" aria-expanded="false"
-                                    @click.stop>
-                                    <i class="ri-more-2-fill fs-16"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end" :aria-labelledby="'dropdownLote' + lote.id">
-                                    <li>
-                                        <a class="dropdown-item" href="#" @click.prevent.stop="baixarXml(lote.id)">
-                                            <i class="ri-file-code-line align-bottom me-2 text-muted"></i> Baixar XML
-                                        </a>
-                                    </li>
-                                    <li v-if="lote.status === 'FECHADA'">
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li v-if="lote.status === 'FECHADA'">
-                                        <a class="dropdown-item fw-medium text-primary" href="#" @click.prevent.stop="askProcessarLote(lote.id)">
-                                            <i class="ri-settings-4-line align-bottom me-2"></i> Processar Lote
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <!-- Status + Menu visível em mobile -->
-                        <div class="d-md-none text-end mt-2 mb-2 me-2 d-flex justify-content-end align-items-center gap-2">
-                            <span class="badge px-3 py-1 fs-12 shadow-sm rounded-pill" :class="getLoteStatusClass(lote.status)">
-                                {{ lote.status.replace('_', ' ') }}
-                            </span>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-ghost-secondary rounded-circle shadow-none p-0"
-                                    style="width: 28px; height: 28px; line-height: 28px;"
-                                    type="button" :id="'dropdownLoteMob' + lote.id" data-bs-toggle="dropdown" aria-expanded="false"
-                                    @click.stop>
-                                    <i class="ri-more-2-fill fs-16"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end" :aria-labelledby="'dropdownLoteMob' + lote.id">
-                                    <li>
-                                        <a class="dropdown-item" href="#" @click.prevent.stop="baixarXml(lote.id)">
-                                            <i class="ri-file-code-line align-bottom me-2 text-muted"></i> Baixar XML
-                                        </a>
-                                    </li>
-                                    <li v-if="lote.status === 'FECHADA'">
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li v-if="lote.status === 'FECHADA'">
-                                        <a class="dropdown-item fw-medium text-primary" href="#" @click.prevent.stop="askProcessarLote(lote.id)">
-                                            <i class="ri-settings-4-line align-bottom me-2"></i> Processar Lote
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="row align-items-center mt-3 mt-md-0" style="cursor: pointer;"
-                            @click="toggleCollapse(lote.id)">
-
-                            <!-- Convênio Icone e Nome -->
-                            <div class="col-md-3 col-12 mb-3 mb-md-0 border-end-md pe-md-4 text-center text-md-start">
-                                <div class="d-flex flex-column flex-md-row align-items-center">
-                                    <div class="flex-shrink-0 mb-2 mb-md-0 me-md-3">
-                                        <img v-if="lote.convenio_logo" :src="`/storage/${lote.convenio_logo}`" alt="Logo"
-                                            class="rounded bg-light p-1"
-                                            style="object-fit: contain; width: 70px; height: 70px;" />
-                                        <div v-else
-                                            class="rounded bg-primary-subtle text-primary d-flex justify-content-center align-items-center"
-                                            style="width: 70px; height: 70px;">
-                                            <i class="ri-hospital-line" style="font-size: 40px;"></i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h5 class="fs-15 fw-semibold mb-1 text-primary">{{ lote.convenio }}</h5>
-                                        <span class="text-muted fs-12"><i class="ri-calendar-event-line align-middle me-1"></i>
-                                            {{ lote.data_faturamento || '-' }}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Barra de Progresso das Guias -->
-                            <div class="col-md-4 col-12 mb-3 mb-md-0 px-md-4">
-                                <div class="d-flex justify-content-between align-items-end mb-2">
-                                    <span class="text-uppercase fw-semibold fs-11 text-muted">Progresso das Guias</span>
-                                    <span class="badge bg-info-subtle text-info fw-semibold px-2 py-1 fs-11">
-                                        <i class="ri-file-list-3-line align-middle me-1"></i> {{ lote.total_guias }} guias no
-                                        lote
+                                <!-- Status + Menu no canto superior direito (Desktop) -->
+                                <div class="position-absolute top-0 end-0 p-2 d-none d-md-flex align-items-center gap-2"
+                                    style="z-index: 5;">
+                                    <span class="badge px-3 py-1 fs-12 shadow-sm rounded-pill"
+                                        :class="getLoteStatusClass(lote.status)">
+                                        {{ lote.status.replace('_', ' ') }}
                                     </span>
-                                </div>
-
-                                <div v-if="lote.guias_timeline && lote.guias_timeline.length > 0">
-                                    <div class="progress animated-progress"
-                                        style="height: 8px; border-radius: 4px; background-color: #e9ebec;">
-                                        <div v-for="(t, index) in lote.guias_timeline" :key="index" class="progress-bar"
-                                            :class="getProgressBarClass(t.status)" role="progressbar"
-                                            :style="{ width: t.percentage + '%' }" :title="t.status + ' (' + t.count + ')'">
-                                        </div>
-                                    </div>
-
-                                    <!-- Legendas -->
-                                    <div class="d-flex flex-wrap mt-2 gap-2 justify-content-start">
-                                        <div v-for="(t, index) in lote.guias_timeline" :key="index"
-                                            class="d-flex align-items-center fs-11 fw-medium"
-                                            :class="getProgressTextClass(t.status)">
-                                            <i class="ri-checkbox-blank-circle-fill me-1" style="font-size: 8px;"></i>
-                                            {{ t.percentage }}% {{ t.status }} ({{ t.count }})
-                                        </div>
-                                    </div>
-                                </div>
-                                <div v-else class="text-muted fs-12 d-flex align-items-center mt-2">
-                                    <i class="ri-information-line me-1"></i> Este lote não possui guias associadas.
-                                </div>
-                            </div>
-
-                            <!-- Status e Total do Lote -->
-                            <div class="col-md-4 col-12 text-center border-start-md ps-md-4">
-                                <div class="row g-2 mb-2">
-                                    <div class="col-4">
-                                        <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Total</p>
-                                        <h6 class="text-primary fw-bold mb-0">{{ formatCurrency(lote.valor_total) }}</h6>
-                                    </div>
-                                    <div class="col-4">
-                                        <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Glosado</p>
-                                        <h6 class="text-danger fw-bold mb-0">{{ formatCurrency(calcularValorGlosado(lote)) }}
-                                        </h6>
-                                    </div>
-                                    <div class="col-4">
-                                        <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Aprovado</p>
-                                        <h6 class="text-success fw-bold mb-0">{{ formatCurrency(calcularValorAprovado(lote)) }}</h6>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-ghost-secondary rounded-circle shadow-none p-0"
+                                            style="width: 28px; height: 28px; line-height: 28px;" type="button"
+                                            :id="'dropdownLote' + lote.id" data-bs-toggle="dropdown"
+                                            aria-expanded="false" @click.stop>
+                                            <i class="ri-more-2-fill fs-16"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end"
+                                            :aria-labelledby="'dropdownLote' + lote.id">
+                                            <li>
+                                                <a class="dropdown-item" href="#"
+                                                    @click.prevent.stop="baixarXml(lote.id)">
+                                                    <i class="ri-file-code-line align-bottom me-2 text-muted"></i>
+                                                    Baixar XML
+                                                </a>
+                                            </li>
+                                            <li v-if="lote.status === 'FECHADA'">
+                                                <hr class="dropdown-divider">
+                                            </li>
+                                            <li v-if="lote.status === 'FECHADA'">
+                                                <a class="dropdown-item fw-medium text-primary" href="#"
+                                                    @click.prevent.stop="askProcessarLote(lote.id)">
+                                                    <i class="ri-settings-4-line align-bottom me-2"></i> Processar Lote
+                                                </a>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="col-md-1 col-12 text-center text-md-end mt-3 mt-md-0">
-                                <button class="btn btn-sm btn-ghost-secondary rounded-circle shadow-none">
-                                    <i class="ri-arrow-down-s-line fs-20"
-                                        :class="{ 'ri-arrow-up-s-line': isExpanded(lote.id) }"></i>
-                                </button>
-                            </div>
-
-                        </div>
-
-                        <!-- Tabela Colapsável -->
-                        <div v-show="isExpanded(lote.id)" class="mt-4 ms-md-4 border-top pt-3">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fs-13 fw-semibold text-muted text-uppercase mb-0">Guias Atreladas ao Lote</h6>
-                                <div class="d-flex gap-2">
-                                    <button v-if="lote.status === 'ABERTA'" class="btn btn-sm btn-soft-success"
-                                        @click.stop="abrirAddModal(lote)">
-                                        <i class="ri-add-line align-bottom me-1"></i> Adicionar Guias
-                                    </button>
-                                    <button v-if="lote.status === 'ABERTA'" class="btn btn-sm btn-soft-warning"
-                                        @click.stop="askFecharLote(lote.id)"
-                                        :disabled="fechandoLote === lote.id">
-                                        <i class="ri-lock-line align-bottom me-1"></i> Fechar Lote
-                                    </button>
-                                    <button v-else-if="lote.status === 'FECHADA'" class="btn btn-sm btn-soft-info"
-                                        @click.stop="askReabrirLote(lote.id)"
-                                        :disabled="fechandoLote === lote.id">
-                                        <i class="ri-lock-unlock-line align-bottom me-1"></i> Reabrir Lote
-                                    </button>
+                                <!-- Status + Menu visível em mobile -->
+                                <div
+                                    class="d-md-none text-end mt-2 mb-2 me-2 d-flex justify-content-end align-items-center gap-2">
+                                    <span class="badge px-3 py-1 fs-12 shadow-sm rounded-pill"
+                                        :class="getLoteStatusClass(lote.status)">
+                                        {{ lote.status.replace('_', ' ') }}
+                                    </span>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-ghost-secondary rounded-circle shadow-none p-0"
+                                            style="width: 28px; height: 28px; line-height: 28px;" type="button"
+                                            :id="'dropdownLoteMob' + lote.id" data-bs-toggle="dropdown"
+                                            aria-expanded="false" @click.stop>
+                                            <i class="ri-more-2-fill fs-16"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end"
+                                            :aria-labelledby="'dropdownLoteMob' + lote.id">
+                                            <li>
+                                                <a class="dropdown-item" href="#"
+                                                    @click.prevent.stop="baixarXml(lote.id)">
+                                                    <i class="ri-file-code-line align-bottom me-2 text-muted"></i>
+                                                    Baixar XML
+                                                </a>
+                                            </li>
+                                            <li v-if="lote.status === 'FECHADA'">
+                                                <hr class="dropdown-divider">
+                                            </li>
+                                            <li v-if="lote.status === 'FECHADA'">
+                                                <a class="dropdown-item fw-medium text-primary" href="#"
+                                                    @click.prevent.stop="askProcessarLote(lote.id)">
+                                                    <i class="ri-settings-4-line align-bottom me-2"></i> Processar Lote
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="table-wrapper-choices" :key="'table-' + lote.id + '-' + lote.status">
-                                <SimpleTable :items="lote.guias || []" :columns="guiasLoteColumns" :hasActions="true"
-                                    actionsLabel="Ação" variant="borderless" :compact="true"
-                                    emptyTitle="Nenhuma guia atrelada a este lote."
-                                    :row-class="getGuiaRowClass">
-                                    <template #cell(id)="{ item }">
-                                        <span class="fw-medium text-primary">#{{ item.id }}</span>
-                                    </template>
-                                    <template #cell(numero)="{ item }">
-                                        <a v-if="item.agendamento_id"
-                                            :href="route('guias.imprimirDaAgenda', item.agendamento_id) + '?guia_id=' + item.id" target="_blank"
-                                            class="text-primary fw-medium text-decoration-underline">
-                                            {{ item.numero_guia_prestador || item.numero_guia_operadora || 'Ver Guia' }}
-                                        </a>
-                                        <span v-else class="text-primary fw-medium">{{ item.numero_guia_prestador ||
-                                            item.numero_guia_operadora || '-' }}</span>
-                                    </template>
-                                    <template #cell(tipo)="{ item }">
-                                        {{ item.tipo || 'Guia de Consulta' }}
-                                    </template>
-                                    <template #cell(senha)="{ item }">
-                                        {{ item.senha || '-' }}
-                                    </template>
-                                    <template #cell(valor_total)="{ item }">
-                                        {{ formatCurrency(item.valor_total) }}
-                                    </template>
-                                    <template #cell(glosa)="{ item }">
-                                        <template v-if="lote.status === 'ABERTA' || lote.status === 'PROCESSADA'">
-                                            <span v-if="item.valor_glosado > 0" class="text-danger fw-medium">{{
-                                                formatCurrency(item.valor_glosado) }}</span>
-                                            <span v-else class="text-muted">-</span>
-                                        </template>
-                                        <template v-else>
-                                            <div v-if="item.status === 'GLOSADA'">
-                                                <input type="number" step="0.01" class="form-control form-control-sm"
-                                                    style="min-width: 90px; max-width: 100px;" v-model="item.valor_glosado"
-                                                    @blur="atualizarValorGlosado(lote.id, item.id, item.valor_glosado)">
+                                <div class="row align-items-center mt-3 mt-md-0" style="cursor: pointer;"
+                                    @click="toggleCollapse(lote.id)">
+
+                                    <!-- Convênio Icone e Nome -->
+                                    <div
+                                        class="col-md-3 col-12 mb-3 mb-md-0 border-end-md pe-md-4 text-center text-md-start">
+                                        <div class="d-flex flex-column flex-md-row align-items-center">
+                                            <div class="flex-shrink-0 mb-2 mb-md-0 me-md-3">
+                                                <img v-if="lote.convenio_logo" :src="`/storage/${lote.convenio_logo}`"
+                                                    alt="Logo" class="rounded bg-light p-1"
+                                                    style="object-fit: contain; width: 70px; height: 70px;" />
+                                                <div v-else
+                                                    class="rounded bg-primary-subtle text-primary d-flex justify-content-center align-items-center"
+                                                    style="width: 70px; height: 70px;">
+                                                    <i class="ri-hospital-line" style="font-size: 40px;"></i>
+                                                </div>
                                             </div>
-                                            <span v-else-if="item.valor_glosado > 0" class="text-danger fw-medium">{{
-                                                formatCurrency(item.valor_glosado) }}</span>
-                                            <span v-else class="text-muted">-</span>
-                                        </template>
-                                    </template>
-                                    <template #cell(status)="{ item }">
-                                        <span v-if="lote.status === 'ABERTA' || item.status === 'DEVOLVIDA' || lote.status === 'PROCESSADA'">
-                                            {{ item.status ? item.status.replace(/_/g, ' ') : 'PENDENTE' }}
-                                        </span>
-                                        <div v-else>
-                                            <select :value="item.status" data-choices data-choices-search-false
-                                                style="min-width: 150px;" class="form-select form-select-sm"
-                                                :disabled="updatingStatus[item.id]"
-                                                @change="atualizarStatusGuia(lote.id, item.id, $event.detail ? $event.detail.value : $event.target.value)">
-                                                <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                                                    {{ opt.label }}
-                                                </option>
-                                            </select>
+                                            <div class="flex-grow-1">
+                                                <h5 class="fs-15 fw-semibold mb-1 text-primary">{{ lote.convenio }}</h5>
+                                                <span class="text-muted fs-12"><i
+                                                        class="ri-calendar-event-line align-middle me-1"></i>
+                                                    {{ lote.data_faturamento || '-' }}</span>
+                                            </div>
                                         </div>
-                                    </template>
-                                    <template #actions="{ item }">
-                                        <button v-if="lote.status === 'ABERTA'"
-                                            class="btn btn-sm btn-soft-danger shadow-none"
-                                            @click.stop="askDeleteGuia(lote.id, item.id)" :disabled="removendoGuia === item.id || item.status === 'DEVOLVIDA'">
-                                            <i class="ri-delete-bin-line"></i>
+                                    </div>
+
+                                    <!-- Barra de Progresso das Guias -->
+                                    <div class="col-md-4 col-12 mb-3 mb-md-0 px-md-4">
+                                        <div class="d-flex justify-content-between align-items-end mb-2">
+                                            <span class="text-uppercase fw-semibold fs-11 text-muted">Progresso das
+                                                Guias</span>
+                                            <span class="badge bg-info-subtle text-info fw-semibold px-2 py-1 fs-11">
+                                                <i class="ri-file-list-3-line align-middle me-1"></i> {{
+                                                    lote.total_guias }} guias no
+                                                lote
+                                            </span>
+                                        </div>
+
+                                        <div v-if="lote.guias_timeline && lote.guias_timeline.length > 0">
+                                            <div class="progress animated-progress"
+                                                style="height: 8px; border-radius: 4px; background-color: #e9ebec;">
+                                                <div v-for="(t, index) in lote.guias_timeline" :key="index"
+                                                    class="progress-bar" :class="getProgressBarClass(t.status)"
+                                                    role="progressbar" :style="{ width: t.percentage + '%' }"
+                                                    :title="t.status + ' (' + t.count + ')'">
+                                                </div>
+                                            </div>
+
+                                            <!-- Legendas -->
+                                            <div class="d-flex flex-wrap mt-2 gap-2 justify-content-start">
+                                                <div v-for="(t, index) in lote.guias_timeline" :key="index"
+                                                    class="d-flex align-items-center fs-11 fw-medium"
+                                                    :class="getProgressTextClass(t.status)">
+                                                    <i class="ri-checkbox-blank-circle-fill me-1"
+                                                        style="font-size: 8px;"></i>
+                                                    {{ t.percentage }}% {{ t.status }} ({{ t.count }})
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div v-else class="text-muted fs-12 d-flex align-items-center mt-2">
+                                            <i class="ri-information-line me-1"></i> Este lote não possui guias
+                                            associadas.
+                                        </div>
+                                    </div>
+
+                                    <!-- Status e Total do Lote -->
+                                    <div class="col-md-4 col-12 text-center border-start-md ps-md-4">
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-4">
+                                                <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Total</p>
+                                                <h6 class="text-primary fw-bold mb-0">{{
+                                                    formatCurrency(lote.valor_total) }}</h6>
+                                            </div>
+                                            <div class="col-4">
+                                                <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Glosado</p>
+                                                <h6 class="text-danger fw-bold mb-0">{{
+                                                    formatCurrency(calcularValorGlosado(lote)) }}
+                                                </h6>
+                                            </div>
+                                            <div class="col-4">
+                                                <p class="text-muted text-uppercase fw-semibold fs-10 mb-1">Aprovado</p>
+                                                <h6 class="text-success fw-bold mb-0">{{
+                                                    formatCurrency(calcularValorAprovado(lote)) }}</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-1 col-12 text-center text-md-end mt-3 mt-md-0">
+                                        <button class="btn btn-sm btn-ghost-secondary rounded-circle shadow-none">
+                                            <i class="ri-arrow-down-s-line fs-20"
+                                                :class="{ 'ri-arrow-up-s-line': isExpanded(lote.id) }"></i>
                                         </button>
-                                        <button v-if="lote.status !== 'PROCESSADA'" class="btn btn-sm btn-soft-dark shadow-none ms-1"
-                                            @click.stop="askDevolverGuiaLote(item.id)" :disabled="devolvendoGuiaId === item.id || item.status === 'DEVOLVIDA'" title="Devolver Guia">
-                                            <i class="ri-arrow-go-back-line"></i>
-                                        </button>
-                                    </template>
-                                </SimpleTable>
+                                    </div>
+
+                                </div>
+
+                                <!-- Tabela Colapsável -->
+                                <div v-show="isExpanded(lote.id)" class="mt-4 ms-md-4 border-top pt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="fs-13 fw-semibold text-muted text-uppercase mb-0">Guias Atreladas ao
+                                            Lote</h6>
+                                        <div class="d-flex gap-2">
+                                            <button v-if="lote.status === 'ABERTA'" class="btn btn-sm btn-soft-success"
+                                                @click.stop="abrirAddModal(lote)">
+                                                <i class="ri-add-line align-bottom me-1"></i> Adicionar Guias
+                                            </button>
+                                            <button v-if="lote.status === 'ABERTA'" class="btn btn-sm btn-soft-warning"
+                                                @click.stop="askFecharLote(lote.id)"
+                                                :disabled="fechandoLote === lote.id">
+                                                <i class="ri-lock-line align-bottom me-1"></i> Fechar Lote
+                                            </button>
+                                            <button v-else-if="lote.status === 'FECHADA'"
+                                                class="btn btn-sm btn-soft-info" @click.stop="askReabrirLote(lote.id)"
+                                                :disabled="fechandoLote === lote.id">
+                                                <i class="ri-lock-unlock-line align-bottom me-1"></i> Reabrir Lote
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-wrapper-choices" :key="'table-' + lote.id + '-' + lote.status">
+                                        <SimpleTable :items="lote.guias || []" :columns="guiasLoteColumns"
+                                            :hasActions="true" actionsLabel="Ação" variant="borderless" :compact="true"
+                                            emptyTitle="Nenhuma guia atrelada a este lote."
+                                            :row-class="getGuiaRowClass">
+                                            <template #cell(id)="{ item }">
+                                                <span class="fw-medium text-primary">#{{ item.id }}</span>
+                                            </template>
+                                            <template #cell(numero)="{ item }">
+                                                <a v-if="item.agendamento_id"
+                                                    :href="route('guias.imprimirDaAgenda', item.agendamento_id) + '?guia_id=' + item.id"
+                                                    target="_blank"
+                                                    class="text-primary fw-medium text-decoration-underline">
+                                                    <template v-if="item.numero_guia_prestador || item.numero_guia_operadora">
+                                                        {{ item.numero_guia_prestador || item.numero_guia_operadora }}
+                                                    </template>
+                                                    <template v-else>Ver Guia</template>
+                                                </a>
+                                                <span v-else class="text-primary fw-medium">{{
+                                                    item.numero_guia_prestador ||
+                                                    item.numero_guia_operadora || '-' }}</span>
+                                            </template>
+                                            <template #cell(tipo)="{ item }">
+                                                {{ item.tipo || 'Guia de Consulta' }}
+                                            </template>
+                                            <template #cell(senha)="{ item }">
+                                                {{ item.senha || '-' }}
+                                            </template>
+                                            <template #cell(valor_total)="{ item }">
+                                                {{ formatCurrency(item.valor_total) }}
+                                            </template>
+                                            <template #cell(glosa)="{ item }">
+                                                <template
+                                                    v-if="lote.status === 'ABERTA' || lote.status === 'PROCESSADA'">
+                                                    <span v-if="item.valor_glosado > 0" class="text-danger fw-medium">{{
+                                                        formatCurrency(item.valor_glosado) }}</span>
+                                                    <span v-else class="text-muted">-</span>
+                                                </template>
+                                                <template v-else>
+                                                    <div v-if="item.status === 'GLOSADA'">
+                                                        <input type="number" step="0.01"
+                                                            class="form-control form-control-sm"
+                                                            style="min-width: 90px; max-width: 100px;"
+                                                            v-model="item.valor_glosado"
+                                                            @blur="atualizarValorGlosado(lote.id, item.id, item.valor_glosado)">
+                                                    </div>
+                                                    <span v-else-if="item.valor_glosado > 0"
+                                                        class="text-danger fw-medium">{{
+                                                            formatCurrency(item.valor_glosado) }}</span>
+                                                    <span v-else class="text-muted">-</span>
+                                                </template>
+                                            </template>
+                                            <template #cell(status)="{ item }">
+                                                <span
+                                                    v-if="lote.status === 'ABERTA' || item.status === 'DEVOLVIDA' || lote.status === 'PROCESSADA'">
+                                                    {{ item.status ? item.status.replace(/_/g, ' ') : 'PENDENTE' }}
+                                                </span>
+                                                <div v-else>
+                                                    <select :value="item.status" data-choices data-choices-search-false
+                                                        style="min-width: 150px;" class="form-select form-select-sm"
+                                                        :disabled="updatingStatus[item.id]"
+                                                        @change="atualizarStatusGuia(lote.id, item.id, $event.detail ? $event.detail.value : $event.target.value)">
+                                                        <option v-for="opt in statusOptions" :key="opt.value"
+                                                            :value="opt.value">
+                                                            {{ opt.label }}
+                                                        </option>
+                                                    </select>
+                                                </div>
+                                            </template>
+                                            <template #actions="{ item }">
+                                                <button v-if="lote.status === 'ABERTA'"
+                                                    class="btn btn-sm btn-soft-danger shadow-none"
+                                                    @click.stop="askDeleteGuia(lote.id, item.id)"
+                                                    :disabled="removendoGuia === item.id || item.status === 'DEVOLVIDA'">
+                                                    <i class="ri-delete-bin-line"></i>
+                                                </button>
+                                                <button v-if="lote.status !== 'PROCESSADA'"
+                                                    class="btn btn-sm btn-soft-dark shadow-none ms-1"
+                                                    @click.stop="askDevolverGuiaLote(item.id)"
+                                                    :disabled="devolvendoGuiaId === item.id || item.status === 'DEVOLVIDA'"
+                                                    title="Devolver Guia">
+                                                    <i class="ri-arrow-go-back-line"></i>
+                                                </button>
+                                            </template>
+                                        </SimpleTable>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
-
-                    </div>
-                </div>
 
                     </div>
                 </div>
@@ -358,21 +403,24 @@
                             <span class="badge bg-danger-subtle text-danger fs-11">Atenção</span>
                         </div>
                     </div>
-                    
+
                     <div class="card-body px-0" style="max-height: 70vh; overflow-y: auto;">
                         <div v-if="guiasPrestesAVencer && guiasPrestesAVencer.length > 0">
                             <div class="list-group list-group-flush border-dashed">
-                                <div v-for="guia in guiasPrestesAVencer" :key="guia.id" 
+                                <div v-for="guia in guiasPrestesAVencer" :key="guia.id"
                                     class="list-group-item list-group-item-action d-flex align-items-center flex-column px-3 py-2 border-bottom">
                                     <div class="w-100 d-flex justify-content-between align-items-center mb-1">
                                         <div class="fw-semibold text-primary fs-13">
-                                            Guia: 
-                                            <a v-if="guia.agendamento_id" :href="`/guias/${guia.agendamento_id}/imprimir`" target="_blank" class="text-decoration-underline" title="Imprimir Guia">
+                                            Guia:
+                                            <a v-if="guia.agendamento_id"
+                                                :href="`/guias/${guia.agendamento_id}/imprimir`" target="_blank"
+                                                class="text-decoration-underline" title="Imprimir Guia">
                                                 {{ guia.numero_guia || 'N/I' }}
                                             </a>
                                             <span v-else>{{ guia.numero_guia || 'N/I' }}</span>
                                         </div>
-                                        <span class="badge bg-warning text-dark fs-10">{{ guia.dias_vencer }} dias</span>
+                                        <span class="badge bg-warning text-dark fs-10">{{ guia.dias_vencer }}
+                                            dias</span>
                                     </div>
                                     <div class="w-100 d-flex justify-content-between align-items-center">
                                         <div class="text-muted fs-12 text-truncate" style="max-width: 65%;">
@@ -417,7 +465,8 @@
         </Modal>
 
         <!-- Modal Adicionar Nova Guia -->
-        <Modal v-model="showAddModal" :title="'Adicionar Guias - Lote #' + (gerenciarLote?.id || '')" size="xl"
+        <Modal v-model="showAddModal"
+            :title="'Adicionar Guias - Lote #' + (gerenciarLote?.numero_lote || gerenciarLote?.id || '')" size="xl"
             customWidth="98vw" :show-footer="false">
             <div v-if="loadingDisponiveisAdd" class="text-center py-4">
                 <div class="spinner-border text-primary" role="status"></div>
@@ -463,9 +512,12 @@
                                     <td>#{{ guia.id }}</td>
                                     <td>
                                         <a v-if="guia.agendamento_id"
-                                            :href="route('guias.imprimirDaAgenda', guia.agendamento_id) + '?guia_id=' + guia.id" target="_blank"
-                                            class="text-primary fw-medium text-decoration-underline">
-                                            {{ guia.numero_guia_prestador || guia.numero_guia_operadora || 'Ver Guia' }}
+                                            :href="route('guias.imprimirDaAgenda', guia.agendamento_id) + '?guia_id=' + guia.id"
+                                            target="_blank" class="text-primary fw-medium text-decoration-underline">
+                                            <template v-if="guia.numero_guia_prestador || guia.numero_guia_operadora">
+                                                {{ guia.numero_guia_prestador || guia.numero_guia_operadora }}
+                                            </template>
+                                            <template v-else>Ver Guia</template>
                                         </a>
                                         <span v-else class="text-primary fw-medium">{{ guia.numero_guia_prestador ||
                                             guia.numero_guia_operadora || '-' }}</span>
@@ -518,8 +570,7 @@
             message="Esta guia será clonada e retornará para a fila de validação, mantendo o histórico original intacto."
             nameButton="Sim, devolver guia" buttonClass="btn-warning" @save="executarDevolverGuiaLote" />
 
-        <ModalConfirm v-model="confirmFecharLoteModal" title="Fechar Lote"
-            subTitle="Deseja realmente fechar este lote?"
+        <ModalConfirm v-model="confirmFecharLoteModal" title="Fechar Lote" subTitle="Deseja realmente fechar este lote?"
             message="Ao fechar o lote, não será mais possível adicionar ou remover guias. Porém, você poderá alterar o status e valor da glosa das guias."
             nameButton="Sim, fechar lote" buttonClass="btn-warning" @save="executarFecharLote" />
 
@@ -530,8 +581,8 @@
 
         <ModalConfirm v-model="confirmProcessarLoteModal" title="Processar Lote"
             subTitle="Deseja realmente processar este lote?"
-            message="Esta ação é irreversível. O lote e as guias não poderão mais ser alterados e os lançamentos no financeiro (Contas a Receber) serão gerados." nameButton="Sim, processar"
-            buttonClass="btn-primary" @save="executarProcessarLote" />
+            message="Esta ação é irreversível. O lote e as guias não poderão mais ser alterados e os lançamentos no financeiro (Contas a Receber) serão gerados."
+            nameButton="Sim, processar" buttonClass="btn-primary" @save="executarProcessarLote" />
 
     </Layout>
 </template>
@@ -818,7 +869,7 @@ function executarDevolverGuiaLote() {
     if (!guiaIdParaDevolver.value) return;
     devolvendoGuiaId.value = guiaIdParaDevolver.value;
     confirmDevolverLoteModal.value = false;
-    
+
     axios.post(route('guias.devolver', guiaIdParaDevolver.value))
         .then(res => {
             window.dispatchEvent(new CustomEvent('flash:show', {
@@ -939,17 +990,12 @@ function executarProcessarLote() {
 }
 
 function baixarXml(loteId) {
-    // This is a mockup for downloading XML
     window.dispatchEvent(new CustomEvent('flash:show', {
-        detail: { type: 'info', message: 'Baixando XML do lote #' + loteId + '...' }
+        detail: { type: 'info', message: 'Gerando arquivo XML para o lote #' + loteId + '...' }
     }));
-    
-    // Simular o download após 1 segundo
-    setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('flash:show', {
-            detail: { type: 'success', message: 'Arquivo XML baixado com sucesso!' }
-        }));
-    }, 1000);
+
+    // Abrir a rota de download em uma nova aba para forçar o navegador a baixar o arquivo
+    window.open(route('faturamento.xml', loteId), '_blank');
 }
 
 // Helpers
@@ -1011,12 +1057,12 @@ function calcularValorGlosado(lote) {
 
 function calcularValorAprovado(lote) {
     if (!lote) return 0;
-    
+
     // If it is saved in the database
     if (lote.valor_aprovado !== undefined && lote.valor_aprovado !== null) {
         return parseFloat(lote.valor_aprovado);
     }
-    
+
     // Dynamic fallback
     const total = parseFloat(lote.valor_total) || 0;
     const glosado = calcularValorGlosado(lote);
@@ -1048,9 +1094,11 @@ function getBgColorLote(status) {
     opacity: 0.6;
     background-color: rgba(var(--vz-secondary-rgb), 0.05);
 }
+
 :deep(.row-devolvida td) {
     position: relative;
 }
+
 :deep(.row-devolvida td::after) {
     content: '';
     position: absolute;

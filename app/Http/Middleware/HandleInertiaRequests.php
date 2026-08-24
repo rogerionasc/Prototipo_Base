@@ -38,7 +38,20 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         return array_merge(parent::share($request), [
-            //
+            'accounts' => function () {
+                if (auth()->check()) {
+                    // Aqui você pode adicionar lógica de roles, ex: hasRole('Super Admin')
+                    return \App\Models\Account::all();
+                }
+                return [];
+            },
+            'current_account' => function () {
+                if (auth()->check()) {
+                    $accountId = session('current_account_id', auth()->user()->account_id);
+                    return $accountId ? \App\Models\Account::find($accountId) : null;
+                }
+                return null;
+            },
             'flash' => function () use ($request) {
                 $error = Session::get('error');
                 if (!$error && Session::has('errors')) {

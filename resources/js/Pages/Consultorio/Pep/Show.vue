@@ -430,6 +430,7 @@ const todasPrescricoes = computed(() => {
 });
 
 import Modal from "@/Components/Modal.vue";
+import ModalConfirm from "@/Components/ModalConfirm.vue";
 
 const calcularIdade = (dataNascimento) => {
     if (!dataNascimento) return 'N/A';
@@ -1501,17 +1502,10 @@ const finalizarAtendimento = () => {
         </div> <!-- /row -->
         </div>
         <!-- Modal para Finalizar Atendimento -->
-        <Modal v-model="showFinalizarModal" title="Finalizar Atendimento" name-button="Sim, finalizar" size="md"
-            @save="finalizarAtendimento">
-            <div class="text-center p-3">
-                <i class="ri-error-warning-line display-5 text-warning mb-3 d-inline-block"></i>
-                <h4 class="mb-3">Atenção!</h4>
-                <p class="text-muted mb-0">
-                    Você está prestes a encerrar este atendimento. O prontuário será fechado e o paciente sairá da lista
-                    de atendimentos em andamento.
-                </p>
-            </div>
-        </Modal>
+        <ModalConfirm v-model="showFinalizarModal" title="Finalizar Atendimento" subTitle="Atenção!"
+            message="Você está prestes a encerrar este atendimento. O prontuário será fechado e o paciente sairá da lista de atendimentos em andamento."
+            name-button="Sim, finalizar" buttonClass="btn-warning"
+            @save="finalizarAtendimento" />
 
         <!-- Modal de Exclusão Padrão do Projeto -->
         <ModalDelete v-model="deleteModal" title="Excluir Registro" subTitle="Deseja realmente excluir este registro?"

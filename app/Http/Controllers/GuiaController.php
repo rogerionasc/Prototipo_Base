@@ -62,8 +62,11 @@ class GuiaController extends Controller
             
             if (!$guia) {
                 $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
-                $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
-                $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+                $guia = Guia::where('agendamento_id', $origemId)->first();
+                if (!$guia) {
+                    $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
+                    $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+                }
             }
         }
 
@@ -116,8 +119,11 @@ class GuiaController extends Controller
             
             if (!$guia) {
                 $origemId = $agendamento->agendamento_origem_id ?? $agendamento->id;
-                $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
-                $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+                $guia = Guia::where('agendamento_id', $origemId)->first();
+                if (!$guia) {
+                    $numeroGuiaPrestador = 'G' . str_pad($origemId, 8, '0', STR_PAD_LEFT);
+                    $guia = Guia::where('numero_guia_prestador', $numeroGuiaPrestador)->first();
+                }
             }
         }
 

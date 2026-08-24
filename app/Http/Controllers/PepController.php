@@ -22,7 +22,16 @@ class PepController extends Controller
         }
 
 
-        $atendimento->load(['paciente', 'medico', 'procedimento', 'tuss', 'agendamento.sessaoTratamento']);
+        $atendimento->load(['paciente', 'medico', 'procedimento', 'tuss', 'agendamento.sessaoTratamento', 'guia']);
+        
+        $isGuiaValidada = false;
+        if ($atendimento->guia_id) {
+            $isGuiaValidada = \App\Models\Guia::where('id', $atendimento->guia_id)->where('status', 'VALIDADA')->exists();
+        }
+        if (!$isGuiaValidada && $atendimento->agendamento_id) {
+            $isGuiaValidada = \App\Models\Guia::where('agendamento_id', $atendimento->agendamento_id)->where('status', 'VALIDADA')->exists();
+        }
+        $atendimento->is_guia_validada = $isGuiaValidada;
         $paciente = $atendimento->paciente;
         $user = auth()->user();
         

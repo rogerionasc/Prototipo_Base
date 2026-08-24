@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToAccount;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Pessoa extends Model
 {
+    use BelongsToAccount;
     use HasFactory, SoftDeletes;
+    use \App\Traits\BelongsToAccount;
 
     protected $table = 'pessoas';
 
