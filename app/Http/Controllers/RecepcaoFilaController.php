@@ -77,8 +77,14 @@ class RecepcaoFilaController extends Controller
             $baseProcNome = $ag->procedimento 
                               ? $ag->procedimento->nome 
                               : ($ag->tuss ? $ag->tuss->descricao : 'N/A');
-            $sessN = $ag->sessaoTratamento ? $ag->sessaoTratamento->numero_sessao : null;
+            $sessN = $atendimento && $atendimento->sessao 
+                        ? $atendimento->sessao 
+                        : ($ag->sessaoTratamento ? $ag->sessaoTratamento->numero_sessao : null);
             $sessT = $ag->procedimento ? $ag->procedimento->quantidade_sessoes : ($ag->tuss ? $ag->tuss->quantidade_sessoes : null);
+
+            if ($sessT > 1 && $sessN === null) {
+                $sessN = 1;
+            }
 
             $procNome = $baseProcNome;
             if ($sessN !== null) {
@@ -146,7 +152,7 @@ class RecepcaoFilaController extends Controller
 
     public function confirmar(Request $request, $id)
     {
-        $agendamento = Agendamento::with('agendaMedica')->findOrFail($id);
+        $agendamento = Agendamento::with(['agendaMedica', 'sessaoTratamento'])->findOrFail($id);
 
         $atendimento = Atendimento::where('agendamento_id', $id)->first();
 
@@ -165,6 +171,25 @@ class RecepcaoFilaController extends Controller
                   ->orWhere('agendamento_id', $agendamento->agendamento_origem_id); 
             })->latest()->first();
 
+            $sessN = $agendamento->sessaoTratamento ? $agendamento->sessaoTratamento->numero_sessao : null;
+            $sessT = $agendamento->procedimento ? $agendamento->procedimento->quantidade_sessoes : ($agendamento->tuss ? $agendamento->tuss->quantidade_sessoes : null);
+            
+            \Illuminate\Support\Facades\Log::info('RecepcaoFilaController::confirmar - DEBUG', [
+                'agendamento_id' => $agendamento->id,
+                'sessao_tratamento_id' => $agendamento->sessao_tratamento_id,
+                'sessaoTratamento_exists' => (bool)$agendamento->sessaoTratamento,
+                'sessN_before' => $sessN,
+                'sessT' => $sessT
+            ]);
+
+            if ($sessT > 1 && $sessN === null) {
+                $sessN = 1;
+            }
+            \Illuminate\Support\Facades\Log::info('RecepcaoFilaController::confirmar - RESULT', [
+                'sessN_final' => $sessN
+            ]);
+
+
             Atendimento::create([
                 'paciente_id'               => $agendamento->paciente_id,
                 'medico_id'                => $agendamento->agendaMedica->pessoa_id ?? null,
@@ -177,6 +202,7 @@ class RecepcaoFilaController extends Controller
                 'hora_prevista'            => Carbon::today()->format('Y-m-d') . ' ' . $agendamento->hora,
                 'status'                   => 'AGUARDANDO',
                 'convenio_id'              => $agendamento->convenio_id,
+                'sessao'                   => $sessN,
             ]);
         }
 
@@ -201,7 +227,7 @@ class RecepcaoFilaController extends Controller
 
     public function toggleEmergencia(Request $request, $id)
     {
-        $agendamento = Agendamento::with('agendaMedica')->findOrFail($id);
+        $agendamento = Agendamento::with(['agendaMedica', 'sessaoTratamento'])->findOrFail($id);
         
         $atendimento = Atendimento::where('agendamento_id', $id)->first();
 
@@ -216,6 +242,12 @@ class RecepcaoFilaController extends Controller
                   ->orWhere('agendamento_id', $agendamento->agendamento_origem_id); 
             })->latest()->first();
 
+            $sessN = $agendamento->sessaoTratamento ? $agendamento->sessaoTratamento->numero_sessao : null;
+            $sessT = $agendamento->procedimento ? $agendamento->procedimento->quantidade_sessoes : ($agendamento->tuss ? $agendamento->tuss->quantidade_sessoes : null);
+            if ($sessT > 1 && $sessN === null) {
+                $sessN = 1;
+            }
+
             $atendimento = Atendimento::create([
                 'paciente_id' => $agendamento->paciente_id,
                 'medico_id' => $agendamento->agendaMedica->pessoa_id ?? null,
@@ -228,6 +260,7 @@ class RecepcaoFilaController extends Controller
                 'status' => 'AGUARDANDO',
                 'emergencia' => true,
                 'convenio_id' => $agendamento->convenio_id,
+                'sessao' => $sessN,
             ]);
             
             return redirect()->back()->with('success', 'Presença confirmada e paciente marcado como emergência.');

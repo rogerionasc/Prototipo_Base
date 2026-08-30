@@ -143,23 +143,23 @@ class PepController extends Controller
             ? $atendimento->procedimento->nome 
             : ($atendimento->tuss ? $atendimento->tuss->descricao : 'N/A');
         
-        $sessN = $atendimento->agendamento && $atendimento->agendamento->sessaoTratamento 
+        $sessN = $atendimento->sessao ?? ($atendimento->agendamento && $atendimento->agendamento->sessaoTratamento 
                     ? $atendimento->agendamento->sessaoTratamento->numero_sessao 
-                    : null;
+                    : null);
         $sessT = $atendimento->procedimento 
                     ? $atendimento->procedimento->quantidade_sessoes 
                     : ($atendimento->tuss ? $atendimento->tuss->quantidade_sessoes : null);
+        
+        // Se o procedimento tem sessões e sessN for nulo (ex: atendimento criado sem vínculo formal), assume 1
+        if ($sessT > 1 && $sessN === null) {
+            $sessN = 1;
+        }
 
         $procNome = $baseProcNome;
-        if ($sessN !== null) {
-            if ($sessT !== null && $sessT > 0) {
-                $procNome .= " (Sessão {$sessN}/{$sessT})";
-            } else {
-                $procNome .= " (Sessão {$sessN})";
-            }
-        }
-        
-        $atendimento->procedimento_nome = $procNome;
+        // Removido para evitar redundância, pois agora a sessão é exibida no título
+        $atendimento->procedimento_nome = $baseProcNome;
+        $atendimento->sessao_atual = $sessN;
+        $atendimento->total_sessoes = $sessT;
 
         return Inertia::render('Consultorio/Pep/Show', [
             'atendimento' => $atendimento,

@@ -593,7 +593,12 @@ const finalizarAtendimento = () => {
                     <div class="tab-pane fade show active" id="v-pills-resumo" role="tabpanel">
                         <div class="card shadow-sm">
                             <div class="card-header border-0">
-                                <h5 class="card-title mb-0">Resumo do Atendimento Atual</h5>
+                                <h5 class="card-title mb-0">
+                                    Resumo do Atendimento Atual
+                                    <span v-if="atendimento?.sessao_atual || (atendimento?.total_sessoes && atendimento?.total_sessoes > 1)" class="text-muted fs-14 fw-normal ms-1">
+                                        (Sessão {{ atendimento.sessao_atual || '1' }}{{ atendimento.total_sessoes ? '/' + atendimento.total_sessoes : '' }})
+                                    </span>
+                                </h5>
                             </div>
                             <div class="card-body border-top border-top-dashed">
                                 <div class="row">
@@ -650,7 +655,7 @@ const finalizarAtendimento = () => {
                                                     <div class="mb-2 position-relative" style="z-index: 2; height: 28px;">
                                                         <span class="badge shadow-xs transition-all"
                                                             :class="selectedTimelinePepId === item.id ? 'bg-primary text-white fs-12 px-3 py-1 scale-105' : 'bg-white text-dark border fs-11'">
-                                                            <i class="ri-calendar-event-line me-1"></i> {{ item.data_formatada }}
+                                                            <i class="ri-calendar-event-line me-1"></i> {{ item.data_formatada }} <span v-if="item.hora_formatada"> - {{ item.hora_formatada }}</span>
                                                         </span>
                                                     </div>
 
@@ -721,9 +726,14 @@ const finalizarAtendimento = () => {
                                                     </div>
                                                 </div>
 
-                                                <div v-else class="text-center py-4 text-muted">
-                                                    <i class="ri-file-text-line fs-24 mb-1 d-block text-muted opacity-50"></i>
-                                                    Nenhuma evolução registrada neste atendimento ({{ selectedPepGroup.data_formatada }}).
+                                                <div v-else class="text-center py-4">
+                                                    <div class="avatar-md mx-auto mb-3">
+                                                        <div class="avatar-title bg-light text-primary rounded-circle fs-24">
+                                                            <i class="ri-pulse-line"></i>
+                                                        </div>
+                                                    </div>
+                                                    <h5 class="fs-15">Nenhuma evolução</h5>
+                                                    <p class="text-muted mb-0">Nenhuma evolução registrada neste atendimento ({{ selectedPepGroup.data_formatada }}).</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -837,7 +847,14 @@ const finalizarAtendimento = () => {
                                                                             <strong>Obs Triagem:</strong> {{ hist.sinais_vitais[0].observacao }}
                                                                         </p>
                                                                     </div>
-                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhum sinal vital/triagem registrado neste atendimento.</div>
+                                                                    <div v-else class="text-center py-3">
+                                                                        <div class="avatar-sm mx-auto mb-2">
+                                                                            <div class="avatar-title bg-light text-primary rounded-circle fs-18">
+                                                                                <i class="ri-heart-pulse-line"></i>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p class="text-muted fs-13 mb-0">Nenhum sinal vital/triagem registrado neste atendimento.</p>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
@@ -871,7 +888,14 @@ const finalizarAtendimento = () => {
                                                                             <p class="fs-13 mb-0 text-dark">{{ hist.anamnese.medicamentos_uso }}</p>
                                                                         </div>
                                                                     </div>
-                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhuma anamnese registrada neste atendimento.</div>
+                                                                    <div v-else class="text-center py-3">
+                                                                        <div class="avatar-sm mx-auto mb-2">
+                                                                            <div class="avatar-title bg-light text-primary rounded-circle fs-18">
+                                                                                <i class="ri-file-list-3-line"></i>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p class="text-muted fs-13 mb-0">Nenhuma anamnese registrada neste atendimento.</p>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
@@ -893,7 +917,14 @@ const finalizarAtendimento = () => {
                                                                             <small class="text-muted d-block mt-1">Por: {{ ev.profissional?.nome || 'Profissional' }}</small>
                                                                         </div>
                                                                     </div>
-                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhuma evolução registrada neste atendimento.</div>
+                                                                    <div v-else class="text-center py-3">
+                                                                        <div class="avatar-sm mx-auto mb-2">
+                                                                            <div class="avatar-title bg-light text-primary rounded-circle fs-18">
+                                                                                <i class="ri-pulse-line"></i>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p class="text-muted fs-13 mb-0">Nenhuma evolução registrada neste atendimento.</p>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
@@ -918,7 +949,14 @@ const finalizarAtendimento = () => {
                                                                             </div>
                                                                         </div>
                                                                     </div>
-                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhum diagnóstico registrado neste atendimento.</div>
+                                                                    <div v-else class="text-center py-3">
+                                                                        <div class="avatar-sm mx-auto mb-2">
+                                                                            <div class="avatar-title bg-light text-primary rounded-circle fs-18">
+                                                                                <i class="ri-stethoscope-line"></i>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p class="text-muted fs-13 mb-0">Nenhum diagnóstico registrado neste atendimento.</p>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
@@ -947,7 +985,14 @@ const finalizarAtendimento = () => {
                                                                             </ul>
                                                                         </div>
                                                                     </div>
-                                                                    <div v-else class="text-muted fs-13 fst-italic">Nenhuma prescrição registrada neste atendimento.</div>
+                                                                    <div v-else class="text-center py-3">
+                                                                        <div class="avatar-sm mx-auto mb-2">
+                                                                            <div class="avatar-title bg-light text-primary rounded-circle fs-18">
+                                                                                <i class="ri-medicine-bottle-line"></i>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p class="text-muted fs-13 mb-0">Nenhuma prescrição registrada neste atendimento.</p>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
@@ -1185,9 +1230,14 @@ const finalizarAtendimento = () => {
                                         <p class="text-secondary fs-13 mb-0 ps-1" style="white-space: pre-line;">{{ ev.descricao }}</p>
                                     </div>
                                 </div>
-                                <div v-else class="text-center py-4 text-muted">
-                                    <i class="ri-file-text-line fs-24 mb-1 d-block text-muted opacity-50"></i>
-                                    Nenhuma evolução registrada neste atendimento.
+                                <div v-else class="text-center py-4">
+                                    <div class="avatar-md mx-auto mb-3">
+                                        <div class="avatar-title bg-light text-primary rounded-circle fs-24">
+                                            <i class="ri-pulse-line"></i>
+                                        </div>
+                                    </div>
+                                    <h5 class="fs-15">Nenhuma evolução</h5>
+                                    <p class="text-muted mb-0">Nenhuma evolução registrada neste atendimento.</p>
                                 </div>
                             </div>
                         </div>
@@ -1235,9 +1285,14 @@ const finalizarAtendimento = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div v-else class="text-center py-4 text-muted">
-                                    <i class="ri-survey-line fs-24 mb-1 d-block text-muted opacity-50"></i>
-                                    Nenhum plano de tratamento registrado.
+                                <div v-else class="text-center py-4">
+                                    <div class="avatar-md mx-auto mb-3">
+                                        <div class="avatar-title bg-light text-primary rounded-circle fs-24">
+                                            <i class="ri-survey-line"></i>
+                                        </div>
+                                    </div>
+                                    <h5 class="fs-15">Nenhum plano de tratamento</h5>
+                                    <p class="text-muted mb-0">Nenhum plano de tratamento registrado.</p>
                                 </div>
                             </div>
                         </div>
@@ -1348,8 +1403,14 @@ const finalizarAtendimento = () => {
                                 <h5 class="card-title mb-0">Receituários e Prescrições Deste Atendimento</h5>
                             </div>
                             <div class="card-body">
-                                <div v-if="todasPrescricoes.length === 0" class="text-center py-4 text-muted">
-                                    Nenhuma prescrição registrada para este paciente.
+                                <div v-if="todasPrescricoes.length === 0" class="text-center py-4">
+                                    <div class="avatar-md mx-auto mb-3">
+                                        <div class="avatar-title bg-light text-primary rounded-circle fs-24">
+                                            <i class="ri-medicine-bottle-line"></i>
+                                        </div>
+                                    </div>
+                                    <h5 class="fs-15">Nenhuma prescrição</h5>
+                                    <p class="text-muted mb-0">Nenhuma prescrição registrada para este paciente.</p>
                                 </div>
                                 <div class="vstack gap-3" v-else>
                                     <div class="border rounded border-dashed p-3" v-for="pres in todasPrescricoes"
@@ -1463,9 +1524,14 @@ const finalizarAtendimento = () => {
                                 <h5 class="card-title mb-0">Diagnósticos Deste Atendimento</h5>
                             </div>
                             <div class="card-body">
-                                <div class="text-center py-4 text-muted" v-if="todosDiagnosticos.length === 0">
-                                    <i class="ri-stethoscope-line display-6 text-light mb-2 d-inline-block"></i><br>
-                                    Nenhum diagnóstico registrado para este atendimento.
+                                <div v-if="todosDiagnosticos.length === 0" class="text-center py-4">
+                                    <div class="avatar-md mx-auto mb-3">
+                                        <div class="avatar-title bg-light text-primary rounded-circle fs-24">
+                                            <i class="ri-stethoscope-line"></i>
+                                        </div>
+                                    </div>
+                                    <h5 class="fs-15">Nenhum diagnóstico</h5>
+                                    <p class="text-muted mb-0">Nenhum diagnóstico registrado para este atendimento.</p>
                                 </div>
                                 <div class="vstack gap-3" v-else>
                                     <div class="border rounded border-dashed p-3" v-for="diag in todosDiagnosticos"

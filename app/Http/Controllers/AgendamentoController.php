@@ -356,17 +356,15 @@ class AgendamentoController extends Controller
                     }
                     $nextNum = $sessoesLocalCount[$grupoId];
 
-                    $sessaoId = DB::table('sessoes_tratamento')->insertGetId([
+                    $sessao = \App\Models\SessaoTratamento::create([
                         'procedimento_id' => $isConvenio ? null : $procId,
                         'tuss_id' => $isConvenio ? $procId : null,
                         'paciente_id' => $pacId,
                         'numero_sessao' => $nextNum,
                         'data_prevista' => $item['dt']->toDateString(),
                         'realizada' => false,
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now(),
-                        'deleted_at' => null,
                     ]);
+                    $sessaoId = $sessao->id;
                 }
 
                 $agendamentoStatusId = $data['status_id'] ?? null;

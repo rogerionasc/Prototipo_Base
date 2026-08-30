@@ -16,6 +16,7 @@ class Atendimento extends Model
     protected $table = 'atendimentos';
 
     protected $fillable = [
+        'sessao',
         'paciente_id',
         'convenio_id',
         'medico_id',

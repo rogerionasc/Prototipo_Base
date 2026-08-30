@@ -647,6 +647,23 @@ class PagamentoController extends Controller
                 $catProcedimentoId = DB::table('procedimentos')->where('id', $ag->procedimento_id)->value('categoria_id');
             }
 
+            $sessaoNumero = null;
+            if ($ag->sessao_tratamento_id) {
+                $sessaoNumero = DB::table('sessoes_tratamento')->where('id', $ag->sessao_tratamento_id)->value('numero_sessao');
+            }
+
+            if ($sessaoNumero === null) {
+                $sessT = null;
+                if ($ag->procedimento_id) {
+                    $sessT = DB::table('procedimentos')->where('id', $ag->procedimento_id)->value('quantidade_sessoes');
+                } elseif ($ag->tuss_id) {
+                    $sessT = DB::table('tuss')->where('id', $ag->tuss_id)->value('quantidade_sessoes');
+                }
+                if ($sessT > 1) {
+                    $sessaoNumero = 1;
+                }
+            }
+
             // Fallbacks caso algum ID obrigatorio falte (embora devessem estar preenchidos)
             if (!$medicoId) {
                 $medicoId = DB::table('pessoas')->value('id'); // fallback temporario se o DB estiver inconsistente
@@ -668,6 +685,7 @@ class PagamentoController extends Controller
                 'data_atendimento' => $ag->data ?? today(),
                 'hora_prevista' => ($ag->data && $ag->hora) ? ($ag->data . ' ' . $ag->hora) : now(),
                 'status' => 'NÃO ATENDIDO',
+                'sessao' => $sessaoNumero,
                 'criado_por' => auth()->id(),
             ]);
         }
