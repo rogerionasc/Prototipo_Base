@@ -12,6 +12,7 @@ use App\Http\Controllers\OrcamentoController;
 use App\Http\Controllers\CaixaController;
 use App\Http\Controllers\MovimentacaoCaixaController;
 use App\Http\Controllers\AgendamentoController;
+use App\Http\Controllers\TussMapeamentoController;
 use App\Http\Controllers\FaturamentoController;
 use App\Http\Controllers\ContasMedicasController;
 use App\Http\Controllers\ContasReceberController;
@@ -136,6 +137,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/tuss", [ProcedimentoController::class, "storeTuss"])->name('tuss.store');
         Route::put("/tuss/{id}", [ProcedimentoController::class, "updateTuss"])->name('tuss.update');
         Route::get("/tuss/list", [ProcedimentoController::class, "listTuss"])->name('tuss.list');
+        
+        // Tuss Mapeamentos
+        Route::get("/tuss-mapeamentos", [TussMapeamentoController::class, "index"])->name('tuss_mapeamentos.index');
+        Route::post("/tuss-mapeamentos", [TussMapeamentoController::class, "store"])->name('tuss_mapeamentos.store');
+        Route::put("/tuss-mapeamentos/{id}", [TussMapeamentoController::class, "update"])->name('tuss_mapeamentos.update');
+        Route::delete("/tuss-mapeamentos/{id}", [TussMapeamentoController::class, "destroy"])->name('tuss_mapeamentos.destroy');
         Route::post("/tuss/import", [ProcedimentoController::class, "importTuss"])->name('tuss.import');
         Route::post("/tuss/import/start", [ProcedimentoController::class, "startTussImport"])->name('tuss.import.start');
         Route::get("/tuss/import/status/{id}", [ProcedimentoController::class, "tussImportStatus"])->name('tuss.import.status');

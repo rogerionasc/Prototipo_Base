@@ -85,7 +85,7 @@
           <div v-if="!isTipoParticular" class="row g-3">
             <div class="col-lg-4">
               <div class="card mb-0 tuss-panel">
-                <div class="card-header bg-transparent py-2">
+                <div class="card-header bg-transparent" style="padding-bottom: 15px; padding-top: 15px;">
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
                       <i class="ri-check-double-line text-success"></i>
@@ -195,23 +195,34 @@
             </div>
 
             <div class="col-lg-8">
-              <TableGrid ref="tussGridRef" :serverUrl="tussServerUrl" :columns="tussGridColumns" :search="true"
-                :searchPlaceholder="'Buscar procedimento...'" :showCheckbox="true" :showMultiDelete="false"
-                :showAddButton="true" :addButtonText="'Adicionar selecionados'"
-                :addButtonIconClass="'ri-add-circle-line'" :addButtonDisabled="tussGridSelectedIds.length === 0"
-                :showActions="false" :showPerPagination="true" :compactSpacing="true"
-                :tableTitle="`Procedimentos (${form.tuss_tabela})`" @add="addSelectedFromGrid"
-                @selectionChange="onTussGridSelectionChange">
-                <template #left-actions>
-                  <div class="d-flex align-items-center gap-2 ms-2 ps-3 border-start">
-                    <label for="tussTabelaHeader" class="form-label mb-0 text-nowrap text-muted small">Tabela:</label>
-                    <select ref="tussTabelaHeaderSelect" v-model="form.tuss_tabela"
-                      class="form-select form-select-sm w-auto min-w-100" id="tussTabelaHeader">
-                      <option v-for="t in allowedTabelas" :key="t" :value="t">{{ t }}</option>
-                    </select>
+              <BTabs nav-class="nav-tabs-custom nav-success border-bottom-0">
+                <BTab :title="`Procedimentos (${form.tuss_tabela})`" active>
+                  <div class="mt-2">
+                    <TableGrid ref="tussGridRef" :serverUrl="tussServerUrl" :columns="tussGridColumns" :search="true"
+                      :searchPlaceholder="'Buscar procedimento...'" :showCheckbox="true" :showMultiDelete="false"
+                      :showAddButton="true" :addButtonText="'Adicionar selecionados'"
+                      :addButtonIconClass="'ri-add-circle-line'" :addButtonDisabled="tussGridSelectedIds.length === 0"
+                      :showActions="false" :showPerPagination="true" :compactSpacing="true"
+                      :tableTitle="`Procedimentos (${form.tuss_tabela})`" @add="addSelectedFromGrid"
+                      @selectionChange="onTussGridSelectionChange">
+                      <template #left-actions>
+                        <div class="d-flex align-items-center gap-2 ms-2 ps-3 border-start">
+                          <label for="tussTabelaHeader" class="form-label mb-0 text-nowrap text-muted small">Tabela:</label>
+                          <select ref="tussTabelaHeaderSelect" v-model="form.tuss_tabela"
+                            class="form-select form-select-sm w-auto min-w-100" id="tussTabelaHeader">
+                            <option v-for="t in allowedTabelas" :key="t" :value="t">{{ t }}</option>
+                          </select>
+                        </div>
+                      </template>
+                    </TableGrid>
                   </div>
-                </template>
-              </TableGrid>
+                </BTab>
+                <BTab title="Mapeamento">
+                  <div class="mt-2">
+                    <MapeamentoTuss />
+                  </div>
+                </BTab>
+              </BTabs>
             </div>
           </div>
         </div>
@@ -312,6 +323,7 @@
 </template>
 
 <script setup>
+import MapeamentoTuss from "./MapeamentoTuss.vue";
 import { useForm } from "@inertiajs/vue3";
 import { ref, defineExpose, onMounted, nextTick, watch, toRef, computed } from "vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
@@ -724,6 +736,9 @@ function onLogoChange(e) {
 ====================== */
 const getChoicesInstance = () => {
   return tipoSelect.value?._choicesInstance || tipoSelect.value?.choices || null;
+};
+const getTussTabelaChoicesInstance = () => {
+  return tussTabelaHeaderSelect.value?._choicesInstance || tussTabelaHeaderSelect.value?.choices || null;
 };
 const getEmpresaChoicesInstance = () => {
   return empresaSelect.value?._choicesInstance || empresaSelect.value?.choices || null;
