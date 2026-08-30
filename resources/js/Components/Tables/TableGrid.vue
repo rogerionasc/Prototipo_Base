@@ -747,15 +747,18 @@ onMounted(async () => {
         <div :class="props.compactSpacing ? 'card' : 'card card-body'">
             <div :class="['card-body', props.compactSpacing ? 'px-0 pt-0' : 'px-0']">
                 <h5 v-if="props.showTitle"
-                    :class="['card-title', 'mb-0', 'flex-grow-1', props.compactSpacing ? 'mb-1' : 'mb-3']">{{
+                    :class="['card-title', 'mb-0', 'flex-grow-1', props.compactSpacing ? 'mb-1 px-3 pt-2' : 'mb-3']">{{
                     props.tableTitle }}</h5>
                 <!-- Filtros -->
                 <BCardBody class="border border-dashed border-end-0 border-start-0 px-0 pt-3 pb-3 mb-4">
                     <div class="d-flex justify-content-between align-items-center px-3 pb-3">
-                        <div class="search-box" style="width: 300px;" v-if="props.search">
-                            <input type="text" name="table_search" autocomplete="on" class="form-control search"
-                                :placeholder="searchPlaceholder" v-model="searchQuery" />
-                            <i class="ri-search-line search-icon"></i>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="search-box" style="width: 300px;" v-if="props.search">
+                                <input type="text" name="table_search" autocomplete="on" class="form-control search"
+                                    :placeholder="searchPlaceholder" v-model="searchQuery" />
+                                <i class="ri-search-line search-icon"></i>
+                            </div>
+                            <slot name="left-actions"></slot>
                         </div>
                         <div class="d-flex align-items-center gap-3">
                             <button id="deleteMulti" @click="emit('modalDdeletarMultiplos', selectedRows)"

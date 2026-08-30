@@ -21,7 +21,7 @@ const props = defineProps({
 const isMedicoResponsavel = computed(() => {
     const page = usePage();
     if (page.props.auth?.user?.id === 1) return true;
-    return props.pep?.profissional_id === props.auth_profissional_id || props.atendimento?.medico_id === props.auth_profissional_id;
+    return props.pep?.profissional_id == props.auth_profissional_id || props.atendimento?.medico_id == props.auth_profissional_id;
 });
 
 const canEditPep = computed(() => {

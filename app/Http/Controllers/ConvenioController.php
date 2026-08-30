@@ -82,9 +82,17 @@ class ConvenioController extends Controller
         $tussData = [];
         foreach ($tussInput as $item) {
             if (is_array($item) && isset($item['id'])) {
-                $tussData[(int)$item['id']] = !empty($item['requer_autorizacao']);
+                $tussData[(int)$item['id']] = [
+                    'requer_autorizacao' => !empty($item['requer_autorizacao']),
+                    'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
+                    'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                ];
             } elseif (is_numeric($item)) {
-                $tussData[(int)$item] = false;
+                $tussData[(int)$item] = [
+                    'requer_autorizacao' => false,
+                    'valor_ch' => 0,
+                    'valor_co' => 0,
+                ];
             }
         }
         $medicosInput = (array)($request->input('medicos', []));
@@ -105,18 +113,32 @@ class ConvenioController extends Controller
         unset($data['logo']);
         if ($logoFile) $data['logo_path'] = $logoFile->store('convenios', 'public');
 
+        $accountId = auth()->user()->account_id ?? null;
+        $data['account_id'] = $accountId;
         $convenio = null;
-        DB::transaction(function () use (&$convenio, $data, $tussData, $medicosInput) {
+        DB::transaction(function () use (&$convenio, $data, $tussData, $medicosInput, $accountId) {
             $convenio = Convenio::create($data);
             if (!empty($tussData)) {
+                $tussIds = array_keys($tussData);
+                $tussModels = DB::table('tuss')->whereIn('id', $tussIds)->select('id', 'quantidade_ch', 'quantidade_co')->get()->keyBy('id');
+                
                 $rows = [];
-                foreach ($tussData as $tid => $reqAuth) {
+                foreach ($tussData as $tid => $tData) {
+                    $tModel = $tussModels->get($tid);
+                    $qtdCh = $tModel ? (float)$tModel->quantidade_ch : 0;
+                    $qtdCo = $tModel ? (float)$tModel->quantidade_co : 0;
+                    $vProc = ($qtdCh * $tData['valor_ch']) + ($qtdCo * $tData['valor_co']);
+                    
                     $rows[] = [
                         'convenio_id' => $convenio->id,
                         'tuss_id' => $tid,
-                        'requer_autorizacao' => $reqAuth ? 1 : 0,
+                        'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
+                        'valor_ch' => $tData['valor_ch'],
+                        'valor_co' => $tData['valor_co'],
+                        'valor_procedimento' => $vProc,
                         'created_at' => now(),
                         'updated_at' => now(),
+                            'account_id' => $accountId,
                     ];
                 }
                 DB::table('convenio_tuss')->insert($rows);
@@ -135,6 +157,7 @@ class ConvenioController extends Controller
                             'tuss_id' => null,
                             'created_at' => now(),
                             'updated_at' => now(),
+                            'account_id' => $accountId,
                         ];
                     } else {
                         foreach ($mTuss as $tid) {
@@ -183,9 +206,17 @@ class ConvenioController extends Controller
         $tussData = [];
         foreach ($tussInput as $item) {
             if (is_array($item) && isset($item['id'])) {
-                $tussData[(int)$item['id']] = !empty($item['requer_autorizacao']);
+                $tussData[(int)$item['id']] = [
+                    'requer_autorizacao' => !empty($item['requer_autorizacao']),
+                    'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
+                    'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                ];
             } elseif (is_numeric($item)) {
-                $tussData[(int)$item] = false;
+                $tussData[(int)$item] = [
+                    'requer_autorizacao' => false,
+                    'valor_ch' => 0,
+                    'valor_co' => 0,
+                ];
             }
         }
         $medicosInput = (array)($request->input('medicos', []));
@@ -214,22 +245,37 @@ class ConvenioController extends Controller
             }
             $data['logo_path'] = $logoFile->store('convenios', 'public');
         }
-        DB::transaction(function () use ($convenio, $data, $tussData, $medicosInput) {
+        $accountId = auth()->user()->account_id ?? null;
+        $data['account_id'] = $accountId;
+        DB::transaction(function () use ($convenio, $data, $tussData, $medicosInput, $accountId) {
             $convenio->update($data);
 
             DB::table('convenio_tuss')
                 ->where('convenio_id', $convenio->id)
+                ->where('account_id', $accountId)
                 ->delete();
 
             if (!empty($tussData)) {
+                $tussIds = array_keys($tussData);
+                $tussModels = DB::table('tuss')->whereIn('id', $tussIds)->select('id', 'quantidade_ch', 'quantidade_co')->get()->keyBy('id');
+                
                 $rows = [];
-                foreach ($tussData as $tid => $reqAuth) {
+                foreach ($tussData as $tid => $tData) {
+                    $tModel = $tussModels->get($tid);
+                    $qtdCh = $tModel ? (float)$tModel->quantidade_ch : 0;
+                    $qtdCo = $tModel ? (float)$tModel->quantidade_co : 0;
+                    $vProc = ($qtdCh * $tData['valor_ch']) + ($qtdCo * $tData['valor_co']);
+                    
                     $rows[] = [
                         'convenio_id' => $convenio->id,
                         'tuss_id' => $tid,
-                        'requer_autorizacao' => $reqAuth ? 1 : 0,
+                        'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
+                        'valor_ch' => $tData['valor_ch'],
+                        'valor_co' => $tData['valor_co'],
+                        'valor_procedimento' => $vProc,
                         'created_at' => now(),
                         'updated_at' => now(),
+                            'account_id' => $accountId,
                     ];
                 }
                 DB::table('convenio_tuss')->insert($rows);
@@ -253,6 +299,7 @@ class ConvenioController extends Controller
                             'tuss_id' => null,
                             'created_at' => now(),
                             'updated_at' => now(),
+                            'account_id' => $accountId,
                         ];
                     } else {
                         foreach ($mTuss as $tid) {
@@ -287,6 +334,7 @@ class ConvenioController extends Controller
         $base = DB::table('convenio_tuss as ct')
             ->join('tuss as t', 't.id', '=', 'ct.tuss_id')
             ->where('ct.convenio_id', $convenio->id)
+            ->where('ct.account_id', auth()->user()->account_id ?? null)
             ->whereNull('ct.deleted_at')
             ->whereNull('t.deleted_at');
 
@@ -297,9 +345,10 @@ class ConvenioController extends Controller
             });
         }
 
+        \Log::info('tussProcedimentos Query:', ['sql' => $base->toSql(), 'bindings' => $base->getBindings(), 'account_id' => auth()->user()->account_id ?? null, 'results' => $base->get()]);
         $total = (clone $base)->count();
         $rows = $base
-            ->select('t.id', 't.tabela', 't.codigo', 't.descricao', 't.total', 'ct.requer_autorizacao')
+            ->select('t.id', 't.tabela', 't.codigo', 't.descricao', 't.quantidade_ch', 't.quantidade_co', 'ct.requer_autorizacao', 'ct.valor_ch', 'ct.valor_co', 'ct.valor_procedimento')
             ->orderBy('t.descricao')
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
@@ -324,11 +373,10 @@ class ConvenioController extends Controller
         $convenio = Convenio::select('id', 'tipo')->findOrFail($id);
         $tipo = strtoupper((string)($convenio->tipo ?? ''));
         if ($tipo === 'PARTICULAR') {
-            $rows = DB::table('procedimentos as p')
-                ->whereNull('p.deleted_at')
-                ->where('p.ativo', 1)
-                ->select('p.id', 'p.nome', 'p.descricao', 'p.valor', 'p.categoria_id', 'p.eh_tratamento', 'p.quantidade_sessoes')
-                ->orderBy('p.nome')
+            $rows = \App\Models\Procedimento::query()
+                ->where('ativo', 1)
+                ->select('id', 'nome', 'descricao', 'valor', 'categoria_id', 'eh_tratamento', 'quantidade_sessoes')
+                ->orderBy('nome')
                 ->get();
             $out = $rows->map(fn($p) => [
                 'source' => 'procedimento',
@@ -342,7 +390,7 @@ class ConvenioController extends Controller
             return response()->json(['procedimentos' => $out]);
         }
 
-        $select = ['t.id', 't.tabela', 't.codigo', 't.descricao', 't.total', 't.ch', 't.co', 'ct.requer_autorizacao'];
+        $select = ['t.id', 't.tabela', 't.codigo', 't.descricao', 't.quantidade_ch', 't.quantidade_co', 'ct.requer_autorizacao', 'ct.valor_ch', 'ct.valor_co', 'ct.valor_procedimento'];
         if (Schema::hasColumn('tuss', 'eh_tratamento')) $select[] = 't.eh_tratamento';
         if (Schema::hasColumn('tuss', 'quantidade_sessoes')) $select[] = 't.quantidade_sessoes';
 
@@ -352,6 +400,7 @@ class ConvenioController extends Controller
                     ->whereNull('t.deleted_at');
             })
             ->where('ct.convenio_id', (int)$convenio->id)
+            ->where('ct.account_id', auth()->user()->account_id ?? null)
             ->whereNull('ct.deleted_at')
             ->select($select)
             ->distinct()
@@ -367,7 +416,7 @@ class ConvenioController extends Controller
             'codigo' => $t->codigo ?? '',
             'nome' => trim((string)($t->descricao ?? '')),
             'descricao' => (trim((string)($t->tabela ?? '')) !== '' && trim((string)($t->codigo ?? '')) !== '') ? (trim((string)$t->tabela) . ' ' . trim((string)$t->codigo)) : null,
-            'valor' => (((float)($t->ch ?? 0) + (float)($t->co ?? 0)) > 0) ? ((float)($t->ch ?? 0) + (float)($t->co ?? 0)) : (float)($t->total ?? 0),
+            'valor' => (float)($t->valor_procedimento ?? 0) > 0 ? (float)$t->valor_procedimento : (float)($t->total ?? 0),
             'eh_tratamento' => (bool)($t->eh_tratamento ?? false),
             'quantidade_sessoes' => $t->quantidade_sessoes ?? null,
             'requer_autorizacao' => (bool)($t->requer_autorizacao ?? false),

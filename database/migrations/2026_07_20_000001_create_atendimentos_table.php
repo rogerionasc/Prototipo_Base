@@ -11,6 +11,8 @@ return new class extends Migration
         Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('atendimentos');
         Schema::create('atendimentos', function (Blueprint $table) {
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
             $table->id();
             $table->foreignId('paciente_id')->constrained('pacientes');
             $table->foreignId('convenio_id')->nullable()->constrained('convenios');

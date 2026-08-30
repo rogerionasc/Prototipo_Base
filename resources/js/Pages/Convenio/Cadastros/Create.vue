@@ -76,32 +76,7 @@
             Convênio do tipo Particular não utiliza tabela TUSS.
           </div>
 
-          <div class="border border-dashed rounded p-3 bg-light-subtle mb-3" v-if="!isTipoParticular">
-            <div class="row g-3 align-items-end">
-              <div class="col-lg-6">
-                <label for="tussTabela" class="form-label mb-1">
-                  <i class="ri-file-list-3-line text-primary me-1"></i>
-                  Tabela TUSS
-                </label>
-                <select data-choices ref="tussTabelaSelect" v-model="form.tuss_tabela" class="form-select"
-                  id="tussTabela" :disabled="isTipoParticular">
-                  <option disabled value="">Selecione...</option>
-                  <option v-for="t in allowedTabelas" :key="t" :value="t">{{ t }}</option>
-                </select>
-                <div v-if="form.errors.tuss_tabela" class="invalid-feedback d-block">{{ form.errors.tuss_tabela }}</div>
-              </div>
 
-              <div class="col-lg-6">
-                <div class="d-flex flex-wrap justify-content-lg-end gap-2">
-                  <button type="button" class="btn btn-sm btn-soft-danger" @click="clearSelectedTuss"
-                    :disabled="selectedTussRows.length === 0">
-                    <i class="ri-delete-bin-6-line me-1"></i>
-                    Limpar seleção
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <div v-if="form.errors.tuss_ids" class="alert alert-danger mb-3">
             {{ form.errors.tuss_ids }}
@@ -110,13 +85,15 @@
           <div v-if="!isTipoParticular" class="row g-3">
             <div class="col-lg-4">
               <div class="card mb-0 tuss-panel">
-                <div class="card-header bg-light-subtle py-2">
+                <div class="card-header bg-transparent py-2">
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
                       <i class="ri-check-double-line text-success"></i>
                       <strong>Selecionados</strong>
                     </div>
-                    <span class="badge bg-primary-subtle text-primary">{{ selectedTussRows.length }}</span>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge bg-primary-subtle text-primary">{{ selectedTussRows.length }}</span>
+                    </div>
                   </div>
                 </div>
                 <div class="card-body pt-2">
@@ -129,31 +106,74 @@
                   <div class="tuss-selected-scroll">
                     <ul class="list-group list-group-flush" v-if="filteredSelectedTussRows.length > 0">
                       <li v-for="r in filteredSelectedTussRows" :key="`sel-${r.id}`"
-                        class="list-group-item px-2 py-2 mb-1 border rounded">
-                        <div class="d-flex justify-content-between align-items-start">
+                        class="list-group-item p-0 mb-1 border rounded overflow-hidden"
+                        style="display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr;">
+                        <!-- BLOCK A: Procedure Info -->
+                        <div
+                          class="p-2 bg-white d-flex justify-content-between align-items-start w-100 h-100 border-start border-3 border-primary"
+                          style="grid-column: 1; grid-row: 1; transition: transform 0.3s ease, opacity 0.3s ease; cursor: pointer;"
+                          :style="r.isEditingValues ? 'transform: translateX(-100%); pointer-events: none; opacity: 0;' : 'transform: translateX(0); opacity: 1;'"
+                          @click="r.isEditingValues = true" title="Clique para configurar valores">
                           <div class="d-flex flex-column me-2 flex-grow-1" style="min-width:0;">
                             <span class="d-flex align-items-center flex-wrap gap-2">
-                              <span class="fw-bold">{{ r.codigo }}</span>
-                              <span class="badge bg-secondary-subtle text-secondary">{{ r.tabela || "—" }}</span>
+                              <span class="text-muted fw-medium">{{ r.codigo }}</span>
+                              <span class="badge bg-secondary-subtle text-secondary">{{ r.tabela || "-" }}</span>
                               <button type="button" class="btn btn-sm p-0 m-0 border-0 d-flex align-items-center"
                                 :class="r.requer_autorizacao ? 'text-success' : 'text-muted opacity-50'"
-                                @click="r.requer_autorizacao = !r.requer_autorizacao"
-                                :title="r.requer_autorizacao ? 'Requer autorização prévia (clique para alterar)' : 'Não requer autorização (clique para alterar)'">
+                                @click.stop="r.requer_autorizacao = !r.requer_autorizacao"
+                                :title="r.requer_autorizacao ? 'Requer autorização prévia' : 'Não requer autorização'">
                                 <i
                                   :class="r.requer_autorizacao ? 'ri-shield-check-fill fs-5' : 'ri-shield-line fs-5'"></i>
                               </button>
                             </span>
-                            <span class="text-muted small mt-1 text-truncate-2">{{ r.descricao }}</span>
+                            <span class="text-dark mt-1 text-truncate-2">{{ r.descricao }}</span>
+
                           </div>
-                          <div class="d-flex align-items-start gap-2 flex-shrink-0">
-                            <span v-if="r.total !== null && r.total !== undefined && String(r.total) !== ''"
-                              class="text-muted small text-nowrap mt-1 fw-medium">
-                              {{ formatMoney(r.total) }}
+                          <div class="d-flex align-items-center gap-3 flex-shrink-0">
+                            <span class="fw-bold text-primary text-nowrap fs-6">
+                              {{ formatMoney(r.valor_procedimento) }}
                             </span>
                             <button type="button" class="btn btn-sm btn-soft-danger px-2 py-1"
-                              @click="removeTussRow(r.id)" title="Remover procedimento">
-                              <i class="ri-close-line"></i>
+                              @click.stop="removeTussRow(r.id)" title="Remover procedimento">
+                              <i class="ri-delete-bin-line"></i>
                             </button>
+                          </div>
+                        </div>
+
+                        <!-- Invisible overlay to close when clicking outside -->
+                        <div v-if="r.isEditingValues" class="position-fixed top-0 start-0 w-100 h-100"
+                          style="z-index: 99; cursor: default;" @click.stop="r.isEditingValues = false"></div>
+
+                        <!-- BLOCK B: Values Card -->
+                        <div class="bg-white w-100 h-100 d-flex align-items-center position-relative"
+                          style="grid-column: 1; grid-row: 1; z-index: 100; cursor: pointer; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;"
+                          :style="r.isEditingValues ? 'transform: translateX(0); opacity: 1;' : 'transform: translateX(100%); pointer-events: none; opacity: 0;'"
+                          @click="r.isEditingValues = false" title="Clique aqui ou fora para fechar">
+
+                          <div class="d-flex align-items-center w-100 px-3" @click.stop>
+                            <div class="d-flex flex-wrap flex-sm-nowrap align-items-center gap-4 flex-grow-1">
+                              <div class="d-flex align-items-center gap-2">
+                                <label class="form-label mb-0 text-nowrap">Valor CH <span
+                                    class="text-muted fw-normal">(x{{ r.quantidade_ch || 0 }})</span></label>
+                                <input type="number" step="0.01" class="form-control form-control-sm text-end"
+                                  style="width: 90px;" v-model="r.valor_ch" placeholder="0,00" />
+                              </div>
+
+                              <div class="d-flex align-items-center gap-2">
+                                <label class="form-label mb-0 text-nowrap">Valor CO <span
+                                    class="text-muted fw-normal">(x{{ r.quantidade_co || 0 }})</span></label>
+                                <input type="number" step="0.01" class="form-control form-control-sm text-end"
+                                  style="width: 90px;" v-model="r.valor_co" placeholder="0,00" />
+                              </div>
+
+                              <div class="ms-auto d-flex align-items-center gap-2 text-nowrap" style="min-width: 0;">
+                                <span class="text-muted fw-medium flex-shrink-0">Total:</span>
+                                <span class="fw-bold text-primary text-truncate"
+                                  style="font-size: 1.1rem; max-width: 180px;">
+                                  {{ formatMoney(r.valor_procedimento) }}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </li>
@@ -175,25 +195,23 @@
             </div>
 
             <div class="col-lg-8">
-              <div v-if="!form.tuss_tabela" class="card mb-0 tuss-panel">
-                <div class="card-body p-4 text-center">
-                  <div class="avatar-sm mx-auto mb-3">
-                    <div class="avatar-title bg-warning-subtle text-warning rounded-circle">
-                      <i class="ri-filter-3-line fs-4"></i>
-                    </div>
-                  </div>
-                  <div class="fw-semibold">Selecione uma tabela TUSS</div>
-                  <div class="text-muted small">Depois use a busca para encontrar o procedimento e adicionar ao
-                    convênio.</div>
-                </div>
-              </div>
-              <TableGrid v-if="form.tuss_tabela" ref="tussGridRef" :serverUrl="tussServerUrl" :columns="tussGridColumns"
-                :search="true" :searchPlaceholder="'Buscar procedimento (código ou descrição)'" :showCheckbox="true"
-                :showMultiDelete="false" :showAddButton="true" :addButtonText="'Adicionar selecionados'"
+              <TableGrid ref="tussGridRef" :serverUrl="tussServerUrl" :columns="tussGridColumns" :search="true"
+                :searchPlaceholder="'Buscar procedimento...'" :showCheckbox="true" :showMultiDelete="false"
+                :showAddButton="true" :addButtonText="'Adicionar selecionados'"
                 :addButtonIconClass="'ri-add-circle-line'" :addButtonDisabled="tussGridSelectedIds.length === 0"
                 :showActions="false" :showPerPagination="true" :compactSpacing="true"
                 :tableTitle="`Procedimentos (${form.tuss_tabela})`" @add="addSelectedFromGrid"
-                @selectionChange="onTussGridSelectionChange" />
+                @selectionChange="onTussGridSelectionChange">
+                <template #left-actions>
+                  <div class="d-flex align-items-center gap-2 ms-2 ps-3 border-start">
+                    <label for="tussTabelaHeader" class="form-label mb-0 text-nowrap text-muted small">Tabela:</label>
+                    <select ref="tussTabelaHeaderSelect" v-model="form.tuss_tabela"
+                      class="form-select form-select-sm w-auto min-w-100" id="tussTabelaHeader">
+                      <option v-for="t in allowedTabelas" :key="t" :value="t">{{ t }}</option>
+                    </select>
+                  </div>
+                </template>
+              </TableGrid>
             </div>
           </div>
         </div>
@@ -283,8 +301,8 @@
         </div>
         <TableGrid v-if="showEditMedicoTussModal" ref="medicoTussGridRef" :columns="[
           { id: 'id', name: 'ID', sort: false, attributes: { style: 'display:none;' } },
-          { id: 'codigo', name: 'Código' },
-          { id: 'descricao', name: 'Descrição' }
+          { id: 'codigo', name: 'Código', attributes: { style: 'width: 14%; white-space: nowrap;' } },
+          { id: 'descricao', name: 'Descrição', attributes: { style: 'white-space: normal !important; width: auto;' } }
         ]" :data="selectedTussRows" :search="true" :searchPlaceholder="'Buscar procedimento...'" :showCheckbox="true"
           :showMultiDelete="false" :showAddButton="false" :showActions="false" :showPerPagination="false"
           :compactSpacing="true" :tableTitle="'Selecione os procedimentos'" />
@@ -380,8 +398,9 @@ const spsadtFields = [
 
 const formEl = ref(null);
 const tipoSelect = ref(null);
-const tussTabelaSelect = ref(null);
 const empresaSelect = ref(null);
+const tussTabelaHeaderSelect = ref(null);
+let tussTabelaHeaderChoices = null;
 const logoInput = ref(null);
 const existingLogoPath = ref("");
 const logoPreviewUrl = ref("");
@@ -487,9 +506,10 @@ const tussServerUrl = computed(() => {
 });
 const tussGridColumns = [
   { id: "id", name: "ID", sort: false, attributes: { style: "display:none;" } },
-  { id: "codigo", name: "Código" },
+  { id: "codigo", name: "Código", attributes: { style: "white-space: nowrap; width: 7%;" } },
   { id: "descricao", name: "Descrição" },
-  { id: "total", name: "Total", formatter: (cell) => formatMoney(cell) },
+  { id: "quantidade_ch", name: "Qtd. CH", attributes: { style: "white-space: nowrap; width: 7%;" } },
+  { id: "quantidade_co", name: "Qtd. CO", attributes: { style: "white-space: nowrap; width: 7%;" } },
 ];
 
 const medicosGridColumns = [
@@ -524,7 +544,7 @@ const medicosGridColumns = [
 
 const selectedTussRows = ref([]);
 watch(selectedTussRows, (rows) => {
-  form.tuss_ids = rows.map(r => ({ id: Number(r.id), requer_autorizacao: !!r.requer_autorizacao }));
+  form.tuss_ids = rows.map(r => ({ id: Number(r.id), requer_autorizacao: !!r.requer_autorizacao, valor_ch: Number(String(r.valor_ch).replace(',', '.') || 0), valor_co: Number(String(r.valor_co).replace(',', '.') || 0) }));
 }, { deep: true });
 
 const selectedMedicosRows = ref([]);
@@ -567,7 +587,13 @@ function addTussRow(row) {
     codigo: row?.codigo ?? "",
     descricao: row?.descricao ?? "",
     total: row?.total ?? null,
+    valor_ch: Number(row?.valor_ch || 0),
+    valor_co: Number(row?.valor_co || 0),
+    quantidade_ch: Number(row?.quantidade_ch || 0),
+    quantidade_co: Number(row?.quantidade_co || 0),
+    valor_procedimento: Number(row?.valor_procedimento || 0),
     requer_autorizacao: false,
+    isEditingValues: false,
   });
 }
 
@@ -581,7 +607,7 @@ function addSelectedTuss() {
   if (newIds.length === 0) return;
   const newRows = newIds.map(id => {
     const dataRow = tussGridRef.value?.getRowData?.(id) || { id, codigo: '?', descricao: 'Desconhecido', tabela: '' };
-    return { ...dataRow, requer_autorizacao: false };
+    return { ...dataRow, requer_autorizacao: false, valor_ch: Number(dataRow.valor_ch || 0), valor_co: Number(dataRow.valor_co || 0), valor_procedimento: Number(dataRow.valor_procedimento || 0) };
   });
   selectedTussRows.value.push(...newRows);
   tussGridSelectedIds.value = [];
@@ -655,9 +681,8 @@ function syncTussIdsBeforeSubmit() {
     addSelectedFromGrid();
   }
   // Garante que o form enviará a lista completa de objetos (id + requer_autorizacao)
-  form.tuss_ids = selectedTussRows.value.map(r => ({ id: Number(r.id), requer_autorizacao: !!r.requer_autorizacao }));
+  form.tuss_ids = selectedTussRows.value.map(r => ({ id: Number(r.id), requer_autorizacao: !!r.requer_autorizacao, valor_ch: Number(String(r.valor_ch).replace(',', '.') || 0), valor_co: Number(String(r.valor_co).replace(',', '.') || 0) }));
 }
-
 
 function formatMoney(v) {
   const n = Number(v ?? 0);
@@ -700,9 +725,6 @@ function onLogoChange(e) {
 const getChoicesInstance = () => {
   return tipoSelect.value?._choicesInstance || tipoSelect.value?.choices || null;
 };
-const getTussTabelaChoicesInstance = () => {
-  return tussTabelaSelect.value?._choicesInstance || tussTabelaSelect.value?.choices || null;
-};
 const getEmpresaChoicesInstance = () => {
   return empresaSelect.value?._choicesInstance || empresaSelect.value?.choices || null;
 };
@@ -720,20 +742,6 @@ watch(
     if (String(value || '').toLowerCase() === 'particular') {
       form.tuss_tabela = '';
       clearSelectedTuss();
-      await nextTick();
-      if (window.syncChoiceValue && tussTabelaSelect.value) {
-        window.syncChoiceValue(tussTabelaSelect.value, "");
-      }
-    }
-  },
-  { immediate: true }
-);
-watch(
-  () => form.tuss_tabela,
-  async (value) => {
-    await nextTick();
-    if (window.syncChoiceValue && tussTabelaSelect.value) {
-      window.syncChoiceValue(tussTabelaSelect.value, value || "");
     }
   },
   { immediate: true }
@@ -748,6 +756,36 @@ const onTipoChange = (e) => {
 const onTussTabelaChange = (e) => {
   form.tuss_tabela = e?.target?.value ?? form.tuss_tabela;
 };
+
+watch(
+  () => form.tuss_tabela,
+  async (value) => {
+    // Initialize or update the header select Choices instance if it exists
+    if (value || value === "") {
+      await nextTick();
+      if (tussTabelaHeaderSelect.value && !tussTabelaHeaderChoices) {
+        tussTabelaHeaderChoices = new Choices(tussTabelaHeaderSelect.value, {
+          searchEnabled: false,
+          itemSelectText: '',
+          shouldSort: false,
+        });
+
+        tussTabelaHeaderSelect.value.addEventListener('change', (e) => {
+          form.tuss_tabela = e.detail ? e.detail.value : e.target.value;
+        });
+      } else if (tussTabelaHeaderChoices) {
+        tussTabelaHeaderChoices.setChoiceByValue(value);
+      }
+    } else {
+      if (tussTabelaHeaderChoices) {
+        tussTabelaHeaderChoices.destroy();
+        tussTabelaHeaderChoices = null;
+      }
+    }
+  },
+  { immediate: true }
+);
+
 watch(
   () => form.empresa_id,
   async (value) => {
@@ -879,9 +917,6 @@ onMounted(async () => {
   if (tipoSelect.value) {
     tipoSelect.value.addEventListener("change", onTipoChange);
   }
-  if (tussTabelaSelect.value) {
-    tussTabelaSelect.value.addEventListener("change", onTussTabelaChange);
-  }
   if (empresaSelect.value) {
     empresaSelect.value.addEventListener("change", onEmpresaChange);
   }
@@ -889,9 +924,6 @@ onMounted(async () => {
   // Força valor inicial (update)
   if (window.syncChoiceValue && tipoSelect.value) {
     window.syncChoiceValue(tipoSelect.value, form.tipo || "");
-  }
-  if (window.syncChoiceValue && tussTabelaSelect.value) {
-    window.syncChoiceValue(tussTabelaSelect.value, form.tuss_tabela || "");
   }
   if (window.syncChoiceValue && empresaSelect.value) {
     window.syncChoiceValue(empresaSelect.value, form.empresa_id ?? "");
@@ -1014,7 +1046,13 @@ function setSelectedTussRows(rows) {
     codigo: r?.codigo ?? "",
     descricao: r?.descricao ?? "",
     total: r?.total ?? null,
+    valor_ch: Number(r?.valor_ch || 0),
+    valor_co: Number(r?.valor_co || 0),
+    quantidade_ch: Number(r?.quantidade_ch || 0),
+    quantidade_co: Number(r?.quantidade_co || 0),
+    valor_procedimento: Number(r?.valor_procedimento || 0),
     requer_autorizacao: !!r?.requer_autorizacao,
+    isEditingValues: false,
   })).filter(r => Number.isFinite(r.id)) : [];
 }
 

@@ -8,6 +8,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('guias', function (Blueprint $table) {
+            $table->unsignedBigInteger('guia_origem_id')->nullable();
+            $table->foreign('guia_origem_id')->references('id')->on('guias')->onDelete('set null');
+
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
             $table->id();
             $table->foreignId('faturamento_id')->nullable()->constrained('faturamentos')->nullOnDelete()->nullable()->comment('Lote (Faturamento)');
             $table->foreignId('agendamento_id')->nullable()->constrained('agendamentos')->nullOnDelete()->comment('Agendamento vinculado');

@@ -10,6 +10,8 @@ return new class extends Migration
     {
         if (!Schema::hasTable('movimentacoes_caixa')) {
             Schema::create('movimentacoes_caixa', function (Blueprint $table) {
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
                 $table->id();
                 $table->foreignId('caixa_id')->constrained('caixas');
                 $table->foreignId('aberto_por_id')->nullable()->constrained('users')->nullOnDelete();

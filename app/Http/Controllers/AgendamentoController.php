@@ -319,7 +319,24 @@ class AgendamentoController extends Controller
                 $procId = (int)$item['procedimento_id'];
 
                 if ($isConvenio) {
-                    $proc = DB::table('tuss')->select('id', 'total as valor', 'eh_tratamento', 'quantidade_sessoes')->where('id', $procId)->first();
+                    $proc = DB::table('tuss')
+                        ->leftJoin('convenio_tuss', function ($join) use ($convenioId) {
+                            $join->on('tuss.id', '=', 'convenio_tuss.tuss_id')
+                                 ->where('convenio_tuss.convenio_id', '=', $convenioId);
+                        })
+                        ->select(
+                            'tuss.id',
+                            'convenio_tuss.valor_procedimento as valor',
+                            'tuss.eh_tratamento',
+                            'tuss.quantidade_sessoes'
+                        )
+                        ->where('tuss.id', $procId)
+                        ->first();
+                    
+                    // Fallback to 0 if not found
+                    if (!$proc) {
+                        $proc = DB::table('tuss')->select('id', DB::raw('0 as valor'), 'eh_tratamento', 'quantidade_sessoes')->where('id', $procId)->first();
+                    }
                 } else {
                     $proc = Procedimento::select('id', 'valor', 'eh_tratamento', 'quantidade_sessoes')->findOrFail($procId);
                 }
@@ -1075,8 +1092,7 @@ class AgendamentoController extends Controller
             ->select('autorizacoes.*', 'ps.procedimento_solicitado_descricao as desc')
             ->get();
 
-        $convenioParticularId = DB::table('convenios')
-            ->whereNull('deleted_at')
+        $convenioParticularId = \App\Models\Convenio::query()
             ->where(function ($q) {
                 $q->whereRaw('UPPER(tipo) = ?', ['PARTICULAR'])
                     ->orWhereRaw('UPPER(descricao) = ?', ['PARTICULAR']);

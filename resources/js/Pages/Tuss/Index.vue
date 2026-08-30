@@ -85,9 +85,9 @@
                   <input v-model.number="tussCreateForm.quantidade_sessoes" type="number" min="1"
                     class="form-control" />
                 </BCol>
-                <BCol md="2"><label class="form-label">CH</label><input v-model.trim="tussCreateForm.ch" type="text"
+                <BCol md="2"><label class="form-label">Qtd. CH</label><input v-model.trim="tussCreateForm.quantidade_ch" type="text"
                     class="form-control" placeholder="Ex.: 100" /></BCol>
-                <BCol md="2"><label class="form-label">CO</label><input v-model.trim="tussCreateForm.co" type="text"
+                <BCol md="2"><label class="form-label">Qtd. CO</label><input v-model.trim="tussCreateForm.quantidade_co" type="text"
                     class="form-control" placeholder="Ex.: 1" /></BCol>
                 <BCol md="3"><label class="form-label">Total</label><input :value="tussCreateTotalDisplay" type="text"
                     class="form-control" disabled /></BCol>
@@ -124,9 +124,9 @@
                   <label class="form-label">Qtd. Sessões</label>
                   <input v-model.number="tussEditForm.quantidade_sessoes" type="number" min="1" class="form-control" />
                 </BCol>
-                <BCol md="2"><label class="form-label">CH</label><input v-model.trim="tussEditForm.ch" type="text"
+                <BCol md="2"><label class="form-label">Qtd. CH</label><input v-model.trim="tussEditForm.quantidade_ch" type="text"
                     class="form-control" /></BCol>
-                <BCol md="2"><label class="form-label">CO</label><input v-model.trim="tussEditForm.co" type="text"
+                <BCol md="2"><label class="form-label">Qtd. CO</label><input v-model.trim="tussEditForm.quantidade_co" type="text"
                     class="form-control" /></BCol>
                 <BCol md="3"><label class="form-label">Total</label><input :value="tussEditTotalDisplay" type="text"
                     class="form-control" disabled /></BCol>
@@ -234,8 +234,8 @@ const tussColumns = [
   { id: "quantidade_sessoes", name: "Qtd. Sessões" },
 ];
 
-const tussCreateForm = useForm({ tabela: '', codigo: '', descricao: '', eh_tratamento: false, quantidade_sessoes: null, ch: '', co: '', m2_filme: '', auxiliares: '', incidencia: '', porte: '' });
-const tussEditForm = useForm({ id: null, tabela: '', codigo: '', descricao: '', eh_tratamento: false, quantidade_sessoes: null, ch: '', co: '', m2_filme: '', auxiliares: '', incidencia: '', porte: '' });
+const tussCreateForm = useForm({ tabela: '', codigo: '', descricao: '', eh_tratamento: false, quantidade_sessoes: null, quantidade_ch: '', quantidade_co: '', m2_filme: '', auxiliares: '', incidencia: '', porte: '' });
+const tussEditForm = useForm({ id: null, tabela: '', codigo: '', descricao: '', eh_tratamento: false, quantidade_sessoes: null, quantidade_ch: '', quantidade_co: '', m2_filme: '', auxiliares: '', incidencia: '', porte: '' });
 const tussImportForm = useForm({ file: null, tabela_forcada: '' });
 
 const isTussCreateTratamento = computed(() => tussCreateForm.eh_tratamento === true);
@@ -250,12 +250,12 @@ function parseNum(v) {
 }
 
 const tussCreateTotalDisplay = computed(() => {
-  const ch = parseNum(tussCreateForm.ch); const co = parseNum(tussCreateForm.co);
+  const ch = parseNum(tussCreateForm.quantidade_ch); const co = parseNum(tussCreateForm.quantidade_co);
   if (ch === null && co === null) return '';
   return ((ch ?? 0) + (co ?? 0)).toFixed(2).replace('.', ',');
 });
 const tussEditTotalDisplay = computed(() => {
-  const ch = parseNum(tussEditForm.ch); const co = parseNum(tussEditForm.co);
+  const ch = parseNum(tussEditForm.quantidade_ch); const co = parseNum(tussEditForm.quantidade_co);
   if (ch === null && co === null) return '';
   return ((ch ?? 0) + (co ?? 0)).toFixed(2).replace('.', ',');
 });
@@ -269,8 +269,8 @@ function openTussEditModal(id, row) {
   tussEditForm.descricao = row?.descricao ?? '';
   tussEditForm.eh_tratamento = row?.eh_tratamento == true || row?.eh_tratamento == 1;
   tussEditForm.quantidade_sessoes = row?.quantidade_sessoes ?? null;
-  tussEditForm.ch = row?.ch != null ? String(row.ch).replace('.', ',') : '';
-  tussEditForm.co = row?.co != null ? String(row.co).replace('.', ',') : '';
+  tussEditForm.quantidade_ch = row?.quantidade_ch != null ? String(row.quantidade_ch).replace('.', ',') : '';
+  tussEditForm.quantidade_co = row?.quantidade_co != null ? String(row.quantidade_co).replace('.', ',') : '';
   tussEditForm.m2_filme = row?.m2_filme != null ? String(row.m2_filme) : '';
   tussEditForm.auxiliares = row?.auxiliares != null ? String(row.auxiliares) : '';
   tussEditForm.incidencia = row?.incidencia != null ? String(row.incidencia) : '';

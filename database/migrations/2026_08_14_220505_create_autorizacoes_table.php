@@ -9,6 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('autorizacoes', function (Blueprint $table) {
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
             $table->id()->startingValue(1000);
             $table->foreignId('convenio_id')->constrained()->onDelete('cascade');
             $table->string('protocolo', 100)->nullable();

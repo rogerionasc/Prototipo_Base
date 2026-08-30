@@ -10,6 +10,8 @@ return new class extends Migration
     {
         if (!Schema::hasTable('caixas')) {
             Schema::create('caixas', function (Blueprint $table) {
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
                 $table->id();
                 $table->string('descricao', 120);
                 $table->string('tipo', 50);

@@ -150,7 +150,7 @@ class ImportTussCsvJob implements ShouldQueue
             }
 
             $hasProcRef = Schema::hasColumn('tuss', 'proc_ref');
-            $allowedHeaders = ['tabela', 'codigo', 'cod_tuss', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co', 'total'];
+            $allowedHeaders = ['tabela', 'codigo', 'cod_tuss', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'quantidade_ch', 'quantidade_co'];
             if ($hasProcRef) $allowedHeaders[] = 'proc_ref';
             $headerKeys = array_values(array_filter(array_keys($headerMap), fn($k) => $k !== ''));
             $unknownHeaders = array_values(array_diff($headerKeys, $allowedHeaders));
@@ -248,8 +248,8 @@ class ImportTussCsvJob implements ShouldQueue
                 $aux = $this->parseDecimal($get($row, 'auxiliares'));
                 $inc = $this->parseDecimal($get($row, 'incidencia'));
                 $porte = trim((string)($this->ensureUtf8((string)($get($row, 'porte') ?? '')) ?? ''));
-                $ch = $this->parseDecimal($get($row, 'ch'));
-                $co = $this->parseDecimal($get($row, 'co'));
+                $ch = $this->parseDecimal($get($row, 'quantidade_ch'));
+                $co = $this->parseDecimal($get($row, 'quantidade_co'));
                 $total = $this->parseDecimal($get($row, 'total'));
                 if ($ch !== null && $co !== null) $total = $ch + $co;
 
@@ -262,9 +262,9 @@ class ImportTussCsvJob implements ShouldQueue
                     'auxiliares' => $aux,
                     'incidencia' => $inc,
                     'porte' => $porte !== '' ? $porte : null,
-                    'ch' => $ch,
-                    'co' => $co,
-                    'total' => $total,
+                    'quantidade_ch' => $ch,
+                    'quantidade_co' => $co,
+                    
                     'created_at' => $now,
                     'updated_at' => $now,
                     'deleted_at' => null,

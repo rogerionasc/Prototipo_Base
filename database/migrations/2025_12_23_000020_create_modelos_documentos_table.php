@@ -9,6 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('modelos_documentos', function (Blueprint $table) {
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
             $table->id();
             $table->string('tipo', 50);
             $table->string('nome', 120);

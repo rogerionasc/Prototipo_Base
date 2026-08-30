@@ -11,6 +11,8 @@ return new class extends Migration
         Schema::disableForeignKeyConstraints();
         if (!Schema::hasTable('pagamentos')) {
             Schema::create('pagamentos', function (Blueprint $table) {
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
                 $table->id();
                 $table->string('nu_pagamento', 25)->nullable();
                 $table->foreignId('faturamento_id')->constrained('faturamentos')->cascadeOnDelete();

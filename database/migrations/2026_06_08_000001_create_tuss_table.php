@@ -13,15 +13,14 @@ return new class extends Migration
 
             $table->string('tabela', 20)->comment('AMB1990|AMB1992|AMB1993|AMB1999|CBHPM3|CBHPM4|CBHPM5|TUSS');
             $table->string('codigo', 30)->comment('Código na tabela informada');
-            $table->string('descricao', 255)->nullable();
+            $table->text('descricao')->nullable();
 
             $table->decimal('m2_filme', 10, 2)->nullable()->comment('m² Filme');
             $table->decimal('auxiliares', 10, 2)->nullable();
             $table->decimal('incidencia', 10, 2)->nullable();
             $table->string('porte', 20)->nullable();
-            $table->decimal('ch', 10, 2)->nullable();
-            $table->decimal('co', 10, 2)->nullable();
-            $table->decimal('total', 10, 2)->nullable()->comment('CH + CO');
+            $table->decimal('quantidade_ch', 10, 2)->nullable();
+            $table->decimal('quantidade_co', 10, 2)->nullable();
 
             $table->boolean('eh_tratamento')->default(false);
             $table->unsignedInteger('quantidade_sessoes')->nullable();

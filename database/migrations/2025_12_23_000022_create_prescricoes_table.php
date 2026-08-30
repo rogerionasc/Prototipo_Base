@@ -9,6 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('prescricoes', function (Blueprint $table) {
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
             $table->id();
             $table->foreignId('prontuario_id')->constrained('prontuarios');
             $table->foreignId('pessoa_id')->constrained('pessoas');

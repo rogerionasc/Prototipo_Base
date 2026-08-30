@@ -194,7 +194,12 @@ class GuiaController extends Controller
             }
         }
         
-        $procedimentosTuss = \App\Models\Tuss::select('codigo', 'descricao', 'total')
+        $convenioId = $agendamento->convenio_id;
+        $procedimentosTuss = \App\Models\Tuss::leftJoin('convenio_tuss', function($join) use ($convenioId) {
+                $join->on('tuss.id', '=', 'convenio_tuss.tuss_id')
+                     ->where('convenio_tuss.convenio_id', '=', $convenioId);
+            })
+            ->select('tuss.codigo', 'tuss.descricao', 'convenio_tuss.valor_procedimento as total')
             ->whereIn('codigo', $codigosTuss->filter()->unique()->values()->all())
             ->orderBy('descricao')
             ->get();

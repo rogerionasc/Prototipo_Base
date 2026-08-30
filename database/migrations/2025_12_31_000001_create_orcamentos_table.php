@@ -9,6 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orcamentos', function (Blueprint $table) {
+
             $table->id();
             $table->string('numero', 30)->unique();
             $table->datetime('data_emissao')->nullable();
@@ -25,6 +26,10 @@ return new class extends Migration
 
         if (!Schema::hasTable('faturamentos')) {
             Schema::create('faturamentos', function (Blueprint $table) {
+            $table->string('numero_lote', 20)->nullable();
+
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
                 $table->id();
                 $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
                 $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();

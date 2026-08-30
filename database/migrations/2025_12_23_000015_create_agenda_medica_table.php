@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('agenda_medica', function (Blueprint $table) {
+            $table->softDeletes();
+
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
             $table->id();
             $table->foreignId('pessoa_id')->constrained('pessoas');
             $table->unsignedTinyInteger('dia_semana');

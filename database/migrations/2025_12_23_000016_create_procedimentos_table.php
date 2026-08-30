@@ -9,6 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('procedimentos', function (Blueprint $table) {
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
             $table->id();
             $table->string('nome', 120);
             $table->string('descricao', 120)->nullable();

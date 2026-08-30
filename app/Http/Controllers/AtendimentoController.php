@@ -177,13 +177,11 @@ class AtendimentoController extends Controller
             return redirect()->back()->with('error', 'A guia deste atendimento já está validada no Contas Médicas. Não é possível iniciar o atendimento.');
         }
 
-        // Verifica se o médico está alocado em alguma sala
-        $sala = \App\Models\Sala::where('pessoa_id', $atendimento->medico_id)->first();
+        // Verifica se o médico autenticado está alocado em alguma sala
+        $pessoaIdAutenticada = auth()->user()->pessoa_id;
+        $sala = \App\Models\Sala::where('pessoa_id', $pessoaIdAutenticada)->first();
         if (!$sala && auth()->id() !== 1) {
-            $msg = (auth()->user()->pessoa_id != $atendimento->medico_id)
-                ? 'O médico responsável precisa estar alocado em um consultório/sala para iniciar o atendimento.'
-                : 'Você precisa estar alocado em um consultório/sala para iniciar o atendimento.';
-            return redirect()->back()->with('error', $msg);
+            return redirect()->back()->with('error', 'Você precisa estar alocado em um consultório/sala para iniciar o atendimento.');
         }
 
         // Verifica se o médico já possui um atendimento em andamento
@@ -312,8 +310,10 @@ class AtendimentoController extends Controller
                     // Procura o primeiro esqueleto vazio na guia
                     $procRealizado = $guia->procedimentosRealizados()->whereNull('procedimento_realizado_codigo')->first();
 
-                    $vUnit = floatval($ag->tuss->total ?? 0);
-                    $procValorTotal = round(1 * $vUnit * 1, 2);
+                    $vUnit = floatval($ag->valor_cobrado ?? 0);
+                    $qtd = $procRealizado ? floatval($procRealizado->quantidade_realizada ?? 1) : 1;
+                    $fator = $procRealizado ? floatval($procRealizado->fator_reducao_acrescimo ?? 1) : 1;
+                    $procValorTotal = round($qtd * $vUnit * $fator, 2);
 
                     $descricaoParaSalvar = $ag->tuss->descricao;
                     if ($procRealizado && $procRealizado->procedimentoSolicitado) {
@@ -331,7 +331,7 @@ class AtendimentoController extends Controller
                             'tabela_procedimento_realizado' => '22',
                             'procedimento_realizado_codigo' => $ag->tuss->codigo,
                             'procedimento_realizado_descricao' => $descricaoParaSalvar,
-                            'quantidade_realizada' => 1,
+                            'quantidade_realizada' => $qtd,
                             'data_realizacao' => $ag->data,
                             'hora_inicial' => $ag->hora,
                             'hora_final' => now()->format('H:i:s'),
@@ -345,7 +345,7 @@ class AtendimentoController extends Controller
                             'tabela_procedimento_realizado' => '22',
                             'procedimento_realizado_codigo' => $ag->tuss->codigo,
                             'procedimento_realizado_descricao' => $descricaoParaSalvar,
-                            'quantidade_realizada' => 1,
+                            'quantidade_realizada' => $qtd,
                             'data_realizacao' => $ag->data,
                             'hora_inicial' => $ag->hora,
                             'hora_final' => now()->format('H:i:s'),

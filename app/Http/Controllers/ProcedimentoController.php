@@ -86,7 +86,7 @@ class ProcedimentoController extends Controller
 
     public function downloadTussTemplate()
     {
-        $cols = ['codigo', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co'];
+        $cols = ['codigo', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'quantidade_ch', 'quantidade_co'];
         $csv = implode(';', $cols) . "\n";
         $sample = ['000000', 'Procedimento Exemplo', '0', '0', '0', 'A', '100', '1'];
         $csv .= implode(';', $sample) . "\n";
@@ -278,7 +278,7 @@ class ProcedimentoController extends Controller
                 $hasProcRef = Schema::hasColumn('tuss', 'proc_ref');
                 $hasEhTratamento = Schema::hasColumn('tuss', 'eh_tratamento');
                 $hasQuantidadeSessoes = Schema::hasColumn('tuss', 'quantidade_sessoes');
-                $allowedHeaders = ['tabela', 'codigo', 'cod_tuss', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co', 'total'];
+                $allowedHeaders = ['tabela', 'codigo', 'cod_tuss', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'quantidade_ch', 'quantidade_co'];
                 if ($hasProcRef) $allowedHeaders[] = 'proc_ref';
                 $headerKeys = array_values(array_filter(array_keys($headerMap), fn ($k) => $k !== ''));
                 $unknownHeaders = array_values(array_diff($headerKeys, $allowedHeaders));
@@ -391,8 +391,8 @@ class ProcedimentoController extends Controller
                     $aux = $validateDecimal($get($row, 'auxiliares'), 'auxiliares', $processed);
                     $inc = $validateDecimal($get($row, 'incidencia'), 'incidencia', $processed);
                     $porte = trim((string)($this->ensureUtf8((string)($get($row, 'porte') ?? '')) ?? ''));
-                    $ch = $validateDecimal($get($row, 'ch'), 'ch', $processed);
-                    $co = $validateDecimal($get($row, 'co'), 'co', $processed);
+                    $ch = $validateDecimal($get($row, 'quantidade_ch'), 'quantidade_ch', $processed);
+                    $co = $validateDecimal($get($row, 'quantidade_co'), 'quantidade_co', $processed);
                     $total = $validateDecimal($get($row, 'total'), 'total', $processed);
                     if ($ch !== null && $co !== null) $total = $ch + $co;
 
@@ -405,9 +405,9 @@ class ProcedimentoController extends Controller
                         'auxiliares' => $aux,
                         'incidencia' => $inc,
                         'porte' => $porte !== '' ? $porte : null,
-                        'ch' => $ch,
-                        'co' => $co,
-                        'total' => $total,
+                        'quantidade_ch' => $ch,
+                        'quantidade_co' => $co,
+                        
                         'created_at' => $now,
                         'updated_at' => $now,
                         'deleted_at' => null,
@@ -513,7 +513,7 @@ class ProcedimentoController extends Controller
 
         $total = (clone $base)->count();
         $rows = $base
-            ->select('id', 'tabela', 'codigo', 'descricao', 'total')
+            ->select('id', 'tabela', 'codigo', 'descricao', 'quantidade_ch', 'quantidade_co')
             ->orderBy('descricao')
             ->offset($offset)
             ->limit($perPage)
@@ -584,7 +584,7 @@ class ProcedimentoController extends Controller
         $hasProcRef = Schema::hasColumn('tuss', 'proc_ref');
         $hasEhTratamento = Schema::hasColumn('tuss', 'eh_tratamento');
         $hasQuantidadeSessoes = Schema::hasColumn('tuss', 'quantidade_sessoes');
-        $allowedHeaders = ['tabela', 'codigo', 'cod_tuss', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co', 'total'];
+        $allowedHeaders = ['tabela', 'codigo', 'cod_tuss', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'quantidade_ch', 'quantidade_co'];
         if ($hasProcRef) $allowedHeaders[] = 'proc_ref';
         $headerKeys = array_values(array_filter(array_keys($headerMap), fn ($k) => $k !== ''));
         $unknownHeaders = array_values(array_diff($headerKeys, $allowedHeaders));
@@ -692,8 +692,8 @@ class ProcedimentoController extends Controller
                 $aux = $this->parseDecimal($get($row, 'auxiliares'));
                 $inc = $this->parseDecimal($get($row, 'incidencia'));
                 $porte = trim((string)($this->ensureUtf8((string)($get($row, 'porte') ?? '')) ?? ''));
-                $ch = $this->parseDecimal($get($row, 'ch'));
-                $co = $this->parseDecimal($get($row, 'co'));
+                $ch = $this->parseDecimal($get($row, 'quantidade_ch'));
+                $co = $this->parseDecimal($get($row, 'quantidade_co'));
                 $total = $this->parseDecimal($get($row, 'total'));
                 if ($ch !== null && $co !== null) $total = $ch + $co;
 
@@ -706,9 +706,9 @@ class ProcedimentoController extends Controller
                     'auxiliares' => $aux,
                     'incidencia' => $inc,
                     'porte' => $porte !== '' ? $porte : null,
-                    'ch' => $ch,
-                    'co' => $co,
-                    'total' => $total,
+                    'quantidade_ch' => $ch,
+                    'quantidade_co' => $co,
+                    
                     'created_at' => $now,
                     'updated_at' => $now,
                     'deleted_at' => null,
@@ -769,8 +769,8 @@ class ProcedimentoController extends Controller
             'auxiliares' => ['nullable', 'string', 'max:50'],
             'incidencia' => ['nullable', 'string', 'max:50'],
             'porte' => ['nullable', 'string', 'max:20'],
-            'ch' => ['nullable', 'string', 'max:50'],
-            'co' => ['nullable', 'string', 'max:50'],
+            'quantidade_ch' => ['nullable', 'string', 'max:50'],
+            'quantidade_co' => ['nullable', 'string', 'max:50'],
         ];
         if ($hasProcRef) $rules['proc_ref'] = ['nullable', 'string', 'max:50'];
         if ($hasEhTratamento) $rules['eh_tratamento'] = ['nullable'];
@@ -793,8 +793,8 @@ class ProcedimentoController extends Controller
             ]);
         }
 
-        $ch = $this->parseDecimal($data['ch'] ?? null);
-        $co = $this->parseDecimal($data['co'] ?? null);
+        $ch = $this->parseDecimal($data['quantidade_ch'] ?? null);
+        $co = $this->parseDecimal($data['quantidade_co'] ?? null);
         $ehTratamento = $hasEhTratamento
             ? (filter_var($data['eh_tratamento'] ?? false, FILTER_VALIDATE_BOOLEAN) ? true : false)
             : null;
@@ -825,9 +825,9 @@ class ProcedimentoController extends Controller
             'auxiliares' => $this->parseDecimal($data['auxiliares'] ?? null),
             'incidencia' => $this->parseDecimal($data['incidencia'] ?? null),
             'porte' => isset($data['porte']) && trim((string)$data['porte']) !== '' ? trim((string)$data['porte']) : null,
-            'ch' => $ch,
-            'co' => $co,
-            'total' => $total,
+            'quantidade_ch' => $ch,
+            'quantidade_co' => $co,
+            
             'created_at' => now(),
             'updated_at' => now(),
             'deleted_at' => null,
@@ -838,7 +838,7 @@ class ProcedimentoController extends Controller
         if ($hasEhTratamento) $payload['eh_tratamento'] = $ehTratamento ? 1 : 0;
         if ($hasQuantidadeSessoes) $payload['quantidade_sessoes'] = $quantidadeSessoes;
 
-        $updateCols = ['descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co', 'total', 'updated_at', 'deleted_at'];
+        $updateCols = ['descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'quantidade_ch', 'quantidade_co', 'updated_at', 'deleted_at'];
         if ($hasProcRef) array_unshift($updateCols, 'proc_ref');
         if ($hasEhTratamento) $updateCols[] = 'eh_tratamento';
         if ($hasQuantidadeSessoes) $updateCols[] = 'quantidade_sessoes';
@@ -868,8 +868,8 @@ class ProcedimentoController extends Controller
             'auxiliares' => ['nullable', 'string', 'max:50'],
             'incidencia' => ['nullable', 'string', 'max:50'],
             'porte' => ['nullable', 'string', 'max:20'],
-            'ch' => ['nullable', 'string', 'max:50'],
-            'co' => ['nullable', 'string', 'max:50'],
+            'quantidade_ch' => ['nullable', 'string', 'max:50'],
+            'quantidade_co' => ['nullable', 'string', 'max:50'],
         ];
         if ($hasProcRef) $rules['proc_ref'] = ['nullable', 'string', 'max:50'];
         if ($hasEhTratamento) $rules['eh_tratamento'] = ['nullable'];
@@ -904,8 +904,8 @@ class ProcedimentoController extends Controller
             }
         }
 
-        $ch = $this->parseDecimal($data['ch'] ?? null);
-        $co = $this->parseDecimal($data['co'] ?? null);
+        $ch = $this->parseDecimal($data['quantidade_ch'] ?? null);
+        $co = $this->parseDecimal($data['quantidade_co'] ?? null);
         $ehTratamento = $hasEhTratamento
             ? (filter_var($data['eh_tratamento'] ?? false, FILTER_VALIDATE_BOOLEAN) ? true : false)
             : null;
@@ -936,9 +936,9 @@ class ProcedimentoController extends Controller
             'auxiliares' => $this->parseDecimal($data['auxiliares'] ?? null),
             'incidencia' => $this->parseDecimal($data['incidencia'] ?? null),
             'porte' => isset($data['porte']) && trim((string)$data['porte']) !== '' ? trim((string)$data['porte']) : null,
-            'ch' => $ch,
-            'co' => $co,
-            'total' => $total,
+            'quantidade_ch' => $ch,
+            'quantidade_co' => $co,
+            
             'updated_at' => now(),
             'deleted_at' => null,
         ];
@@ -984,7 +984,7 @@ class ProcedimentoController extends Controller
 
         $total = (clone $query)->count();
 
-        $select = ['id', 'tabela', 'codigo', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'ch', 'co', 'total'];
+        $select = ['id', 'tabela', 'codigo', 'descricao', 'm2_filme', 'auxiliares', 'incidencia', 'porte', 'quantidade_ch', 'quantidade_co'];
         if (Schema::hasColumn('tuss', 'proc_ref')) {
             $select[] = 'proc_ref';
         }
@@ -1005,7 +1005,7 @@ class ProcedimentoController extends Controller
 
         return response()->json([
             'data' => $rows,
-            'total' => $total,
+            
         ]);
     }
 

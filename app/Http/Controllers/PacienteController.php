@@ -35,9 +35,8 @@ class PacienteController extends Controller
             ->orderBy('c.descricao')
             ->get();
 
-        $particular = DB::table('convenios')
+        $particular = \App\Models\Convenio::query()
             ->select('id', 'descricao', 'tipo', DB::raw("'' AS numero_carteira"), DB::raw("'' AS plano"), DB::raw("NULL AS validade_carteira"))
-            ->whereNull('deleted_at')
             ->where(function($q) {
                 $q->whereRaw('UPPER(tipo) = ?', ['PARTICULAR'])
                   ->orWhereRaw('UPPER(descricao) = ?', ['PARTICULAR']);
