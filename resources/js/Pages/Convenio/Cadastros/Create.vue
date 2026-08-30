@@ -131,7 +131,7 @@
                           </div>
                           <div class="d-flex align-items-center gap-3 flex-shrink-0">
                             <span class="fw-bold text-primary text-nowrap fs-6">
-                              {{ formatMoney(r.valor_procedimento) }}
+                              {{ formatMoney(calcValorProcedimento(r)) }}
                             </span>
                             <button type="button" class="btn btn-sm btn-soft-danger px-2 py-1"
                               @click.stop="removeTussRow(r.id)" title="Remover procedimento">
@@ -170,7 +170,7 @@
                                 <span class="text-muted fw-medium flex-shrink-0">Total:</span>
                                 <span class="fw-bold text-primary text-truncate"
                                   style="font-size: 1.1rem; max-width: 180px;">
-                                  {{ formatMoney(r.valor_procedimento) }}
+                                  {{ formatMoney(calcValorProcedimento(r)) }}
                                 </span>
                               </div>
                             </div>
@@ -196,20 +196,21 @@
 
             <div class="col-lg-8">
               <BTabs nav-class="nav-tabs-custom nav-success border-bottom-0">
-                <BTab :title="`Procedimentos (${form.tuss_tabela})`" active>
+                <BTab :title="`Procedimentos (${form.tuss_tabela || 'Tabela'})`" active>
                   <div class="mt-2">
                     <TableGrid ref="tussGridRef" :serverUrl="tussServerUrl" :columns="tussGridColumns" :search="true"
                       :searchPlaceholder="'Buscar procedimento...'" :showCheckbox="true" :showMultiDelete="false"
                       :showAddButton="true" :addButtonText="'Adicionar selecionados'"
                       :addButtonIconClass="'ri-add-circle-line'" :addButtonDisabled="tussGridSelectedIds.length === 0"
                       :showActions="false" :showPerPagination="true" :compactSpacing="true"
-                      :tableTitle="`Procedimentos (${form.tuss_tabela})`" @add="addSelectedFromGrid"
+                      :tableTitle="`Procedimentos (${form.tuss_tabela || 'Tabela'})`" @add="addSelectedFromGrid"
                       @selectionChange="onTussGridSelectionChange">
                       <template #left-actions>
                         <div class="d-flex align-items-center gap-2 ms-2 ps-3 border-start">
                           <label for="tussTabelaHeader" class="form-label mb-0 text-nowrap text-muted small">Tabela:</label>
                           <select ref="tussTabelaHeaderSelect" v-model="form.tuss_tabela"
                             class="form-select form-select-sm w-auto min-w-100" id="tussTabelaHeader">
+                            <option value="">Selecione uma tabela</option>
                             <option v-for="t in allowedTabelas" :key="t" :value="t">{{ t }}</option>
                           </select>
                         </div>
@@ -219,7 +220,7 @@
                 </BTab>
                 <BTab title="Mapeamento">
                   <div class="mt-2">
-                    <MapeamentoTuss />
+                    <MapeamentoTuss @assign="onAssignMapeamentos" />
                   </div>
                 </BTab>
               </BTabs>
@@ -639,6 +640,44 @@ function removeSelectedTussRows() {
   try { tussGridRef.value?.clearSelection?.(); } catch (_) { }
 }
 
+function onAssignMapeamentos(mapeamentos) {
+  if (!mapeamentos || mapeamentos.length === 0) return;
+  const newRows = [];
+  
+  mapeamentos.forEach(mapData => {
+    const origem = mapData.origem_procedimento || mapData.origemProcedimento || {};
+    const referencia = mapData.referencia_procedimento || mapData.referenciaProcedimento || {};
+    
+    // Apenas adicionar se não estiver na lista ainda, usando o ID do procedimento origem
+    const id = Number(mapData.origem_procedimento_id);
+    if (!selectedTussRows.value.some(r => Number(r.id) === id)) {
+      newRows.push({
+        id,
+        is_mapeamento: true,
+        tuss_mapeamento_id: mapData.id,
+        tabela: origem.tabela || "",
+        codigo: origem.codigo || "",
+        descricao: origem.descricao || "",
+        total: null,
+        valor_ch: 0,
+        valor_co: 0,
+        quantidade_ch: Number(mapData.quantidade_ch || referencia.quantidade_ch || 0),
+        quantidade_co: Number(mapData.quantidade_co || referencia.quantidade_co || 0),
+        valor_procedimento: 0,
+        requer_autorizacao: false,
+        isEditingValues: false,
+      });
+    }
+  });
+
+  if (newRows.length > 0) {
+    selectedTussRows.value.push(...newRows);
+    // window.dispatchEvent(new CustomEvent('flash:show', { detail: { type: 'success', message: `${newRows.length} procedimento(s) mapeado(s) adicionado(s).` } }));
+  } else {
+    window.dispatchEvent(new CustomEvent('flash:show', { detail: { type: 'info', message: 'Os procedimentos selecionados já estavam na lista.' } }));
+  }
+}
+
 function clearSelectedMedicos() {
   selectedMedicosRows.value = [];
   form.medicos = [];
@@ -693,13 +732,28 @@ function syncTussIdsBeforeSubmit() {
     addSelectedFromGrid();
   }
   // Garante que o form enviará a lista completa de objetos (id + requer_autorizacao)
-  form.tuss_ids = selectedTussRows.value.map(r => ({ id: Number(r.id), requer_autorizacao: !!r.requer_autorizacao, valor_ch: Number(String(r.valor_ch).replace(',', '.') || 0), valor_co: Number(String(r.valor_co).replace(',', '.') || 0) }));
+  form.tuss_ids = selectedTussRows.value.map(r => ({ 
+    id: Number(r.id), 
+    is_mapeamento: !!r.is_mapeamento,
+    tuss_mapeamento_id: r.tuss_mapeamento_id || null,
+    requer_autorizacao: !!r.requer_autorizacao, 
+    valor_ch: Number(String(r.valor_ch).replace(',', '.') || 0), 
+    valor_co: Number(String(r.valor_co).replace(',', '.') || 0) 
+  }));
 }
 
 function formatMoney(v) {
   const n = Number(v ?? 0);
   if (!Number.isFinite(n)) return "—";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function calcValorProcedimento(r) {
+  const vch = Number(String(r.valor_ch).replace(',', '.') || 0);
+  const vco = Number(String(r.valor_co).replace(',', '.') || 0);
+  const qch = Number(r.quantidade_ch || 0);
+  const qco = Number(r.quantidade_co || 0);
+  return (vch * qch) + (vco * qco);
 }
 
 const logoDisplayUrl = computed(() => {
@@ -1067,6 +1121,8 @@ function setSelectedTussRows(rows) {
     quantidade_co: Number(r?.quantidade_co || 0),
     valor_procedimento: Number(r?.valor_procedimento || 0),
     requer_autorizacao: !!r?.requer_autorizacao,
+    is_mapeamento: !!r?.is_mapeamento,
+    tuss_mapeamento_id: r?.tuss_mapeamento_id ?? null,
     isEditingValues: false,
   })).filter(r => Number.isFinite(r.id)) : [];
 }

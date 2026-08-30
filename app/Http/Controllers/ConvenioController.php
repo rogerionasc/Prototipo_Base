@@ -37,7 +37,7 @@ class ConvenioController extends Controller
 
     public function index()
     {
-        $convenios = Convenio::with(['medicos:id,nome,conselho_id,numero_conselho,uf_conselho', 'medicos.conselho', 'medicos.especialidades:id,nome', 'medicoTuss:id'])
+        $convenios = Convenio::with(['medicos:id,nome,conselho_id,numero_conselho,uf_conselho', 'medicos.conselho', 'medicos.especialidades:id,nome', 'medicoTuss:id', 'medicoTussMapeados:id,origem_procedimento_id'])
             ->select('id', 'descricao', 'logo_path', 'tuss_tabela', 'tipo', 'empresa_id', 'ans', 'dias_recebimento', 'dias_retorno', 'dias_para_faturar', 'config_spsadt')
             ->get();
         $contas = Conta::select('id', 'nome')->orderBy('nome')->get();
@@ -79,15 +79,37 @@ class ConvenioController extends Controller
             return back()->withErrors(['tipo' => 'Tipo inválido.']);
         }
         $tussInput = (array)($request->input('tuss_ids', []));
-        $tussData = [];
+        $tussData = []; $tussMapeamentoData = []; $tussGridMap = [];
         foreach ($tussInput as $item) {
-            if (is_array($item) && isset($item['id'])) {
-                $tussData[(int)$item['id']] = [
-                    'requer_autorizacao' => !empty($item['requer_autorizacao']),
-                    'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
-                    'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
-                ];
+            if (is_array($item)) {
+                if (!empty($item['is_mapeamento']) && !empty($item['tuss_mapeamento_id'])) {
+                    if (isset($item['id'])) {
+                        $tussGridMap[(int)$item['id']] = [
+                            'is_mapeamento' => true,
+                            'tuss_mapeamento_id' => (int)$item['tuss_mapeamento_id']
+                        ];
+                    }
+                    $tussMapeamentoData[(int)$item['tuss_mapeamento_id']] = [
+                        'requer_autorizacao' => !empty($item['requer_autorizacao']),
+                        'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
+                        'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                    ];
+                } elseif (isset($item['id'])) {
+                    $tussGridMap[(int)$item['id']] = [
+                        'is_mapeamento' => false,
+                        'tuss_id' => (int)$item['id']
+                    ];
+                    $tussData[(int)$item['id']] = [
+                        'requer_autorizacao' => !empty($item['requer_autorizacao']),
+                        'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
+                        'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                    ];
+                }
             } elseif (is_numeric($item)) {
+                $tussGridMap[(int)$item] = [
+                    'is_mapeamento' => false,
+                    'tuss_id' => (int)$item
+                ];
                 $tussData[(int)$item] = [
                     'requer_autorizacao' => false,
                     'valor_ch' => 0,
@@ -99,14 +121,14 @@ class ConvenioController extends Controller
         unset($data['tuss_ids'], $data['medicos']);
 
         if ($data['tipo'] === 'CONVENIO') {
-            if (empty($tussData)) {
+            if (empty($tussData) && empty($tussMapeamentoData)) {
                 return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.'])
                     ->with('error', 'Erro de Validação: Selecione ao menos 1 procedimento da TUSS para este convênio.');
             }
             $data['tuss_tabela'] = null;
         } else {
             $data['tuss_tabela'] = null;
-            $tussData = [];
+            $tussData = []; $tussMapeamentoData = [];
         }
 
         $logoFile = $request->file('logo');
@@ -116,7 +138,7 @@ class ConvenioController extends Controller
         $accountId = auth()->user()->account_id ?? null;
         $data['account_id'] = $accountId;
         $convenio = null;
-        DB::transaction(function () use (&$convenio, $data, $tussData, $medicosInput, $accountId) {
+        DB::transaction(function () use (&$convenio, $data, $tussData, $tussMapeamentoData, $tussGridMap, $medicosInput, $accountId) {
             $convenio = Convenio::create($data);
             if (!empty($tussData)) {
                 $tussIds = array_keys($tussData);
@@ -132,13 +154,46 @@ class ConvenioController extends Controller
                     $rows[] = [
                         'convenio_id' => $convenio->id,
                         'tuss_id' => $tid,
+                        'tuss_mapeamento_id' => null,
                         'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
                         'valor_ch' => $tData['valor_ch'],
                         'valor_co' => $tData['valor_co'],
                         'valor_procedimento' => $vProc,
                         'created_at' => now(),
                         'updated_at' => now(),
-                            'account_id' => $accountId,
+                        'account_id' => $accountId,
+                    ];
+                }
+                DB::table('convenio_tuss')->insert($rows);
+            }
+
+            if (!empty($tussMapeamentoData)) {
+                $mapIds = array_keys($tussMapeamentoData);
+                $mapModels = DB::table('tuss_mapeamentos')->whereIn('id', $mapIds)
+                                ->select('id', 'referencia_procedimento_id')
+                                ->get()->keyBy('id');
+                $refIds = $mapModels->pluck('referencia_procedimento_id')->filter()->unique();
+                $refModels = DB::table('tuss')->whereIn('id', $refIds)->select('id', 'quantidade_ch', 'quantidade_co')->get()->keyBy('id');
+                
+                $rows = [];
+                foreach ($tussMapeamentoData as $mapId => $tData) {
+                    $mapModel = $mapModels->get($mapId);
+                    $refModel = $mapModel ? $refModels->get($mapModel->referencia_procedimento_id) : null;
+                    $qtdCh = $refModel ? (float)$refModel->quantidade_ch : 0;
+                    $qtdCo = $refModel ? (float)$refModel->quantidade_co : 0;
+                    $vProc = ($qtdCh * $tData['valor_ch']) + ($qtdCo * $tData['valor_co']);
+                    
+                    $rows[] = [
+                        'convenio_id' => $convenio->id,
+                        'tuss_id' => null,
+                        'tuss_mapeamento_id' => $mapId,
+                        'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
+                        'valor_ch' => $tData['valor_ch'],
+                        'valor_co' => $tData['valor_co'],
+                        'valor_procedimento' => $vProc,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                        'account_id' => $accountId,
                     ];
                 }
                 DB::table('convenio_tuss')->insert($rows);
@@ -147,28 +202,32 @@ class ConvenioController extends Controller
                 $medicoTussRows = [];
                 foreach ($medicosInput as $m) {
                     $mTuss = array_values(array_unique(array_map('intval', (array)($m['tuss_ids'] ?? []))));
-                    $mTuss = array_values(array_filter($mTuss, function ($tid) use ($tussData) {
-                        return array_key_exists($tid, $tussData);
-                    }));
-                    if (empty($mTuss)) {
+                    $hasValid = false;
+                    foreach ($mTuss as $tid) {
+                        if (isset($tussGridMap[$tid])) {
+                            $hasValid = true;
+                            $mapInfo = $tussGridMap[$tid];
+                            $medicoTussRows[] = [
+                                'convenio_id' => $convenio->id,
+                                'pessoa_id' => $m['id'],
+                                'tuss_id' => $mapInfo['is_mapeamento'] ? null : $mapInfo['tuss_id'],
+                                'tuss_mapeamento_id' => $mapInfo['is_mapeamento'] ? $mapInfo['tuss_mapeamento_id'] : null,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                                'account_id' => $accountId,
+                            ];
+                        }
+                    }
+                    if (!$hasValid) {
                         $medicoTussRows[] = [
                             'convenio_id' => $convenio->id,
                             'pessoa_id' => $m['id'],
                             'tuss_id' => null,
+                            'tuss_mapeamento_id' => null,
                             'created_at' => now(),
                             'updated_at' => now(),
                             'account_id' => $accountId,
                         ];
-                    } else {
-                        foreach ($mTuss as $tid) {
-                            $medicoTussRows[] = [
-                                'convenio_id' => $convenio->id,
-                                'pessoa_id' => $m['id'],
-                                'tuss_id' => $tid,
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ];
-                        }
                     }
                 }
                 if (!empty($medicoTussRows)) {
@@ -203,15 +262,37 @@ class ConvenioController extends Controller
             return back()->withErrors(['tipo' => 'Tipo inválido.']);
         }
         $tussInput = (array)($request->input('tuss_ids', []));
-        $tussData = [];
+        $tussData = []; $tussMapeamentoData = []; $tussGridMap = [];
         foreach ($tussInput as $item) {
-            if (is_array($item) && isset($item['id'])) {
-                $tussData[(int)$item['id']] = [
-                    'requer_autorizacao' => !empty($item['requer_autorizacao']),
-                    'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
-                    'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
-                ];
+            if (is_array($item)) {
+                if (!empty($item['is_mapeamento']) && !empty($item['tuss_mapeamento_id'])) {
+                    if (isset($item['id'])) {
+                        $tussGridMap[(int)$item['id']] = [
+                            'is_mapeamento' => true,
+                            'tuss_mapeamento_id' => (int)$item['tuss_mapeamento_id']
+                        ];
+                    }
+                    $tussMapeamentoData[(int)$item['tuss_mapeamento_id']] = [
+                        'requer_autorizacao' => !empty($item['requer_autorizacao']),
+                        'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
+                        'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                    ];
+                } elseif (isset($item['id'])) {
+                    $tussGridMap[(int)$item['id']] = [
+                        'is_mapeamento' => false,
+                        'tuss_id' => (int)$item['id']
+                    ];
+                    $tussData[(int)$item['id']] = [
+                        'requer_autorizacao' => !empty($item['requer_autorizacao']),
+                        'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
+                        'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                    ];
+                }
             } elseif (is_numeric($item)) {
+                $tussGridMap[(int)$item] = [
+                    'is_mapeamento' => false,
+                    'tuss_id' => (int)$item
+                ];
                 $tussData[(int)$item] = [
                     'requer_autorizacao' => false,
                     'valor_ch' => 0,
@@ -223,14 +304,14 @@ class ConvenioController extends Controller
         unset($data['tuss_ids'], $data['medicos']);
 
         if ($data['tipo'] === 'CONVENIO') {
-            if (empty($tussData)) {
+            if (empty($tussData) && empty($tussMapeamentoData)) {
                 return back()->withErrors(['tuss_ids' => 'Selecione ao menos 1 procedimento da TUSS para este convênio.'])
                     ->with('error', 'Erro de Validação: Selecione ao menos 1 procedimento da TUSS para este convênio.');
             }
             $data['tuss_tabela'] = null;
         } else {
             $data['tuss_tabela'] = null;
-            $tussData = [];
+            $tussData = []; $tussMapeamentoData = [];
         }
 
         $logoFile = $request->file('logo');
@@ -247,7 +328,7 @@ class ConvenioController extends Controller
         }
         $accountId = auth()->user()->account_id ?? null;
         $data['account_id'] = $accountId;
-        DB::transaction(function () use ($convenio, $data, $tussData, $medicosInput, $accountId) {
+        DB::transaction(function () use ($convenio, $data, $tussData, $tussMapeamentoData, $tussGridMap, $medicosInput, $accountId) {
             $convenio->update($data);
 
             DB::table('convenio_tuss')
@@ -269,13 +350,46 @@ class ConvenioController extends Controller
                     $rows[] = [
                         'convenio_id' => $convenio->id,
                         'tuss_id' => $tid,
+                        'tuss_mapeamento_id' => null,
                         'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
                         'valor_ch' => $tData['valor_ch'],
                         'valor_co' => $tData['valor_co'],
                         'valor_procedimento' => $vProc,
                         'created_at' => now(),
                         'updated_at' => now(),
-                            'account_id' => $accountId,
+                        'account_id' => $accountId,
+                    ];
+                }
+                DB::table('convenio_tuss')->insert($rows);
+            }
+
+            if (!empty($tussMapeamentoData)) {
+                $mapIds = array_keys($tussMapeamentoData);
+                $mapModels = DB::table('tuss_mapeamentos')->whereIn('id', $mapIds)
+                                ->select('id', 'referencia_procedimento_id')
+                                ->get()->keyBy('id');
+                $refIds = $mapModels->pluck('referencia_procedimento_id')->filter()->unique();
+                $refModels = DB::table('tuss')->whereIn('id', $refIds)->select('id', 'quantidade_ch', 'quantidade_co')->get()->keyBy('id');
+                
+                $rows = [];
+                foreach ($tussMapeamentoData as $mapId => $tData) {
+                    $mapModel = $mapModels->get($mapId);
+                    $refModel = $mapModel ? $refModels->get($mapModel->referencia_procedimento_id) : null;
+                    $qtdCh = $refModel ? (float)$refModel->quantidade_ch : 0;
+                    $qtdCo = $refModel ? (float)$refModel->quantidade_co : 0;
+                    $vProc = ($qtdCh * $tData['valor_ch']) + ($qtdCo * $tData['valor_co']);
+                    
+                    $rows[] = [
+                        'convenio_id' => $convenio->id,
+                        'tuss_id' => null,
+                        'tuss_mapeamento_id' => $mapId,
+                        'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
+                        'valor_ch' => $tData['valor_ch'],
+                        'valor_co' => $tData['valor_co'],
+                        'valor_procedimento' => $vProc,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                        'account_id' => $accountId,
                     ];
                 }
                 DB::table('convenio_tuss')->insert($rows);
@@ -289,28 +403,32 @@ class ConvenioController extends Controller
                 $medicoTussRows = [];
                 foreach ($medicosInput as $m) {
                     $mTuss = array_values(array_unique(array_map('intval', (array)($m['tuss_ids'] ?? []))));
-                    $mTuss = array_values(array_filter($mTuss, function ($tid) use ($tussData) {
-                        return array_key_exists($tid, $tussData);
-                    }));
-                    if (empty($mTuss)) {
+                    $hasValid = false;
+                    foreach ($mTuss as $tid) {
+                        if (isset($tussGridMap[$tid])) {
+                            $hasValid = true;
+                            $mapInfo = $tussGridMap[$tid];
+                            $medicoTussRows[] = [
+                                'convenio_id' => $convenio->id,
+                                'pessoa_id' => $m['id'],
+                                'tuss_id' => $mapInfo['is_mapeamento'] ? null : $mapInfo['tuss_id'],
+                                'tuss_mapeamento_id' => $mapInfo['is_mapeamento'] ? $mapInfo['tuss_mapeamento_id'] : null,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                                'account_id' => $accountId,
+                            ];
+                        }
+                    }
+                    if (!$hasValid) {
                         $medicoTussRows[] = [
                             'convenio_id' => $convenio->id,
                             'pessoa_id' => $m['id'],
                             'tuss_id' => null,
+                            'tuss_mapeamento_id' => null,
                             'created_at' => now(),
                             'updated_at' => now(),
                             'account_id' => $accountId,
                         ];
-                    } else {
-                        foreach ($mTuss as $tid) {
-                            $medicoTussRows[] = [
-                                'convenio_id' => $convenio->id,
-                                'pessoa_id' => $m['id'],
-                                'tuss_id' => $tid,
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ];
-                        }
                     }
                 }
                 if (!empty($medicoTussRows)) {
@@ -332,24 +450,48 @@ class ConvenioController extends Controller
         $perPage = max(1, min(100, $perPage));
 
         $base = DB::table('convenio_tuss as ct')
-            ->join('tuss as t', 't.id', '=', 'ct.tuss_id')
+            ->leftJoin('tuss as t', 't.id', '=', 'ct.tuss_id')
+            ->leftJoin('tuss_mapeamentos as tm', 'tm.id', '=', 'ct.tuss_mapeamento_id')
+            ->leftJoin('tuss as o', 'o.id', '=', 'tm.origem_procedimento_id')
+            ->leftJoin('tuss as r', 'r.id', '=', 'tm.referencia_procedimento_id')
             ->where('ct.convenio_id', $convenio->id)
             ->where('ct.account_id', auth()->user()->account_id ?? null)
             ->whereNull('ct.deleted_at')
-            ->whereNull('t.deleted_at');
+            ->where(function ($query) {
+                $query->whereNull('t.deleted_at')
+                      ->orWhere(function ($q2) {
+                          $q2->whereNull('tm.deleted_at')
+                             ->whereNull('o.deleted_at');
+                      });
+            });
 
         if ($q !== '') {
             $base->where(function ($w) use ($q) {
                 $w->where('t.codigo', 'like', '%' . $q . '%')
-                    ->orWhere('t.descricao', 'like', '%' . $q . '%');
+                  ->orWhere('t.descricao', 'like', '%' . $q . '%')
+                  ->orWhere('o.codigo', 'like', '%' . $q . '%')
+                  ->orWhere('o.descricao', 'like', '%' . $q . '%');
             });
         }
 
         \Log::info('tussProcedimentos Query:', ['sql' => $base->toSql(), 'bindings' => $base->getBindings(), 'account_id' => auth()->user()->account_id ?? null, 'results' => $base->get()]);
         $total = (clone $base)->count();
         $rows = $base
-            ->select('t.id', 't.tabela', 't.codigo', 't.descricao', 't.quantidade_ch', 't.quantidade_co', 'ct.requer_autorizacao', 'ct.valor_ch', 'ct.valor_co', 'ct.valor_procedimento')
-            ->orderBy('t.descricao')
+            ->select(
+                DB::raw('COALESCE(t.id, o.id) as id'),
+                DB::raw('COALESCE(t.tabela, o.tabela) as tabela'),
+                DB::raw('COALESCE(t.codigo, o.codigo) as codigo'),
+                DB::raw('COALESCE(t.descricao, o.descricao) as descricao'),
+                DB::raw('COALESCE(t.quantidade_ch, r.quantidade_ch) as quantidade_ch'),
+                DB::raw('COALESCE(t.quantidade_co, r.quantidade_co) as quantidade_co'),
+                'ct.requer_autorizacao', 
+                'ct.valor_ch', 
+                'ct.valor_co', 
+                'ct.valor_procedimento',
+                'ct.tuss_mapeamento_id',
+                DB::raw('IF(ct.tuss_mapeamento_id IS NOT NULL, 1, 0) as is_mapeamento')
+            )
+            ->orderBy(DB::raw('COALESCE(t.descricao, o.descricao)'))
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
             ->get();
@@ -390,18 +532,35 @@ class ConvenioController extends Controller
             return response()->json(['procedimentos' => $out]);
         }
 
-        $select = ['t.id', 't.tabela', 't.codigo', 't.descricao', 't.quantidade_ch', 't.quantidade_co', 'ct.requer_autorizacao', 'ct.valor_ch', 'ct.valor_co', 'ct.valor_procedimento'];
-        if (Schema::hasColumn('tuss', 'eh_tratamento')) $select[] = 't.eh_tratamento';
-        if (Schema::hasColumn('tuss', 'quantidade_sessoes')) $select[] = 't.quantidade_sessoes';
+        $select = [
+            DB::raw('COALESCE(t.id, o.id) as id'),
+            DB::raw('COALESCE(t.tabela, o.tabela) as tabela'),
+            DB::raw('COALESCE(t.codigo, o.codigo) as codigo'),
+            DB::raw('COALESCE(t.descricao, o.descricao) as descricao'),
+            DB::raw('COALESCE(t.quantidade_ch, r.quantidade_ch) as quantidade_ch'),
+            DB::raw('COALESCE(t.quantidade_co, r.quantidade_co) as quantidade_co'),
+            'ct.requer_autorizacao', 'ct.valor_ch', 'ct.valor_co', 'ct.valor_procedimento',
+            'ct.tuss_mapeamento_id',
+            DB::raw('IF(ct.tuss_mapeamento_id IS NOT NULL, 1, 0) as is_mapeamento')
+        ];
+        if (Schema::hasColumn('tuss', 'eh_tratamento')) $select[] = DB::raw('COALESCE(t.eh_tratamento, o.eh_tratamento) as eh_tratamento');
+        if (Schema::hasColumn('tuss', 'quantidade_sessoes')) $select[] = DB::raw('COALESCE(t.quantidade_sessoes, o.quantidade_sessoes) as quantidade_sessoes');
 
         $tussRows = DB::table('convenio_tuss as ct')
-            ->join('tuss as t', function ($j) {
-                $j->on('t.id', '=', 'ct.tuss_id')
-                    ->whereNull('t.deleted_at');
-            })
+            ->leftJoin('tuss as t', 't.id', '=', 'ct.tuss_id')
+            ->leftJoin('tuss_mapeamentos as tm', 'tm.id', '=', 'ct.tuss_mapeamento_id')
+            ->leftJoin('tuss as o', 'o.id', '=', 'tm.origem_procedimento_id')
+            ->leftJoin('tuss as r', 'r.id', '=', 'tm.referencia_procedimento_id')
             ->where('ct.convenio_id', (int)$convenio->id)
             ->where('ct.account_id', auth()->user()->account_id ?? null)
             ->whereNull('ct.deleted_at')
+            ->where(function ($query) {
+                $query->whereNull('t.deleted_at')
+                      ->orWhere(function ($q2) {
+                          $q2->whereNull('tm.deleted_at')
+                             ->whereNull('o.deleted_at');
+                      });
+            })
             ->select($select)
             ->distinct()
             ->get();

@@ -135,10 +135,11 @@ async function openModalEdit(id) {
     convenioFormRef.value.form.config_spsadt.bloqueado = Object.values(c.config_spsadt?.bloqueado || []);
     const medicosMap = (c.medicos || []).map(m => {
       const mId = Number(m.id);
-      // c.medico_tuss is eager loaded in ConvenioController as medico_tuss or medicoTuss
       const tList = c.medicoTuss || c.medico_tuss || [];
+      const tListMap = c.medicoTussMapeados || c.medico_tuss_mapeados || [];
       const tussIds = tList.filter(mt => Number(mt.pivot.pessoa_id) === mId).map(mt => mt.id);
-      return { ...m, tuss_ids: tussIds };
+      const mappedIds = tListMap.filter(mt => Number(mt.pivot.pessoa_id) === mId).map(mt => mt.origem_procedimento_id);
+      return { ...m, tuss_ids: [...tussIds, ...mappedIds] };
     });
     convenioFormRef.value.form.medicos = medicosMap.map(m => ({ id: m.id, tuss_ids: m.tuss_ids }));
     convenioFormRef.value?.setExistingLogoPath?.(c.logo_path || '');

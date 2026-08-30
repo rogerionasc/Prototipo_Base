@@ -114,4 +114,33 @@ class TussMapeamentoController extends Controller
 
         return response()->json(['message' => 'Mapeamento removido com sucesso.']);
     }
+
+    public function atribuirConvenio(Request $request)
+    {
+        $validated = $request->validate([
+            'convenio_id' => 'required|integer|exists:convenios,id',
+            'mapeamento_ids' => 'required|array',
+            'mapeamento_ids.*' => 'integer|exists:tuss_mapeamentos,id',
+        ]);
+
+        $accountId = auth()->user()->account_id ?? null;
+
+        $mapeamentos = TussMapeamento::whereIn('id', $validated['mapeamento_ids'])->get();
+        $convenio = \App\Models\Convenio::findOrFail($validated['convenio_id']);
+
+        $syncData = [];
+        foreach ($mapeamentos as $map) {
+            $syncData[$map->origem_procedimento_id] = [
+                'account_id' => $accountId,
+                'requer_autorizacao' => false,
+                'valor_ch' => 0,
+                'valor_co' => 0,
+                'valor_procedimento' => 0,
+            ];
+        }
+
+        $convenio->tuss()->syncWithoutDetaching($syncData);
+
+        return response()->json(['message' => 'Procedimentos atribuídos ao convênio com sucesso.']);
+    }
 }

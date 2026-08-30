@@ -56,4 +56,11 @@ class Convenio extends Model
             ->withPivot('pessoa_id')
             ->withTimestamps();
     }
+
+    public function medicoTussMapeados()
+    {
+        return $this->belongsToMany(TussMapeamento::class, 'convenio_medico_tuss', 'convenio_id', 'tuss_mapeamento_id')
+            ->withPivot('pessoa_id')
+            ->withTimestamps();
+    }
 }

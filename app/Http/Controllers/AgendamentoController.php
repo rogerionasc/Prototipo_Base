@@ -1011,8 +1011,12 @@ class AgendamentoController extends Controller
             if ($convenio && strtoupper((string)$convenio->tipo) !== 'PARTICULAR') {
                 $profissionais = Pessoa::query()
                     ->join('convenio_medico_tuss as cmt', 'cmt.pessoa_id', '=', 'pessoas.id')
+                    ->leftJoin('tuss_mapeamentos as tm', 'tm.id', '=', 'cmt.tuss_mapeamento_id')
                     ->where('cmt.convenio_id', $convenioId)
-                    ->where('cmt.tuss_id', $procedimentoId)
+                    ->where(function($q) use ($procedimentoId) {
+                        $q->where('cmt.tuss_id', $procedimentoId)
+                          ->orWhere('tm.origem_procedimento_id', $procedimentoId);
+                    })
                     ->select('pessoas.id', 'pessoas.nome')
                     ->distinct()
                     ->orderBy('pessoas.nome')

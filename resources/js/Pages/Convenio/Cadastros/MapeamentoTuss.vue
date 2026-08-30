@@ -6,8 +6,9 @@
       :columns="columns" 
       :search="true"
       :searchPlaceholder="'Buscar mapeamento...'"
-      :showCheckbox="false" 
+      :showCheckbox="true" 
       :showActions="true"
+      :showMultiDelete="false"
       :showAddButton="true"
       :addButtonText="'Adicionar Mapeamento'"
       :addButtonIconClass="'ri-add-line'"
@@ -17,7 +18,18 @@
       @edit="editMapeamento"
       :tableTitle="'Mapeamentos Cadastrados'"
       :compactSpacing="true"
-    />
+    >
+      <template #custom-actions="{ selectedRows }">
+        <button 
+          v-if="selectedRows && selectedRows.length > 0"
+          type="button" 
+          class="btn btn-primary ms-2"
+          @click="assignMapeamentos(selectedRows)"
+        >
+          <i class="ri-links-line align-bottom me-1"></i> Atribuir Selecionados
+        </button>
+      </template>
+    </TableGrid>
 
     <!-- Modal para adicionar mapeamento -->
     <Teleport to="body">
@@ -90,6 +102,8 @@ import axios from 'axios';
 import TableGrid from '@/Components/Tables/TableGrid.vue';
 import Modal from '@/Components/Modal.vue';
 import Swal from 'sweetalert2';
+
+const emit = defineEmits(['assign', 'delete']);
 
 const allowedTabelas = ['AMB1990', 'AMB1992', 'AMB1993', 'AMB1999', 'CBHPM3', 'CBHPM4', 'CBHPM5', 'TUSS'];
 
@@ -220,6 +234,12 @@ onBeforeUnmount(() => {
   if (origemChoices) origemChoices.destroy();
   if (referenciaChoices) referenciaChoices.destroy();
 });
+
+const assignMapeamentos = (selectedIds) => {
+  const selectedData = mapeamentosGridRef.value?.getSelectedRowObjects?.() || [];
+  emit('assign', selectedData);
+  try { mapeamentosGridRef.value?.clearSelection?.(); } catch(e) {}
+};
 
 const openAddModal = () => {
   isEditing.value = false;

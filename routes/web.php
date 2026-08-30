@@ -140,6 +140,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         
         // Tuss Mapeamentos
         Route::get("/tuss-mapeamentos", [TussMapeamentoController::class, "index"])->name('tuss_mapeamentos.index');
+        Route::post("/tuss-mapeamentos/atribuir-convenio", [TussMapeamentoController::class, "atribuirConvenio"])->name('tuss_mapeamentos.atribuir_convenio');
         Route::post("/tuss-mapeamentos", [TussMapeamentoController::class, "store"])->name('tuss_mapeamentos.store');
         Route::put("/tuss-mapeamentos/{id}", [TussMapeamentoController::class, "update"])->name('tuss_mapeamentos.update');
         Route::delete("/tuss-mapeamentos/{id}", [TussMapeamentoController::class, "destroy"])->name('tuss_mapeamentos.destroy');
