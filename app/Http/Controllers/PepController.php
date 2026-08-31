@@ -48,9 +48,13 @@ class PepController extends Controller
         );
 
         // Se o procedimento for um tratamento, auto-gera o plano caso não exista um em andamento
-        if ($atendimento->procedimento && $atendimento->procedimento->eh_tratamento) {
+        $procOuTuss = $atendimento->procedimento ?? $atendimento->tuss;
+
+        if ($procOuTuss && $procOuTuss->eh_tratamento == 1) {
+            $nomeProcedimento = $procOuTuss->nome ?? $procOuTuss->descricao;
+
             $tratamentoExistente = \App\Models\PepTratamento::where('paciente_id', $paciente->id)
-                ->where('nome_tratamento', $atendimento->procedimento->nome)
+                ->where('nome_tratamento', $nomeProcedimento)
                 ->where('status', 'Em andamento')
                 ->first();
 
@@ -58,7 +62,9 @@ class PepController extends Controller
 
             if (!$tratamentoExistente) {
                 $isSessao1 = true;
-                if ($atendimento->agendamento && $atendimento->agendamento->sessaoTratamento) {
+                if ($atendimento->sessao > 1) {
+                    $isSessao1 = false;
+                } elseif ($atendimento->agendamento && $atendimento->agendamento->sessaoTratamento) {
                     if ($atendimento->agendamento->sessaoTratamento->numero_sessao > 1) {
                         $isSessao1 = false;
                     }
@@ -66,7 +72,7 @@ class PepController extends Controller
 
                 if ($isSessao1) {
                     $jaCriouNestePep = \App\Models\PepTratamento::where('pep_id', $pep->id)
-                        ->where('nome_tratamento', $atendimento->procedimento->nome)
+                        ->where('nome_tratamento', $nomeProcedimento)
                         ->exists();
 
                     if (!$jaCriouNestePep) {
@@ -80,8 +86,8 @@ class PepController extends Controller
                     'pep_id' => $pep->id,
                     'paciente_id' => $paciente->id,
                     'profissional_id' => $atendimento->medico_id ?? $user->pessoa_id,
-                    'nome_tratamento' => $atendimento->procedimento->nome,
-                    'quantidade_sessoes_previstas' => $atendimento->procedimento->quantidade_sessoes > 0 ? $atendimento->procedimento->quantidade_sessoes : 1,
+                    'nome_tratamento' => $nomeProcedimento,
+                    'quantidade_sessoes_previstas' => $procOuTuss->quantidade_sessoes > 0 ? $procOuTuss->quantidade_sessoes : 1,
                     'quantidade_sessoes_realizadas' => 0,
                     'status' => 'Em andamento',
                     'data_inicio' => now(),
@@ -90,7 +96,7 @@ class PepController extends Controller
             }
         }
 
-        $pep->load(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'diagnosticos.profissional', 'diagnosticos.cid']);
+        $pep->load(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'evolucoes.tratamento', 'prescricoes.itens', 'prescricoes.profissional', 'diagnosticos.profissional', 'diagnosticos.cid']);
 
         $tratamentos = \App\Models\PepTratamento::with(['profissional', 'evolucoes'])
             ->where('paciente_id', $paciente->id)
@@ -98,7 +104,7 @@ class PepController extends Controller
             ->get();
 
         // Carrega o histórico de PEPs do paciente (incluindo o atual caso já esteja finalizado/encerrado)
-        $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'atendimento.procedimento', 'atendimento.tuss', 'atendimento.agendamento.sessaoTratamento', 'diagnosticos.profissional', 'diagnosticos.cid'])
+        $historico = Pep::with(['anamnese', 'sinaisVitais', 'evolucoes.profissional', 'evolucoes.tratamento', 'prescricoes.itens', 'prescricoes.profissional', 'atendimento.medico', 'atendimento.procedimento', 'atendimento.tuss', 'atendimento.agendamento.sessaoTratamento', 'diagnosticos.profissional', 'diagnosticos.cid'])
         ->where('paciente_id', $paciente->id)
         ->where(function($q) use ($pep) {
             if ($pep->status === 'Aberto') {
@@ -253,6 +259,10 @@ class PepController extends Controller
     public function saveEvolucao(Request $request, Atendimento $atendimento)
     {
         $this->checkAtendimentoEmAndamento($atendimento);
+
+        if ($request->tratamento_id === 'null' || $request->tratamento_id === '') {
+            $request->merge(['tratamento_id' => null]);
+        }
 
         $request->validate([
             'descricao' => 'required|string',

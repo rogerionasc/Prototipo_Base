@@ -279,6 +279,7 @@ const evolucoesPorAtendimento = computed(() => {
             }
             return nome;
         })(),
+        sessao_numero: props.atendimento?.sessao_atual || (props.atendimento?.agendamento?.sessao_tratamento?.numero_sessao || props.atendimento?.agendamento?.sessaoTratamento?.numero_sessao) || props.atendimento?.sessao || null,
         is_atual: true,
         evolucoes: currentPepEvolucoes
     });
@@ -308,6 +309,7 @@ const evolucoesPorAtendimento = computed(() => {
                         }
                         return nome;
                     })(),
+                    sessao_numero: (h.atendimento?.agendamento?.sessao_tratamento?.numero_sessao || h.atendimento?.agendamento?.sessaoTratamento?.numero_sessao) || h.atendimento?.sessao || null,
                     is_atual: false,
                     evolucoes: h.evolucoes || []
                 });
@@ -705,9 +707,14 @@ const finalizarAtendimento = () => {
                                                 <div v-if="selectedPepGroup.evolucoes && selectedPepGroup.evolucoes.length > 0" class="vstack gap-3">
                                                     <div v-for="ev in selectedPepGroup.evolucoes" :key="ev.id" class="p-3 border rounded-3 bg-white shadow-xs">
                                                         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                                                            <span class="badge bg-success-subtle text-success fs-12 fw-medium">
-                                                                <i class="ri-pulse-line me-1"></i> {{ ev.tipo || 'Evolução Clínica' }}
-                                                            </span>
+                                                            <div class="d-flex flex-wrap gap-2">
+                                                                <span class="badge bg-success-subtle text-success fs-12 fw-medium">
+                                                                    <i class="ri-pulse-line me-1"></i> {{ ev.tipo || 'Evolução Clínica' }}
+                                                                </span>
+                                                                <span v-if="ev.tratamento" class="badge border border-info text-info fs-11 fw-medium" title="Vinculado ao Tratamento">
+                                                                    <i class="ri-link-m me-1"></i> {{ ev.tratamento.nome_tratamento }}<span v-if="selectedPepGroup.sessao_numero"> (Sessão {{ selectedPepGroup.sessao_numero }})</span>
+                                                                </span>
+                                                            </div>
                                                             <div class="d-flex align-items-center gap-2">
                                                                 <span class="fs-12 text-muted">
                                                                     <i class="ri-time-line me-1"></i> {{ formatDate(ev.created_at) }}
@@ -909,8 +916,11 @@ const finalizarAtendimento = () => {
                                                                 <div class="card-body">
                                                                     <div v-if="hist.evolucoes && hist.evolucoes.length > 0" class="vstack gap-2">
                                                                         <div v-for="ev in hist.evolucoes" :key="ev.id" class="p-3 border rounded bg-white">
-                                                                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                                                                <span class="badge bg-success-subtle text-success fs-11">{{ ev.tipo || 'Evolução' }}</span>
+                                                                            <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
+                                                                                <div class="d-flex flex-wrap gap-1">
+                                                                                    <span class="badge bg-success-subtle text-success fs-11"><i class="ri-pulse-line me-1"></i> {{ ev.tipo || 'Evolução Clínica' }}</span>
+                                                                                    <span v-if="ev.tratamento" class="badge border border-info text-info fs-10 fw-medium" title="Vinculado ao Tratamento"><i class="ri-link-m me-1"></i> {{ ev.tratamento.nome_tratamento }}<span v-if="hist.sessao_numero"> (Sessão {{ hist.sessao_numero }})</span></span>
+                                                                                </div>
                                                                                 <span class="fs-12 text-muted">{{ formatDate(ev.created_at) }}</span>
                                                                             </div>
                                                                             <p class="text-muted mb-0 fs-13">{{ ev.descricao }}</p>
@@ -1210,9 +1220,14 @@ const finalizarAtendimento = () => {
                                 <div v-if="pep?.evolucoes && pep.evolucoes.length > 0" class="vstack gap-3">
                                     <div v-for="ev in pep.evolucoes" :key="ev.id" class="p-3 border rounded-3 bg-white shadow-xs">
                                         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                                            <span class="badge bg-success-subtle text-success fs-12 fw-medium">
-                                                <i class="ri-pulse-line me-1"></i> {{ ev.tipo || 'Evolução Clínica' }}
-                                            </span>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <span class="badge bg-success-subtle text-success fs-12 fw-medium">
+                                                    <i class="ri-pulse-line me-1"></i> {{ ev.tipo || 'Evolução Clínica' }}
+                                                </span>
+                                                <span v-if="ev.tratamento" class="badge border border-info text-info fs-11 fw-medium" title="Vinculado ao Tratamento">
+                                                    <i class="ri-link-m me-1"></i> {{ ev.tratamento.nome_tratamento }}<span v-if="props.atendimento?.sessao_atual"> (Sessão {{ props.atendimento.sessao_atual }})</span>
+                                                </span>
+                                            </div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <span class="fs-12 text-muted">
                                                     <i class="ri-time-line me-1"></i> {{ formatDate(ev.created_at) }}

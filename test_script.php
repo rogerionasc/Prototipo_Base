@@ -1,1 +1,0 @@
-<?php require __DIR__." /vendor/autoload.php\; \ = require_once __DIR__.\/bootstrap/app.php\; \ = \->make(Illuminate\Contracts\Console\Kernel::class); \->bootstrap(); \ = \App\Models\Atendimento::orderBy(\id\, \desc\)->first(); echo json_encode([\id\=>\->id, \status\=>\->status, \pep\=>\->pep]);
