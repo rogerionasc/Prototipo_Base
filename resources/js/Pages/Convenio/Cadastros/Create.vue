@@ -83,8 +83,8 @@
           </div>
 
           <div v-if="!isTipoParticular" class="row g-3">
-            <div class="col-lg-4">
-              <div class="card mb-0 tuss-panel">
+            <div class="col-lg-5">
+              <div class="card mb-0 tuss-panel h-100">
                 <div class="card-header bg-transparent" style="padding-bottom: 15px; padding-top: 15px;">
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
@@ -96,23 +96,23 @@
                     </div>
                   </div>
                 </div>
-                <div class="card-body pt-2">
-                  <div class="search-box mb-2">
+                <div class="card-body pt-2 d-flex flex-column">
+                  <div class="search-box mb-2 flex-shrink-0">
                     <input v-model="selectedTussQuery" type="text" class="form-control search"
                       placeholder="Buscar nos selecionados" :disabled="selectedTussRows.length === 0" />
                     <i class="ri-search-line search-icon"></i>
                   </div>
 
-                  <div class="tuss-selected-scroll">
+                  <div class="tuss-selected-scroll flex-grow-1" style="min-height: 0;">
                     <ul class="list-group list-group-flush" v-if="filteredSelectedTussRows.length > 0">
                       <li v-for="r in filteredSelectedTussRows" :key="`sel-${r.id}`"
                         class="list-group-item p-0 mb-1 border rounded overflow-hidden"
-                        style="display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr;">
+                        :style="{ zIndex: r.dropdownOpen ? 9999 : 1, position: 'relative', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: '1fr' }">
                         <!-- BLOCK A: Procedure Info -->
                         <div
-                          class="p-2 bg-white d-flex justify-content-between align-items-start w-100 h-100 border-start border-3 border-primary"
+                          class="p-2 bg-white rounded d-flex justify-content-between align-items-start w-100 h-100 border-start border-3 border-primary"
                           style="grid-column: 1; grid-row: 1; transition: transform 0.3s ease, opacity 0.3s ease; cursor: pointer;"
-                          :style="r.isEditingValues ? 'transform: translateX(-100%); pointer-events: none; opacity: 0;' : 'transform: translateX(0); opacity: 1;'"
+                          :style="r.isEditingValues ? 'transform: translateX(-100%); pointer-events: none; opacity: 0;' : 'transform: none; opacity: 1;'"
                           @click="r.isEditingValues = true" title="Clique para configurar valores">
                           <div class="d-flex flex-column me-2 flex-grow-1" style="min-width:0;">
                             <span class="d-flex align-items-center flex-wrap gap-2">
@@ -129,10 +129,16 @@
                             <span class="text-dark mt-1 text-truncate-2">{{ r.descricao }}</span>
 
                           </div>
-                          <div class="d-flex align-items-center gap-3 flex-shrink-0">
-                            <span class="fw-bold text-primary text-nowrap fs-6">
+                          <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                            <span class="fw-bold text-primary text-nowrap fs-6 me-2">
                               {{ formatMoney(calcValorProcedimento(r)) }}
                             </span>
+                            <button type="button" class="btn btn-sm px-2 py-1"
+                              :class="activeTreatmentMenu?.row?.id === r.id ? 'btn-secondary' : 'btn-soft-secondary'"
+                              @click.stop="toggleTreatmentMenu($event, r)" title="Configurar Tratamento">
+                              <i class="ri-settings-4-line"></i>
+                            </button>
+
                             <button type="button" class="btn btn-sm btn-soft-danger px-2 py-1"
                               @click.stop="removeTussRow(r.id)" title="Remover procedimento">
                               <i class="ri-delete-bin-line"></i>
@@ -145,7 +151,7 @@
                           style="z-index: 99; cursor: default;" @click.stop="r.isEditingValues = false"></div>
 
                         <!-- BLOCK B: Values Card -->
-                        <div class="bg-white w-100 h-100 d-flex align-items-center position-relative"
+                        <div class="bg-white rounded w-100 h-100 d-flex align-items-center position-relative"
                           style="grid-column: 1; grid-row: 1; z-index: 100; cursor: pointer; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;"
                           :style="r.isEditingValues ? 'transform: translateX(0); opacity: 1;' : 'transform: translateX(100%); pointer-events: none; opacity: 0;'"
                           @click="r.isEditingValues = false" title="Clique aqui ou fora para fechar">
@@ -166,6 +172,8 @@
                                   style="width: 90px;" v-model="r.valor_co" placeholder="0,00" />
                               </div>
 
+
+
                               <div class="ms-auto d-flex align-items-center gap-2 text-nowrap" style="min-width: 0;">
                                 <span class="text-muted fw-medium flex-shrink-0">Total:</span>
                                 <span class="fw-bold text-primary text-truncate"
@@ -176,6 +184,7 @@
                             </div>
                           </div>
                         </div>
+
                       </li>
                     </ul>
                     <div v-else class="tuss-empty text-center text-muted">
@@ -185,6 +194,30 @@
                       <div class="fw-semibold">Nenhum procedimento selecionado</div>
                       <div class="small">Selecione na lista ao lado e clique em “Adicionar selecionados”.</div>
                     </div>
+                    <Teleport to="body">
+                      <div v-if="activeTreatmentMenu">
+                        <div class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 1050;"
+                          @click.stop="activeTreatmentMenu = null"></div>
+                        <div class="dropdown-menu show p-3 shadow-sm border"
+                          :style="{ position: 'absolute', top: activeTreatmentMenu.top + 'px', left: activeTreatmentMenu.left + 'px', zIndex: 1060, minWidth: '220px' }"
+                          @click.stop>
+                          <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox"
+                              :id="'tratamento-' + activeTreatmentMenu.row.id"
+                              v-model="activeTreatmentMenu.row.eh_tratamento">
+                            <label class="form-check-label fw-medium small user-select-none" style="cursor:pointer;"
+                              :for="'tratamento-' + activeTreatmentMenu.row.id">É Tratamento?</label>
+                          </div>
+                          <div v-if="activeTreatmentMenu.row.eh_tratamento" class="mt-2">
+                            <label class="form-label small text-muted mb-1">Qtd. Sessões</label>
+                            <input type="number" step="1" min="1" class="form-control form-control-sm"
+                              v-model.number="activeTreatmentMenu.row.quantidade_sessoes"
+                              placeholder="Ilimitado ou nº exato">
+                          </div>
+                        </div>
+                      </div>
+                    </Teleport>
+
                   </div>
                   <div class="text-muted small mt-2 d-flex align-items-center gap-2">
                     <i class="ri-information-line"></i>
@@ -194,7 +227,7 @@
               </div>
             </div>
 
-            <div class="col-lg-8">
+            <div class="col-lg-7">
               <BTabs nav-class="nav-tabs-custom nav-success border-bottom-0">
                 <BTab :title="`Procedimentos (${form.tuss_tabela || 'Tabela'})`" active>
                   <div class="mt-2">
@@ -207,7 +240,8 @@
                       @selectionChange="onTussGridSelectionChange">
                       <template #left-actions>
                         <div class="d-flex align-items-center gap-2 ms-2 ps-3 border-start">
-                          <label for="tussTabelaHeader" class="form-label mb-0 text-nowrap text-muted small">Tabela:</label>
+                          <label for="tussTabelaHeader"
+                            class="form-label mb-0 text-nowrap text-muted small">Tabela:</label>
                           <select ref="tussTabelaHeaderSelect" v-model="form.tuss_tabela"
                             class="form-select form-select-sm w-auto min-w-100" id="tussTabelaHeader">
                             <option value="">Selecione uma tabela</option>
@@ -328,8 +362,24 @@ import MapeamentoTuss from "./MapeamentoTuss.vue";
 import { useForm } from "@inertiajs/vue3";
 import { ref, defineExpose, onMounted, nextTick, watch, toRef, computed } from "vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
-import Modal from "@/Components/Modal.vue";
+import Modal from '@/Components/Modal.vue';
+import Swal from 'sweetalert2';
 import Choices from "choices.js";
+
+const activeTreatmentMenu = ref(null);
+
+function toggleTreatmentMenu(event, row) {
+  if (activeTreatmentMenu.value && activeTreatmentMenu.value.row.id === row.id) {
+    activeTreatmentMenu.value = null;
+    return;
+  }
+  const rect = event.currentTarget.getBoundingClientRect();
+  activeTreatmentMenu.value = {
+    row: row,
+    top: rect.bottom + window.scrollY + 5,
+    left: rect.right + window.scrollX - 220 // align end side
+  };
+}
 
 const props = defineProps({
   contas: { type: Array, default: () => [] },
@@ -606,6 +656,9 @@ function addTussRow(row) {
     quantidade_co: Number(row?.quantidade_co || 0),
     valor_procedimento: Number(row?.valor_procedimento || 0),
     requer_autorizacao: false,
+    eh_tratamento: !!row?.eh_tratamento,
+    quantidade_sessoes: row?.quantidade_sessoes ?? null,
+    dropdownOpen: false,
     isEditingValues: false,
   });
 }
@@ -620,7 +673,7 @@ function addSelectedTuss() {
   if (newIds.length === 0) return;
   const newRows = newIds.map(id => {
     const dataRow = tussGridRef.value?.getRowData?.(id) || { id, codigo: '?', descricao: 'Desconhecido', tabela: '' };
-    return { ...dataRow, requer_autorizacao: false, valor_ch: Number(dataRow.valor_ch || 0), valor_co: Number(dataRow.valor_co || 0), valor_procedimento: Number(dataRow.valor_procedimento || 0) };
+    return { ...dataRow, requer_autorizacao: false, eh_tratamento: !!dataRow.eh_tratamento, quantidade_sessoes: dataRow.quantidade_sessoes ?? null, valor_ch: Number(dataRow.valor_ch || 0), valor_co: Number(dataRow.valor_co || 0), valor_procedimento: Number(dataRow.valor_procedimento || 0) };
   });
   selectedTussRows.value.push(...newRows);
   tussGridSelectedIds.value = [];
@@ -643,11 +696,11 @@ function removeSelectedTussRows() {
 function onAssignMapeamentos(mapeamentos) {
   if (!mapeamentos || mapeamentos.length === 0) return;
   const newRows = [];
-  
+
   mapeamentos.forEach(mapData => {
     const origem = mapData.origem_procedimento || mapData.origemProcedimento || {};
     const referencia = mapData.referencia_procedimento || mapData.referenciaProcedimento || {};
-    
+
     // Apenas adicionar se não estiver na lista ainda, usando o ID do procedimento origem
     const id = Number(mapData.origem_procedimento_id);
     if (!selectedTussRows.value.some(r => Number(r.id) === id)) {
@@ -665,6 +718,9 @@ function onAssignMapeamentos(mapeamentos) {
         quantidade_co: Number(mapData.quantidade_co || referencia.quantidade_co || 0),
         valor_procedimento: 0,
         requer_autorizacao: false,
+        eh_tratamento: !!origem?.eh_tratamento,
+        quantidade_sessoes: origem?.quantidade_sessoes ?? null,
+        dropdownOpen: false,
         isEditingValues: false,
       });
     }
@@ -732,13 +788,15 @@ function syncTussIdsBeforeSubmit() {
     addSelectedFromGrid();
   }
   // Garante que o form enviará a lista completa de objetos (id + requer_autorizacao)
-  form.tuss_ids = selectedTussRows.value.map(r => ({ 
-    id: Number(r.id), 
+  form.tuss_ids = selectedTussRows.value.map(r => ({
+    id: Number(r.id),
     is_mapeamento: !!r.is_mapeamento,
     tuss_mapeamento_id: r.tuss_mapeamento_id || null,
-    requer_autorizacao: !!r.requer_autorizacao, 
-    valor_ch: Number(String(r.valor_ch).replace(',', '.') || 0), 
-    valor_co: Number(String(r.valor_co).replace(',', '.') || 0) 
+    requer_autorizacao: !!r.requer_autorizacao,
+    valor_ch: Number(String(r.valor_ch).replace(',', '.') || 0),
+    valor_co: Number(String(r.valor_co).replace(',', '.') || 0),
+    eh_tratamento: !!r.eh_tratamento,
+    quantidade_sessoes: r.quantidade_sessoes ?? null
   }));
 }
 
@@ -1121,8 +1179,11 @@ function setSelectedTussRows(rows) {
     quantidade_co: Number(r?.quantidade_co || 0),
     valor_procedimento: Number(r?.valor_procedimento || 0),
     requer_autorizacao: !!r?.requer_autorizacao,
+    eh_tratamento: !!r?.eh_tratamento,
+    quantidade_sessoes: r?.quantidade_sessoes ?? null,
     is_mapeamento: !!r?.is_mapeamento,
     tuss_mapeamento_id: r?.tuss_mapeamento_id ?? null,
+    dropdownOpen: false,
     isEditingValues: false,
   })).filter(r => Number.isFinite(r.id)) : [];
 }
@@ -1157,7 +1218,6 @@ defineExpose({ form, submit, submitUpdate, processingRef: toRef(form, "processin
 }
 
 .tuss-selected-scroll {
-  max-height: 320px;
   overflow: auto;
 }
 

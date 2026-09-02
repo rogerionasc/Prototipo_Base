@@ -302,15 +302,16 @@
                                             :hasActions="true" actionsLabel="Ação" variant="borderless" :compact="true"
                                             emptyTitle="Nenhuma guia atrelada a este lote."
                                             :row-class="getGuiaRowClass">
-                                            <template #cell(id)="{ item }">
+                                            <!-- <template #cell(id)="{ item }">
                                                 <span class="fw-medium text-primary">#{{ item.id }}</span>
-                                            </template>
+                                            </template> -->
                                             <template #cell(numero)="{ item }">
                                                 <a v-if="item.agendamento_id"
                                                     :href="route('guias.imprimirDaAgenda', item.agendamento_id) + '?guia_id=' + item.id"
                                                     target="_blank"
                                                     class="text-primary fw-medium text-decoration-underline">
-                                                    <template v-if="item.numero_guia_prestador || item.numero_guia_operadora">
+                                                    <template
+                                                        v-if="item.numero_guia_prestador || item.numero_guia_operadora">
                                                         {{ item.numero_guia_prestador || item.numero_guia_operadora }}
                                                     </template>
                                                     <template v-else>Ver Guia</template>
@@ -373,7 +374,7 @@
                                                     :disabled="removendoGuia === item.id || item.status === 'DEVOLVIDA'">
                                                     <i class="ri-delete-bin-line"></i>
                                                 </button>
-                                                <button v-if="lote.status !== 'PROCESSADA'"
+                                                <button v-if="lote.status === 'FECHADA'"
                                                     class="btn btn-sm btn-soft-dark shadow-none ms-1"
                                                     @click.stop="askDevolverGuiaLote(item.id)"
                                                     :disabled="devolvendoGuiaId === item.id || item.status === 'DEVOLVIDA'"
@@ -394,58 +395,131 @@
 
             <!-- Coluna Direita -->
             <div class="col-lg-3">
-                <div class="card shadow-sm border-0 sticky-top" style="top: 80px;">
-                    <div class="card-header align-items-center d-flex border-bottom-dashed">
-                        <h4 class="card-title mb-0 flex-grow-1 fs-14 fw-semibold text-uppercase text-muted">
-                            Guias Prestes a Vencer
-                        </h4>
-                        <div class="flex-shrink-0">
-                            <span class="badge bg-danger-subtle text-danger fs-11">Atenção</span>
+                <div class="sticky-top" style="top: 80px;">
+                    <!-- Guias Vencidas -->
+                    <div class="card shadow-sm border-0 border-danger mb-3">
+                        <div class="card-header bg-danger-subtle align-items-center d-flex border-bottom-dashed">
+                            <h4 class="card-title mb-0 flex-grow-1 fs-14 fw-semibold text-uppercase text-danger">
+                                Guias Vencidas
+                            </h4>
+                            <div class="flex-shrink-0">
+                                <span class="badge bg-danger fs-11">Atrasadas</span>
+                            </div>
+                        </div>
+
+                        <div class="card-body px-0" style="max-height: 35vh; overflow-y: auto;">
+                            <div v-if="guiasVencidas && guiasVencidas.length > 0">
+                                <div class="list-group list-group-flush border-dashed">
+                                    <div v-for="guia in guiasVencidas" :key="'venc-' + guia.id"
+                                        class="list-group-item list-group-item-action d-flex align-items-center flex-column px-3 py-2 border-bottom">
+                                        <div class="w-100 d-flex justify-content-between align-items-center mb-1">
+                                            <div class="fw-semibold text-danger fs-13">
+                                                Guia:
+                                                <a v-if="guia.agendamento_id"
+                                                    :href="`/guias/${guia.agendamento_id}/imprimir`" target="_blank"
+                                                    class="text-decoration-underline text-danger" title="Imprimir Guia">
+                                                    {{ guia.numero_guia || 'N/I' }}
+                                                </a>
+                                                <span v-else>{{ guia.numero_guia || 'N/I' }}</span>
+                                            </div>
+                                            <span class="badge bg-danger text-white fs-10" title="Dias atrasados">{{
+                                                Math.abs(guia.dias_vencer) }}
+                                                dias</span>
+                                        </div>
+                                        <div class="w-100 d-flex justify-content-between align-items-center">
+                                            <div class="text-muted fs-12 text-truncate" style="max-width: 65%;">
+                                                {{ guia.atendimento?.agendamento?.paciente?.nome || 'Paciente não info.'
+                                                }}
+                                            </div>
+                                            <div class="fw-medium text-dark fs-12">
+                                                {{ formatCurrency(guia.valor_total) }}
+                                            </div>
+                                        </div>
+                                        <div class="w-100 mt-1 d-flex justify-content-between align-items-center">
+                                            <div class="text-muted fs-11 text-truncate" style="max-width: 50%;">
+                                                Convênio: <strong>{{ guia.faturamento?.convenio?.nome || 'N/A'
+                                                }}</strong>
+                                            </div>
+                                            <div class="text-muted fs-11 text-end" v-if="guia.data_vencimento">
+                                                Venceu: <strong class="text-danger">{{ guia.data_vencimento }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="text-center py-4 px-3">
+                                <div class="avatar-sm mx-auto mb-2">
+                                    <div class="avatar-title bg-light text-success rounded-circle fs-20">
+                                        <i class="ri-check-double-line"></i>
+                                    </div>
+                                </div>
+                                <h6 class="fs-13 fw-semibold">Nenhuma guia vencida!</h6>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="card-body px-0" style="max-height: 70vh; overflow-y: auto;">
-                        <div v-if="guiasPrestesAVencer && guiasPrestesAVencer.length > 0">
-                            <div class="list-group list-group-flush border-dashed">
-                                <div v-for="guia in guiasPrestesAVencer" :key="guia.id"
-                                    class="list-group-item list-group-item-action d-flex align-items-center flex-column px-3 py-2 border-bottom">
-                                    <div class="w-100 d-flex justify-content-between align-items-center mb-1">
-                                        <div class="fw-semibold text-primary fs-13">
-                                            Guia:
-                                            <a v-if="guia.agendamento_id"
-                                                :href="`/guias/${guia.agendamento_id}/imprimir`" target="_blank"
-                                                class="text-decoration-underline" title="Imprimir Guia">
-                                                {{ guia.numero_guia || 'N/I' }}
-                                            </a>
-                                            <span v-else>{{ guia.numero_guia || 'N/I' }}</span>
-                                        </div>
-                                        <span class="badge bg-warning text-dark fs-10">{{ guia.dias_vencer }}
-                                            dias</span>
-                                    </div>
-                                    <div class="w-100 d-flex justify-content-between align-items-center">
-                                        <div class="text-muted fs-12 text-truncate" style="max-width: 65%;">
-                                            {{ guia.atendimento?.agendamento?.paciente?.nome || 'Paciente não info.' }}
-                                        </div>
-                                        <div class="fw-medium text-dark fs-12">
-                                            {{ formatCurrency(guia.valor_total) }}
-                                        </div>
-                                    </div>
-                                    <div class="w-100 mt-1 d-flex justify-content-between align-items-center">
-                                        <div class="text-muted fs-11">
-                                            Convênio: <strong>{{ guia.faturamento?.convenio?.nome || 'N/A' }}</strong>
-                                        </div>
-                                    </div>
-                                </div>
+                    <!-- Guias Prestes a Vencer -->
+                    <div class="card shadow-sm border-0 border-warning">
+                        <div class="card-header bg-warning-subtle align-items-center d-flex border-bottom-dashed">
+                            <h4
+                                class="card-title mb-0 flex-grow-1 fs-14 fw-semibold text-uppercase text-warning-emphasis">
+                                Prestes a Vencer
+                            </h4>
+                            <div class="flex-shrink-0">
+                                <span class="badge bg-warning text-dark fs-11">Atenção</span>
                             </div>
                         </div>
-                        <div v-else class="text-center py-5 px-3">
-                            <div class="avatar-sm mx-auto mb-3">
-                                <div class="avatar-title bg-light text-success rounded-circle fs-20">
-                                    <i class="ri-check-double-line"></i>
+
+                        <div class="card-body px-0" style="max-height: 35vh; overflow-y: auto;">
+                            <div v-if="guiasPrestesAVencer && guiasPrestesAVencer.length > 0">
+                                <div class="list-group list-group-flush border-dashed">
+                                    <div v-for="guia in guiasPrestesAVencer" :key="guia.id"
+                                        class="list-group-item list-group-item-action d-flex align-items-center flex-column px-3 py-2 border-bottom">
+                                        <div class="w-100 d-flex justify-content-between align-items-center mb-1">
+                                            <div class="fw-semibold text-primary fs-13">
+                                                Guia:
+                                                <a v-if="guia.agendamento_id"
+                                                    :href="`/guias/${guia.agendamento_id}/imprimir`" target="_blank"
+                                                    class="text-decoration-underline" title="Imprimir Guia">
+                                                    {{ guia.numero_guia || 'N/I' }}
+                                                </a>
+                                                <span v-else>{{ guia.numero_guia || 'N/I' }}</span>
+                                            </div>
+                                            <span class="badge bg-warning text-dark fs-10">{{ guia.dias_vencer }}
+                                                dias</span>
+                                        </div>
+                                        <div class="w-100 d-flex justify-content-between align-items-center">
+                                            <div class="text-muted fs-12 text-truncate" style="max-width: 65%;">
+                                                {{ guia.atendimento?.agendamento?.paciente?.nome || 'Paciente não info.'
+                                                }}
+                                            </div>
+                                            <div class="fw-medium text-dark fs-12">
+                                                {{ formatCurrency(guia.valor_total) }}
+                                            </div>
+                                        </div>
+                                        <div class="w-100 mt-1 d-flex justify-content-between align-items-center">
+                                            <div class="text-muted fs-11 text-truncate" style="max-width: 50%;">
+                                                Convênio: <strong>{{ guia.faturamento?.convenio?.nome || 'N/A'
+                                                }}</strong>
+                                            </div>
+                                            <div class="text-muted fs-11 text-end" v-if="guia.data_vencimento">
+                                                Vence: <strong class="text-warning-emphasis">{{ guia.data_vencimento
+                                                }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <h6 class="fs-13 fw-semibold">Tudo em dia!</h6>
-                            <p class="text-muted fs-12 mb-0">Nenhuma guia prestes a vencer encontrada no momento.</p>
+                            <div v-else class="text-center py-4 px-3">
+                                <div class="avatar-sm mx-auto mb-2">
+                                    <div class="avatar-title bg-light text-success rounded-circle fs-20">
+                                        <i class="ri-check-double-line"></i>
+                                    </div>
+                                </div>
+                                <h6 class="fs-13 fw-semibold">Tudo em dia!</h6>
+                                <p class="text-muted fs-12 mb-0">Nenhuma guia prestes a vencer encontrada no momento.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -606,7 +680,6 @@ import axios from "axios";
 const flatpickrOptions = { altInput: true, altInputClass: "form-control", altFormat: "d M, Y", dateFormat: "Y-m-d", locale: "pt", static: true };
 
 const guiasLoteColumns = [
-    { key: 'id', label: 'ID Guia' },
     { key: 'numero', label: 'Nº da Guia' },
     { key: 'data_atendimento', label: 'Data' },
     { key: 'paciente_nome', label: 'Paciente' },
@@ -620,6 +693,7 @@ const guiasLoteColumns = [
 const props = defineProps({
     faturamentos: { type: Array, default: () => [] },
     guiasPrestesAVencer: { type: Array, default: () => [] },
+    guiasVencidas: { type: Array, default: () => [] },
     convenios_list: { type: Array, default: () => [] },
 });
 

@@ -93,6 +93,8 @@ class ConvenioController extends Controller
                         'requer_autorizacao' => !empty($item['requer_autorizacao']),
                         'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
                         'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                        'eh_tratamento' => !empty($item['eh_tratamento']),
+                        'quantidade_sessoes' => isset($item['quantidade_sessoes']) ? (int)$item['quantidade_sessoes'] : null,
                     ];
                 } elseif (isset($item['id'])) {
                     $tussGridMap[(int)$item['id']] = [
@@ -103,6 +105,8 @@ class ConvenioController extends Controller
                         'requer_autorizacao' => !empty($item['requer_autorizacao']),
                         'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
                         'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                        'eh_tratamento' => !empty($item['eh_tratamento']),
+                        'quantidade_sessoes' => isset($item['quantidade_sessoes']) ? (int)$item['quantidade_sessoes'] : null,
                     ];
                 }
             } elseif (is_numeric($item)) {
@@ -156,6 +160,8 @@ class ConvenioController extends Controller
                         'tuss_id' => $tid,
                         'tuss_mapeamento_id' => null,
                         'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
+                        'eh_tratamento' => (bool)($tData['eh_tratamento'] ?? false),
+                        'quantidade_sessoes' => $tData['quantidade_sessoes'] ?? null,
                         'valor_ch' => $tData['valor_ch'],
                         'valor_co' => $tData['valor_co'],
                         'valor_procedimento' => $vProc,
@@ -188,6 +194,8 @@ class ConvenioController extends Controller
                         'tuss_id' => null,
                         'tuss_mapeamento_id' => $mapId,
                         'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
+                        'eh_tratamento' => (bool)($tData['eh_tratamento'] ?? false),
+                        'quantidade_sessoes' => $tData['quantidade_sessoes'] ?? null,
                         'valor_ch' => $tData['valor_ch'],
                         'valor_co' => $tData['valor_co'],
                         'valor_procedimento' => $vProc,
@@ -276,6 +284,8 @@ class ConvenioController extends Controller
                         'requer_autorizacao' => !empty($item['requer_autorizacao']),
                         'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
                         'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                        'eh_tratamento' => !empty($item['eh_tratamento']),
+                        'quantidade_sessoes' => isset($item['quantidade_sessoes']) ? (int)$item['quantidade_sessoes'] : null,
                     ];
                 } elseif (isset($item['id'])) {
                     $tussGridMap[(int)$item['id']] = [
@@ -286,6 +296,8 @@ class ConvenioController extends Controller
                         'requer_autorizacao' => !empty($item['requer_autorizacao']),
                         'valor_ch' => isset($item['valor_ch']) ? (float)$item['valor_ch'] : 0,
                         'valor_co' => isset($item['valor_co']) ? (float)$item['valor_co'] : 0,
+                        'eh_tratamento' => !empty($item['eh_tratamento']),
+                        'quantidade_sessoes' => isset($item['quantidade_sessoes']) ? (int)$item['quantidade_sessoes'] : null,
                     ];
                 }
             } elseif (is_numeric($item)) {
@@ -352,6 +364,8 @@ class ConvenioController extends Controller
                         'tuss_id' => $tid,
                         'tuss_mapeamento_id' => null,
                         'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
+                        'eh_tratamento' => (bool)($tData['eh_tratamento'] ?? false),
+                        'quantidade_sessoes' => $tData['quantidade_sessoes'] ?? null,
                         'valor_ch' => $tData['valor_ch'],
                         'valor_co' => $tData['valor_co'],
                         'valor_procedimento' => $vProc,
@@ -384,6 +398,8 @@ class ConvenioController extends Controller
                         'tuss_id' => null,
                         'tuss_mapeamento_id' => $mapId,
                         'requer_autorizacao' => $tData['requer_autorizacao'] ? 1 : 0,
+                        'eh_tratamento' => (bool)($tData['eh_tratamento'] ?? false),
+                        'quantidade_sessoes' => $tData['quantidade_sessoes'] ?? null,
                         'valor_ch' => $tData['valor_ch'],
                         'valor_co' => $tData['valor_co'],
                         'valor_procedimento' => $vProc,
@@ -488,6 +504,8 @@ class ConvenioController extends Controller
                 'ct.valor_ch', 
                 'ct.valor_co', 
                 'ct.valor_procedimento',
+                'ct.eh_tratamento',
+                'ct.quantidade_sessoes',
                 'ct.tuss_mapeamento_id',
                 DB::raw('IF(ct.tuss_mapeamento_id IS NOT NULL, 1, 0) as is_mapeamento')
             )
@@ -541,10 +559,10 @@ class ConvenioController extends Controller
             DB::raw('COALESCE(t.quantidade_co, r.quantidade_co) as quantidade_co'),
             'ct.requer_autorizacao', 'ct.valor_ch', 'ct.valor_co', 'ct.valor_procedimento',
             'ct.tuss_mapeamento_id',
+            'ct.eh_tratamento',
+            'ct.quantidade_sessoes',
             DB::raw('IF(ct.tuss_mapeamento_id IS NOT NULL, 1, 0) as is_mapeamento')
         ];
-        if (Schema::hasColumn('tuss', 'eh_tratamento')) $select[] = DB::raw('COALESCE(t.eh_tratamento, o.eh_tratamento) as eh_tratamento');
-        if (Schema::hasColumn('tuss', 'quantidade_sessoes')) $select[] = DB::raw('COALESCE(t.quantidade_sessoes, o.quantidade_sessoes) as quantidade_sessoes');
 
         $tussRows = DB::table('convenio_tuss as ct')
             ->leftJoin('tuss as t', 't.id', '=', 'ct.tuss_id')

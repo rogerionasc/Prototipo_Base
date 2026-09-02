@@ -23,12 +23,9 @@ class Tuss extends Model
         'quantidade_ch',
         'quantidade_co',
         'total',
-        'eh_tratamento',
-        'quantidade_sessoes',
     ];
 
     protected $casts = [
-        'eh_tratamento' => 'boolean',
     ];
 
     public function convenios()

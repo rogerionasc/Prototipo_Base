@@ -48,10 +48,10 @@ class PepController extends Controller
         );
 
         // Se o procedimento for um tratamento, auto-gera o plano caso não exista um em andamento
-        $procOuTuss = $atendimento->procedimento ?? $atendimento->tuss;
+        $procOuTuss = $atendimento->procedimento ?? $atendimento->convenioTussPivot;
 
         if ($procOuTuss && $procOuTuss->eh_tratamento == 1) {
-            $nomeProcedimento = $procOuTuss->nome ?? $procOuTuss->descricao;
+            $nomeProcedimento = $atendimento->procedimento ? $atendimento->procedimento->nome : ($atendimento->tuss ? $atendimento->tuss->descricao : 'Tratamento');
 
             $tratamentoExistente = \App\Models\PepTratamento::where('paciente_id', $paciente->id)
                 ->where('nome_tratamento', $nomeProcedimento)

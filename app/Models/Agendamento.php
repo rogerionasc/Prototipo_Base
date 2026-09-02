@@ -87,4 +87,10 @@ class Agendamento extends Model
     {
         return $this->belongsTo(SessaoTratamento::class, 'sessao_tratamento_id');
     }
+
+    public function convenioTussPivot()
+    {
+        return $this->hasOne(ConvenioTuss::class, 'tuss_id', 'tuss_id')
+            ->where('convenio_id', $this->convenio_id);
+    }
 }

@@ -166,6 +166,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
         // Contas Médicas
         Route::get("/contas-medicas/validacao-guias", [ContasMedicasController::class, "validacaoGuias"])->name('contas_medicas.validacao_guias');
+        Route::get("/contas-medicas/validacao-guias/api", [ContasMedicasController::class, "getGuiasParaValidacaoApi"])->name('contas_medicas.validacao_guias.api');
+        Route::get("/contas-medicas/validacao-guias/contadores", [ContasMedicasController::class, "getContadoresApi"])->name('contas_medicas.validacao_guias.contadores');
         Route::post("/contas-medicas/validacao-guias/encaminhar", [ContasMedicasController::class, "encaminharFaturamento"])->name('contas_medicas.encaminhar_faturamento');
 
         // Faturamento

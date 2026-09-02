@@ -653,7 +653,7 @@ function initGrid() {
         } else if (action === 'edit') {
             emit('edit', rowObj?.id ?? id, rowObj);
         } else if (action === 'show') {
-            emit('show', rowObj?.id ?? id);
+            emit('show', rowObj?.id ?? id, rowObj);
         } else if (action === 'diary') {
             emit('diary', rowObj?.id ?? id);
         } else if (action === 'print') {

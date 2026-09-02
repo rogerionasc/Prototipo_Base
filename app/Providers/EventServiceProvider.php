@@ -25,7 +25,7 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \App\Models\GuiaProcedimentoRealizado::observe(\App\Observers\GuiaProcedimentoRealizadoObserver::class);
     }
 
     /**

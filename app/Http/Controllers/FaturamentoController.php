@@ -98,7 +98,7 @@ class FaturamentoController extends Controller
         });
 
         // Guias Prestes a Vencer
-        $guiasPrestesVencer = \App\Models\Guia::with(['atendimento.agendamento.paciente', 'agendamento.paciente', 'atendimento.agendamento.convenio', 'agendamento.convenio', 'faturamento.convenio', 'procedimentosRealizados'])
+        $guiasAlerta = \App\Models\Guia::with(['atendimento.agendamento.paciente', 'agendamento.paciente', 'atendimento.agendamento.convenio', 'agendamento.convenio', 'faturamento.convenio', 'procedimentosRealizados'])
             ->where('status', 'PRONTA_FATURAMENTO')
             ->whereNull('faturamento_id')
             ->get()
@@ -106,20 +106,11 @@ class FaturamentoController extends Controller
                 $convenio = $g->atendimento?->agendamento?->convenio ?? $g->agendamento?->convenio;
                 $diasParaFaturar = $convenio?->dias_para_faturar ?? 30;
 
-                $dataExecucaoMaisAntiga = null;
-                if ($g->procedimentosRealizados->isNotEmpty()) {
-                    $minData = $g->procedimentosRealizados->min('data_realizacao');
-                    if ($minData) {
-                        $dataExecucaoMaisAntiga = \Carbon\Carbon::parse($minData);
-                    }
+                $diasVencer = null;
+                if ($g->data_vencimento_faturar) {
+                    $dataLimite = \Carbon\Carbon::parse($g->data_vencimento_faturar);
+                    $diasVencer = (int) ceil(\Carbon\Carbon::now()->floatDiffInDays($dataLimite, false));
                 }
-
-                if (!$dataExecucaoMaisAntiga) {
-                    $dataExecucaoMaisAntiga = $g->created_at->copy();
-                }
-
-                $dataLimite = $dataExecucaoMaisAntiga->copy()->addDays($diasParaFaturar);
-                $diasVencer = (int) ceil(\Carbon\Carbon::now()->floatDiffInDays($dataLimite, false));
 
                 return [
                     'id' => $g->id,
@@ -139,20 +130,23 @@ class FaturamentoController extends Controller
                         'convenio' => [
                             'nome' => $convenio?->descricao ?? 'Sem Convênio'
                         ]
-                    ]
+                    ],
+                    'data_vencimento' => $g->data_vencimento_faturar ? \Carbon\Carbon::parse($g->data_vencimento_faturar)->format('d/m/Y') : null,
                 ];
             })
             ->filter(function ($item) {
                 // Aparecer apenas quando faltar 20% ou menos do prazo máximo (ou se já estiver atrasado)
                 return $item['dias_vencer'] <= $item['limite_20_porcento'];
             })
-            ->sortBy('dias_vencer')
-            ->take(10)
-            ->values();
+            ->sortBy('dias_vencer');
+
+        $guiasVencidas = $guiasAlerta->filter(fn($g) => $g['dias_vencer'] < 0)->take(10)->values();
+        $guiasPrestesVencer = $guiasAlerta->filter(fn($g) => $g['dias_vencer'] >= 0)->take(10)->values();
 
         return Inertia::render('Faturamento/Convenios', [
             'faturamentos' => $rows,
             'guiasPrestesAVencer' => $guiasPrestesVencer,
+            'guiasVencidas' => $guiasVencidas,
             'convenios_list' => \App\Models\Convenio::where('tipo', 'CONVENIO')->orderBy('descricao')->get(['id', 'descricao'])
         ]);
     }

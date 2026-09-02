@@ -394,7 +394,7 @@
                   </td>
                   <td v-if="isExibido('47_valor_total')">
                     <input v-model="item.valor_total" type="number" class="form-control form-control-sm px-1 text-end"
-                      :disabled="isBloqueado('47_valor_total')" />
+                      :disabled="isBloqueado('47_valor_total')" @input="calcularTotaisGerais" />
                   </td>
                   <td>
                     <button type="button" class="btn btn-sm btn-soft-danger" @click="removeProcReal(index)"><i
@@ -505,31 +505,31 @@
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('60_valor_total_taxas')">
               <label>60 - Taxas <span class="text-danger" v-if="isObrigatorio('60_valor_total_taxas')">*</span></label>
               <input v-model="form.total_taxas_alugueis" type="number" class="form-control form-control-sm"
-                :disabled="isBloqueado('60_valor_total_taxas')" :required="isObrigatorio('60_valor_total_taxas')" />
+                :disabled="isBloqueado('60_valor_total_taxas')" :required="isObrigatorio('60_valor_total_taxas')" @input="calcularTotaisGerais" />
             </div>
             <div class="col-md-1 tiss-modern-col" v-if="isExibido('61_valor_total_materiais')">
               <label>61 - Mat <span class="text-danger"
                   v-if="isObrigatorio('61_valor_total_materiais')">*</span></label>
               <input v-model="form.total_materiais" type="number" class="form-control form-control-sm"
                 :disabled="isBloqueado('61_valor_total_materiais')"
-                :required="isObrigatorio('61_valor_total_materiais')" />
+                :required="isObrigatorio('61_valor_total_materiais')" @input="calcularTotaisGerais" />
             </div>
             <div class="col-md-1 tiss-modern-col" v-if="isExibido('62_valor_total_opme')">
               <label>62 - OPME <span class="text-danger" v-if="isObrigatorio('62_valor_total_opme')">*</span></label>
               <input v-model="form.total_opme" type="number" class="form-control form-control-sm"
-                :disabled="isBloqueado('62_valor_total_opme')" :required="isObrigatorio('62_valor_total_opme')" />
+                :disabled="isBloqueado('62_valor_total_opme')" :required="isObrigatorio('62_valor_total_opme')" @input="calcularTotaisGerais" />
             </div>
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('63_valor_total_medicamentos')">
               <label>63 - Med <span class="text-danger"
                   v-if="isObrigatorio('63_valor_total_medicamentos')">*</span></label>
               <input v-model="form.total_medicamentos" type="number" class="form-control form-control-sm"
                 :disabled="isBloqueado('63_valor_total_medicamentos')"
-                :required="isObrigatorio('63_valor_total_medicamentos')" />
+                :required="isObrigatorio('63_valor_total_medicamentos')" @input="calcularTotaisGerais" />
             </div>
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('64_valor_total_gases')">
               <label>64 - Gases <span class="text-danger" v-if="isObrigatorio('64_valor_total_gases')">*</span></label>
               <input v-model="form.total_gases_medicinais" type="number" class="form-control form-control-sm"
-                :disabled="isBloqueado('64_valor_total_gases')" :required="isObrigatorio('64_valor_total_gases')" />
+                :disabled="isBloqueado('64_valor_total_gases')" :required="isObrigatorio('64_valor_total_gases')" @input="calcularTotaisGerais" />
             </div>
             <div class="col-md-2 tiss-modern-col" v-if="isExibido('65_valor_total_geral')">
               <label>65 - Total Geral <span class="text-danger"
@@ -683,6 +683,26 @@ export default {
       let fator = fatorStr === '' ? 1 : (parseFloat(fatorStr) || 0);
 
       item.valor_total = (qtd * vUnit * fator).toFixed(2);
+      this.calcularTotaisGerais();
+    },
+    calcularTotaisGerais() {
+      if (!this.form) return;
+      let totalProcedimentos = 0;
+      if (this.form.procedimentos_realizados) {
+        this.form.procedimentos_realizados.forEach(p => {
+          totalProcedimentos += parseFloat(p.valor_total) || 0;
+        });
+      }
+      this.form.total_procedimentos = totalProcedimentos.toFixed(2);
+
+      let totalGeral = totalProcedimentos;
+      totalGeral += parseFloat(this.form.total_taxas_alugueis) || 0;
+      totalGeral += parseFloat(this.form.total_materiais) || 0;
+      totalGeral += parseFloat(this.form.total_opme) || 0;
+      totalGeral += parseFloat(this.form.total_medicamentos) || 0;
+      totalGeral += parseFloat(this.form.total_gases_medicinais) || 0;
+
+      this.form.valor_total_geral = totalGeral.toFixed(2);
     },
 
     addProcSol() {

@@ -4,11 +4,119 @@
         <Head title="Validação de Guias" />
         <PageHeader title="Validação de Guias" pageTitle="Contas Médicas" />
 
+        <div class="row mb-4">
+            <!-- Card Vencidas -->
+            <div class="col">
+                <div class="card shadow-sm border-0 h-100" style="cursor: pointer; border-left: 4px solid var(--vz-danger) !important;"
+                     :class="filterStatusPendentes === 'VENCIDAS' ? 'bg-danger-subtle' : ''"
+                     @click="setFiltroStatus('VENCIDAS')">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Vencidas</p>
+                                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-danger">{{ countStatus.vencidas }}</span></h4>
+                            </div>
+                            <div class="avatar-sm flex-shrink-0">
+                                <span class="avatar-title bg-danger-subtle text-danger rounded fs-3">
+                                    <i class="ri-alert-line"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Próximo a Vencer -->
+            <div class="col">
+                <div class="card shadow-sm border-0 h-100" style="cursor: pointer; border-left: 4px solid var(--vz-secondary) !important;"
+                     :class="filterStatusPendentes === 'PROXIMO_VENCER' ? 'bg-secondary-subtle' : ''"
+                     @click="setFiltroStatus('PROXIMO_VENCER')">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Próximo a Vencer</p>
+                                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-secondary">{{ countStatus.proximo_vencer }}</span></h4>
+                            </div>
+                            <div class="avatar-sm flex-shrink-0">
+                                <span class="avatar-title bg-secondary-subtle text-secondary rounded fs-3">
+                                    <i class="ri-timer-flash-line"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card Devolvidas -->
+            <div class="col">
+                <div class="card shadow-sm border-0 h-100" style="cursor: pointer; border-left: 4px solid var(--vz-warning) !important;"
+                     :class="filterStatusPendentes === 'DEVOLVIDA' ? 'bg-warning-subtle' : ''" 
+                     @click="setFiltroStatus('DEVOLVIDA')">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Devolvidas</p>
+                                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-warning">{{ countStatus.devolvidas }}</span></h4>
+                            </div>
+                            <div class="avatar-sm flex-shrink-0">
+                                <span class="avatar-title bg-warning-subtle text-warning rounded fs-3">
+                                    <i class="ri-arrow-go-back-line"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Validadas -->
+            <div class="col">
+                <div class="card shadow-sm border-0 h-100" style="cursor: pointer; border-left: 4px solid var(--vz-primary) !important;"
+                     :class="filterStatusPendentes === 'VALIDADA' ? 'bg-primary-subtle' : ''"
+                     @click="setFiltroStatus('VALIDADA')">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Validadas</p>
+                                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-primary">{{ countStatus.validadas }}</span></h4>
+                            </div>
+                            <div class="avatar-sm flex-shrink-0">
+                                <span class="avatar-title bg-primary-subtle text-primary rounded fs-3">
+                                    <i class="ri-shield-check-line"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Pendentes -->
+            <div class="col">
+                <div class="card shadow-sm border-0 h-100" style="cursor: pointer; border-left: 4px solid var(--vz-info) !important;"
+                     :class="filterStatusPendentes === 'PENDENTES' ? 'bg-info-subtle' : ''"
+                     @click="setFiltroStatus('PENDENTES')">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Pendentes</p>
+                                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-info">{{ countStatus.pendentes }}</span></h4>
+                            </div>
+                            <div class="avatar-sm flex-shrink-0">
+                                <span class="avatar-title bg-info-subtle text-info rounded fs-3">
+                                    <i class="ri-time-line"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-lg-12">
                 <div class="card" id="guiasList">
                     <div class="card-body">
-                        <TableGrid ref="tableGridPendentesRef" :columns="columnsPendentes" :data="guiasPendentes"
+                        <TableGrid ref="tableGridPendentesRef" :columns="columnsPendentes" :serverUrl="serverUrl"
+                            :serverQuery="serverQuery"
                             tableTitle="Guias a Validar" :showStatus="false" :showCheckbox="true"
                             :showMultiDelete="false" :showImage="false" :search="true" :showAddButton="false"
                             :searchPlaceholder="'Buscar guia, paciente ou convênio...'"
@@ -31,10 +139,10 @@
                                         <select ref="selStatusPendentes" class="form-select"
                                             v-model="filterStatusPendentes" style="width: 200px;">
                                             <option value="">Todos os Status</option>
-                                            <option value="CRIADA">Criada</option>
-                                            <option value="EM_ATENDIMENTO">Em Atendimento</option>
-                                            <option value="ATENDIDA">Atendimento Realizado</option>
-                                            <option value="VALIDADA">Validada</option>
+                                            <option value="VENCIDAS">Vencidas</option>
+                                            <option value="DEVOLVIDA">Devolvidas</option>
+                                            <option value="VALIDADA">Validadas</option>
+                                            <option value="PENDENTES">Pendentes</option>
                                         </select>
                                     </div>
                                 </div>
@@ -64,6 +172,7 @@ import "gridjs/dist/theme/mermaid.css";
 import { html } from "gridjs";
 import Choices from "choices.js";
 import Swal from "sweetalert2";
+import axios from "axios";
 import Layout from "@/Layouts/main.vue";
 import PageHeader from "@/Components/page-header.vue";
 import { Head, router, usePage } from "@inertiajs/vue3";
@@ -72,9 +181,7 @@ import GuiaSADTModal from "@/Components/Guias/GuiaSADTModal.vue";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 import ModalConfirm from "@/Components/ModalConfirm.vue";
 
-const props = defineProps({
-    guias: { type: Array, default: () => [] }
-});
+const serverUrl = '/contas-medicas/validacao-guias/api';
 
 const page = usePage();
 
@@ -93,45 +200,64 @@ const guiasParaEncaminhar = ref([]);
 const filterConvenioPendentes = ref('');
 const filterStatusPendentes = ref('');
 
+const serverQuery = computed(() => {
+    const q = {};
+    if (filterConvenioPendentes.value) q.convenio = filterConvenioPendentes.value;
+    if (filterStatusPendentes.value) q.status_filter = filterStatusPendentes.value;
+    return q;
+});
+
 const conveniosDisponiveis = computed(() => {
-    const convs = props.guias.map(g => g.convenio_nome).filter(Boolean);
-    return [...new Set(convs)].sort();
+    return [];
 });
 
-const guiasPendentes = computed(() => {
-    let result = props.guias.filter(g => String(g.status).toUpperCase() !== 'PRONTA_FATURAMENTO');
-
-    if (filterConvenioPendentes.value) {
-        result = result.filter(g => g.convenio_nome === filterConvenioPendentes.value);
-    }
-
-    if (filterStatusPendentes.value) {
-        let statusCheck = filterStatusPendentes.value.toUpperCase();
-        if (statusCheck === 'CRIADA') {
-            result = result.filter(g => !g.status || String(g.status).toUpperCase() === 'CRIADA');
-        } else {
-            result = result.filter(g => String(g.status).toUpperCase() === statusCheck);
-        }
-    }
-
-    return result;
+const countStatus = ref({
+    devolvidas: 0,
+    validadas: 0,
+    vencidas: 0,
+    pendentes: 0,
+    proximo_vencer: 0,
 });
 
+async function fetchContadores() {
+    try {
+        const response = await axios.get('/contas-medicas/validacao-guias/contadores');
+        countStatus.value = response.data;
+    } catch (error) {
+        console.error('Erro ao buscar contadores:', error);
+    }
+}
 
-onMounted(() => {
+let choicesConvenioInstance = null;
+let choicesStatusInstance = null;
+
+onMounted(async () => {
+    fetchContadores();
     setTimeout(() => {
         nextTick(() => {
             if (selConvenioPendentes.value) {
-                new Choices(selConvenioPendentes.value, { searchEnabled: false, itemSelectText: '' });
+                choicesConvenioInstance = new Choices(selConvenioPendentes.value, { searchEnabled: false, itemSelectText: '' });
                 selConvenioPendentes.value.addEventListener('change', (e) => filterConvenioPendentes.value = e.target.value);
             }
             if (selStatusPendentes.value) {
-                new Choices(selStatusPendentes.value, { searchEnabled: false, itemSelectText: '' });
+                choicesStatusInstance = new Choices(selStatusPendentes.value, { searchEnabled: false, itemSelectText: '' });
                 selStatusPendentes.value.addEventListener('change', (e) => filterStatusPendentes.value = e.target.value);
             }
         });
     }, 500);
 });
+
+function setFiltroStatus(status) {
+    // Toggle off if already selected
+    if (filterStatusPendentes.value === status) {
+        filterStatusPendentes.value = '';
+    } else {
+        filterStatusPendentes.value = status;
+    }
+    if (choicesStatusInstance) {
+        choicesStatusInstance.setChoiceByValue(filterStatusPendentes.value);
+    }
+}
 
 function formatData(dataStr) {
     if (!dataStr) return 'N/A';
@@ -161,7 +287,6 @@ function getStatusBadgeClass(status) {
 
 function formatStatusLabel(status) {
     const s = String(status || 'CRIADA').toUpperCase();
-    if (s === 'PRONTA_FATURAMENTO') return 'LIBERADA';
     if (s === 'ENVIADA_FATURAMENTO') return 'ENVIADA P/ FATURAMENTO';
     return s.replace(/_/g, ' ');
 }
@@ -174,6 +299,21 @@ const columnsPendentes = [
     { id: "paciente_nome", name: "Paciente" },
     { id: "medico_nome", name: "Médico", formatter: (cell) => cell || "-" },
     { id: "data_criacao", name: "Criado em" },
+    { id: "data_execucao", name: "Data Execução", formatter: (cell) => cell || "-" },
+    { 
+        id: "data_limite_faturamento", 
+        name: "Prazo Faturamento", 
+        formatter: (cell, row) => {
+            if (!cell) return "-";
+            if (row.is_vencida) {
+                return html(`<span class="text-danger fw-bold"><i class="ri-alert-line align-bottom me-1"></i>${cell} (Vencida)</span>`);
+            }
+            if (row.dias_vencer <= 5) {
+                return html(`<span class="text-warning fw-bold"><i class="ri-time-line align-bottom me-1"></i>${cell} (${row.dias_vencer} dias)</span>`);
+            }
+            return cell;
+        }
+    },
     {
         id: "status",
         name: "Status",
@@ -186,11 +326,10 @@ const columnsPendentes = [
 ];
 
 
-const abrirGuia = (id) => {
-    const guia = props.guias.find(g => g.id === parseInt(id));
-    if (guia && guia.agendamento_id) {
-        selectedAgendamentoForGuia.value = guia.agendamento_id;
-        selectedGuiaId.value = guia.id;
+const abrirGuia = (id, rowData) => {
+    if (rowData && rowData.agendamento_id) {
+        selectedAgendamentoForGuia.value = rowData.agendamento_id;
+        selectedGuiaId.value = rowData.id || id;
         showGuiaSADTModal.value = true;
     }
 };
@@ -207,7 +346,8 @@ function encaminharSelecionadas() {
         return;
     }
 
-    const invalidas = props.guias.filter(g => ids.includes(String(g.id)) && g.status !== 'VALIDADA');
+    const selectedObjs = tableGridPendentesRef.value.getSelectedRowObjects ? tableGridPendentesRef.value.getSelectedRowObjects() : [];
+    const invalidas = selectedObjs.filter(g => g.status !== 'VALIDADA');
     if (invalidas.length > 0) {
         window.dispatchEvent(new CustomEvent('flash:show', {
             detail: { type: 'warning', message: 'Apenas guias com status VALIDADA podem ser encaminhadas para faturamento.' }
@@ -241,6 +381,9 @@ function executarEncaminharSelecionadas() {
 }
 
 function reloadPage() {
-    router.reload({ only: ['guias'] });
+    if (tableGridPendentesRef.value?.reload) {
+        tableGridPendentesRef.value.reload();
+    }
+    fetchContadores();
 }
 </script>

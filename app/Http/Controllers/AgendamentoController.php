@@ -327,15 +327,15 @@ class AgendamentoController extends Controller
                         ->select(
                             'tuss.id',
                             'convenio_tuss.valor_procedimento as valor',
-                            'tuss.eh_tratamento',
-                            'tuss.quantidade_sessoes'
+                            'convenio_tuss.eh_tratamento',
+                            'convenio_tuss.quantidade_sessoes'
                         )
                         ->where('tuss.id', $procId)
                         ->first();
                     
                     // Fallback to 0 if not found
                     if (!$proc) {
-                        $proc = DB::table('tuss')->select('id', DB::raw('0 as valor'), 'eh_tratamento', 'quantidade_sessoes')->where('id', $procId)->first();
+                        $proc = DB::table('tuss')->select('id', DB::raw('0 as valor'), DB::raw('0 as eh_tratamento'), DB::raw('null as quantidade_sessoes'))->where('id', $procId)->first();
                     }
                 } else {
                     $proc = Procedimento::select('id', 'valor', 'eh_tratamento', 'quantidade_sessoes')->findOrFail($procId);
@@ -602,6 +602,10 @@ class AgendamentoController extends Controller
             ->leftJoin('pacientes as p', 'p.id', '=', 'a.paciente_id')
             ->leftJoin('procedimentos as pr', 'pr.id', '=', 'a.procedimento_id')
             ->leftJoin('tuss as t', 't.id', '=', 'a.tuss_id')
+            ->leftJoin('convenio_tuss as ct', function($join) {
+                $join->on('ct.tuss_id', '=', 'a.tuss_id')
+                     ->on('ct.convenio_id', '=', 'a.convenio_id');
+            })
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
@@ -628,13 +632,13 @@ class AgendamentoController extends Controller
                 DB::raw('COALESCE(a.procedimento_id, a.tuss_id) AS procedimento_id'),
                 'a.sessao_tratamento_id',
                 DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
-                DB::raw('COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes, NULL) AS sessao_total'),
+                DB::raw('COALESCE(pr.quantidade_sessoes, ct.quantidade_sessoes, NULL) AS sessao_total'),
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("CONCAT(
                     COALESCE(pr.nome, t.descricao, ''),
                     IF(st.numero_sessao IS NOT NULL,
-                        IF(COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes) IS NOT NULL,
-                            CONCAT(' (Sessão ', st.numero_sessao, '/', COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes), ')'),
+                        IF(COALESCE(pr.quantidade_sessoes, ct.quantidade_sessoes) IS NOT NULL,
+                            CONCAT(' (Sessão ', st.numero_sessao, '/', COALESCE(pr.quantidade_sessoes, ct.quantidade_sessoes), ')'),
                             CONCAT(' (Sessão ', st.numero_sessao, ')')
                         ),
                         ''
@@ -661,6 +665,10 @@ class AgendamentoController extends Controller
             ->leftJoin('pacientes as p', 'p.id', '=', 'a.paciente_id')
             ->leftJoin('procedimentos as pr', 'pr.id', '=', 'a.procedimento_id')
             ->leftJoin('tuss as t', 't.id', '=', 'a.tuss_id')
+            ->leftJoin('convenio_tuss as ct', function($join) {
+                $join->on('ct.tuss_id', '=', 'a.tuss_id')
+                     ->on('ct.convenio_id', '=', 'a.convenio_id');
+            })
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
             ->leftJoin('sessoes_tratamento as st', 'st.id', '=', 'a.sessao_tratamento_id')
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
@@ -686,7 +694,7 @@ class AgendamentoController extends Controller
                 DB::raw("COALESCE(p.nome,'') AS paciente_nome"),
                 DB::raw("COALESCE(pr.nome, t.descricao, '') AS procedimento_nome"),
                 DB::raw('COALESCE(st.numero_sessao, NULL) AS sessao_numero'),
-                DB::raw('COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes, NULL) AS sessao_total'),
+                DB::raw('COALESCE(pr.quantidade_sessoes, ct.quantidade_sessoes, NULL) AS sessao_total'),
                 DB::raw('COALESCE(pag.status, "") AS status_pagamento'),
                 'au.id AS autorizacao_id',
                 'au.numero_autorizacao',
@@ -1051,6 +1059,10 @@ class AgendamentoController extends Controller
             ->leftJoin('sessoes_tratamento as st', 'st.id', '=', 'a.sessao_tratamento_id')
             ->leftJoin('procedimentos as pr', 'pr.id', '=', 'a.procedimento_id')
             ->leftJoin('tuss as t', 't.id', '=', 'a.tuss_id')
+            ->leftJoin('convenio_tuss as ct', function($join) {
+                $join->on('ct.tuss_id', '=', 'a.tuss_id')
+                     ->on('ct.convenio_id', '=', 'a.convenio_id');
+            })
             ->leftJoin('status_agendamento as s', 's.id', '=', 'a.status_id')
             ->leftJoin('agenda_medica as am', 'am.id', '=', 'a.agenda_medica_id')
             ->leftJoin('pessoas as prof', 'prof.id', '=', 'am.pessoa_id')
@@ -1072,7 +1084,7 @@ class AgendamentoController extends Controller
                 DB::raw('COALESCE(at.convenio_id, a.convenio_id) AS convenio_id'),
                 DB::raw('COALESCE(conv.descricao, conv.tipo, "Particular") AS convenio_nome'),
                 'am.pessoa_id',
-                DB::raw('CONCAT(COALESCE(pr.nome, t.descricao, ""), CASE WHEN st.numero_sessao IS NOT NULL AND COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes) IS NOT NULL AND COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes) > 0 THEN CONCAT(" (Sessão ", st.numero_sessao, "/", COALESCE(pr.quantidade_sessoes, t.quantidade_sessoes), ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END) AS procedimento_nome'),
+                DB::raw('CONCAT(COALESCE(pr.nome, t.descricao, ""), CASE WHEN st.numero_sessao IS NOT NULL AND COALESCE(pr.quantidade_sessoes, ct.quantidade_sessoes) IS NOT NULL AND COALESCE(pr.quantidade_sessoes, ct.quantidade_sessoes) > 0 THEN CONCAT(" (Sessão ", st.numero_sessao, "/", COALESCE(pr.quantidade_sessoes, ct.quantidade_sessoes), ")") WHEN st.numero_sessao IS NOT NULL THEN CONCAT(" (Sessão ", st.numero_sessao, ")") ELSE "" END) AS procedimento_nome'),
                 DB::raw('COALESCE(prof.nome, "") AS profissional_nome'),
                 DB::raw('CASE WHEN at.status = "ATENDIDO" THEN "ATENDIDO" ELSE COALESCE(s.descricao, "") END AS status'),
                 'pag.nu_pagamento',

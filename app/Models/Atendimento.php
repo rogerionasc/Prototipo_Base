@@ -100,4 +100,10 @@ class Atendimento extends Model
     {
         return $this->hasOne(Pep::class, 'atendimento_id');
     }
+
+    public function convenioTussPivot()
+    {
+        return $this->hasOne(ConvenioTuss::class, 'tuss_id', 'tuss_id')
+            ->where('convenio_id', $this->convenio_id);
+    }
 }

@@ -46,7 +46,7 @@ class Convenio extends Model
     public function tuss()
     {
         return $this->belongsToMany(Tuss::class, 'convenio_tuss')
-            ->withPivot('requer_autorizacao')
+            ->withPivot('requer_autorizacao', 'eh_tratamento', 'quantidade_sessoes')
             ->withTimestamps();
     }
 
