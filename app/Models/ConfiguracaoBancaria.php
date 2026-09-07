@@ -32,6 +32,7 @@ class ConfiguracaoBancaria extends Model
         'ativo' => 'boolean',
         'client_id' => 'encrypted',
         'client_secret' => 'encrypted',
+        'app_key' => 'encrypted',
         'certificado' => 'encrypted',
     ];
 

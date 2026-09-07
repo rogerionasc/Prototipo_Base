@@ -689,7 +689,18 @@ const testConnection = async () => {
     <!-- Modal de Integração Bancária -->
     <Modal v-model="showBankModal" :title="`Integrações Bancárias: ${clinicaSelecionadaBank?.name}`" size="xl"
       customWidth="1400px" :show-footer="false" :z-index="1060" :backdrop-z-index="1055">
-      <div class="row">
+      <div v-if="!tiposIntegracaoBancaria || tiposIntegracaoBancaria.length === 0" class="card-body text-center p-5">
+        <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title bg-light text-primary rounded-circle fs-2">
+                <i class="ri-bank-card-line"></i>
+            </div>
+        </div>
+        <h5 class="mt-2">Tipo de integração não encontrado</h5>
+        <p class="text-muted mb-0">Atualmente não há tipos de integrações bancárias cadastrados no sistema.</p>
+        <p class="text-muted mt-2">Por favor, acesse as configurações do sistema para criar os tipos disponíveis.</p>
+      </div>
+
+      <div v-else class="row">
         <!-- Lista de Bancos (Sidebar) -->
         <div class="col-md-3 border-end">
           <div class="nav flex-column nav-pills" role="tablist" aria-orientation="vertical">
@@ -761,19 +772,22 @@ const testConnection = async () => {
                     <input type="text" class="form-control" v-model="bankForm.numero_variacao_carteira" placeholder="Ex: 019">
                   </div>
 
-                  <div class="col-md-4">
-                    <label class="form-label">Client ID <span class="text-danger"
-                        v-if="tipo.nome === 'Banco do Brasil'">*</span></label>
+                  <div class="col-md-4" v-if="tipo.nome !== 'Asaas'">
+                    <label class="form-label">Client ID <span class="text-danger" v-if="tipo.nome === 'Banco do Brasil'">*</span></label>
                     <input type="text" class="form-control" v-model="bankForm.client_id"
                       :required="tipo.nome === 'Banco do Brasil'">
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-4" v-if="tipo.nome === 'Asaas'">
+                    <label class="form-label">API Key (Access Token) <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control" v-model="bankForm.app_key" required>
+                  </div>
+                  <div class="col-md-4" v-if="tipo.nome !== 'Asaas'">
                     <label class="form-label">Client Secret <span class="text-danger"
                         v-if="tipo.nome === 'Banco do Brasil'">*</span></label>
                     <input type="password" class="form-control" v-model="bankForm.client_secret"
                       :required="tipo.nome === 'Banco do Brasil'">
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-4" v-if="tipo.nome !== 'Asaas'">
                     <label class="form-label">App Key (Dev. BB) <span class="text-danger"
                         v-if="tipo.nome === 'Banco do Brasil'">*</span></label>
                     <input type="password" class="form-control" v-model="bankForm.app_key"

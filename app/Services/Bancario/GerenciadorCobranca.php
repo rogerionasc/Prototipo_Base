@@ -54,7 +54,8 @@ class GerenciadorCobranca
             $response = Http::withHeaders($headersCustomer)->post($endpointCustomer, $payloadCustomer);
 
             if (!$response->successful()) {
-                throw new \Exception('Falha ao registrar cliente: ' . ($response->json('errors.0.description') ?? 'Erro desconhecido.'));
+                $errorMsg = $response->json('errors.0.description') ?? $response->body();
+                throw new \Exception('Falha ao registrar cliente: ' . $errorMsg);
             }
 
             $dadosBoleto['customer_id'] = $response->json('id');

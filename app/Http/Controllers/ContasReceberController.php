@@ -157,7 +157,7 @@ class ContasReceberController extends Controller
         $tokenData = $gerenciador->gerarToken([
             'client_id' => $config->client_id,
             'client_secret' => $config->client_secret,
-            'access_token' => $config->app_key ?: $config->client_id,
+            'access_token' => (strtolower($config->provedor) === 'asaas') ? $config->app_key : ($config->app_key ?: $config->client_id),
         ]);
 
         if (!$tokenData['success']) {
@@ -170,7 +170,7 @@ class ContasReceberController extends Controller
             $boleto = $gerenciador->registrarBoleto($dadosBoleto, $tokenData['data']['access_token'] ?? '', [
                 'app_key' => $config->app_key,
                 'client_id' => $config->client_id,
-                'access_token' => $config->app_key ?: $config->client_id
+                'access_token' => (strtolower($config->provedor) === 'asaas') ? $config->app_key : ($config->app_key ?: $config->client_id)
             ]);
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());

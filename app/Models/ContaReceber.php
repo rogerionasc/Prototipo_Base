@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class ContaReceber extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\BelongsToAccount;
 
     protected $table = 'contas_receber';
 
     protected $fillable = [
+        'account_id',
         'faturamento_id',
         'paciente_id',
         'convenio_id',

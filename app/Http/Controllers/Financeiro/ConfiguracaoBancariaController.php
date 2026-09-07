@@ -102,6 +102,11 @@ class ConfiguracaoBancariaController extends Controller
             }
         }
 
+        if (strtolower($validated['provedor']) === 'asaas') {
+            $validated['client_secret'] = null;
+            $validated['client_id'] = null;
+        }
+
         $config = ConfiguracaoBancaria::updateOrCreate(
             ['account_id' => $accountId, 'provedor' => $validated['provedor']],
             $validated
