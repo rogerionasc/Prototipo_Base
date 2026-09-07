@@ -17,6 +17,7 @@ class Convenio extends Model
 
     protected $fillable = [
         'descricao',
+        'cnpj',
         'logo_path',
         'tuss_tabela',
         'tipo',

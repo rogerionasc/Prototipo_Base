@@ -13,7 +13,7 @@ return new class extends Migration
     {
         // 1. peps
         Schema::create('peps', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('atendimento_id')->constrained('atendimentos');
             $table->foreignId('paciente_id')->constrained('pacientes');
             $table->foreignId('profissional_id')->constrained('pessoas');
@@ -28,7 +28,7 @@ return new class extends Migration
 
         // 2. pep_anamneses
         Schema::create('pep_anamneses', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->text('queixa_principal')->nullable();
             $table->text('historia_doenca_atual')->nullable();
@@ -46,7 +46,7 @@ return new class extends Migration
 
         // 3. pep_sinais_vitais
         Schema::create('pep_sinais_vitais', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->string('pressao_sistolica', 20)->nullable();
             $table->string('pressao_diastolica', 20)->nullable();
@@ -66,7 +66,7 @@ return new class extends Migration
 
         // 4. pep_exames_fisicos
         Schema::create('pep_exames_fisicos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->text('descricao')->nullable();
             $table->text('observacao')->nullable();
@@ -76,7 +76,7 @@ return new class extends Migration
 
         // 5. pep_diagnosticos
         Schema::create('pep_diagnosticos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->unsignedBigInteger('cid_id')->nullable();
             $table->boolean('principal')->default(false);
@@ -88,7 +88,7 @@ return new class extends Migration
 
         // 5.5 pep_tratamentos
         Schema::create('pep_tratamentos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->foreignId('paciente_id')->constrained('pacientes')->onDelete('cascade');
             $table->foreignId('profissional_id')->nullable()->constrained('pessoas')->onDelete('set null');
@@ -104,7 +104,7 @@ return new class extends Migration
 
         // 6. pep_evolucoes
         Schema::create('pep_evolucoes', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->foreignId('tratamento_id')->nullable()->constrained('pep_tratamentos')->nullOnDelete();
@@ -115,7 +115,7 @@ return new class extends Migration
 
         // 7. pep_procedimentos
         Schema::create('pep_procedimentos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos');
             $table->integer('quantidade')->default(1);
@@ -127,7 +127,7 @@ return new class extends Migration
 
         // 8. pep_prescricoes
         Schema::create('pep_prescricoes', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->foreignId('profissional_id')->nullable()->constrained('pessoas');
             $table->text('observacao')->nullable();
@@ -137,7 +137,7 @@ return new class extends Migration
 
         // 9. pep_prescricao_itens
         Schema::create('pep_prescricao_itens', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('prescricao_id')->constrained('pep_prescricoes')->onDelete('cascade');
             $table->unsignedBigInteger('medicamento_id')->nullable();
             $table->string('dosagem', 100)->nullable();
@@ -151,7 +151,7 @@ return new class extends Migration
 
         // 10. pep_solicitacoes_exames
         Schema::create('pep_solicitacoes_exames', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->foreignId('procedimento_id')->nullable()->constrained('procedimentos');
             $table->text('justificativa')->nullable();
@@ -163,7 +163,7 @@ return new class extends Migration
 
         // 11. pep_receitas
         Schema::create('pep_receitas', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->foreignId('prescricao_id')->nullable()->constrained('pep_prescricoes')->onDelete('set null');
             $table->text('texto')->nullable();
@@ -174,7 +174,7 @@ return new class extends Migration
 
         // 12. pep_atestados
         Schema::create('pep_atestados', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->integer('dias')->nullable();
             $table->unsignedBigInteger('cid_id')->nullable();
@@ -186,7 +186,7 @@ return new class extends Migration
 
         // 13. pep_encaminhamentos
         Schema::create('pep_encaminhamentos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->string('especialidade_destino', 255)->nullable();
             $table->string('profissional_destino', 255)->nullable();
@@ -198,7 +198,7 @@ return new class extends Migration
 
         // 14. pep_documentos
         Schema::create('pep_documentos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->string('tipo', 100)->nullable();
             $table->string('titulo', 255)->nullable();
@@ -210,7 +210,7 @@ return new class extends Migration
 
         // 15. pep_arquivos
         Schema::create('pep_arquivos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->string('nome', 255)->nullable();
             $table->string('arquivo', 255)->nullable();
@@ -223,7 +223,7 @@ return new class extends Migration
 
         // 16. pep_assinaturas
         Schema::create('pep_assinaturas', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('pep_id')->constrained('peps')->onDelete('cascade');
             $table->unsignedBigInteger('documento_id')->nullable();
             $table->foreignId('profissional_id')->nullable()->constrained('pessoas');

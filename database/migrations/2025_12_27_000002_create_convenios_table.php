@@ -9,11 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('convenios', function (Blueprint $table) {
-            $table->integer('dias_para_faturar')->nullable()->default(30);
-
+            $table->id()->startingValue(1000);
             $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
-
-            $table->id();
+            $table->integer('dias_para_faturar')->nullable()->default(30);
             $table->string('descricao', 120);
             $table->string('logo_path', 255)->nullable();
             $table->string('tuss_tabela', 20)->nullable();

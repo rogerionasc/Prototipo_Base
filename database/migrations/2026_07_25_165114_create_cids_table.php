@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('cids', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('codigo', 10)->unique();
             $table->text('descricao');
             $table->timestamps();

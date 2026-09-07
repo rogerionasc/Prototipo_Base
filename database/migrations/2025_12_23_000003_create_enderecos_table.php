@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('enderecos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('cep', 9)->nullable();
             $table->string('endereco', 120);
             $table->string('numero', 10)->nullable();

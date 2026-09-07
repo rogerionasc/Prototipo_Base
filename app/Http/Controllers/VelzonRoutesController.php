@@ -13,6 +13,8 @@ use App\Models\Especialidade;
 use App\Models\CategoriaProcedimento;
 use App\Models\Procedimento;
 use App\Models\Comorbidade;
+use App\Models\TipoIntegracaoBancaria;
+use Illuminate\Support\Facades\Storage;
 
 class VelzonRoutesController extends Controller
 {
@@ -51,6 +53,7 @@ class VelzonRoutesController extends Controller
         $parentescos = Parentesco::select('id', 'descricao')->orderBy('descricao')->get();
         $categoriasProcedimento = CategoriaProcedimento::select('id', 'nome')->orderBy('nome')->get();
         $comorbidades = Comorbidade::select('id', 'nome')->orderBy('nome')->get();
+        $tiposIntegracaoBancaria = TipoIntegracaoBancaria::select('id', 'nome', 'logo')->orderBy('nome')->get();
 
         return Inertia::render('Parametrizacao/Sistema/Index', [
             'estadosCivis' => $estados,
@@ -59,6 +62,7 @@ class VelzonRoutesController extends Controller
             'parentescos' => $parentescos,
             'categoriasProcedimento' => $categoriasProcedimento,
             'comorbidades' => $comorbidades,
+            'tiposIntegracaoBancaria' => $tiposIntegracaoBancaria,
         ]);
     }
 
@@ -498,5 +502,54 @@ class VelzonRoutesController extends Controller
         $tabela = \App\Models\TabelaReferencia::findOrFail($id);
         $tabela->delete();
         return redirect()->back()->with('success', 'Tabela de Referência removida com sucesso!');
+    }
+
+    public function parametros_store_tipo_integracao_bancaria(Request $request)
+    {
+        $request->validate([
+            'nome' => 'required|string|max:100|unique:tipo_integracao_bancarias,nome',
+            'logo' => 'nullable|image|max:2048',
+        ]);
+        
+        $data = ['nome' => $request->nome];
+        
+        if ($request->hasFile('logo')) {
+            $data['logo'] = $request->file('logo')->store('logos_bancos', 'public');
+        }
+
+        TipoIntegracaoBancaria::create($data);
+        return redirect()->back()->with('success', 'Tipo de Integração Bancária criado com sucesso!');
+    }
+
+    public function parametros_update_tipo_integracao_bancaria(Request $request, $id)
+    {
+        $tipo = TipoIntegracaoBancaria::findOrFail($id);
+        $request->validate([
+            'nome' => 'required|string|max:100|unique:tipo_integracao_bancarias,nome,' . $id,
+            'logo' => 'nullable|image|max:2048',
+        ]);
+
+        $data = ['nome' => $request->nome];
+
+        if ($request->hasFile('logo')) {
+            // Remove old logo if exists
+            if ($tipo->logo) {
+                Storage::disk('public')->delete($tipo->logo);
+            }
+            $data['logo'] = $request->file('logo')->store('logos_bancos', 'public');
+        }
+
+        $tipo->update($data);
+        return redirect()->back()->with('success', 'Tipo de Integração Bancária atualizado com sucesso!');
+    }
+
+    public function parametros_destroy_tipo_integracao_bancaria($id)
+    {
+        $tipo = TipoIntegracaoBancaria::findOrFail($id);
+        if ($tipo->logo) {
+            Storage::disk('public')->delete($tipo->logo);
+        }
+        $tipo->delete();
+        return redirect()->back()->with('success', 'Tipo de Integração Bancária removido com sucesso!');
     }
 }

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('totem_opcoes', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('totem_id')->constrained('totens')->onDelete('cascade');
             $table->string('nome');
             $table->string('codigo')->nullable();

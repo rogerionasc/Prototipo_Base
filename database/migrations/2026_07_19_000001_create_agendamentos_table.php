@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('agendamentos', function (Blueprint $table) {
-            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
 
-            $table->id();
+            $table->id()->startingValue(1000);
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->date('data')->nullable();
             $table->time('hora')->nullable();
             $table->foreignId('agenda_medica_id')->nullable()->constrained('agenda_medica');

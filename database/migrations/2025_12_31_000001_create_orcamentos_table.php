@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::create('orcamentos', function (Blueprint $table) {
 
-            $table->id();
+            $table->id()->startingValue(1000);
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->string('numero', 30)->unique();
             $table->datetime('data_emissao')->nullable();
             $table->datetime('validade')->nullable();
@@ -26,11 +27,9 @@ return new class extends Migration
 
         if (!Schema::hasTable('faturamentos')) {
             Schema::create('faturamentos', function (Blueprint $table) {
-            $table->string('numero_lote', 20)->nullable();
-
-            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
-
-                $table->id();
+                $table->id()->startingValue(1000);
+                $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+                $table->string('numero_lote', 20)->nullable();
                 $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
                 $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();
                 $table->decimal('valor_total', 10, 2)->default(0);
@@ -50,7 +49,8 @@ return new class extends Migration
 
         if (!Schema::hasTable('contas_receber')) {
             Schema::create('contas_receber', function (Blueprint $table) {
-                $table->id();
+                $table->id()->startingValue(1000);
+                $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
                 $table->foreignId('faturamento_id')->constrained('faturamentos')->cascadeOnDelete();
                 $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
                 $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();

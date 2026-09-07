@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('accounts', function (Blueprint $table) {
+            $table->id()->startingValue(1000);
             $table->string('endereco')->nullable();
             $table->string('telefone')->nullable();
             $table->string('email')->nullable();
             $table->boolean('ativo')->default(true);
-            $table->id();
             $table->string('name', 120);
             $table->string('cnpj', 18)->nullable();
             $table->string('cnes', 7)->nullable();

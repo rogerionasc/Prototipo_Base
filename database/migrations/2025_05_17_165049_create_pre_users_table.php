@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('pre_cadastro', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('nome', 120);
             $table->string('cpf', 14)->unique();
             $table->string('telefone', 15);

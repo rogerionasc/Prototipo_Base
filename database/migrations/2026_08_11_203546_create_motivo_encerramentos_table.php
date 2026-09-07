@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('motivo_encerramentos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('codigo');
             $table->string('descricao');
             $table->boolean('ativo')->default(true);

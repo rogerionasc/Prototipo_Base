@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tipo_sanguineo', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('descricao', 10);
             $table->timestamps();
             $table->softDeletes();

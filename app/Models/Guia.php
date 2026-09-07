@@ -13,6 +13,32 @@ class Guia extends Model
     
     protected $guarded = ['id'];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $accountId = $model->account_id ?? (auth()->check() ? auth()->user()->account_id : 1);
+            if (empty($model->numero_guia_prestador)) {
+                $datePrefix = date('Ymd');
+                
+                $lastModel = static::withoutGlobalScopes()
+                    ->where('account_id', $accountId)
+                    ->where('numero_guia_prestador', 'like', "{$datePrefix}{$accountId}%")
+                    ->orderBy('id', 'desc')
+                    ->first();
+                
+                $sequence = 1;
+                if ($lastModel) {
+                    $lastNumberStr = substr($lastModel->numero_guia_prestador, -4);
+                    $sequence = intval($lastNumberStr) + 1;
+                }
+                
+                $model->numero_guia_prestador = sprintf("%s%s%04d", $datePrefix, $accountId, $sequence);
+            }
+        });
+    }
+
     public function faturamento()
     {
         return $this->belongsTo(Faturamento::class, 'faturamento_id');

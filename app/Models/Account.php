@@ -44,6 +44,11 @@ class Account extends Model
         return $this->hasMany(Guiche::class);
     }
 
+    public function configuracoesBancarias()
+    {
+        return $this->hasMany(ConfiguracaoBancaria::class, 'account_id');
+    }
+
     public function setCnpjAttribute($value)
     {
         $this->attributes['cnpj'] = preg_replace('/[^0-9]/', '', $value);

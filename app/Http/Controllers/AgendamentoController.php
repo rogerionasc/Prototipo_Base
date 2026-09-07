@@ -424,7 +424,7 @@ class AgendamentoController extends Controller
                             'agendamento_id' => $agendamento->id,
                             'faturamento_id' => null,
                             'ans_registro' => $registroAns,
-                            'numero_guia_prestador' => date('Y') . date('m') . date('d') . (auth()->user() ? auth()->user()->account_id : '0') . date('s') . str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT) . (auth()->user() ? auth()->user()->id : '0'),
+                            'numero_guia_prestador' => null,
                             'numero_guia_principal' => null,
                             'data_autorizacao' => $requerAutorizacao ? null : Carbon::now(),
                             'numero_guia_operadora' => null,
@@ -472,7 +472,7 @@ class AgendamentoController extends Controller
                             if ($procedimentosNaGuiaAtual >= 5) {
                                 $novaGuia = $masterGuia->replicate();
                                 $novaGuia->agendamento_id = $agendamento->id;
-                                $novaGuia->numero_guia_prestador = date('Y') . date('m') . date('d') . (auth()->user() ? auth()->user()->account_id : '0') . date('s') . str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT) . (auth()->user() ? auth()->user()->id : '0');
+                                $novaGuia->numero_guia_prestador = null;
                                 $novaGuia->numero_guia_principal = $masterGuia->numero_guia_prestador;
                                 $novaGuia->save();
                                 $guiaAtual = $novaGuia;
@@ -544,7 +544,7 @@ class AgendamentoController extends Controller
                 }
 
                 if (!$isConvenio) {
-                    $fatId = (int)DB::table('faturamentos')->insertGetId([
+                    $fat = \App\Models\Faturamento::create([
                         'paciente_id'      => $pacId,
                         'valor_final'      => (float)$valorItem,
                         'convenio_id'      => $convenioId,
@@ -555,19 +555,16 @@ class AgendamentoController extends Controller
                         'status'           => 'AGUARDANDO_PAGAMENTO',
                         'data_faturamento' => Carbon::now()->format('Y-m-d H:i:s'),
                         'vencimento'       => Carbon::today()->toDateString(),
-                        'created_at'       => Carbon::now(),
-                        'updated_at'       => Carbon::now(),
                     ]);
+                    $fatId = $fat->id;
 
-                    DB::table('contas_receber')->insert([
+                    \App\Models\ContaReceber::create([
                         'faturamento_id' => $fatId,
                         'paciente_id' => $pacId,
                         'convenio_id' => $convenioId,
                         'valor' => (float)$valorItem,
                         'vencimento' => Carbon::today()->toDateString(),
-                        'status' => 'ABERTO',
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now(),
+                        'status' => 'AGUARDANDO_COBRANCA',
                     ]);
 
                     Pagamento::create([

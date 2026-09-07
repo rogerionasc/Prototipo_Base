@@ -219,6 +219,8 @@ class FaturamentoController extends Controller
 
         $total = $guias->where('status', '!=', 'DEVOLVIDA')->sum('valor_total_geral');
 
+        $pacienteId = \App\Models\Paciente::first()->id ?? 1000;
+
         $fat = \App\Models\Faturamento::create([
             'convenio_id' => $data['convenio_id'],
             'valor_total' => $total,
@@ -226,13 +228,8 @@ class FaturamentoController extends Controller
             'valor_aprovado' => $total,
             'status' => 'ABERTA',
             'data_faturamento' => now(),
-            'paciente_id' => 1 // Temporary fallback until patient logic is refined
+            'paciente_id' => $pacienteId // Resolvido fallback
         ]);
-
-        $accId = str_pad(session('current_account_id'), 2, '0', STR_PAD_LEFT);
-        $fatId = str_pad($fat->id, 4, '0', STR_PAD_LEFT);
-        $fat->numero_lote = date('ymd') . $accId . $fatId;
-        $fat->save();
 
         if (!empty($data['guias'])) {
             \App\Models\Guia::whereIn('id', $data['guias'])->update([
@@ -359,6 +356,16 @@ class FaturamentoController extends Controller
         if ($faturamento->status !== 'FECHADA') {
             return back()->with('error', 'Apenas lotes fechados podem ser processados!');
         }
+
+        // Gera a Conta a Receber com base no valor aprovado
+        \App\Models\ContaReceber::create([
+            'faturamento_id' => $faturamento->id,
+            'convenio_id' => $faturamento->convenio_id,
+            'paciente_id' => null,
+            'valor' => $faturamento->valor_aprovado ?? 0,
+            'vencimento' => now()->addDays(30)->format('Y-m-d'), // Padrão 30 dias para vencimento
+            'status' => 'AGUARDANDO_COBRANCA'
+        ]);
 
         $faturamento->update(['status' => 'PROCESSADA']);
 

@@ -12,7 +12,7 @@
               <div class="modal-header bg-light p-3">
                 <h5 class="modal-title" id="myModalLabel">{{ title }}</h5>
                 <!-- Botão para fechar o modal -->
-                <button type="button" class="btn-close" :disabled="props.processing || props.disableClose" @click="$emit('update:modelValue', false)"></button>
+                <button type="button" class="btn-close" :disabled="processing || disableClose" @click="$emit('update:modelValue', false)"></button>
               </div>
               <div class="modal-body">
                 <!-- Espaço para inserir conteúdo personalizado -->
@@ -23,9 +23,9 @@
                   <slot name="extraFooterLeft"></slot>
                 </div>
                 <div class="d-flex">
-                  <button type="button" class="btn btn-light" :disabled="props.processing || props.disableClose" @click="$emit('update:modelValue', false)">{{ cancelText }}</button>
-                  <button v-if="showSave" type="button" class="btn btn-success ms-2" :disabled="props.processing || props.disableClose" @click="$emit('save')">
-                    <span v-if="props.processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                  <button type="button" class="btn btn-light" :disabled="processing || disableClose" @click="$emit('update:modelValue', false)">{{ cancelText }}</button>
+                  <button v-if="showSave" type="button" class="btn btn-success ms-2" :disabled="processing || disableClose" @click="$emit('save')">
+                    <span v-if="processing" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                     {{ nameButton }}
                   </button>
                 </div>

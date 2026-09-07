@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tuss_mapeamentos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->unsignedBigInteger('account_id')->index();
             $table->unsignedBigInteger('origem_procedimento_id')->comment('O procedimento que será mapeado,ex: TUSS 10101012');
             $table->unsignedBigInteger('referencia_procedimento_id')->comment('O procedimento de referência, ex: AMB92 00010014');

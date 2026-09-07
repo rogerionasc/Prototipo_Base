@@ -26,7 +26,7 @@
             <div class="invalid-feedback">Informe a descrição.</div>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label for="tipo" class="form-label">Tipo</label>
             <select data-choices ref="tipoSelect" v-model="form.tipo" class="form-select" id="tipo">
               <option disabled value="">Selecione...</option>
@@ -35,7 +35,7 @@
             </select>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label for="empresa" class="form-label">Empresa</label>
             <select v-model="form.empresa_id" data-choices class="form-select" id="empresa" ref="empresaSelect">
               <option disabled value="">Selecione...</option>
@@ -44,25 +44,31 @@
               </option>
             </select>
           </div>
+          
+          <div class="col-md-4">
+            <label for="cnpj" class="form-label">CNPJ</label>
+            <input v-model="form.cnpj" v-mask="['##.###.###/####-##']" type="text" class="form-control" id="cnpj"
+              placeholder="00.000.000/0000-00" />
+          </div>
 
-          <div class="col-md-2">
+          <div class="col-md-3">
             <label for="ans" class="form-label">ANS</label>
             <input v-model.number="form.ans" type="number" class="form-control" id="ans" placeholder="Código ANS" />
           </div>
 
-          <div class="col-md-2">
+          <div class="col-md-3">
             <label for="diasReceb" class="form-label">Dias Receb.</label>
             <input v-model.number="form.dias_recebimento" type="number" class="form-control" id="diasReceb"
               placeholder="Ex.: 30" />
           </div>
 
-          <div class="col-md-2">
+          <div class="col-md-3">
             <label for="diasRet" class="form-label">Dias Retorno</label>
             <input v-model.number="form.dias_retorno" type="number" class="form-control" id="diasRet"
               placeholder="Ex.: 7" />
           </div>
 
-          <div class="col-md-2">
+          <div class="col-md-3">
             <label for="diasFaturar" class="form-label">Dias p/ Faturar</label>
             <input v-model.number="form.dias_para_faturar" type="number" class="form-control" id="diasFaturar"
               placeholder="Ex.: 30" />
@@ -533,7 +539,7 @@ const form = useForm({
   config_spsadt: { visivel: [], obrigatorio: [], bloqueado: [] },
   id: null,
   descricao: "",
-  logo: null,
+  cnpj: "",
   tipo: "CONVENIO",
   tuss_tabela: "",
   tuss_ids: [],

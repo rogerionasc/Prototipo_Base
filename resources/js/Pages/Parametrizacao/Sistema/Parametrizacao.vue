@@ -348,6 +348,76 @@
                         </BTab>
 
 
+                        <!-- TIPO INTEGRACAO BANCARIA -->
+                        <BTab title="Integrações Bancárias">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Tipos de Integração Bancária</h6>
+                            </div>
+                            <div class="border rounded p-3 bg-light-subtle mb-4">
+                                <form @submit.prevent="saveIntegracaoBancaria">
+                                    <BRow class="g-3 align-items-end">
+                                        <BCol md="4">
+                                            <label class="form-label">Nome do Banco</label>
+                                            <input v-model="formIntegracaoBancaria.nome" type="text" class="form-control"
+                                                :class="{ 'is-invalid': formIntegracaoBancaria.errors.nome }"
+                                                placeholder="Ex.: Banco do Brasil" />
+                                            <div class="invalid-feedback">{{ formIntegracaoBancaria.errors.nome }}</div>
+                                        </BCol>
+                                        <BCol md="5">
+                                            <label class="form-label">Logo (Imagem)</label>
+                                            <input type="file" @input="formIntegracaoBancaria.logo = $event.target.files[0]" class="form-control"
+                                                :class="{ 'is-invalid': formIntegracaoBancaria.errors.logo }" accept="image/*" />
+                                            <div class="invalid-feedback">{{ formIntegracaoBancaria.errors.logo }}</div>
+                                        </BCol>
+                                        <BCol md="3">
+                                            <button type="submit" class="btn btn-primary w-100"
+                                                :disabled="formIntegracaoBancaria.processing"><i
+                                                    class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                        </BCol>
+                                    </BRow>
+                                </form>
+                            </div>
+                            <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                                :items="integracoesBancariasLocal" 
+                                :columns="[{key: 'id', label: 'ID', width: '80px'}, {key: 'logo', label: 'Logo', width: '100px'}, {key: 'nome', label: 'Banco'}, {key: 'acoes', label: 'Ações', width: '120px'}]"
+                                emptyTitle=""
+                                emptyMessage="Nenhum registro encontrado.">
+                                <template #body="{ items }">
+                                    <tr v-for="i in items" :key="i.id">
+                                        <template v-if="editingIntegracaoBancariaId !== i.id">
+                                            <td style="width:80px">#{{ i.id }}</td>
+                                            <td style="width:100px">
+                                                <img v-if="i.logo" :src="'/storage/' + i.logo" alt="Logo" class="avatar-sm rounded object-fit-contain bg-white" />
+                                                <span v-else class="text-muted small">-</span>
+                                            </td>
+                                            <td>{{ i.nome }}</td>
+                                            <td class="text-end" style="width:150px">
+                                                <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                    @click="startEditIntegracaoBancaria(i)" title="Editar"><i
+                                                        class="ri-pencil-line"></i></button>
+                                                <button type="button" class="btn btn-sm btn-soft-danger"
+                                                    @click="destroyIntegracaoBancaria(i.id)" title="Excluir"><i
+                                                        class="ri-delete-bin-line"></i></button>
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td colspan="4">
+                                                <div class="d-flex gap-2">
+                                                    <input v-model="editIntegracaoBancaria.nome" type="text" placeholder="Nome do Banco"
+                                                        class="form-control w-25" />
+                                                    <input type="file" @input="editIntegracaoBancaria.logo = $event.target.files[0]"
+                                                        class="form-control w-50" accept="image/*" />
+                                                    <button type="button" class="btn btn-success"
+                                                        @click="updateIntegracaoBancaria">Salvar</button>
+                                                    <button type="button" class="btn btn-light"
+                                                        @click="cancelEditIntegracaoBancaria">Cancelar</button>
+                                                </div>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </SimpleTable>
+                        </BTab>
                     </BTabs>
 
 
@@ -355,7 +425,7 @@
                 </BCardBody>
             </BCard>
 
-            <ModalDelete v-model="deleteModal" :title="deleteTitle" :message="deleteSubTitleComputed" @confirm="confirmDelete" />
+            <ModalDelete v-model="deleteModal" :title="deleteTitle" :message="deleteSubTitleComputed" @save="confirmDelete" />
         </BContainer>
 </template>
 
@@ -378,6 +448,7 @@ const props = defineProps({
     parentescos: { type: Array, default: () => [] },
     categoriasProcedimento: { type: Array, default: () => [] },
     comorbidades: { type: Array, default: () => [] },
+    tiposIntegracaoBancaria: { type: Array, default: () => [] },
 });
 
 const estadosCivisLocal = ref([...(props.estadosCivis || [])]);
@@ -393,6 +464,7 @@ watch(() => props.canaisAviso, (v) => { canaisAvisoLocal.value = [...(v || [])];
 watch(() => props.parentescos, (v) => { parentescosLocal.value = [...(v || [])]; });
 watch(() => props.categoriasProcedimento, (v) => { categoriasLocal.value = [...(v || [])]; });
 watch(() => props.comorbidades, (v) => { comorbidadesLocal.value = [...(v || [])]; });
+watch(() => props.tiposIntegracaoBancaria, (v) => { integracoesBancariasLocal.value = [...(v || [])]; });
 
 const formEstadoCivil = useForm({ descricao: "" });
 const editEstadoCivil = useForm({ descricao: "" });
@@ -417,6 +489,11 @@ const editingCategoriaId = ref(null);
 const formComorbidade = useForm({ nome: "" });
 const editComorbidade = useForm({ nome: "" });
 const editingComorbidadeId = ref(null);
+
+const formIntegracaoBancaria = useForm({ nome: "", logo: "" });
+const editIntegracaoBancaria = useForm({ nome: "", logo: "" });
+const editingIntegracaoBancariaId = ref(null);
+const integracoesBancariasLocal = ref([...(props.tiposIntegracaoBancaria || [])]);
 
 const deleteModal = ref(false);
 const deleteContext = ref({ type: '', id: null, nome: '' });
@@ -626,6 +703,43 @@ const destroyComorbidade = (id) => {
     deleteModal.value = true;
 };
 
+const saveIntegracaoBancaria = () => {
+    formIntegracaoBancaria.post("/parametros/tipo-integracao-bancaria", {
+        onSuccess: () => {
+            formIntegracaoBancaria.reset();
+            router.reload({ only: ['tiposIntegracaoBancaria'] });
+        },
+        preserveScroll: true,
+    });
+};
+const startEditIntegracaoBancaria = (i) => {
+    editingIntegracaoBancariaId.value = i.id;
+    editIntegracaoBancaria.nome = i.nome || "";
+    editIntegracaoBancaria.logo = null;
+};
+const cancelEditIntegracaoBancaria = () => {
+    editingIntegracaoBancariaId.value = null;
+    editIntegracaoBancaria.reset();
+};
+const updateIntegracaoBancaria = () => {
+    editIntegracaoBancaria.transform((data) => ({
+        ...data,
+        _method: 'put',
+    })).post(`/parametros/tipo-integracao-bancaria/${editingIntegracaoBancariaId.value}`, {
+        onSuccess: () => {
+            editingIntegracaoBancariaId.value = null;
+            editIntegracaoBancaria.reset();
+            router.reload({ only: ['tiposIntegracaoBancaria'] });
+        },
+        preserveScroll: true,
+    });
+};
+const destroyIntegracaoBancaria = (id) => {
+    const item = (props.tiposIntegracaoBancaria || []).find(i => i.id === id);
+    deleteContext.value = { type: 'tipo_integracao_bancaria', id, nome: item?.nome || '' };
+    deleteModal.value = true;
+};
+
 
 
 const confirmDelete = () => {
@@ -673,6 +787,14 @@ const confirmDelete = () => {
             onSuccess: () => {
                 comorbidadesLocal.value = (comorbidadesLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
                 router.reload({ only: ['comorbidades'] });
+            }
+        });
+    } else if (ctx.type === 'tipo_integracao_bancaria') {
+        f.delete(`/parametros/tipo-integracao-bancaria/${ctx.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                integracoesBancariasLocal.value = (integracoesBancariasLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
+                router.reload({ only: ['tiposIntegracaoBancaria'] });
             }
         });
     }

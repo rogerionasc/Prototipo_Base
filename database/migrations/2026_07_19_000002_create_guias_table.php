@@ -3,17 +3,16 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+
 return new class extends Migration
 {
     public function up(): void
     {
         Schema::create('guias', function (Blueprint $table) {
+            $table->id()->startingValue(1000);
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->unsignedBigInteger('guia_origem_id')->nullable();
             $table->foreign('guia_origem_id')->references('id')->on('guias')->onDelete('set null');
-
-            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
-
-            $table->id();
             $table->foreignId('faturamento_id')->nullable()->constrained('faturamentos')->nullOnDelete()->nullable()->comment('Lote (Faturamento)');
             $table->foreignId('agendamento_id')->nullable()->constrained('agendamentos')->nullOnDelete()->comment('Agendamento vinculado');
             $table->string('status', 30)->default('CRIADA')->nullable()->comment('CRIADA, EM_ANALISE, AUTORIZADA, GLOSADA, PAGA, CANCELADA');

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('guia_profissional_executantes', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('procedimento_realizado_id')->constrained('guia_procedimento_realizados')->cascadeOnDelete();
             $table->string('sequencial_referencia', 2)->nullable()->comment('Sequencial referência'); // 48
             $table->string('grau_participacao', 2)->nullable()->comment('Grau participação'); // 49

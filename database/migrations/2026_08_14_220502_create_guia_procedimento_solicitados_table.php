@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('guia_procedimento_solicitados', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('guia_id')->constrained('guias')->cascadeOnDelete();
             $table->string('tabela_procedimento_solicitado', 2)->nullable()->comment('Tabela procedimento solicitado'); // 24
             $table->string('procedimento_solicitado_codigo', 10)->nullable()->comment('Código procedimento solicitado'); // 25

@@ -59,7 +59,9 @@ const emit = defineEmits([
     'receive',
     'procedure',
     'selectionChange',
-    'toggle'
+    'toggle',
+    'bank',
+    'charge'
 ]);
 
 // -------------------- REFS E VARIÁVEIS REATIVAS --------------------
@@ -500,8 +502,10 @@ function initGrid() {
                     can(ac.print) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="print" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('print') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.print ?? 'Imprimir'}">${isLoadingAction('print') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.print ?? 'ri-printer-fill'} align-bottom ${isLoadingAction('print') ? 'd-none' : ''}"></i>${bt.print ? `<span class="d-none d-sm-inline ms-1">${bt.print}</span>` : ''}</button>` : ``,
                     can(ac.download) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="download" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('download') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.download ?? 'Baixar'}">${isLoadingAction('download') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.download ?? 'ri-download-line'} align-bottom ${isLoadingAction('download') ? 'd-none' : ''}"></i>${bt.download ? `<span class="d-none d-sm-inline ms-1">${bt.download}</span>` : ''}</button>` : ``,
                     can(ac.receive) ? `<button class="btn btn-sm btn-soft-success" type="button" data-action="receive" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('receive') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.receive ?? 'Receber'}">${isLoadingAction('receive') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.receive ?? 'ri-money-dollar-box-line'} align-bottom ${isLoadingAction('receive') ? 'd-none' : ''}"></i>${bt.receive ? `<span class="d-none d-sm-inline ms-1">${bt.receive}</span>` : ''}</button>` : ``,
+                    can(ac.charge) ? `<button class="btn btn-sm btn-soft-info" type="button" data-action="charge" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('charge') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.charge ?? 'Gerar Cobrança'}">${isLoadingAction('charge') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.charge ?? 'ri-barcode-box-line'} align-bottom ${isLoadingAction('charge') ? 'd-none' : ''}"></i>${bt.charge ? `<span class="d-none d-sm-inline ms-1">${bt.charge}</span>` : ''}</button>` : ``,
                     can(ac.procedure) ? `<button class="btn btn-sm btn-soft-primary" type="button" data-action="procedure" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('procedure') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.procedure ?? 'Procedimentos'}">${isLoadingAction('procedure') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.procedure ?? 'ri-list-check'} align-bottom ${isLoadingAction('procedure') ? 'd-none' : ''}"></i>${bt.procedure ? `<span class="d-none d-sm-inline ms-1">${bt.procedure}</span>` : ''}</button>` : ``,
                     (props.showDiaryButton && can(ac.diary)) ? `<button class="btn btn-sm btn-soft-dark" type="button" data-action="diary" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('diary') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.diary ?? 'Agenda'}">${isLoadingAction('diary') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.diary ?? 'ri-calendar-2-line'} align-bottom ${isLoadingAction('diary') ? 'd-none' : ''}"></i>${bt.diary ? `<span class="d-none d-sm-inline ms-1">${bt.diary}</span>` : ''}</button>` : ``,
+                    can(ac.bank) ? `<button class="btn btn-sm btn-soft-secondary" type="button" data-action="bank" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('bank') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.bank ?? 'Integrações Bancárias'}">${isLoadingAction('bank') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.bank ?? 'ri-bank-card-line'} align-bottom ${isLoadingAction('bank') ? 'd-none' : ''}"></i>${bt.bank ? `<span class="d-none d-sm-inline ms-1">${bt.bank}</span>` : ''}</button>` : ``,
                     can(ac.toggle) ? `<button class="btn btn-sm ${rowData.is_active ? 'btn-soft-success' : 'btn-soft-danger'}" type="button" data-action="toggle" data-id="${rowId}" data-row='${rowDataStr}' data-loading="${isLoadingAction('toggle') ? 'true' : 'false'}" ${(disabledAll || isRowLoading) ? 'disabled' : ''} title="${al.toggle ?? (rowData.is_active ? 'Bloquear' : 'Desbloquear')}">${isLoadingAction('toggle') ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>` : ''}<i class="${ai.toggle ?? (rowData.is_active ? 'ri-lock-unlock-fill' : 'ri-lock-fill')} align-bottom ${isLoadingAction('toggle') ? 'd-none' : ''}"></i>${bt.toggle ? `<span class="d-none d-sm-inline ms-1">${bt.toggle}</span>` : ''}</button>` : ``
                 ].join('');
                 return html(`<div class="d-flex gap-2">${buttons}</div>`);
@@ -666,8 +670,12 @@ function initGrid() {
             emit('receive', rowObj?.id ?? id, rowObj);
         } else if (action === 'procedure') {
             emit('procedure', rowObj?.id ?? id, rowObj);
+        } else if (action === 'bank') {
+            emit('bank', rowObj?.id ?? id, rowObj);
         } else if (action === 'toggle') {
             emit('toggle', rowObj?.id ?? id, rowObj);
+        } else if (action === 'charge') {
+            emit('charge', rowObj?.id ?? id, rowObj);
         }
     };
     wrapper.value.addEventListener('change', changeListener);

@@ -40,6 +40,7 @@ use App\Http\Controllers\TipoAtendimentoController;
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',])->group(function () {
     Route::post("/conta/switch/{id}", [\App\Http\Controllers\AccountController::class, "switch"])->name('conta.switch');
     Route::resource('clinicas', \App\Http\Controllers\AccountController::class)->names('clinicas');
+    Route::post("/clinicas/{id}/configuracao-bancaria", [\App\Http\Controllers\Financeiro\ConfiguracaoBancariaController::class, "storeForAccount"])->whereNumber('id')->name('clinicas.configuracao_bancaria.store');
 
     Route::get('/usuarios/pessoas-disponiveis', [UserController::class, 'pessoasDisponiveis'])->name('usuarios.pessoas_disponiveis');
     Route::put('/usuarios/{usuario}/toggle-status', [UserController::class, 'toggleStatus'])->name('usuarios.toggle_status');
@@ -191,6 +192,20 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get("/faturamentos/{id}/detalhes", [FaturamentoController::class, "detalhes"])->whereNumber('id')->name('faturamentos.detalhes');
         Route::get("/contas-receber", [ContasReceberController::class, "index"])->name('financeiro.contas_receber.index');
         Route::post("/faturamentos/{id}/receber-financeiro", [ContasReceberController::class, "receiveConvenio"])->whereNumber('id')->name('financeiro.receber_convenio');
+        Route::post("/contas-receber/{id}/gerar-cobranca", [ContasReceberController::class, "gerarCobranca"])->whereNumber('id')->name('financeiro.contas_receber.gerar_cobranca');
+
+        // Cobrança Bancária
+        Route::get("/financeiro/configuracoes/cobranca", [\App\Http\Controllers\Financeiro\ConfiguracaoBancariaController::class, "index"])->name('financeiro.configuracoes.cobranca.index');
+        Route::post("/financeiro/configuracoes/cobranca", [\App\Http\Controllers\Financeiro\ConfiguracaoBancariaController::class, "store"])->name('financeiro.configuracoes.cobranca.store');
+        Route::post("/financeiro/configuracoes/cobranca/{account}/storeForAccount", [\App\Http\Controllers\Financeiro\ConfiguracaoBancariaController::class, "storeForAccount"])->name('financeiro.configuracoes.cobranca.storeForAccount');
+        Route::put("/financeiro/configuracoes/cobranca/{configuracaoBancaria}", [\App\Http\Controllers\Financeiro\ConfiguracaoBancariaController::class, "update"])->name('financeiro.configuracoes.cobranca.update');
+        Route::post("/financeiro/configuracoes/cobranca/test-connection", [\App\Http\Controllers\Financeiro\ConfiguracaoBancariaController::class, "testConnection"])->name('financeiro.configuracoes.cobranca.test_connection');
+        Route::post("/financeiro/cobrancas/{contaReceber}/emitir", [\App\Http\Controllers\Financeiro\CobrancaController::class, "emitir"])->name('financeiro.cobrancas.emitir');
+        Route::post("/financeiro/cobrancas/{cobranca}/simular-pagamento", [\App\Http\Controllers\Financeiro\CobrancaController::class, "simularPagamento"])->name('financeiro.cobrancas.simular_pagamento');
+
+        Route::post("/financeiro/configuracoes/cobranca/fake-conta", [\App\Http\Controllers\Financeiro\ConfiguracaoBancariaController::class, "storeFakeContaReceber"])->name('financeiro.configuracoes.cobranca.fake_conta');
+        Route::post("/financeiro/configuracoes/cobranca/bb-token", [\App\Http\Controllers\Financeiro\CobrancaController::class, "gerarToken"])->name('financeiro.configuracoes.cobranca.bb_token');
+        Route::post("/financeiro/configuracoes/cobranca/bb-gerar", [\App\Http\Controllers\Financeiro\CobrancaController::class, "gerarBoleto"])->name('financeiro.configuracoes.cobranca.bb_gerar');
 
         // Agenda Médica routes
         Route::post("/agenda-medica", [AgendaMedicaController::class, "store"])->name('agenda_medica.store');
@@ -252,6 +267,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/parametros/comorbidade", [VelzonRoutesController::class, "parametros_store_comorbidade"])->name('parametros.comorbidade.store');
         Route::put("/parametros/comorbidade/{id}", [VelzonRoutesController::class, "parametros_update_comorbidade"])->name('parametros.comorbidade.update');
         Route::delete("/parametros/comorbidade/{id}", [VelzonRoutesController::class, "parametros_destroy_comorbidade"])->name('parametros.comorbidade.destroy');
+
+        Route::post("/parametros/tipo-integracao-bancaria", [VelzonRoutesController::class, "parametros_store_tipo_integracao_bancaria"])->name('parametros.tipo_integracao_bancaria.store');
+        Route::put("/parametros/tipo-integracao-bancaria/{id}", [VelzonRoutesController::class, "parametros_update_tipo_integracao_bancaria"])->name('parametros.tipo_integracao_bancaria.update');
+        Route::delete("/parametros/tipo-integracao-bancaria/{id}", [VelzonRoutesController::class, "parametros_destroy_tipo_integracao_bancaria"])->name('parametros.tipo_integracao_bancaria.destroy');
         Route::post("/parametros/conselho", [VelzonRoutesController::class, "parametros_store_conselho"])->name('parametros.conselho.store');
         Route::put("/parametros/conselho/{id}", [VelzonRoutesController::class, "parametros_update_conselho"])->name('parametros.conselho.update');
         Route::delete("/parametros/conselho/{id}", [VelzonRoutesController::class, "parametros_destroy_conselho"])->name('parametros.conselho.destroy');

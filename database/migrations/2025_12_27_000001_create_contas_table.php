@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('contas', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('nome', 120);
             $table->string('cnpj', 18)->nullable();
             $table->string('pix_chave', 140)->nullable();

@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('canais_aviso', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('nome', 60);
             $table->timestamps();
             $table->softDeletes();

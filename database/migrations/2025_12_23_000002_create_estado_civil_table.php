@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('estado_civil', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('descricao', 20);
             $table->timestamps();
             $table->softDeletes();

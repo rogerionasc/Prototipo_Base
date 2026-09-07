@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('conselhos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('sigla', 10)->unique()->comment('Ex: CRM, CRO, COREN');
             $table->string('codigo', 2)->nullable()->comment('Código TISS');
             $table->string('descricao', 100)->nullable()->comment('Descrição opcional');

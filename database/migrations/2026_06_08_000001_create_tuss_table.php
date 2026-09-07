@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tuss', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
 
             $table->string('tabela', 20)->comment('AMB1990|AMB1992|AMB1993|AMB1999|CBHPM3|CBHPM4|CBHPM5|TUSS');
             $table->string('codigo', 30)->comment('Código na tabela informada');

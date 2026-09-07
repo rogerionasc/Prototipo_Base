@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('prontuarios', function (Blueprint $table) {
-            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
 
-            $table->id();
+            $table->id()->startingValue(1000);
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->foreignId('paciente_id')->constrained('pacientes');
             $table->string('codigo', 20)->unique();
             $table->date('data_abertura')->nullable();

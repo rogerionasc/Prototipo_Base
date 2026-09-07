@@ -58,6 +58,7 @@ function openModalAdd() {
   modalTitle.value = 'Adicionar Convênio';
   if (convenioFormRef.value?.form) {
     convenioFormRef.value.form.id = null;
+    convenioFormRef.value.form.cnpj = '';
     convenioFormRef.value.form.tipo = 'CONVENIO';
     convenioFormRef.value.form.dias_retorno = null;
     convenioFormRef.value.form.config_spsadt.visivel = [];
@@ -123,6 +124,7 @@ async function openModalEdit(id) {
   if (convenioFormRef.value?.form) {
     convenioFormRef.value.form.id = c.id;
     convenioFormRef.value.form.descricao = c.descricao || '';
+    convenioFormRef.value.form.cnpj = c.cnpj || '';
     convenioFormRef.value.form.tuss_tabela = '';
     convenioFormRef.value.form.tipo = c.tipo ? String(c.tipo).toUpperCase() : 'CONVENIO';
     convenioFormRef.value.form.empresa_id = c.empresa_id || '';

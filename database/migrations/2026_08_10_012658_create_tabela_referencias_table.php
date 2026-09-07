@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tabela_referencias', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('codigo', 2)->unique();
             $table->string('descricao', 100);
             $table->timestamps();

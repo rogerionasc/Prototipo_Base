@@ -12,13 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('comorbidades', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('nome');
             $table->timestamps();
         });
 
         Schema::create('comorbidade_paciente', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('paciente_id')->constrained('pacientes')->onDelete('cascade');
             $table->foreignId('comorbidade_id')->constrained('comorbidades')->onDelete('cascade');
             $table->timestamps();

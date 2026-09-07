@@ -15,6 +15,7 @@ import "@vueform/multiselect/themes/default.css";
 const props = defineProps({
   clinicas: Array,
   profissionais: Array,
+  tiposIntegracaoBancaria: Array,
   auth: Object
 });
 
@@ -172,13 +173,13 @@ const guichesColumns = [
   { id: "id", name: "ID" },
   { id: "nome", name: "Nome/Identificação" },
   { id: "hostname", name: "Hostname" },
-  { 
-      name: 'Status', 
-      id: 'status', 
-      formatter: (val) => {
-          if (val === 'Ativo' || val === true) return html(`<span class="badge bg-success-subtle text-success">Ativo</span>`);
-          return html(`<span class="badge bg-danger-subtle text-danger">Inativo</span>`);
-      }
+  {
+    name: 'Status',
+    id: 'status',
+    formatter: (val) => {
+      if (val === 'Ativo' || val === true) return html(`<span class="badge bg-success-subtle text-success">Ativo</span>`);
+      return html(`<span class="badge bg-danger-subtle text-danger">Inativo</span>`);
+    }
   },
 ];
 
@@ -359,6 +360,109 @@ const confirmDelete = () => {
 const switchAccount = (id) => {
   router.post(route('conta.switch', id));
 };
+
+const showBankModal = ref(false);
+const clinicaSelecionadaBank = ref(null);
+const currentBankTab = ref(0);
+
+const bankForm = useForm({
+  provedor: '',
+  tipo: 'boleto',
+  ambiente: 'sandbox',
+  numero_convenio: '',
+  numero_carteira: '',
+  numero_variacao_carteira: '',
+  client_id: '',
+  client_secret: '',
+  app_key: '',
+  certificado: '',
+  ativo: true,
+  is_padrao: false
+});
+
+const getBankConfig = (provedorNome) => {
+  if (!clinicaSelecionadaBank.value || !clinicaSelecionadaBank.value.configuracoes_bancarias) return null;
+  return clinicaSelecionadaBank.value.configuracoes_bancarias.find(c => c.provedor === provedorNome);
+};
+
+const selectBankTab = (tipoIntegracao, index) => {
+  currentBankTab.value = index;
+  const config = getBankConfig(tipoIntegracao.nome);
+  if (config) {
+    bankForm.provedor = config.provedor;
+    bankForm.tipo = config.tipo || 'boleto';
+    bankForm.ambiente = config.ambiente || 'sandbox';
+    bankForm.numero_convenio = config.numero_convenio || '';
+    bankForm.numero_carteira = config.numero_carteira || '';
+    bankForm.numero_variacao_carteira = config.numero_variacao_carteira || '';
+    bankForm.client_id = config.client_id || '';
+    bankForm.client_secret = config.client_secret || '';
+    bankForm.app_key = config.app_key || '';
+    bankForm.ativo = config.ativo !== false;
+    bankForm.is_padrao = Boolean(config.is_padrao);
+    bankForm.clearErrors();
+  } else {
+    bankForm.reset();
+    bankForm.clearErrors();
+    bankForm.provedor = tipoIntegracao.nome;
+    bankForm.tipo = 'boleto';
+    bankForm.ambiente = 'sandbox';
+    bankForm.numero_convenio = '';
+    bankForm.numero_carteira = '';
+    bankForm.numero_variacao_carteira = '';
+    bankForm.client_id = '';
+    bankForm.client_secret = '';
+    bankForm.app_key = '';
+    bankForm.certificado = '';
+    bankForm.ativo = true;
+    bankForm.is_padrao = false;
+    bankForm.clearErrors();
+  }
+};
+
+const openBankModal = (id) => {
+  clinicaSelecionadaBank.value = props.clinicas.find(c => c.id == id);
+  if (props.tiposIntegracaoBancaria && props.tiposIntegracaoBancaria.length > 0) {
+    selectBankTab(props.tiposIntegracaoBancaria[0], 0);
+  }
+  showBankModal.value = true;
+};
+
+const saveBankConfig = () => {
+  if (clinicaSelecionadaBank.value && clinicaSelecionadaBank.value.id) {
+    bankForm.post(route('financeiro.configuracoes.cobranca.storeForAccount', clinicaSelecionadaBank.value.id), {
+      preserveScroll: true,
+    });
+  }
+};
+
+const testingConnection = ref(false);
+
+const testConnection = async () => {
+  if (!bankForm.provedor) return;
+  
+  testingConnection.value = true;
+  try {
+    const response = await axios.post(route('financeiro.configuracoes.cobranca.test_connection'), {
+      provedor: bankForm.provedor,
+      ambiente: bankForm.ambiente,
+      client_id: bankForm.client_id,
+      client_secret: bankForm.client_secret,
+      app_key: bankForm.app_key
+    });
+    
+    if (response.data.success) {
+      window.dispatchEvent(new CustomEvent('flash:show', { detail: { type: 'success', message: response.data.message } }));
+    } else {
+      window.dispatchEvent(new CustomEvent('flash:show', { detail: { type: 'danger', message: response.data.message || 'Verifique suas credenciais.' } }));
+    }
+  } catch (error) {
+    window.dispatchEvent(new CustomEvent('flash:show', { detail: { type: 'danger', message: error.response?.data?.message || 'Ocorreu um erro ao testar a conexão.' } }));
+  } finally {
+    testingConnection.value = false;
+  }
+};
+
 </script>
 
 <template>
@@ -366,9 +470,9 @@ const switchAccount = (id) => {
     <PageHeader title="Gerenciar Clínicas" pageTitle="Clínicas" />
 
     <TableGrid :columns="columns" :data="clinicasFormatadas" :tableTitle="'Lista de Clínicas'" :showStatus="true"
-      :actionsConfig="{ edit: true, delete: true, show: true }" :actionsLabels="{ show: 'Acessar' }"
+      :actionsConfig="{ edit: true, delete: true, show: true, bank: true }" :actionsLabels="{ show: 'Acessar' }"
       :actionsIcons="{ show: 'ri-login-box-line' }" @add="openModalAdd" @edit="openModalEdit" @delete="deleteClinica"
-      @show="switchAccount" />
+      @show="switchAccount" @bank="openBankModal" />
 
     <!-- Modal de Cadastro / Edição -->
     <Modal v-model="showModal" size="xl" :title="isEditing ? 'Editar Clínica' : 'Cadastrar Clínica'"
@@ -380,23 +484,28 @@ const switchAccount = (id) => {
           <div class="row">
             <div class="col-md-12 mb-3">
               <label class="form-label">Nome da Clínica <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" v-model="form.name" placeholder="Ex: Clínica Saúde e Vida" required />
+              <input type="text" class="form-control" v-model="form.name" placeholder="Ex: Clínica Saúde e Vida"
+                required />
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">CNPJ</label>
-              <input type="text" class="form-control" v-model="form.cnpj" v-mask="'##.###.###/####-##'" maxlength="18" placeholder="00.000.000/0000-00" />
+              <input type="text" class="form-control" v-model="form.cnpj" v-mask="'##.###.###/####-##'" maxlength="18"
+                placeholder="00.000.000/0000-00" />
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">CNES</label>
-              <input type="text" class="form-control" v-model="form.cnes" v-mask="'#######'" maxlength="7" placeholder="Ex: 1234567" />
+              <input type="text" class="form-control" v-model="form.cnes" v-mask="'#######'" maxlength="7"
+                placeholder="Ex: 1234567" />
             </div>
             <div class="col-md-12 mb-3">
               <label class="form-label">Endereço</label>
-              <input type="text" class="form-control" v-model="form.endereco" placeholder="Ex: Rua das Flores, 123, Centro - São Paulo/SP" />
+              <input type="text" class="form-control" v-model="form.endereco"
+                placeholder="Ex: Rua das Flores, 123, Centro - São Paulo/SP" />
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Telefone</label>
-              <input type="text" class="form-control" v-model="form.telefone" v-mask="'(##) #####-####'" placeholder="(11) 99999-9999" />
+              <input type="text" class="form-control" v-model="form.telefone" v-mask="'(##) #####-####'"
+                placeholder="(11) 99999-9999" />
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">E-mail</label>
@@ -473,14 +582,15 @@ const switchAccount = (id) => {
     </Modal>
 
     <!-- Modal de Exclusão -->
-    <ModalDelete v-model="deleteModal" :item-delete="clinicaToDelete" @confirm-delete="confirmDelete" />
+    <ModalDelete v-model="deleteModal" :item-delete="clinicaToDelete" @save="confirmDelete" />
 
     <!-- Modal de Adicionar Item (Totem/Painel/Guiche/Sala) -->
     <Modal v-model="showSubModal" size="md" :title="subModalTitle" :name-button="'Adicionar'"
       :processing="subForm.processing" @save="saveSubItem" :z-index="1060" :backdrop-z-index="1055">
       <div class="mb-3">
         <label class="form-label">Nome / Identificação</label>
-        <input type="text" class="form-control" v-model="subForm.nome" :placeholder="'Ex: ' + subModalType + ' Principal, ' + subModalType + ' 01'" required />
+        <input type="text" class="form-control" v-model="subForm.nome"
+          :placeholder="'Ex: ' + subModalType + ' Principal, ' + subModalType + ' 01'" required />
       </div>
       <div class="mb-3" v-if="subModalType === 'Guichê'">
         <label class="form-label">Hostname</label>
@@ -552,7 +662,7 @@ const switchAccount = (id) => {
               <div class="form-check form-switch mt-1">
                 <input class="form-check-input" type="checkbox" v-model="opcao.status" :id="'status_' + index">
                 <label class="form-check-label" :for="'status_' + index">{{ opcao.status ? 'Ativo' : 'Inativo'
-                  }}</label>
+                }}</label>
               </div>
             </td>
             <td class="text-center">
@@ -576,5 +686,125 @@ const switchAccount = (id) => {
           placeholder="Selecione um profissional" />
       </div>
     </Modal>
+    <!-- Modal de Integração Bancária -->
+    <Modal v-model="showBankModal" :title="`Integrações Bancárias: ${clinicaSelecionadaBank?.name}`" size="xl"
+      customWidth="1400px" :show-footer="false" :z-index="1060" :backdrop-z-index="1055">
+      <div class="row">
+        <!-- Lista de Bancos (Sidebar) -->
+        <div class="col-md-3 border-end">
+          <div class="nav flex-column nav-pills" role="tablist" aria-orientation="vertical">
+            <button v-for="(tipo, index) in tiposIntegracaoBancaria" :key="tipo.id"
+              class="nav-link text-start d-flex align-items-center mb-2" :class="{ active: currentBankTab === index }"
+              @click="selectBankTab(tipo, index)" type="button" role="tab">
+              <img v-if="tipo.logo" :src="'/storage/' + tipo.logo"
+                class="avatar-xs rounded me-2 object-fit-contain bg-white" alt="Logo">
+              <span v-else class="avatar-xs rounded me-2 bg-light d-flex align-items-center justify-content-center">
+                <i class="ri-bank-fill"></i>
+              </span>
+              <span class="fw-medium">{{ tipo.nome }}</span>
+              <i v-if="getBankConfig(tipo.nome)?.is_padrao" class="ri-checkbox-circle-fill ms-auto fs-16"
+                :class="currentBankTab === index ? 'text-white' : 'text-success'"
+                title="Integração Padrão"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Formulário do Banco Selecionado -->
+        <div class="col-md-9">
+          <div class="tab-content text-muted">
+            <div v-for="(tipo, index) in tiposIntegracaoBancaria" :key="'content-' + tipo.id" class="tab-pane"
+              :class="{ 'active show': currentBankTab === index }" role="tabpanel">
+
+              <form @submit.prevent="saveBankConfig">
+                <div class="d-flex align-items-center mb-4">
+                  <h5 class="mb-0">Configuração API - {{ tipo.nome }}</h5>
+                  <div class="ms-auto d-flex gap-3">
+                    <div class="form-check form-switch form-switch-info">
+                      <input class="form-check-input" type="checkbox" :id="'padraoBankSwitch-' + index"
+                        v-model="bankForm.is_padrao">
+                      <label class="form-check-label" :for="'padraoBankSwitch-' + index">Padrão</label>
+                    </div>
+                    <div class="form-check form-switch form-switch-success">
+                      <input class="form-check-input" type="checkbox" :id="'ativoBankSwitch-' + index"
+                        v-model="bankForm.ativo">
+                      <label class="form-check-label" :for="'ativoBankSwitch-' + index">Ativo</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Ambiente</label>
+                    <select class="form-select" v-model="bankForm.ambiente">
+                      <option value="sandbox">Sandbox (Testes)</option>
+                      <option value="production">Produção</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Tipo de Cobrança</label>
+                    <select class="form-select" v-model="bankForm.tipo">
+                      <option value="boleto">Boleto</option>
+                      <option value="pix">PIX</option>
+                      <option value="boleto_pix">Boleto Híbrido (PIX)</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Nº Convênio</label>
+                    <input type="text" class="form-control" v-model="bankForm.numero_convenio" placeholder="Ex: 1234567">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Nº Carteira</label>
+                    <input type="text" class="form-control" v-model="bankForm.numero_carteira" placeholder="Ex: 17">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Variação Carteira</label>
+                    <input type="text" class="form-control" v-model="bankForm.numero_variacao_carteira" placeholder="Ex: 019">
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Client ID <span class="text-danger"
+                        v-if="tipo.nome === 'Banco do Brasil'">*</span></label>
+                    <input type="text" class="form-control" v-model="bankForm.client_id"
+                      :required="tipo.nome === 'Banco do Brasil'">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Client Secret <span class="text-danger"
+                        v-if="tipo.nome === 'Banco do Brasil'">*</span></label>
+                    <input type="password" class="form-control" v-model="bankForm.client_secret"
+                      :required="tipo.nome === 'Banco do Brasil'">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">App Key (Dev. BB) <span class="text-danger"
+                        v-if="tipo.nome === 'Banco do Brasil'">*</span></label>
+                    <input type="password" class="form-control" v-model="bankForm.app_key"
+                      :required="tipo.nome === 'Banco do Brasil'">
+                  </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                  <button type="button" class="btn btn-outline-primary me-2" @click="testConnection" :disabled="testingConnection || bankForm.processing">
+                    <span v-if="testingConnection" class="spinner-border spinner-border-sm me-1"></span>
+                    <i v-else class="ri-pulse-line me-1"></i>
+                    Testar Conexão
+                  </button>
+                  <button type="submit" class="btn btn-success" :disabled="bankForm.processing || testingConnection">
+                    <span v-if="bankForm.processing" class="spinner-border spinner-border-sm me-1"></span>
+                    Salvar Configurações
+                  </button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </Modal>
   </Layout>
 </template>
+
+<style>
+/* Deixa o texto do item selecionado no Choices.js mais escuro */
+.choices__inner .choices__item.choices__item--selectable {
+  color: #212529 !important;
+}
+</style>

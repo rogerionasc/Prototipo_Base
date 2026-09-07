@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('guia_procedimento_realizados', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->foreignId('guia_id')->constrained('guias')->cascadeOnDelete();
             $table->foreignId('procedimento_solicitado_id')->nullable()->constrained('guia_procedimento_solicitados')->cascadeOnDelete();
             $table->date('data_realizacao')->nullable()->comment('Data realização'); // 36

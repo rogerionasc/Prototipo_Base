@@ -6,8 +6,8 @@
 
     <TableGrid :columns="cols" :data="rows" :tableTitle="'Contas a Receber'" :showCheckbox="false" :search="true"
       :showAddButton="false" :showStatus="false" :showActions="true"
-      :actionsConfig="{ delete: false, edit: false, show: false, diary: false, print: false, download: false, restore: false, receive: canReceive }"
-      @receive="onReceive" />
+      :actionsConfig="{ delete: false, edit: false, show: false, diary: false, print: false, download: false, restore: false, receive: canReceive, charge: true }"
+      @receive="onReceive" @charge="onCharge" />
 
     <Modal v-model="showReceive" title="Registrar Recebimento (Convênio)" name-button="Registrar"
       :processing="receiveForm.processing" size="md" @save="confirmReceive">
@@ -54,6 +54,23 @@
         </div>
       </div>
     </Modal>
+
+    <Modal v-model="showCharge" title="Gerar Cobrança (Link de Pagamento)" name-button="Gerar"
+      :processing="chargeForm.processing" size="md" @save="confirmCharge">
+      <div class="vstack gap-3">
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label">Método de Pagamento Autorizado</label>
+            <select v-model="chargeForm.billingType" class="form-select">
+              <option value="UNDEFINED">Qualquer um (Cliente escolhe entre Boleto, Pix e Cartão)</option>
+              <option value="BOLETO">Apenas Boleto Bancário (C/ Pix Embutido)</option>
+              <option value="PIX">Apenas PIX</option>
+              <option value="CREDIT_CARD">Apenas Cartão de Crédito</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </Modal>
   </Layout>
 </template>
 
@@ -80,16 +97,23 @@ function formatCurrency(n) {
   }
 }
 
+function formatStatus(val) {
+  if (!val) return '';
+  if (val === 'AGUARDANDO_COBRANCA') return 'Aguardando cobrança';
+  return val.replace(/_/g, ' ');
+}
+
 const cols = [
   { id: "id", name: "Faturamento" },
+  { id: "conta_id", name: "ID Conta" },
   { id: "nu_pagamento", name: "Nº Pagamento" },
   { id: "tipo_convenio", name: "Convênio" },
-  { id: "paciente", name: "Paciente" },
+  { id: "pagador", name: "Pagador" },
   { id: "procedimento", name: "Procedimento" },
   { id: "vencimento", name: "Vencimento" },
   { id: "valor", name: "Valor", formatter: (cell) => formatCurrency(cell) },
   { id: "data_pagamento", name: "Dt Pagamento" },
-  { id: "status", name: "Status" },
+  { id: "status", name: "Status", formatter: (cell) => formatStatus(cell) },
 ];
 
 function canReceive(row) {
@@ -137,6 +161,37 @@ function parseNumberOrNull(v) {
   if (!s) return null;
   const n = Number(s.replace(/\./g, "").replace(",", "."));
   return Number.isNaN(n) ? null : n;
+}
+
+const showCharge = ref(false);
+const chargeId = ref(null);
+const chargeForm = useForm({
+  billingType: "UNDEFINED",
+});
+
+function onCharge(id, row) {
+  chargeId.value = row?.conta_id || id;
+  chargeForm.billingType = "UNDEFINED";
+  showCharge.value = true;
+}
+
+function confirmCharge() {
+  const crId = chargeId.value;
+  if (!crId) {
+    showCharge.value = false;
+    return;
+  }
+  
+  chargeForm.post(route('financeiro.contas_receber.gerar_cobranca', crId), {
+    preserveScroll: true,
+    onSuccess: () => {
+      showCharge.value = false;
+      chargeId.value = null;
+    },
+    onError: () => {
+      showCharge.value = false;
+    }
+  });
 }
 
 function confirmReceive() {

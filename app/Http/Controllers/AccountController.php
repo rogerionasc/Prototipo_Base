@@ -9,11 +9,14 @@ class AccountController extends Controller
     public function index()
     {
         // Ao carregar todas as clínicas, já incluímos os itens secundários
-        $clinicas = \App\Models\Account::with(['totens.opcoes', 'paineis', 'salas.profissionalSaude', 'guiches'])->get();
+        $clinicas = \App\Models\Account::with(['totens.opcoes', 'paineis', 'salas.profissionalSaude', 'guiches', 'configuracoesBancarias'])->get();
         $profissionais = \App\Models\Pessoa::get(['id', 'nome']);
+        $tiposIntegracaoBancaria = \App\Models\TipoIntegracaoBancaria::select('id', 'nome', 'logo')->get();
+
         return inertia('Clinicas/Index', [
             'clinicas' => $clinicas,
-            'profissionais' => $profissionais
+            'profissionais' => $profissionais,
+            'tiposIntegracaoBancaria' => $tiposIntegracaoBancaria
         ]);
     }
 

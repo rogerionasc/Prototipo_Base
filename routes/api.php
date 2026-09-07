@@ -25,3 +25,5 @@ Route::post('/pre-cadastro', [PreCadastroController::class, 'store']);
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/pacientes', [PacienteController::class, 'apiIndex']);
 });
+
+Route::post('/webhooks/cobrancas/{gateway}', [\App\Http\Controllers\Financeiro\CobrancaController::class, 'webhook'])->name('webhook.cobrancas');

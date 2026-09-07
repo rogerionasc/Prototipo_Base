@@ -9,7 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('convenio_tuss', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->foreignId('convenio_id')->constrained('convenios');
             $table->foreignId('tuss_id')->nullable()->constrained('tuss');
             $table->foreignId('tuss_mapeamento_id')->nullable()->constrained('tuss_mapeamentos');
@@ -20,7 +21,6 @@ return new class extends Migration
 
             $table->timestamps();
             $table->softDeletes();
-            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             
             // Allow unique mappings for tuss or mapeamentos
             $table->unique(['convenio_id', 'tuss_id', 'tuss_mapeamento_id', 'account_id'], 'convenio_tuss_unique');

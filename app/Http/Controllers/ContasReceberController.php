@@ -25,6 +25,7 @@ class ContasReceberController extends Controller
                 DB::raw("COALESCE((SELECT proc.nome FROM pagamentos pag JOIN agendamentos a ON a.id = pag.agendamento_id JOIN procedimentos proc ON proc.id = a.procedimento_id WHERE pag.faturamento_id = cr.faturamento_id LIMIT 1), '') AS procedimento"),
                 DB::raw("COALESCE(c.descricao,'') AS convenio"),
                 DB::raw("IFNULL(c.tipo, 'PARTICULAR') AS tipo_convenio"),
+                DB::raw("CASE WHEN IFNULL(c.tipo, 'PARTICULAR') = 'CONVENIO' THEN COALESCE(c.descricao,'') ELSE COALESCE(p.nome,'') END AS pagador"),
                 DB::raw("DATE_FORMAT(cr.vencimento, '%d-%m-%Y') AS vencimento"),
                 'cr.valor',
                 'cr.status',
@@ -92,5 +93,119 @@ class ContasReceberController extends Controller
         });
 
         return back()->with('success', 'Recebimento registrado no financeiro.');
+    }
+
+    public function gerarCobranca(Request $request, string $id)
+    {
+        $fatId = (int)$id;
+        $cr = DB::table('contas_receber as cr')
+            ->leftJoin('faturamentos as f', 'f.id', '=', 'cr.faturamento_id')
+            ->leftJoin('pacientes as p', 'p.id', '=', 'cr.paciente_id')
+            ->leftJoin('convenios as c', 'c.id', '=', 'cr.convenio_id')
+            ->select(
+                'cr.id as conta_id',
+                'cr.faturamento_id',
+                'cr.valor',
+                'cr.vencimento',
+                'p.nome as paciente_nome',
+                'p.cpf as paciente_cpf',
+                'p.id as paciente_id',
+                'c.descricao as convenio_nome',
+                'c.cnpj as convenio_cnpj',
+                'c.id as convenio_id',
+                'f.account_id'
+            )
+            ->where('cr.id', $fatId) // ID here is now the cr.id (conta_id)
+            ->first();
+
+        if (!$cr) {
+            return back()->with('error', 'Conta a receber não encontrada.');
+        }
+
+        $config = \App\Models\ConfiguracaoBancaria::where('account_id', $cr->account_id)
+            ->where('is_padrao', true)
+            ->where('ativo', true)
+            ->first();
+
+        if (!$config) {
+            return back()->with('error', 'Nenhuma integração bancária padrão e ativa configurada para esta clínica.');
+        }
+
+        $integracao = \App\Services\Bancario\IntegracaoFactory::make($config->provedor, $config->ambiente === 'sandbox');
+        $gerenciador = new \App\Services\Bancario\GerenciadorCobranca($integracao);
+
+        $pagadorNome = $cr->convenio_id ? $cr->convenio_nome : $cr->paciente_nome;
+        $pagadorDoc = $cr->convenio_id ? ($cr->convenio_cnpj ?? '') : ($cr->paciente_cpf ?? '');
+
+        $dadosBoleto = [
+            'numeroConvenio' => $config->numero_convenio,
+            'numeroCarteira' => $config->numero_carteira,
+            'numeroVariacaoCarteira' => $config->numero_variacao_carteira,
+            'dataEmissao' => date('d.m.Y'),
+            'dataVencimento' => date('Y-m-d', strtotime($cr->vencimento)),
+            'valorOriginal' => (float)$cr->valor,
+            'numeroTituloCliente' => 'CR' . $cr->conta_id,
+            'pagador_nome' => $pagadorNome,
+            'pagador_numeroInscricao' => preg_replace('/\D/', '', $pagadorDoc),
+            'billingType' => $request->input('billingType', 'UNDEFINED'),
+        ];
+
+        if ($config->provedor === 'bb') {
+            $dadosBoleto['dataVencimento'] = date('d.m.Y', strtotime($cr->vencimento));
+        }
+
+        $tokenData = $gerenciador->gerarToken([
+            'client_id' => $config->client_id,
+            'client_secret' => $config->client_secret,
+            'access_token' => $config->app_key ?: $config->client_id,
+        ]);
+
+        if (!$tokenData['success']) {
+            return back()->with('error', 'Falha na autenticação bancária. Verifique as credenciais da integração.');
+        }
+
+        $token = $tokenData['data']['access_token'] ?? '';
+
+        try {
+            $boleto = $gerenciador->registrarBoleto($dadosBoleto, $tokenData['data']['access_token'] ?? '', [
+                'app_key' => $config->app_key,
+                'client_id' => $config->client_id,
+                'access_token' => $config->app_key ?: $config->client_id
+            ]);
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        if (!$boleto['success']) {
+            return back()->with('error', 'Falha ao gerar cobrança na API: ' . ($boleto['error'] ?? 'Erro desconhecido.'));
+        }
+
+        $linkBoleto = '';
+        $nossoNumero = '';
+        if ($config->provedor === 'asaas') {
+            $linkBoleto = $boleto['data']['bankSlipUrl'] ?? $boleto['data']['invoiceUrl'] ?? '';
+            $nossoNumero = $boleto['data']['id'] ?? '';
+        } elseif ($config->provedor === 'bb') {
+            $linkBoleto = 'Linha digitável: ' . ($boleto['data']['linhaDigitavel'] ?? '');
+            $nossoNumero = $boleto['data']['numeroTransacao'] ?? '';
+        }
+
+        DB::table('cobrancas')->insert([
+            'account_id' => $cr->account_id,
+            'conta_receber_id' => $cr->conta_id,
+            'configuracao_bancaria_id' => $config->id,
+            'gateway' => $config->provedor,
+            'gateway_id' => $nossoNumero,
+            'tipo' => 'BOLETO',
+            'nosso_numero' => $nossoNumero,
+            'url' => $linkBoleto,
+            'valor' => $cr->valor,
+            'vencimento' => $cr->vencimento,
+            'status' => 'PENDING',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'Boleto gerado com sucesso!');
     }
 }

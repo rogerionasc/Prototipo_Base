@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('carater_atendimentos', function (Blueprint $table) {
-            $table->id();
+            $table->id()->startingValue(1000);
             $table->string('codigo', 2);
             $table->string('descricao', 50);
             $table->timestamps();

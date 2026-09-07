@@ -18,6 +18,7 @@ class ConvenioController extends Controller
     {
         return [
             'descricao' => ['required', 'string', 'max:255'],
+            'cnpj' => ['nullable', 'string', 'max:20'],
             'logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'tuss_tabela' => ['nullable', 'exclude_if:tuss_tabela,', 'string', 'max:20', 'exists:tuss,tabela'],
             'tuss_ids' => ['nullable', 'array'],
@@ -38,7 +39,7 @@ class ConvenioController extends Controller
     public function index()
     {
         $convenios = Convenio::with(['medicos:id,nome,conselho_id,numero_conselho,uf_conselho', 'medicos.conselho', 'medicos.especialidades:id,nome', 'medicoTuss:id', 'medicoTussMapeados:id,origem_procedimento_id'])
-            ->select('id', 'descricao', 'logo_path', 'tuss_tabela', 'tipo', 'empresa_id', 'ans', 'dias_recebimento', 'dias_retorno', 'dias_para_faturar', 'config_spsadt')
+            ->select('id', 'descricao', 'cnpj', 'logo_path', 'tuss_tabela', 'tipo', 'empresa_id', 'ans', 'dias_recebimento', 'dias_retorno', 'dias_para_faturar', 'config_spsadt')
             ->get();
         $contas = Conta::select('id', 'nome')->orderBy('nome')->get();
         $profissionaisSaude = Pessoa::with(['especialidades:id,nome', 'conselho'])->select('id', 'nome', 'conselho_id', 'numero_conselho', 'uf_conselho')->orderBy('nome')->get();

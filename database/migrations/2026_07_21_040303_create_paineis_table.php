@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('paineis', function (Blueprint $table) {
-            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
 
-            $table->id();
+            $table->id()->startingValue(1000);
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->string('nome');
             $table->boolean('status')->default(true);
             $table->timestamps();

@@ -10,9 +10,9 @@ return new class extends Migration
     {
         if (!Schema::hasTable('caixas')) {
             Schema::create('caixas', function (Blueprint $table) {
-            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
 
-                $table->id();
+                $table->id()->startingValue(1000);
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
                 $table->string('descricao', 120);
                 $table->string('tipo', 50);
                 $table->boolean('bloquear_receber')->default(false);

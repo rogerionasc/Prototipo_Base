@@ -10,7 +10,7 @@ return new class extends Migration
     {
         if (!Schema::hasTable('profissional_especialidade')) {
             Schema::create('profissional_especialidade', function (Blueprint $table) {
-                $table->id();
+                $table->id()->startingValue(1000);
                 $table->foreignId('pessoa_id')->constrained('pessoas');
                 $table->foreignId('especialidade_id')->constrained('especialidades');
                 $table->string('qre', 6)->nullable();
