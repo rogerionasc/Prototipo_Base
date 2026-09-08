@@ -19,6 +19,7 @@ class ContasReceberController extends Controller
                 'cr.faturamento_id as id',
                 'cr.id as conta_id',
                 'cr.faturamento_id',
+                'f.numero_lote as lote',
                 'cr.paciente_id',
                 'cr.convenio_id',
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
@@ -205,6 +206,19 @@ class ContasReceberController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $pagamentoExiste = DB::table('pagamentos')
+            ->where('faturamento_id', $cr->faturamento_id)
+            ->exists();
+
+        if (!$pagamentoExiste) {
+            \App\Models\Pagamento::create([
+                'account_id' => $cr->account_id,
+                'faturamento_id' => $cr->faturamento_id,
+                'valor' => $cr->valor,
+                'status' => 'PENDENTE',
+            ]);
+        }
 
         return back()->with('success', 'Boleto gerado com sucesso!');
     }

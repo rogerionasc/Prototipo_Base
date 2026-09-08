@@ -98,22 +98,21 @@ export default {
       <div class="app-menu navbar-menu">
         <!-- LOGO -->
         <div class="navbar-brand-box">
-          <!-- Dark Logo-->
+          <!-- Logo -->
           <Link href="/" class="logo logo-dark">
             <span class="logo-sm">
-              <img src="@assets/images/logo-sm.png" alt="" height="22" />
+              <img src="/storage/logo-sistema/Logo-Top.svg" alt="Logo Top" height="30" />
             </span>
             <span class="logo-lg">
-              <img src="@assets/images/logo-dark.png" alt="" height="17" />
+              <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="Logo Bottom" height="45" />
             </span>
           </Link>
-          <!-- Light Logo-->
           <Link href="/" class="logo logo-light">
             <span class="logo-sm">
-              <img src="@assets/images/logo-sm.png" alt="" height="22" />
+              <img src="/storage/logo-sistema/Logo-Top.svg" alt="Logo Top" height="30" style="filter: brightness(0) invert(1);" />
             </span>
             <span class="logo-lg">
-              <img src="@assets/images/logo-light.png" alt="" height="17" />
+              <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="Logo Bottom" height="45" style="filter: brightness(0) invert(1);" />
             </span>
           </Link>
           <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover"

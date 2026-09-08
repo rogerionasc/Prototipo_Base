@@ -272,19 +272,19 @@ export default {
           <div class="navbar-brand-box horizontal-logo">
             <Link href="/" class="logo logo-dark">
               <span class="logo-sm">
-                <img src="@assets/images/logo-sm.png" alt="" height="22" />
+                <img src="/storage/logo-sistema/Logo-Top.svg" alt="" height="30" />
               </span>
               <span class="logo-lg">
-                <img src="@assets/images/logo-dark.png" alt="" height="17" />
+                <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="" height="45" />
               </span>
             </Link>
 
             <Link href="/" class="logo logo-light">
               <span class="logo-sm">
-                <img src="@assets/images/logo-sm.png" alt="" height="22" />
+                <img src="/storage/logo-sistema/Logo-Top.svg" alt="" height="30" style="filter: brightness(0) invert(1);" />
               </span>
               <span class="logo-lg">
-                <img src="@assets/images/logo-light.png" alt="" height="17" />
+                <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="" height="45" style="filter: brightness(0) invert(1);" />
               </span>
             </Link>
           </div>

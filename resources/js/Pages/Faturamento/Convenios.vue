@@ -299,7 +299,7 @@
 
                                     <div class="table-wrapper-choices" :key="'table-' + lote.id + '-' + lote.status">
                                         <SimpleTable :items="lote.guias || []" :columns="guiasLoteColumns"
-                                            :hasActions="true" actionsLabel="Ação" variant="borderless" :compact="true"
+                                            :hasActions="['ABERTA', 'FECHADA'].includes(lote.status)" actionsLabel="Ação" variant="borderless" :compact="true"
                                             emptyTitle="Nenhuma guia atrelada a este lote."
                                             :row-class="getGuiaRowClass">
                                             <!-- <template #cell(id)="{ item }">
@@ -331,7 +331,7 @@
                                             </template>
                                             <template #cell(glosa)="{ item }">
                                                 <template
-                                                    v-if="lote.status === 'ABERTA' || lote.status === 'PROCESSADA'">
+                                                    v-if="['ABERTA', 'PROCESSADA', 'RECEBIDO'].includes(lote.status)">
                                                     <span v-if="item.valor_glosado > 0" class="text-danger fw-medium">{{
                                                         formatCurrency(item.valor_glosado) }}</span>
                                                     <span v-else class="text-muted">-</span>
@@ -352,7 +352,7 @@
                                             </template>
                                             <template #cell(status)="{ item }">
                                                 <span
-                                                    v-if="lote.status === 'ABERTA' || item.status === 'DEVOLVIDA' || lote.status === 'PROCESSADA'">
+                                                    v-if="['ABERTA', 'PROCESSADA', 'RECEBIDO'].includes(lote.status) || item.status === 'DEVOLVIDA'">
                                                     {{ item.status ? item.status.replace(/_/g, ' ') : 'PENDENTE' }}
                                                 </span>
                                                 <div v-else>
