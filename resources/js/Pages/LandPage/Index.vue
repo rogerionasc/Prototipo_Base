@@ -92,8 +92,8 @@ const testimonials = [
       <div class="lp-w">
         <div class="lp-nav-inner">
           <div class="lp-nav-brand">
-            <img src="/storage/logo-sistema/Logo-Top.svg" alt="Logo" height="42" />
-            <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="WebClinic" height="48" style="margin-top: 2px;" />
+            <img src="/storage/logo-sistema/Logo-Top.svg" alt="Logo" height="50" />
+            <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="WebClinic" height="72" style="margin-top: 2px;" />
           </div>
           <div class="lp-nav-links d-none d-md-flex">
             <a href="#modulos">Módulos</a>
@@ -364,8 +364,8 @@ const testimonials = [
         <div class="lp-footer-grid">
           <div class="lp-footer-brand">
             <div class="lp-footer-logo">
-              <img src="/storage/logo-sistema/Logo-Top.svg" alt="" height="28" style="filter: brightness(0) invert(1);" />
-              <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="" height="32" style="filter: brightness(0) invert(1);" />
+              <img src="/storage/logo-sistema/Logo-Top.svg" alt="" height="34" style="filter: brightness(0) invert(1);" />
+              <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="" height="52" style="filter: brightness(0) invert(1);" />
             </div>
             <p>Gestão Médica Inteligente.<br>Tecnologia que cuida de quem cuida.</p>
           </div>
@@ -412,7 +412,7 @@ const testimonials = [
 .lp-nav { position: absolute; top: 0; left: 0; width: 100%; z-index: 999; padding: 24px 0; transition: all .3s ease; }
 .lp-nav.scrolled { position: fixed; padding: 16px 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,.05); }
 .lp-nav-inner { display: flex; align-items: center; justify-content: space-between; }
-.lp-nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.lp-nav-brand { display: flex; align-items: center; gap: 4px; text-decoration: none; }
 .lp-nav-links { display: flex; gap: 28px; }
 .lp-nav-links a { color: #475569; text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
 .lp-nav-links a:hover { color: #0ab39c; }
@@ -606,7 +606,7 @@ const testimonials = [
 .lp-footer { background: #0f172a; padding-top: 70px; }
 .lp-footer-grid { display: grid; grid-template-columns: 1.2fr 2fr; gap: 50px; padding-bottom: 50px; border-bottom: 1px solid #1e293b; }
 .lp-footer-brand p { color: #94a3b8; font-size: 14px; line-height: 1.7; margin-top: 16px; }
-.lp-footer-logo { display: flex; align-items: center; gap: 6px; }
+.lp-footer-logo { display: flex; align-items: center; gap: 2px; }
 .lp-footer-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
 .lp-footer-cols h4 { color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 18px; text-transform: uppercase; letter-spacing: .5px; }
 .lp-footer-cols a { display: block; color: #94a3b8; text-decoration: none; font-size: 14px; margin-bottom: 10px; transition: color .2s; }
