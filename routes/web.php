@@ -37,6 +37,9 @@ use App\Http\Controllers\TipoAtendimentoController;
 |
 */
 
+// Landing Page (pública, sem autenticação)
+Route::get('/landpage', [VelzonRoutesController::class, 'landpage'])->name('landpage');
+
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',])->group(function () {
     Route::post("/conta/switch/{id}", [\App\Http\Controllers\AccountController::class, "switch"])->name('conta.switch');
     Route::resource('clinicas', \App\Http\Controllers\AccountController::class)->names('clinicas');

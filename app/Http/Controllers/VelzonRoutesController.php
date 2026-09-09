@@ -217,6 +217,11 @@ class VelzonRoutesController extends Controller
         ]);
     }
 
+    public function landpage()
+    {
+        return Inertia::render('LandPage/Index');
+    }
+
     public function dashboard()
     {
         return Inertia::render('dashboards/Index');

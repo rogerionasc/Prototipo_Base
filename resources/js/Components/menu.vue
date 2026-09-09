@@ -22,6 +22,12 @@ export default {
                     target: "#/"
                 },
                 {
+                    icon: "ri-global-line",
+                    title: "Landing Page",
+                    type: "link",
+                    target: "/landpage"
+                },
+                {
                     icon: "ri-calendar-check-line",
                     title: this.$t("t-receptionist"),
                     type: "link",
