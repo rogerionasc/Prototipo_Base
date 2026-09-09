@@ -1,20 +1,19 @@
 <template>
   <Layout>
+
     <Head title="Contas a Receber" />
     <PageHeader title="Contas a Receber" pageTitle="Financeiro" />
 
     <!-- Top KPIs -->
     <div class="row mb-4">
-      <!-- Card Total Pendente (Geral) -->
       <div class="col">
-        <div class="card shadow-sm border-0 h-100" style="cursor: pointer; border-left: 4px solid var(--vz-primary) !important;"
-             :class="activeTab === 0 ? 'bg-primary-subtle' : ''"
-             @click="activeTab = 0">
+        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid var(--vz-primary) !important;">
           <div class="card-body">
             <div class="d-flex justify-content-between">
               <div>
-                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Total Pendente (Geral)</p>
-                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-primary">{{ formatCurrency(totalPendenteGeral) }}</span></h4>
+                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">A Receber</p>
+                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-primary">{{
+                  formatCurrency(totalAReceber) }}</span></h4>
               </div>
               <div class="avatar-sm flex-shrink-0">
                 <span class="avatar-title bg-primary-subtle text-primary rounded fs-3">
@@ -26,20 +25,18 @@
         </div>
       </div>
 
-      <!-- Card Pendências Particulares -->
       <div class="col">
-        <div class="card shadow-sm border-0 h-100" style="cursor: pointer; border-left: 4px solid var(--vz-warning) !important;"
-             :class="activeTab === 1 ? 'bg-warning-subtle' : ''"
-             @click="activeTab = 1">
+        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid var(--vz-danger) !important;">
           <div class="card-body">
             <div class="d-flex justify-content-between">
               <div>
-                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Pendências Particulares</p>
-                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-warning">{{ formatCurrency(totalPendenteParticular) }}</span></h4>
+                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Vencidas</p>
+                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-danger">{{
+                  formatCurrency(totalVencido) }}</span></h4>
               </div>
               <div class="avatar-sm flex-shrink-0">
-                <span class="avatar-title bg-warning-subtle text-warning rounded fs-3">
-                  <i class="bx bx-user"></i>
+                <span class="avatar-title bg-danger-subtle text-danger rounded fs-3">
+                  <i class="bx bx-error-circle"></i>
                 </span>
               </div>
             </div>
@@ -47,20 +44,18 @@
         </div>
       </div>
 
-      <!-- Card Pendências Convênios -->
       <div class="col">
-        <div class="card shadow-sm border-0 h-100" style="cursor: pointer; border-left: 4px solid var(--vz-success) !important;"
-             :class="activeTab === 2 ? 'bg-success-subtle' : ''"
-             @click="activeTab = 2">
+        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid var(--vz-success) !important;">
           <div class="card-body">
             <div class="d-flex justify-content-between">
               <div>
-                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Pendências Convênios</p>
-                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-success">{{ formatCurrency(totalPendenteConvenio) }}</span></h4>
+                <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Recebidas</p>
+                <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-success">{{
+                  formatCurrency(totalRecebido) }}</span></h4>
               </div>
               <div class="avatar-sm flex-shrink-0">
                 <span class="avatar-title bg-success-subtle text-success rounded fs-3">
-                  <i class="bx bx-building-house"></i>
+                  <i class="bx bx-check-shield"></i>
                 </span>
               </div>
             </div>
@@ -69,33 +64,89 @@
       </div>
     </div>
 
-    <!-- Tabs Container -->
-    <div class="card">
-      <div class="card-body">
-        <BTabs v-model="activeTab" nav-class="nav-tabs-custom nav-success nav-justified mb-3">
-          
-          <BTab title="Visão Geral" active>
-            <TableGrid :columns="cols" :data="rows" :tableTitle="''" :showCheckbox="false" :search="true"
-              :showAddButton="false" :showStatus="false" :showActions="true"
-              :actionsConfig="{ delete: false, edit: false, show: false, diary: false, print: false, download: false, restore: false, receive: canReceive, charge: true }"
-              @receive="onReceive" @charge="onCharge" @show="onShowGuias" />
-          </BTab>
-          
-          <BTab title="Particular (Pacientes)">
-            <TableGrid :columns="colsParticular" :data="rowsParticular" :tableTitle="''" :showCheckbox="false" :search="true"
-              :showAddButton="false" :showStatus="false" :showActions="true"
-              :actionsConfig="{ delete: false, edit: false, show: false, diary: false, print: false, download: false, restore: false, receive: false, charge: true }"
-              @charge="onCharge" @show="onShowGuias" />
-          </BTab>
+    <!-- Master Detail Layout -->
+    <div class="row">
+      <!-- Master List -->
+      <div :class="selectedConta ? 'col-lg-8' : 'col-lg-12'">
+        <TableGrid :columns="currentCols" :data="currentRows" tableTitle="Títulos a Receber" :showCheckbox="false"
+          :search="true" :showAddButton="false" :showStatus="false" :showActions="true" :compactSpacing="true"
+          :actionsConfig="currentActionsConfig" @receive="onReceive" @charge="onCharge" @show="onShowGuias"
+          @procedure="onProcedureClick">
 
-          <BTab title="Convênios (Repasses)">
-            <TableGrid :columns="colsConvenio" :data="rowsConvenio" :tableTitle="''" :showCheckbox="false" :search="true"
-              :showAddButton="false" :showStatus="false" :showActions="true"
-              :actionsConfig="{ delete: false, edit: false, show: false, diary: false, print: false, download: false, restore: false, receive: canReceive, charge: false }"
-              @receive="onReceive" @show="onShowGuias" />
-          </BTab>
-          
-        </BTabs>
+          <template #right-actions>
+            <div class="btn-group" role="group">
+              <input type="radio" class="btn-check" name="filterType" id="filterAll" value="TODOS"
+                v-model="activeFilter">
+              <label class="btn btn-outline-primary" for="filterAll">Geral</label>
+
+              <input type="radio" class="btn-check" name="filterType" id="filterPart" value="PARTICULAR"
+                v-model="activeFilter">
+              <label class="btn btn-outline-primary" for="filterPart">Particular</label>
+
+              <input type="radio" class="btn-check" name="filterType" id="filterConv" value="CONVENIO"
+                v-model="activeFilter">
+              <label class="btn btn-outline-primary" for="filterConv">Convênio</label>
+            </div>
+          </template>
+        </TableGrid>
+      </div>
+
+      <!-- Detail Panel (Offcanvas style but split screen) -->
+      <div v-if="selectedConta" class="col-lg-4">
+        <div class="card sticky-side-div" style="position: sticky; top: 80px;">
+          <div class="card-header border-bottom-dashed bg-light">
+            <div class="d-flex align-items-center">
+              <h5 class="card-title mb-0 flex-grow-1 text-primary">Conta #{{ selectedConta.conta_id }}</h5>
+              <button type="button" class="btn-close" @click="selectedConta = null"></button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+              <div class="flex-shrink-0">
+                <div v-if="selectedConta.logo_path" class="avatar-sm">
+                  <img
+                    :src="selectedConta.logo_path.startsWith('http') ? selectedConta.logo_path : '/storage/' + selectedConta.logo_path"
+                    alt="Logo" class="rounded-circle avatar-sm border bg-white"
+                    style="object-fit: contain; padding: 2px;">
+                </div>
+                <div v-else class="avatar-sm">
+                  <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-3">
+                    <i class="bx"
+                      :class="selectedConta.tipo_convenio === 'CONVENIO' ? 'bx-building-house' : 'bx-user'"></i>
+                  </span>
+                </div>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <h6 class="fs-15 mb-1">{{ selectedConta.pagador }}</h6>
+                <p class="text-muted mb-0">Lote: {{ selectedConta.lote || '-' }}</p>
+              </div>
+              <div>
+                <span class="badge fs-12" :class="getBadgeClass(selectedConta.status)">{{
+                  formatStatus(selectedConta.status)
+                }}</span>
+              </div>
+            </div>
+
+            <div class="row text-center border-top border-bottom py-3 mb-3">
+              <div class="col-6 border-end">
+                <p class="text-muted mb-1">Valor</p>
+                <h5 class="fs-16 fw-semibold mb-0 text-primary">{{ formatCurrency(selectedConta.valor) }}</h5>
+              </div>
+              <div class="col-6">
+                <p class="text-muted mb-1">Vencimento</p>
+                <h5 class="fs-16 fw-semibold mb-0" :class="isVencida(selectedConta) ? 'text-danger' : ''">
+                  {{ selectedConta.vencimento }}
+                </h5>
+              </div>
+            </div>
+
+            <div class="vstack gap-2 mt-3">
+              <button class="btn btn-primary w-100" @click="onCharge(selectedConta.id, selectedConta)">
+                <i class="bx bx-barcode fs-16 align-middle me-1"></i> Gerar Cobrança / Link
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -145,53 +196,122 @@
       </div>
     </Modal>
 
-    <Modal v-model="showCharge" title="Gerar Cobrança (Link de Pagamento)" name-button="Gerar"
+    <Modal v-model="showCharge" title="Gerar Cobrança (Link de Pagamento)" name-button="Gerar Link"
       :processing="chargeForm.processing" size="md" @save="confirmCharge">
-      <div class="vstack gap-3">
-        <div class="row g-2">
-          <div class="col-12">
-            <label class="form-label">Método de Pagamento Autorizado</label>
-            <select v-model="chargeForm.billingType" class="form-select">
-              <option value="UNDEFINED">Qualquer um (Cliente escolhe entre Boleto, Pix e Cartão)</option>
-              <option value="BOLETO">Apenas Boleto Bancário (C/ Pix Embutido)</option>
-              <option value="PIX">Apenas PIX</option>
-              <option value="CREDIT_CARD">Apenas Cartão de Crédito</option>
-            </select>
+      <div class="row g-4">
+        <!-- Método de Pagamento -->
+        <div class="col-12">
+          <h6 class="text-muted text-uppercase fw-semibold mb-3 fs-12">Métodos de Pagamento</h6>
+          <p class="text-muted mb-4 fs-13">Selecione quais métodos o cliente poderá utilizar para pagar este link.</p>
+
+          <div class="vstack gap-3">
+            <div>
+              <input id="billingTypeAny" name="billingType" type="radio" class="custom-radio-input d-none"
+                value="UNDEFINED" v-model="chargeForm.billingType">
+              <label class="custom-radio-card m-0" for="billingTypeAny">
+                <div class="d-flex align-items-center">
+                  <span class="flex-shrink-0 avatar-xs">
+                    <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-4">
+                      <i class="bx bx-list-check"></i>
+                    </span>
+                  </span>
+                  <span class="flex-grow-1 ms-3">
+                    <span class="d-block fw-semibold mb-1">Qualquer Método</span>
+                    <span class="d-block text-muted fs-12">Deixar que o cliente escolha como quer pagar.</span>
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            <div>
+              <input id="billingTypePix" name="billingType" type="radio" class="custom-radio-input d-none" value="PIX"
+                v-model="chargeForm.billingType">
+              <label class="custom-radio-card m-0" for="billingTypePix">
+                <div class="d-flex align-items-center">
+                  <span class="flex-shrink-0 avatar-xs">
+                    <span class="avatar-title bg-success-subtle text-success rounded-circle fs-4">
+                      <i class="bx bx-qr-scan"></i>
+                    </span>
+                  </span>
+                  <span class="flex-grow-1 ms-3">
+                    <span class="d-block fw-semibold mb-1">PIX Exclusivo</span>
+                    <span class="d-block text-muted fs-12">Gera um QR Code Pix dinâmico com baixa automática.</span>
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            <div>
+              <input id="billingTypeBoleto" name="billingType" type="radio" class="custom-radio-input d-none"
+                value="BOLETO" v-model="chargeForm.billingType">
+              <label class="custom-radio-card m-0" for="billingTypeBoleto">
+                <div class="d-flex align-items-center">
+                  <span class="flex-shrink-0 avatar-xs">
+                    <span class="avatar-title bg-info-subtle text-info rounded-circle fs-4">
+                      <i class="bx bx-barcode"></i>
+                    </span>
+                  </span>
+                  <span class="flex-grow-1 ms-3">
+                    <span class="d-block fw-semibold mb-1">Boleto Bancário</span>
+                    <span class="d-block text-muted fs-12">Boleto registrado (inclui linha digitável Pix).</span>
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            <div>
+              <input id="billingTypeCreditCard" name="billingType" type="radio" class="custom-radio-input d-none"
+                value="CREDIT_CARD" v-model="chargeForm.billingType">
+              <label class="custom-radio-card m-0" for="billingTypeCreditCard">
+                <div class="d-flex align-items-center">
+                  <span class="flex-shrink-0 avatar-xs">
+                    <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-4">
+                      <i class="bx bx-credit-card"></i>
+                    </span>
+                  </span>
+                  <span class="flex-grow-1 ms-3">
+                    <span class="d-block fw-semibold mb-1">Cartão de Crédito</span>
+                    <span class="d-block text-muted fs-12">Permite parcelamento com taxas.</span>
+                  </span>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
       </div>
     </Modal>
 
     <!-- Modal Guias do Lote -->
-    <Modal v-model="showGuiasModal" :title="'Guias do Lote ' + (guiasModalLoteName || '')" size="xl" :show-footer="false">
+    <Modal v-model="showGuiasModal" :title="'Guias do Lote ' + (guiasModalLoteName || '')" size="xl"
+      :show-footer="false">
       <div v-if="loadingGuias" class="text-center py-4">
-          <div class="spinner-border text-primary" role="status"></div>
-          <p class="mt-2 text-muted">Buscando guias...</p>
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Buscando guias...</p>
       </div>
       <div v-else class="table-responsive">
-          <table class="table table-bordered table-striped table-hover mb-0">
-              <thead class="table-light">
-                  <tr>
-                      <th>Guia</th>
-                      <th>Beneficiário</th>
-                      <th>Profissional</th>
-                      <th>Tipo</th>
-                      <th>Valor (R$)</th>
-                  </tr>
-              </thead>
-              <tbody>
-                  <tr v-for="guia in guiasLoteList" :key="guia.id">
-                      <td>{{ guia.numero_guia_prestador || guia.numero_guia_operadora || guia.id || '-' }}</td>
-                      <td>{{ guia.beneficiario_nome || '-' }}</td>
-                      <td>{{ guia.profissional_solicitante_nome || '-' }}</td>
-                      <td>{{ guia.tipo || 'Guia de Consulta' }}</td>
-                      <td>{{ formatCurrency(guia.valor_total_geral) }}</td>
-                  </tr>
-                  <tr v-if="guiasLoteList.length === 0">
-                      <td colspan="5" class="text-center text-muted">Nenhuma guia encontrada para este lote.</td>
-                  </tr>
-              </tbody>
-          </table>
+        <table class="table table-bordered table-striped table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Guia</th>
+              <th>Beneficiário</th>
+              <th>Profissional</th>
+              <th>Tipo</th>
+              <th>Valor (R$)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="guia in guiasLoteList" :key="guia.id">
+              <td>{{ guia.numero_guia_prestador || guia.numero_guia_operadora || guia.id || '-' }}</td>
+              <td>{{ guia.beneficiario_nome || '-' }}</td>
+              <td>{{ guia.profissional_solicitante_nome || '-' }}</td>
+              <td>{{ guia.tipo || 'Guia de Consulta' }}</td>
+              <td>{{ formatCurrency(guia.valor_total_geral) }}</td>
+            </tr>
+            <tr v-if="guiasLoteList.length === 0">
+              <td colspan="5" class="text-center text-muted">Nenhuma guia encontrada para este lote.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </Modal>
   </Layout>
@@ -213,24 +333,44 @@ const props = defineProps({
 
 const rows = toRef(props, "contas");
 
-const activeTab = ref(0);
+const activeFilter = ref("TODOS");
+const selectedConta = ref(null);
+const loadingGuias = ref(false);
+const guiasLoteList = ref([]);
 
-// Helper para filtrar pendentes
-const pendentes = computed(() => {
-  return (rows.value || []).filter(r => String(r.status || "").toUpperCase() !== "RECEBIDO" && String(r.status || "").toUpperCase() !== "CANCELADO");
+function parseDateBR(dmy) {
+  if (!dmy) return null;
+  const parts = dmy.split('-');
+  if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);
+  return null;
+}
+
+function isVencida(row) {
+  if (String(row.status || "").toUpperCase() === "RECEBIDO") return false;
+  const v = parseDateBR(row.vencimento);
+  if (!v) return false;
+  const h = new Date();
+  h.setHours(0, 0, 0, 0);
+  return v < h;
+}
+
+const totalAReceber = computed(() => {
+  return (rows.value || [])
+    .filter(r => String(r.status || "").toUpperCase() !== "RECEBIDO" && String(r.status || "").toUpperCase() !== "CANCELADO" && !isVencida(r))
+    .reduce((acc, curr) => acc + Number(curr.valor || 0), 0);
 });
 
-const rowsParticular = computed(() => {
-  return (rows.value || []).filter(r => String(r.tipo_convenio || "").toUpperCase() !== "CONVENIO");
+const totalVencido = computed(() => {
+  return (rows.value || [])
+    .filter(r => String(r.status || "").toUpperCase() !== "RECEBIDO" && String(r.status || "").toUpperCase() !== "CANCELADO" && isVencida(r))
+    .reduce((acc, curr) => acc + Number(curr.valor || 0), 0);
 });
 
-const rowsConvenio = computed(() => {
-  return (rows.value || []).filter(r => String(r.tipo_convenio || "").toUpperCase() === "CONVENIO");
+const totalRecebido = computed(() => {
+  return (rows.value || [])
+    .filter(r => String(r.status || "").toUpperCase() === "RECEBIDO")
+    .reduce((acc, curr) => acc + Number(curr.valor || 0), 0);
 });
-
-const totalPendenteGeral = computed(() => pendentes.value.reduce((acc, curr) => acc + Number(curr.valor || 0), 0));
-const totalPendenteParticular = computed(() => pendentes.value.filter(r => String(r.tipo_convenio || "").toUpperCase() !== "CONVENIO").reduce((acc, curr) => acc + Number(curr.valor || 0), 0));
-const totalPendenteConvenio = computed(() => pendentes.value.filter(r => String(r.tipo_convenio || "").toUpperCase() === "CONVENIO").reduce((acc, curr) => acc + Number(curr.valor || 0), 0));
 
 function formatCurrency(n) {
   const v = Number(n || 0);
@@ -247,51 +387,102 @@ function formatStatus(val) {
   return val.replace(/_/g, ' ');
 }
 
+function getBadgeClass(status) {
+  if (!status) return 'bg-secondary';
+  const s = status.toUpperCase();
+  if (s === 'RECEBIDO') return 'bg-success';
+  if (s === 'CANCELADO') return 'bg-dark';
+  if (s === 'AGUARDANDO_COBRANCA') return 'bg-info';
+  return 'bg-warning text-dark'; // Pendente
+}
+
 function loteFormatter(cell, row) {
-    const faturamentoId = row.cells[0].data; // Faturamento ID
-    const loteNumber = cell || faturamentoId;
-    if (!loteNumber) return html(`<span class="text-muted">-</span>`);
-    return html(`<span data-action="show" data-id="${faturamentoId}" data-lote="${loteNumber}" class="text-primary fw-medium text-decoration-underline" style="cursor: pointer;">${loteNumber}</span>`);
+  const faturamentoId = row.cells[1].data; // Faturamento ID is now the second column
+  const loteNumber = cell || faturamentoId;
+  if (!loteNumber) return html(`<span class="text-muted">-</span>`);
+  return html(`<span data-action="procedure" data-id="${faturamentoId}" data-lote="${loteNumber}" class="text-primary fw-medium text-decoration-underline" style="cursor: pointer;">${loteNumber}</span>`);
+}
+
+function statusFormatter(cell, row) {
+  const v = parseDateBR(row.cells[7].data); // Vencimento is at index 7 in all cols
+  let badgeClass = getBadgeClass(cell);
+  if (String(cell || "").toUpperCase() !== "RECEBIDO" && String(cell || "").toUpperCase() !== "CANCELADO") {
+    const h = new Date();
+    h.setHours(0, 0, 0, 0);
+    if (v && v < h) {
+      badgeClass = 'bg-danger';
+      cell = 'VENCIDO';
+    }
+  }
+  return html(`<span class="badge ${badgeClass}">${formatStatus(cell)}</span>`);
 }
 
 const cols = [
-  { id: "id", name: "Faturamento" },
+  { id: "conta_id", name: "ID Conta Receber" },
+  { id: "id", name: "Faturamento", hidden: true },
   { id: "lote", name: "Lote", formatter: loteFormatter },
-  { id: "conta_id", name: "ID Conta" },
-  { id: "nu_pagamento", name: "Nº Pagamento" },
+  { id: "nu_pagamento", name: "Nº Pgto", hidden: true },
   { id: "tipo_convenio", name: "Tipo" },
   { id: "pagador", name: "Pagador/Convênio" },
-  { id: "procedimento", name: "Procedimento" },
+  { id: "procedimento", name: "Procedimento", hidden: true },
   { id: "vencimento", name: "Vencimento" },
   { id: "valor", name: "Valor", formatter: (cell) => formatCurrency(cell) },
-  { id: "data_pagamento", name: "Dt Pagamento" },
-  { id: "status", name: "Status", formatter: (cell) => formatStatus(cell) },
+  { id: "data_pagamento", name: "Dt Pagamento", hidden: true },
+  { id: "status", name: "Status", formatter: statusFormatter },
 ];
 
 const colsParticular = [
-  { id: "id", name: "Faturamento" },
+  { id: "conta_id", name: "ID Conta Receber" },
+  { id: "id", name: "Faturamento", hidden: true },
   { id: "lote", name: "Lote", formatter: loteFormatter },
-  { id: "conta_id", name: "ID Conta" },
+  { id: "nu_pagamento", name: "Nº Pgto", hidden: true },
+  { id: "tipo_convenio", name: "Tipo", hidden: true },
   { id: "pagador", name: "Paciente" },
-  { id: "procedimento", name: "Procedimento" },
+  { id: "procedimento", name: "Procedimento", hidden: true },
   { id: "vencimento", name: "Vencimento" },
   { id: "valor", name: "Valor", formatter: (cell) => formatCurrency(cell) },
-  { id: "data_pagamento", name: "Dt Pagamento" },
-  { id: "status", name: "Status", formatter: (cell) => formatStatus(cell) },
+  { id: "data_pagamento", name: "Dt Pagamento", hidden: true },
+  { id: "status", name: "Status", formatter: statusFormatter },
 ];
 
 const colsConvenio = [
-  { id: "id", name: "Faturamento" },
+  { id: "conta_id", name: "ID Conta Receber" },
+  { id: "id", name: "Faturamento", hidden: true },
   { id: "lote", name: "Lote", formatter: loteFormatter },
-  { id: "conta_id", name: "ID Conta" },
+  { id: "nu_pagamento", name: "Nº Pgto", hidden: true },
+  { id: "tipo_convenio", name: "Tipo", hidden: true },
   { id: "pagador", name: "Convênio" },
-  { id: "paciente", name: "Paciente" },
-  { id: "procedimento", name: "Procedimento" },
+  { id: "procedimento", name: "Procedimento", hidden: true },
   { id: "vencimento", name: "Vencimento" },
   { id: "valor", name: "Valor", formatter: (cell) => formatCurrency(cell) },
-  { id: "data_pagamento", name: "Dt Repasse" },
-  { id: "status", name: "Status", formatter: (cell) => formatStatus(cell) },
+  { id: "data_pagamento", name: "Dt Repasse", hidden: true },
+  { id: "status", name: "Status", formatter: statusFormatter },
 ];
+
+const currentCols = computed(() => {
+  if (activeFilter.value === 'PARTICULAR') return colsParticular;
+  if (activeFilter.value === 'CONVENIO') return colsConvenio;
+  return cols;
+});
+
+const currentRows = computed(() => {
+  let list = rows.value || [];
+  if (activeFilter.value === 'PARTICULAR') {
+    list = list.filter(r => String(r.tipo_convenio || "").toUpperCase() !== "CONVENIO");
+  } else if (activeFilter.value === 'CONVENIO') {
+    list = list.filter(r => String(r.tipo_convenio || "").toUpperCase() === "CONVENIO");
+  }
+  return list;
+});
+
+const currentActionsConfig = computed(() => {
+  if (activeFilter.value === 'PARTICULAR') {
+    return { delete: false, edit: false, show: true, diary: false, print: false, download: false, restore: false, receive: false, charge: false };
+  } else if (activeFilter.value === 'CONVENIO') {
+    return { delete: false, edit: false, show: true, diary: false, print: false, download: false, restore: false, receive: canReceive, charge: false };
+  }
+  return { delete: false, edit: false, show: true, diary: false, print: false, download: false, restore: false, receive: canReceive, charge: false };
+});
 
 function canReceive(row) {
   return String(row?.tipo_convenio || "").toUpperCase() === "CONVENIO" && String(row?.status || "").toUpperCase() !== "RECEBIDO";
@@ -346,6 +537,16 @@ const chargeForm = useForm({
   billingType: "UNDEFINED",
 });
 
+const chargeInfo = computed(() => {
+  const id = chargeId.value;
+  const r = (rows.value || []).find(x => String(x.conta_id) === String(id) || String(x.id) === String(id)) || {};
+  return {
+    pagador: r?.pagador || "—",
+    valor: formatCurrency(r?.valor || 0),
+    lote: r?.lote || "—"
+  };
+});
+
 function onCharge(id, row) {
   chargeId.value = row?.conta_id || id;
   chargeForm.billingType = "UNDEFINED";
@@ -358,7 +559,7 @@ function confirmCharge() {
     showCharge.value = false;
     return;
   }
-  
+
   chargeForm.post(route('financeiro.contas_receber.gerar_cobranca', crId), {
     preserveScroll: true,
     onSuccess: () => {
@@ -393,17 +594,28 @@ function confirmReceive() {
     });
 }
 
+// Replaced the old guias modal with selectConta logic
+function onShowGuias(id, row) {
+  selectedConta.value = (rows.value || []).find(x => String(x.id) === String(id)) || null;
+  if (selectedConta.value) {
+    loadingGuias.value = true;
+    guiasLoteList.value = [];
+    axios.get(`/faturamentos/${id}/guias`).then(res => {
+      guiasLoteList.value = res.data;
+    }).catch(err => {
+      console.error("Erro ao buscar guias:", err);
+    }).finally(() => {
+      loadingGuias.value = false;
+    });
+  }
+}
+
 const showGuiasModal = ref(false);
 const guiasModalLoteName = ref("");
-const guiasLoteList = ref([]);
-const loadingGuias = ref(false);
 
-function onShowGuias(id, row) {
-    if (row && row.lote) {
-        openGuiasModal(id, row.lote);
-    } else {
-        openGuiasModal(id, id);
-    }
+function onProcedureClick(id) {
+  const r = (rows.value || []).find(x => String(x.id) === String(id));
+  openGuiasModal(id, r?.lote || id);
 }
 
 async function openGuiasModal(faturamentoId, loteName) {
@@ -420,32 +632,30 @@ async function openGuiasModal(faturamentoId, loteName) {
     loadingGuias.value = false;
   }
 }
-
-function getProcedimentoGuia(guia) {
-    // Tenta extrair o nome do procedimento que está atrelado ao agendamento, se houver
-    if (guia.atendimento?.agendamento?.procedimento?.nome) {
-        return guia.atendimento.agendamento.procedimento.nome;
-    }
-    // Caso tenha uma lista de procedimentos, pega o primeiro
-    if (guia.atendimento?.agendamento?.procedimentos && guia.atendimento.agendamento.procedimentos.length > 0) {
-        return guia.atendimento.agendamento.procedimentos[0].nome;
-    }
-    return null;
-}
-
-function getGuiaStatusBadge(status) {
-    if (!status) return 'bg-secondary';
-    const s = status.toUpperCase();
-    if (s === 'FATURADA') return 'bg-success';
-    if (s === 'GLOSADA') return 'bg-danger';
-    if (s === 'DEVOLVIDA') return 'bg-warning text-dark';
-    return 'bg-primary';
-}
 </script>
 
 <style scoped>
-:deep(.gridjs-table thead th:nth-child(1)),
-:deep(.gridjs-table tbody td:nth-child(1):not([colspan])) {
-  display: none;
+.modal-content-scroll {
+  height: calc(100vh - 120px);
+}
+
+.custom-radio-card {
+  border: 1px solid #e2e5e8;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: block;
+}
+
+.custom-radio-card:hover {
+  border-color: #a3c4f7;
+}
+
+.custom-radio-input:checked+.custom-radio-card {
+  border-color: #3b82f6;
+  /* primary color */
+  background-color: #eff6ff;
+  box-shadow: 0 0 0 1px #3b82f6;
 }
 </style>

@@ -387,6 +387,7 @@ function initGrid() {
                         name: col.name,
                         sort: typeof col.sort === 'boolean' ? col.sort : true
                     };
+                    if (typeof col.hidden === 'boolean') out.hidden = col.hidden;
                     if (typeof col.formatter === 'function') out.formatter = col.formatter;
                     else if (col.showImage === true) out.formatter = (cell) => buildImageCell(cell, col);
                     else out.formatter = defaultFormatter;
@@ -414,6 +415,7 @@ function initGrid() {
                     name: col.name,
                     sort: typeof col.sort === 'boolean' ? col.sort : true
                 };
+                if (typeof col.hidden === 'boolean') out.hidden = col.hidden;
                 if (typeof col.formatter === 'function') out.formatter = col.formatter;
                 else if (col.showImage === true) out.formatter = (cell) => buildImageCell(cell, col);
                 else out.formatter = defaultFormatter;
@@ -785,6 +787,7 @@ onMounted(async () => {
                                         { value: 100, label: '100' }
                                     ]" :canClear="false" :searchable="false" />
                             </div>
+                            <slot name="right-actions" :selectedRows="selectedRows"></slot>
                             <button v-if="props.showAddButton" type="button"
                                 class="btn btn-success btn-label waves-effect waves-light" @click="emit('add')"
                                 :disabled="props.addButtonDisabled">

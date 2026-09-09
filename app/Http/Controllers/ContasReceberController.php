@@ -22,6 +22,7 @@ class ContasReceberController extends Controller
                 'f.numero_lote as lote',
                 'cr.paciente_id',
                 'cr.convenio_id',
+                'c.logo_path',
                 DB::raw("COALESCE(p.nome,'') AS paciente"),
                 DB::raw("COALESCE((SELECT proc.nome FROM pagamentos pag JOIN agendamentos a ON a.id = pag.agendamento_id JOIN procedimentos proc ON proc.id = a.procedimento_id WHERE pag.faturamento_id = cr.faturamento_id LIMIT 1), '') AS procedimento"),
                 DB::raw("COALESCE(c.descricao,'') AS convenio"),

@@ -101,18 +101,18 @@ export default {
           <!-- Logo -->
           <Link href="/" class="logo logo-dark">
             <span class="logo-sm">
-              <img src="/storage/logo-sistema/Logo-Top.svg" alt="Logo Top" height="30" />
+              <img src="/storage/logo-sistema/Logo-Top.svg" alt="Logo Top" height="40" />
             </span>
             <span class="logo-lg">
-              <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="Logo Bottom" height="45" />
+              <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="Logo Bottom" height="80" style="margin: 0 auto; display: block;" />
             </span>
           </Link>
           <Link href="/" class="logo logo-light">
             <span class="logo-sm">
-              <img src="/storage/logo-sistema/Logo-Top.svg" alt="Logo Top" height="30" style="filter: brightness(0) invert(1);" />
+              <img src="/storage/logo-sistema/Logo-Top.svg" alt="Logo Top" height="40" style="filter: brightness(0) invert(1);" />
             </span>
             <span class="logo-lg">
-              <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="Logo Bottom" height="45" style="filter: brightness(0) invert(1);" />
+              <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="Logo Bottom" height="80" style="filter: brightness(0) invert(1); margin: 0 auto; display: block;" />
             </span>
           </Link>
           <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover"

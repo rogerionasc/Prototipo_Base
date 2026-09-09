@@ -46,11 +46,9 @@ export default {
                 <!-- Medical Tech Background Image -->
                 <div class="position-absolute w-100 h-100 start-0 top-0" style="background-image: url('/images/medical_bg_3.jpg'); background-size: cover; background-position: center; mix-blend-mode: overlay; opacity: 0.6;"></div>
                 <div class="position-relative d-flex flex-column justify-content-center h-100 p-5 z-1 bg-primary bg-opacity-50">
-                    <div class="mb-auto mt-4">
-                        <h2 class="fw-bold text-white mb-0 d-flex align-items-center">
-                            WCode
-                        </h2>
-                        <p class="lead opacity-75 ms-1">Gestão Médica Inteligente</p>
+                    <div class="mb-auto mt-4 d-flex align-items-center gap-1">
+                        <img src="/storage/logo-sistema/Logo-Top.svg" alt="Logo Top" height="50" style="filter: brightness(0) invert(1); margin-top: -10px;" />
+                        <img src="/storage/logo-sistema/Logo-Bottom.svg" alt="Logo Bottom" height="80" style="filter: brightness(0) invert(1);" />
                     </div>
                     <div>
                         <h1 class="display-4 fw-bold mb-4 text-white">Evolua a forma como você gerencia sua clínica.</h1>
