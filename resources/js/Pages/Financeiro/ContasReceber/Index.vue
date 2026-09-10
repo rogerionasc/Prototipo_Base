@@ -69,7 +69,7 @@
       <!-- Master List -->
       <div :class="selectedConta ? 'col-lg-8' : 'col-lg-12'">
         <TableGrid :columns="currentCols" :data="currentRows" tableTitle="Títulos a Receber" :showCheckbox="false"
-          :search="true" :showAddButton="false" :showStatus="false" :showActions="true" :compactSpacing="true"
+          :search="true" :showAddButton="false" :showStatus="false" :showActions="true"
           :actionsConfig="currentActionsConfig" @receive="onReceive" @charge="onCharge" @show="onShowGuias"
           @procedure="onProcedureClick">
 
