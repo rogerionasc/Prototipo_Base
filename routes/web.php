@@ -16,6 +16,7 @@ use App\Http\Controllers\TussMapeamentoController;
 use App\Http\Controllers\FaturamentoController;
 use App\Http\Controllers\ContasMedicasController;
 use App\Http\Controllers\ContasReceberController;
+use App\Http\Controllers\Financeiro\ContasPagarController;
 use App\Http\Controllers\AtendimentoController;
 use App\Http\Controllers\PepController;
 use App\Http\Controllers\SalaController;
@@ -196,6 +197,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get("/contas-receber", [ContasReceberController::class, "index"])->name('financeiro.contas_receber.index');
         Route::post("/faturamentos/{id}/receber-financeiro", [ContasReceberController::class, "receiveConvenio"])->whereNumber('id')->name('financeiro.receber_convenio');
         Route::post("/contas-receber/{id}/gerar-cobranca", [ContasReceberController::class, "gerarCobranca"])->whereNumber('id')->name('financeiro.contas_receber.gerar_cobranca');
+        
+        Route::get("/contas-pagar", [ContasPagarController::class, "index"])->name('financeiro.contas_pagar.index');
 
         // Cobrança Bancária
         Route::get("/financeiro/configuracoes/cobranca", [\App\Http\Controllers\Financeiro\ConfiguracaoBancariaController::class, "index"])->name('financeiro.configuracoes.cobranca.index');

@@ -2,3 +2,6 @@
 !.gitignore
 !convenios/
 !convenios/**
+!logo-sistema/
+!logo-sistema/**
+

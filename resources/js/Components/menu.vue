@@ -66,7 +66,7 @@ export default {
                     target: "#financeiro",
                     children: [
                         { href: "/contas-receber", label: "Contas a Receber" },
-                        { href: "#", label: "Contas a Pagar" },
+                        { href: "/contas-pagar", label: "Contas a Pagar" },
                         { href: "#", label: "Fluxo de Caixa" },
                         { href: "#", label: "Relatórios" },
                         { href: "/financeiro/configuracoes/cobranca", label: "Cobrança Bancária" }

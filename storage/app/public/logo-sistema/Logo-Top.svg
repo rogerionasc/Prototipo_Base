@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="79.375mm" height="66.1458mm" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 7937.5 6614.58"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil3 {fill:url(#id0);fill-rule:nonzero}
+    .fil1 {fill:url(#id1);fill-rule:nonzero}
+    .fil0 {fill:url(#id2);fill-rule:nonzero}
+    .fil2 {fill:url(#id3);fill-rule:nonzero}
+   ]]>
+  </style>
+  <linearGradient id="id0" gradientUnits="userSpaceOnUse" x1="1099.01" y1="4751.99" x2="2089.01" y2="3588.99">
+   <stop offset="0" style="stop-opacity:1; stop-color:#008CCD"/>
+   <stop offset="1" style="stop-opacity:1; stop-color:#000BA3"/>
+  </linearGradient>
+  <linearGradient id="id1" gradientUnits="userSpaceOnUse" x1="5609.99" y1="1581.01" x2="6598.99" y2="2745">
+   <stop offset="0" style="stop-opacity:1; stop-color:#0AB39C"/>
+   <stop offset="1" style="stop-opacity:1; stop-color:#099885"/>
+  </linearGradient>
+  <linearGradient id="id2" gradientUnits="userSpaceOnUse" xlink:href="#id1" x1="5066.99" y1="4787.99" x2="8663.99" y2="2281.01">
+  </linearGradient>
+  <linearGradient id="id3" gradientUnits="userSpaceOnUse" xlink:href="#id0" x1="1532.01" y1="251.01" x2="5127.99" y2="2758">
+  </linearGradient>
+ </defs>
+ <g id="Camada_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <polygon class="fil0" points="3804.49,6243.04 7668.9,3513.55 6556.73,2401.38 3804.49,4345.31 "/>
+  <polygon class="fil1" points="6556.73,2401.38 5891.47,1736.12 5891.47,2871.24 "/>
+  <polygon class="fil2" points="4133,371.54 268.6,3101.03 1380.77,4213.2 4133,2269.26 "/>
+  <polygon class="fil3" points="1380.77,4213.2 2046.03,4878.46 2046.03,3743.34 "/>
+ </g>
+</svg>
