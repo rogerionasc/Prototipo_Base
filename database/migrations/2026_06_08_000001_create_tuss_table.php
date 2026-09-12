@@ -22,8 +22,7 @@ return new class extends Migration
             $table->decimal('quantidade_ch', 10, 2)->nullable();
             $table->decimal('quantidade_co', 10, 2)->nullable();
 
-            $table->boolean('eh_tratamento')->default(false);
-            $table->unsignedInteger('quantidade_sessoes')->nullable();
+
 
             $table->timestamps();
             $table->softDeletes();

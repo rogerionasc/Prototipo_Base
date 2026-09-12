@@ -15,6 +15,8 @@ return new class extends Migration
             $table->foreignId('tuss_id')->nullable()->constrained('tuss');
             $table->foreignId('tuss_mapeamento_id')->nullable()->constrained('tuss_mapeamentos');
             $table->boolean('requer_autorizacao')->default(false);
+            $table->boolean('eh_tratamento')->default(false);
+            $table->integer('quantidade_sessoes')->nullable();
             $table->decimal('valor_ch', 10, 2)->default(0); //Valor CH
             $table->decimal('valor_co', 10, 2)->default(0); //Valor do CO
             $table->decimal('valor_procedimento', 10, 2)->default(0); //valor_rocedimento= (quantidade_ch * valor_ch) + (quantidade_co * valor_co)

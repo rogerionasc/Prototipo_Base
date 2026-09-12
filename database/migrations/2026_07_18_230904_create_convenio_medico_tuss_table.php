@@ -14,10 +14,11 @@ return new class extends Migration
             $table->foreignId('convenio_id')->constrained('convenios');
             $table->foreignId('pessoa_id')->constrained('pessoas');
             $table->foreignId('tuss_id')->nullable()->constrained('tuss');
+            $table->foreignId('tuss_mapeamento_id')->nullable()->constrained('tuss_mapeamentos')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
             
-            $table->unique(['convenio_id', 'pessoa_id', 'tuss_id', 'account_id'], 'cv_med_tuss_unique');
+            $table->unique(['convenio_id', 'pessoa_id', 'tuss_id', 'tuss_mapeamento_id', 'account_id'], 'cv_med_tuss_map_unique');
             $table->index(['convenio_id', 'pessoa_id', 'account_id'], 'cv_med_acc_idx');
             $table->index(['convenio_id', 'tuss_id', 'account_id'], 'cv_tuss_acc_idx');
         });

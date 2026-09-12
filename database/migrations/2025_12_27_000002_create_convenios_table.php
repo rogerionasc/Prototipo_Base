@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->integer('dias_para_faturar')->nullable()->default(30);
             $table->string('descricao', 120);
+            $table->string('cnpj')->nullable();
             $table->string('logo_path', 255)->nullable();
             $table->string('tuss_tabela', 20)->nullable();
             $table->string('tipo', 20)->nullable();

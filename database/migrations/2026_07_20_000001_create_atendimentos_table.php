@@ -32,6 +32,7 @@ return new class extends Migration
             $table->dateTime('hora_fim')->nullable();
             $table->string('prioridade', 50)->nullable();
             $table->string('status', 50)->default('AGENDADO');
+            $table->integer('sessao')->nullable()->comment('Identificador da sessão do tratamento se aplicável');
             $table->boolean('emergencia')->default(false);
             $table->text('observacao')->nullable();
             $table->text('motivo_cancelamento')->nullable();

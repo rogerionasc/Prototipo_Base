@@ -14,6 +14,7 @@ return new class extends Migration
             $table->unsignedBigInteger('guia_origem_id')->nullable();
             $table->foreign('guia_origem_id')->references('id')->on('guias')->onDelete('set null');
             $table->foreignId('faturamento_id')->nullable()->constrained('faturamentos')->nullOnDelete()->nullable()->comment('Lote (Faturamento)');
+            $table->date('data_vencimento_faturar')->nullable();
             $table->foreignId('agendamento_id')->nullable()->constrained('agendamentos')->nullOnDelete()->comment('Agendamento vinculado');
             $table->string('status', 30)->default('CRIADA')->nullable()->comment('CRIADA, EM_ANALISE, AUTORIZADA, GLOSADA, PAGA, CANCELADA');
             $table->string('tipo')->nullable()->default('Guia de Consulta');

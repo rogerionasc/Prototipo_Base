@@ -52,7 +52,7 @@ return new class extends Migration
                 $table->id()->startingValue(1000);
                 $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
                 $table->foreignId('faturamento_id')->constrained('faturamentos')->cascadeOnDelete();
-                $table->foreignId('paciente_id')->constrained('pacientes')->cascadeOnDelete();
+                $table->foreignId('paciente_id')->nullable()->constrained('pacientes')->cascadeOnDelete();
                 $table->foreignId('convenio_id')->nullable()->constrained('convenios')->nullOnDelete();
                 $table->decimal('valor', 10, 2)->default(0);
                 $table->date('vencimento')->nullable();

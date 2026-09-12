@@ -14,11 +14,15 @@ return new class extends Migration
             $table->string('provedor', 50)->comment('mock, asaas, bb, etc.');
             $table->string('tipo', 30)->comment('boleto, pix, etc.');
             $table->string('ambiente', 20)->default('sandbox');
-            $table->string('carteira', 20)->nullable();
+            $table->string('numero_convenio', 30)->nullable();
+            $table->string('numero_carteira', 20)->nullable();
+            $table->string('numero_variacao_carteira', 20)->nullable();
             $table->text('client_id')->nullable();
             $table->text('client_secret')->nullable();
+            $table->text('app_key')->nullable();
             $table->text('certificado')->nullable();
             $table->boolean('ativo')->default(true);
+            $table->boolean('is_padrao')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });
