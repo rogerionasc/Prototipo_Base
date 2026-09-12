@@ -15,13 +15,17 @@ class CobrancaService
         $this->factory = $factory;
     }
 
-    public function emitirCobranca(ContaReceber $contaReceber, ConfiguracaoBancaria $config, string $tipo = 'boleto'): Cobranca
+    public function emitirCobranca(ContaReceber $contaReceber, ConfiguracaoBancaria $config, string $tipo = 'boleto', ?int $pagamentoId = null): Cobranca
     {
         $gateway = $this->factory->make($config->provedor);
 
         $dados = [
             'valor' => $contaReceber->valor,
             'vencimento' => $contaReceber->vencimento->format('Y-m-d'),
+            'tipo' => $tipo,
+            'paciente' => $contaReceber->faturamento->paciente ?? null,
+            'numero_lote' => $contaReceber->faturamento_id,
+            'nu_pagamento' => $pagamentoId,
         ];
 
         $retorno = $gateway->criar($dados, $config);

@@ -9,7 +9,7 @@ class AccountController extends Controller
     public function index()
     {
         // Ao carregar todas as clínicas, já incluímos os itens secundários
-        $clinicas = \App\Models\Account::with(['totens.opcoes', 'paineis', 'salas.profissionalSaude', 'guiches', 'configuracoesBancarias'])->get();
+        $clinicas = \App\Models\Account::with(['totens.opcoes', 'paineis', 'salas.profissionalSaude', 'guiches', 'configuracoesBancarias', 'pixConfig'])->get();
         $profissionais = \App\Models\Pessoa::get(['id', 'nome']);
         $tiposIntegracaoBancaria = \App\Models\TipoIntegracaoBancaria::select('id', 'nome', 'logo')->get();
 
@@ -29,14 +29,19 @@ class AccountController extends Controller
             'endereco' => 'nullable|string|max:255',
             'telefone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
-            'ativo' => 'boolean'
+            'ativo' => 'boolean',
+            'pix_chave' => 'nullable|string|max:200',
         ]);
 
         if (isset($validated['cnpj'])) {
             $validated['cnpj'] = preg_replace('/[^0-9]/', '', $validated['cnpj']);
         }
 
-        \App\Models\Account::create($validated);
+        $account = \App\Models\Account::create($validated);
+
+        if ($request->filled('pix_chave')) {
+            $account->pixConfig()->create($request->only(['pix_chave']));
+        }
 
         return redirect()->route('clinicas.index')->with('success', 'Clínica cadastrada com sucesso!');
     }
@@ -52,7 +57,8 @@ class AccountController extends Controller
             'endereco' => 'nullable|string|max:255',
             'telefone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
-            'ativo' => 'boolean'
+            'ativo' => 'boolean',
+            'pix_chave' => 'nullable|string|max:200',
         ]);
 
         if (isset($validated['cnpj'])) {
@@ -60,6 +66,15 @@ class AccountController extends Controller
         }
 
         $account->update($validated);
+
+        if ($request->filled('pix_chave')) {
+            $account->pixConfig()->updateOrCreate(
+                ['account_id' => $account->id],
+                $request->only(['pix_chave'])
+            );
+        } else {
+            $account->pixConfig()->delete();
+        }
 
         return redirect()->route('clinicas.index')->with('success', 'Clínica atualizada com sucesso!');
     }

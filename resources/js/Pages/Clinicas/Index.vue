@@ -122,7 +122,8 @@ const form = useForm({
   endereco: '',
   telefone: '',
   email: '',
-  ativo: true
+  ativo: true,
+  pix_chave: '',
 });
 
 const columns = [
@@ -317,6 +318,7 @@ const openModalEdit = (id) => {
     form.telefone = clinica.telefone || '';
     form.email = clinica.email || '';
     form.ativo = clinica.ativo === undefined ? true : clinica.ativo;
+    form.pix_chave = clinica.pix_config?.pix_chave || '';
     activeTab.value = 0;
     showModal.value = true;
   }
@@ -517,6 +519,21 @@ const testConnection = async () => {
                   :checked="form.ativo">
                 <label class="form-check-label" for="ativoSwitch">Clínica Ativa</label>
               </div>
+            </div>
+          </div>
+        </BTab>
+
+        <!-- Aba PIX -->
+        <BTab title="Chave PIX (Local)">
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <div class="alert alert-info">
+                <strong>Nota:</strong> Estas configurações são usadas exclusivamente pelos <b>Caixas Locais</b> para geração de QR Code manual estático (sem integração com Gateway).
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Chave PIX</label>
+              <input type="text" class="form-control" v-model="form.pix_chave" placeholder="Ex: 00.000.000/0001-00" />
             </div>
           </div>
         </BTab>

@@ -44,6 +44,16 @@ class Account extends Model
         return $this->hasMany(Guiche::class);
     }
 
+    public function configFaturamento()
+    {
+        return $this->hasOne(ConfigFaturamento::class, 'account_id');
+    }
+
+    public function pixConfig()
+    {
+        return $this->hasOne(PixConfig::class, 'account_id');
+    }
+
     public function configuracoesBancarias()
     {
         return $this->hasMany(ConfiguracaoBancaria::class, 'account_id');

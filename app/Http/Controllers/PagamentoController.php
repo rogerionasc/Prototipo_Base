@@ -32,9 +32,11 @@ class PagamentoController extends Controller
         $p = DB::table('pagamentos as p')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'p.faturamento_id')
             ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
+            ->leftJoin('caixas as c', 'c.id', '=', 'p.caixa_id')
             ->select(
                 'p.id',
                 'p.caixa_id',
+                'c.tipo as caixa_tipo',
                 'p.valor',
                 'p.forma_pagamento',
                 'p.status',
@@ -141,185 +143,100 @@ class PagamentoController extends Controller
         return back()->with('success', 'Pagamento cancelado. Selecione outra forma de pagamento.');
     }
 
-    public function mpCheckout(Request $request)
+    public function checkoutTransparentePix(Request $request, \App\Services\Billing\CobrancaService $cobrancaService)
     {
         $data = $request->validate([
-            'pagamento_id' => ['required','integer','exists:pagamentos,id'],
+            'pagamento_id' => ['required', 'integer', 'exists:pagamentos,id'],
         ]);
-        $pag = Pagamento::findOrFail((int)$data['pagamento_id']);
+
+        $pag = Pagamento::with('faturamento.contasReceber')->findOrFail((int)$data['pagamento_id']);
+
         if (strtoupper((string)$pag->status) === 'PAGO') {
             return response()->json(['error' => 'Pagamento já confirmado'], 422);
         }
+
         if (($pag->forma_pagamento ?? '') !== 'PIX') {
             return response()->json(['error' => 'Forma de pagamento inválida'], 422);
         }
-        $token = env('MERCADO_PAGO_ACCESS_TOKEN');
-        if (!$token) {
-            return response()->json(['error' => 'Token do Mercado Pago não configurado'], 422);
+
+        // Recupera a Conta a Receber vinculada ao faturamento
+        $contaReceber = $pag->faturamento->contasReceber->first();
+        if (!$contaReceber) {
+            return response()->json(['error' => 'Conta a receber não localizada para este faturamento'], 422);
         }
-        $payer = DB::table('faturamentos as f')
-            ->leftJoin('pacientes as pa', 'pa.id', '=', 'f.paciente_id')
-            ->select('pa.id as paciente_id', 'pa.email')
-            ->where('f.id', (int)($pag->faturamento_id ?? 0))
-            ->first();
-        $payerEmail = trim((string)($payer->email ?? ''));
-        if ($payerEmail === '' || !filter_var($payerEmail, FILTER_VALIDATE_EMAIL)) {
-            return response()->json(['error' => 'Paciente sem e-mail válido cadastrado'], 422);
+
+        $configBancaria = \App\Models\ConfiguracaoBancaria::where('is_padrao', true)->where('ativo', true)->first();
+
+        if (!$configBancaria) {
+            return response()->json(['error' => 'Nenhuma configuração bancária padrão ativa localizada'], 422);
         }
-        $valor = (float)($pag->valor ?? 0);
-        $url = 'https://api.mercadopago.com/v1/payments';
-        $baseUrl = env('MP_WEBHOOK_URL');
-        $notificationUrl = $baseUrl ? rtrim((string)$baseUrl, '/') . '/pix/mp/webhook' : null;
-        $idempotency = 'pix-' . $pag->id . '-' . (string)microtime(true);
-        $body = [
-            'transaction_amount' => $valor,
-            'description' => 'Pagamento ' . $pag->id,
-            'payment_method_id' => 'pix',
-            'external_reference' => 'pag:' . $pag->id,
-            'payer' => [
-                'email' => $payerEmail,
-            ],
-        ];
-        if ($notificationUrl) {
-            $body['notification_url'] = $notificationUrl;
+
+        try {
+            // Verifica se já existe uma cobrança ativa (PIX) para não duplicar no gateway
+            $cobrancaAtiva = \App\Models\Cobranca::where('conta_receber_id', $contaReceber->id)
+                ->where('tipo', 'PIX')
+                ->whereIn('status', ['REGISTRADA', 'PENDING', 'PENDENTE'])
+                ->orderByDesc('id')
+                ->first();
+
+            if ($cobrancaAtiva) {
+                $cobranca = $cobrancaAtiva;
+            } else {
+                // Emite a cobrança nova (isso criará a Cobranca no banco de dados)
+                $cobranca = $cobrancaService->emitirCobranca($contaReceber, $configBancaria, 'PIX', $pag->id);
+            }
+
+            return response()->json([
+                'qr_code' => $cobranca->pix_txid ?? $cobranca->linha_digitavel,
+                'qr_code_base64' => $cobranca->payload['qr_code_base64'] ?? null,
+                'payment_id' => $cobranca->gateway_id,
+                'status' => $cobranca->status,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Erro ao gerar Pix Transparente', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Falha ao gerar cobrança Pix: ' . $e->getMessage()], 422);
         }
-        $resp = Http::withToken($token)->withHeaders(['X-Idempotency-Key' => $idempotency])->post($url, $body);
-        if (!$resp->successful()) {
-            try { Log::warning('MP checkout error', ['details' => $resp->json()]); } catch (\Throwable $e) {}
-            return response()->json(['error' => 'Falha ao criar pagamento no Mercado Pago', 'details' => $resp->json()], 422);
-        }
-        $data = $resp->json();
-        try { Log::info('MP checkout ok', ['payment_id' => $data['id'] ?? null, 'status' => $data['status'] ?? null]); } catch (\Throwable $e) {}
-        $poi = $data['point_of_interaction']['transaction_data'] ?? [];
-        return response()->json([
-            'qr_code' => $poi['qr_code'] ?? null,
-            'qr_code_base64' => $poi['qr_code_base64'] ?? null,
-            'payment_id' => $data['id'] ?? null,
-            'status' => $data['status'] ?? null,
-        ]);
     }
 
-    public function mpStatusCheck(Request $request)
+    public function statusTransparentePix(Request $request)
     {
         $data = $request->validate([
-            'pagamento_id' => ['required','integer','exists:pagamentos,id'],
+            'pagamento_id' => ['required', 'integer', 'exists:pagamentos,id'],
         ]);
-        $simulate = filter_var($request->input('simulate', false), FILTER_VALIDATE_BOOLEAN);
-        $mpPaymentId = $request->input('mp_payment_id');
+
         $pag = Pagamento::findOrFail((int)$data['pagamento_id']);
+
         if (strtoupper((string)$pag->status) === 'PAGO') {
-            return response()->json(['success' => true, 'message' => 'Pagamento já confirmado']);
+            return response()->json(['success' => true]);
         }
-        if (($pag->forma_pagamento ?? '') !== 'PIX') {
-            return response()->json(['error' => 'Forma de pagamento inválida'], 422);
-        }
-        if ($simulate && filter_var(env('PIX_LOCAL_SIMULATION', false), FILTER_VALIDATE_BOOLEAN)) {
-            $err = $this->processarPagamento($pag);
-            if ($err) return $err;
-            return response()->json(['success' => true, 'simulated' => true]);
-        }
-        $token = env('MERCADO_PAGO_ACCESS_TOKEN');
-        if (!$token) {
-            return response()->json(['error' => 'Token do Mercado Pago não configurado'], 422);
-        }
-        if ($mpPaymentId) {
-            $resp = Http::withToken($token)->get('https://api.mercadopago.com/v1/payments/' . $mpPaymentId);
-            if (!$resp->successful()) {
-                try { Log::info('MP status by id failed', ['mp_payment_id' => $mpPaymentId, 'details' => $resp->json()]); } catch (\Throwable $e) {}
-            } else {
-                $p = $resp->json();
-                $status = $p['status'] ?? null;
-                $method = $p['payment_method_id'] ?? null;
-                $amount = (float)($p['transaction_amount'] ?? 0);
-                $ext = $p['external_reference'] ?? '';
-                if (preg_match('/^pag:(\d{1,20})$/i', (string)$ext)) {
-                    if ($status === 'approved' && $method === 'pix') {
-                        if (number_format((float)$pag->valor, 2, '.', '') !== number_format($amount, 2, '.', '')) {
-                            return response()->json(['error' => 'Valor divergente'], 422);
-                        }
-                        $err = $this->processarPagamento($pag);
-                        if ($err) return $err;
-                        try { Log::info('MP status approved by id', ['mp_payment_id' => $mpPaymentId, 'pagamento_id' => $pag->id]); } catch (\Throwable $e) {}
+
+        // Se não está PAGO localmente, vamos consultar o Gateway ativamente
+        if ($pag->forma_pagamento === 'PIX') {
+            $cobranca = \App\Models\Cobranca::where('conta_receber_id', $pag->faturamento->contasReceber->first()->id ?? 0)
+                ->where('tipo', 'PIX')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($cobranca && $cobranca->gateway_id) {
+                try {
+                    $config = \App\Models\ConfiguracaoBancaria::find($cobranca->configuracao_bancaria_id);
+                    $factory = app(\App\Services\Billing\CobrancaGatewayFactory::class);
+                    $gateway = $factory->make($cobranca->gateway);
+                    
+                    $statusGateway = $gateway->consultar($cobranca->gateway_id, $config);
+
+                    if (in_array($statusGateway['status'], ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'])) {
+                        // Confirmar o pagamento
+                        $this->processarPagamento($pag);
                         return response()->json(['success' => true]);
-                    } else {
-                        try { Log::info('MP status not approved by id', ['status' => $status, 'method' => $method]); } catch (\Throwable $e) {}
-                        return response()->json(['ignored' => true]);
                     }
-                } else {
-                    try { Log::info('MP status id external_reference mismatch', ['ext' => $ext, 'expected' => 'pag:' . $pag->id]); } catch (\Throwable $e) {}
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::warning('Erro ao consultar status Pix no Gateway', ['error' => $e->getMessage()]);
                 }
             }
         }
-        $query = [
-            'external_reference' => 'pag:' . $pag->id,
-            'sort' => 'date_created',
-            'order' => 'desc',
-            'limit' => 1,
-        ];
-        $resp = Http::withToken($token)->get('https://api.mercadopago.com/v1/payments/search', $query);
-        if (!$resp->successful()) {
-            try { Log::info('MP search failed', ['query' => $query, 'details' => $resp->json()]); } catch (\Throwable $e) {}
-            return response()->json(['ignored' => true]);
-        }
-        $j = $resp->json();
-        $results = $j['results'] ?? [];
-        if (!$results || count($results) === 0) {
-            try { Log::info('MP search empty', ['external_reference' => 'pag:' . $pag->id]); } catch (\Throwable $e) {}
-            return response()->json(['ignored' => true]);
-        }
-        $p = $results[0];
-        $status = $p['status'] ?? null;
-        $method = $p['payment_method_id'] ?? null;
-        $amount = (float)($p['transaction_amount'] ?? 0);
-        if (!($status === 'approved' && $method === 'pix')) {
-            try { Log::info('MP search not approved', ['status' => $status, 'method' => $method]); } catch (\Throwable $e) {}
-            return response()->json(['ignored' => true]);
-        }
-        if (number_format((float)$pag->valor, 2, '.', '') !== number_format($amount, 2, '.', '')) {
-            return response()->json(['error' => 'Valor divergente'], 422);
-        }
-        $err = $this->processarPagamento($pag);
-        if ($err) return $err;
-        return response()->json(['success' => true]);
-    }
 
-    public function mpWebhook(Request $request)
-    {
-        $token = env('MERCADO_PAGO_ACCESS_TOKEN');
-        $type = $request->input('type') ?? $request->input('action');
-        $paymentId = $request->input('data.id') ?? $request->input('id');
-        if ($type !== 'payment' || !$paymentId) {
-            return response()->json(['ignored' => true]);
-        }
-        if (!$token) {
-            return response()->json(['error' => 'Token do Mercado Pago não configurado'], 422);
-        }
-        $resp = Http::withToken($token)->get('https://api.mercadopago.com/v1/payments/' . $paymentId);
-        if (!$resp->successful()) {
-            return response()->json(['error' => 'Falha ao consultar pagamento'], 422);
-        }
-        $p = $resp->json();
-        $status = $p['status'] ?? null;
-        $method = $p['payment_method_id'] ?? null;
-        $amount = (float)($p['transaction_amount'] ?? 0);
-        $ext = $p['external_reference'] ?? '';
-        if (!($status === 'approved' && $method === 'pix')) {
-            return response()->json(['ignored' => true]);
-        }
-        $id = null;
-        if (preg_match('/^pag:(\d{1,20})$/i', $ext, $m)) {
-            $id = (int)$m[1];
-        }
-        $pag = $id ? Pagamento::find($id) : null;
-        if (!$pag) {
-            return response()->json(['error' => 'Pagamento não localizado'], 404);
-        }
-        if (number_format((float)$pag->valor, 2, '.', '') !== number_format($amount, 2, '.', '')) {
-            return response()->json(['error' => 'Valor divergente'], 422);
-        }
-        $err = $this->processarPagamento($pag);
-        if ($err) return $err;
-        return response()->json(['success' => true]);
+        return response()->json(['ignored' => true]);
     }
 
     public function pixWebhook(Request $request)
@@ -588,7 +505,7 @@ class PagamentoController extends Controller
         }
 
         if ($tipo === 'PARTICULAR') {
-            $novoStatusFat = $quitado ? 'PAGO' : 'AGUARDANDO_PAGAMENTO';
+            $novoStatusFat = $quitado ? 'RECEBIDO' : 'AGUARDANDO_PAGAMENTO';
             DB::table('faturamentos')->where('id', $fatId)->update([
                 'status' => $novoStatusFat,
                 'updated_at' => now(),

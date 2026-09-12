@@ -9,9 +9,11 @@ class CobrancaGatewayFactory
 {
     public function make(string $provedor): CobrancaGateway
     {
-        return match($provedor) {
+        $provedorLower = strtolower($provedor);
+        return match($provedorLower) {
+            'asaas' => new AsaasCobrancaGateway(),
             'mock' => new MockCobrancaGateway(),
-            default => throw new InvalidArgumentException("Gateway [{$provedor}] não suportado."),
+            default => throw new \InvalidArgumentException("Gateway [{$provedor}] não suportado."),
         };
     }
 }

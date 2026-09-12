@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('nosso_numero', 100)->nullable();
             $table->string('linha_digitavel', 255)->nullable();
             $table->string('codigo_barras', 255)->nullable();
-            $table->string('pix_txid', 150)->nullable();
+            $table->text('pix_txid')->nullable();
             $table->string('url', 255)->nullable();
             $table->decimal('valor', 10, 2);
             $table->date('vencimento');

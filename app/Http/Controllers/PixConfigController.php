@@ -9,29 +9,25 @@ class PixConfigController extends Controller
 {
     public function show()
     {
-        $path = 'pix_config.json';
-        $data = [];
-        if (Storage::disk('local')->exists($path)) {
-            try {
-                $json = Storage::disk('local')->get($path);
-                $data = json_decode($json, true) ?: [];
-            } catch (\Throwable $e) {
-                $data = [];
-            }
-        }
-        return response()->json($data);
-    }
+        $accountId = session('current_account_id');
+        $account = $accountId ? \App\Models\Account::find($accountId) : \App\Models\Account::first();
+        
+        $data = [
+            'chave' => '',
+            'nome' => '',
+            'cidade' => '',
+            'descricao' => ''
+        ];
 
-    public function update(Request $request)
-    {
-        $data = $request->validate([
-            'chave' => ['required','string','max:200'],
-            'recebedor_nome' => ['nullable','string','max:60'],
-            'recebedor_cidade' => ['nullable','string','max:60'],
-            'descricao' => ['nullable','string','max:120'],
-        ]);
-        $path = 'pix_config.json';
-        Storage::disk('local')->put($path, json_encode($data, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
-        return response()->json(['success' => true]);
+        if ($account && $account->pixConfig) {
+            $data = [
+                'chave' => $account->pixConfig->pix_chave,
+                'nome' => substr(preg_replace('/[^A-Za-z0-9\s]/', '', $account->name), 0, 25) ?: 'CLINICA',
+                'cidade' => 'SAO PAULO', // Ou buscar do endereco, mas SAO PAULO é comum fallback PIX
+                'descricao' => 'Pagamento',
+            ];
+        }
+
+        return response()->json($data);
     }
 }

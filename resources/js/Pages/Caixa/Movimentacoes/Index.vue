@@ -180,13 +180,22 @@
                         </div>
 
                         <div class="d-grid gap-3" v-if="!selectedPendente.is_confirmed && !selectedPendente.is_refused">
-                          <button v-if="isAguardandoPix(selectedPendente)" class="btn btn-warning btn-lg shadow-sm"
-                            type="button" :disabled="cancelProcessing[selectedPendente.pagamento_id]"
-                            @click="cancelProcessing[selectedPendente.pagamento_id] ? null : cancelarPix(selectedPendente.pagamento_id)">
-                            <span v-if="cancelProcessing[selectedPendente.pagamento_id]"
-                              class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            <i class="ri-close-circle-line align-bottom me-1"></i> Cancelar PIX Pendente
-                          </button>
+                          <div v-if="isAguardandoPix(selectedPendente)" class="d-flex gap-2">
+                            <button class="btn btn-success btn-lg shadow-sm flex-grow-1" type="button"
+                              v-if="String(selectedCaixa?.tipo || '').toLowerCase() === 'local'"
+                              :disabled="confirmProcessing[selectedPendente.pagamento_id]"
+                              @click="confirmProcessing[selectedPendente.pagamento_id] ? null : confirmarPixManual(selectedPendente.pagamento_id)">
+                              <span v-if="confirmProcessing[selectedPendente.pagamento_id]" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                              <i class="ri-check-line align-bottom me-1"></i> Confirmar Manual
+                            </button>
+                            <button class="btn btn-warning btn-lg shadow-sm flex-grow-1"
+                              type="button" :disabled="cancelProcessing[selectedPendente.pagamento_id]"
+                              @click="cancelProcessing[selectedPendente.pagamento_id] ? null : cancelarPix(selectedPendente.pagamento_id)">
+                              <span v-if="cancelProcessing[selectedPendente.pagamento_id]"
+                                class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                              <i class="ri-close-circle-line align-bottom me-1"></i> Cancelar PIX Pendente
+                            </button>
+                          </div>
                           <button v-else-if="waitingPayment[selectedPendente.faturamento_id]"
                             class="btn btn-warning btn-lg shadow-sm" type="button">
                             <span class="spinner-border spinner-border-sm align-middle me-2" role="status"
@@ -1100,6 +1109,31 @@ function cancelarPix(id) {
     onFinish: () => {
       cancelProcessing.value[id] = false;
     },
+  });
+}
+
+const confirmProcessing = ref({});
+function confirmarPixManual(id) {
+  if (!id) return;
+  confirmProcessing.value[id] = true;
+  const f = useForm({
+    caixa_id: openForm.caixa_id,
+    forma_pagamento: 'PIX',
+  });
+  f.put(`/pagamentos/${id}/confirm`, {
+    onSuccess: async () => {
+      triggerPaymentConfirmedAnimation(id, receberFaturamentoId.value);
+      await new Promise((resolve) => {
+        router.reload({ only: ["caixas", "ultimos", "movs", "pagamentosPendentes", "ultimosPagamentos"], onFinish: () => resolve() });
+      });
+      recomputeCurrentMov();
+    },
+    onError: (errs) => {
+      showCaixaModal.value = true;
+    },
+    onFinish: () => {
+      confirmProcessing.value[id] = false;
+    }
   });
 }
 function prosseguirRecebimento() {

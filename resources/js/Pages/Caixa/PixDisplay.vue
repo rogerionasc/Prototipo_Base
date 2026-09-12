@@ -26,8 +26,9 @@
               </div>
             </div>
             <div class="qr">
-              <div v-if="mpLoading" class="qr-skeleton" :style="{ width: qrSizePx, height: qrSizePx }"></div>
-              <img v-else :src="qrUrl" alt="QR Code PIX" :style="{ width: qrSizePx, height: qrSizePx }" />
+              <div v-if="qrLoading" class="qr-skeleton" :style="{ width: qrSizePx, height: qrSizePx }"></div>
+              <img v-else-if="qrUrl" :src="qrUrl" alt="QR Code PIX" :style="{ width: qrSizePx, height: qrSizePx }" />
+              <div v-else class="qr-skeleton" :style="{ width: qrSizePx, height: qrSizePx }"></div>
             </div>
             <div class="actions" v-if="payload">
               <button class="btn btn-outline-primary btn-sm" type="button" @click="copiarPayload" :disabled="copiando">
@@ -67,13 +68,13 @@ import axios from "axios";
 const pagamentoAtual = ref(null);
 const polling = ref(false);
 let timer = null;
-const mpQrText = ref("");
-const mpQrBase64 = ref("");
-const mpLoading = ref(false);
-const mpPaymentId = ref(null);
-const mpQrCreatedAt = ref(0);
-const mpQrTtlMs = 12 * 60 * 1000;
-const qrExpirado = computed(() => mpQrCreatedAt.value > 0 && (Date.now() - mpQrCreatedAt.value) > mpQrTtlMs);
+const qrText = ref("");
+const qrBase64 = ref("");
+const qrLoading = ref(false);
+const gatewayPaymentId = ref(null);
+const qrCreatedAt = ref(0);
+const qrTtlMs = 12 * 60 * 1000;
+const qrExpirado = computed(() => qrCreatedAt.value > 0 && (Date.now() - qrCreatedAt.value) > qrTtlMs);
 const windowWidth = ref(typeof window !== "undefined" ? window.innerWidth : 360);
 const paymentSuccess = ref(false);
 const successInfo = ref({ nome: "", valor: 0 });
@@ -103,34 +104,46 @@ async function carregarAtual() {
   try {
     const resp = await axios.get("/pix/current", { params: { caixa_id: caixaId.value } });
     pagamentoAtual.value = resp.data?.pagamento || null;
-    await tentarConfirmarPorMP();
+    await tentarConfirmarPix();
   } catch (e) {
     pagamentoAtual.value = null;
   }
 }
-async function carregarMpQr() {
-  mpQrText.value = "";
-  mpQrBase64.value = "";
+async function carregarPixQr() {
+  qrText.value = "";
+  qrBase64.value = "";
   if (!pagamentoAtual.value?.id) return;
-  mpLoading.value = true;
+
+  if (pagamentoAtual.value.caixa_tipo?.toLowerCase() === 'local') {
+    // Para caixa local, usamos PIX manual e não chamamos o Gateway (Asaas/etc)
+    return;
+  }
+
+  qrLoading.value = true;
   try {
-    const resp = await axios.post('/pix/mp/checkout', { pagamento_id: pagamentoAtual.value.id });
-    mpQrText.value = resp.data?.qr_code || "";
-    mpQrBase64.value = resp.data?.qr_code_base64 || "";
-    mpPaymentId.value = resp.data?.payment_id || null;
-    mpQrCreatedAt.value = Date.now();
+    const resp = await axios.post('/pix/checkout', { pagamento_id: pagamentoAtual.value.id });
+    qrText.value = resp.data?.qr_code || "";
+    qrBase64.value = resp.data?.qr_code_base64 || "";
+    gatewayPaymentId.value = resp.data?.payment_id || null;
+    qrCreatedAt.value = Date.now();
   } catch (e) {
   } finally {
-    mpLoading.value = false;
+    qrLoading.value = false;
   }
 }
 async function gerarNovoQr() {
-  await carregarMpQr();
+  await carregarPixQr();
 }
-async function tentarConfirmarPorMP() {
+async function tentarConfirmarPix() {
   if (!pagamentoAtual.value?.id) return;
+  
+  if (pagamentoAtual.value.caixa_tipo?.toLowerCase() === 'local') {
+    // PIX manual local não tem confirmação via webhook (o caixa confere no próprio App do banco e clica em Confirmar)
+    return;
+  }
+
   try {
-    const resp = await axios.post('/pix/mp/status-check', { pagamento_id: pagamentoAtual.value.id, mp_payment_id: mpPaymentId.value, simulate: true });
+    const resp = await axios.post('/pix/status-check', { pagamento_id: pagamentoAtual.value.id });
     if (resp.data?.success) {
       const p = pagamentoAtual.value;
       if (p) {
@@ -169,10 +182,10 @@ async function copiarPayload() {
     const t = String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     return t.slice(0, 25);
   }
-  function crc16(payload) {
+  function crc16(payloadStr) {
     let crc = 0xFFFF;
-    for (let i = 0; i < payload.length; i++) {
-      crc ^= payload.charCodeAt(i) << 8;
+    for (let i = 0; i < payloadStr.length; i++) {
+      crc ^= payloadStr.charCodeAt(i) << 8;
       for (let j = 0; j < 8; j++) {
         if ((crc & 0x8000) !== 0) {
           crc = (crc << 1) ^ 0x1021;
@@ -203,6 +216,7 @@ async function copiarPayload() {
     const crc = crc16(payloadSemCRC);
     return payloadSemCRC + crc;
   }
+
   const pixConfig = ref({ chave: '', nome: '', cidade: '' });
   async function carregarPixConfig() {
     try {
@@ -219,21 +233,30 @@ async function copiarPayload() {
   }
 const pagamentoValor = computed(() => Number(pagamentoAtual.value?.valor || 0));
 const payload = computed(() => {
-  if (mpQrText.value) return mpQrText.value;
-  const cfg = pixConfig.value;
-  const pag = pagamentoAtual.value;
-  if (!cfg?.chave || !pag?.id) return "";
-  const txid = sanitizeTxid(`PAG${String(pag.id)}`);
-  return buildPixPayload({
-    chave: cfg.chave,
-    recebedor_nome: cfg.nome || '',
-    recebedor_cidade: cfg.cidade || '',
-    txid,
-    valor: Number(pag.valor || 0),
-  });
+  if (qrText.value) return qrText.value;
+
+  if (pagamentoAtual.value?.caixa_tipo?.toLowerCase() === 'local') {
+    const cfg = pixConfig.value;
+    const pag = pagamentoAtual.value;
+    if (!cfg?.chave || !pag?.id) return "";
+    const txid = sanitizeTxid(`PAG${String(pag.id)}`);
+    return buildPixPayload({
+      chave: cfg.chave,
+      recebedor_nome: cfg.nome || '',
+      recebedor_cidade: cfg.cidade || '',
+      txid,
+      valor: Number(pag.valor || 0),
+    });
+  }
+
+  return "";
 });
 const qrUrl = computed(() => {
-  if (mpQrBase64.value) return `data:image/png;base64,${mpQrBase64.value}`;
+  if (qrBase64.value) {
+    return qrBase64.value.startsWith('data:image') 
+      ? qrBase64.value 
+      : `data:image/png;base64,${qrBase64.value}`;
+  }
   if (payload.value) return `https://api.qrserver.com/v1/create-qr-code/?size=${qrDim.value}x${qrDim.value}&data=${encodeURIComponent(payload.value)}`;
   return "";
 });
@@ -244,8 +267,8 @@ const qrUrl = computed(() => {
     if (timer) clearInterval(timer);
     timer = setInterval(async () => {
       await carregarAtual();
-      if (qrExpirado.value && !mpLoading.value && pagamentoAtual.value?.id) {
-        await carregarMpQr();
+      if (qrExpirado.value && !qrLoading.value && pagamentoAtual.value?.id) {
+        await carregarPixQr();
       }
     }, 2000);
     polling.value = true;
@@ -258,13 +281,13 @@ const qrUrl = computed(() => {
   onMounted(async () => {
     await carregarPixConfig();
     await carregarAtual();
-    await carregarMpQr();
-    await tentarConfirmarPorMP();
+    await carregarPixQr();
+    await tentarConfirmarPix();
     startPolling();
   });
 watch(pagamentoAtual, async (nv, ov) => {
   if (!nv || (ov && nv.id === ov.id)) return;
-  await carregarMpQr();
+  await carregarPixQr();
 });
   onUnmounted(() => stopPolling());
   function onResize() {

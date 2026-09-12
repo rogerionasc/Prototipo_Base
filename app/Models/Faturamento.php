@@ -43,6 +43,11 @@ class Faturamento extends Model
         return $this->hasMany(Guia::class, 'faturamento_id');
     }
 
+    public function contasReceber()
+    {
+        return $this->hasMany(ContaReceber::class, 'faturamento_id');
+    }
+
     public function paciente()
     {
         return $this->belongsTo(Paciente::class);

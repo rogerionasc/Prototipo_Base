@@ -55,4 +55,9 @@ class Pagamento extends Model
     {
         return $this->belongsTo(MovimentacaoCaixa::class, 'movimentacao_id');
     }
+
+    public function faturamento()
+    {
+        return $this->belongsTo(Faturamento::class, 'faturamento_id');
+    }
 }
