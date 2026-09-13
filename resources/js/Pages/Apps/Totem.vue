@@ -9,7 +9,7 @@
                     <i class="ri-hospital-line text-primary display-5"></i>
                 </div>
                 <div>
-                    <h1 class="text-primary m-0 fw-bold display-6">Clínica Velzon</h1>
+                    <h1 class="text-primary m-0 fw-bold display-6">{{ $page.props.current_account?.name || 'Clínica' }}</h1>
                     <span class="text-muted fs-5 fw-medium" v-if="totem">Totem: {{ totem.nome }}</span>
                 </div>
             </div>
@@ -61,7 +61,7 @@
             <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
                 <div class="modal-content ticket-receipt text-center border-0 p-0 shadow-lg">
                     <div class="ticket-header bg-white border-bottom p-4">
-                        <h3 class="fw-bold mb-0 text-dark">Clínica Velzon</h3>
+                        <h3 class="fw-bold mb-0 text-dark">{{ $page.props.current_account?.name || 'Clínica' }}</h3>
                         <p class="text-muted m-0">Comprovante de Senha</p>
                     </div>
                     <div class="ticket-body p-5 bg-white">

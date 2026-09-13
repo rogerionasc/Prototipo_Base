@@ -18,7 +18,7 @@ class ContasPagarController extends Controller
         $categoriasFinanceiras = CategoriaDespesa::select('id', 'descricao')->orderBy('descricao')->get();
         $configuracoesBancarias = ConfiguracaoBancaria::select('id', 'provedor', 'tipo')->get();
 
-        $query = \Illuminate\Support\Facades\DB::table('conta_pagars as cp')
+        $query = ContaPagar::query()->from('conta_pagars as cp')
             ->leftJoin('categoria_despesas as cd', 'cp.categoria_id', '=', 'cd.id')
             ->leftJoin('configuracoes_bancarias as cb', 'cp.configuracao_bancaria_id', '=', 'cb.id')
             ->leftJoin('despesas as d', 'cp.despesa_id', '=', 'd.id')
@@ -92,7 +92,7 @@ class ContasPagarController extends Controller
 
         // KPIs (Calculados via Inertia)
         $todayStr = now()->format('Y-m-d');
-        $baseKpiQuery = \Illuminate\Support\Facades\DB::table('conta_pagars as cp');
+        $baseKpiQuery = ContaPagar::query()->from('conta_pagars as cp');
 
         // Por padrão (PENDENTE) os cards retornam do mês, como solicitado.
         $kpiFilterType = $filterType === 'PENDENTE' ? 'MENSAL' : $filterType;

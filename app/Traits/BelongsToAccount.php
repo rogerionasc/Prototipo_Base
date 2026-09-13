@@ -18,7 +18,11 @@ trait BelongsToAccount
             if (auth()->check()) {
                 $accountId = session('current_account_id', auth()->user()->account_id);
                 if ($accountId) {
-                    $builder->where($builder->getQuery()->from . '.account_id', $accountId);
+                    $from = $builder->getQuery()->from;
+                    $table = is_string($from) && stripos($from, ' as ') !== false 
+                        ? trim(explode(' as ', str_ireplace(' AS ', ' as ', $from))[1]) 
+                        : (is_string($from) ? $from : $builder->getModel()->getTable());
+                    $builder->where($table . '.account_id', $accountId);
                 } else {
                     $builder->whereRaw('0 = 1'); // Autenticado, mas sem conta
                 }

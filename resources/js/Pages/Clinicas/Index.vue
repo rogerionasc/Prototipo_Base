@@ -703,8 +703,8 @@ const testConnection = async () => {
           placeholder="Selecione um profissional" />
       </div>
     </Modal>
-    <!-- Modal de Integração Bancária -->
-    <Modal v-model="showBankModal" :title="`Integrações Bancárias: ${clinicaSelecionadaBank?.name}`" size="xl"
+    <!-- Modal de Gateway de Pagamento -->
+    <Modal v-model="showBankModal" :title="`Gateways de Pagamento: ${clinicaSelecionadaBank?.name}`" size="xl"
       customWidth="1400px" :show-footer="false" :z-index="1060" :backdrop-z-index="1055">
       <div v-if="!tiposIntegracaoBancaria || tiposIntegracaoBancaria.length === 0" class="card-body text-center p-5">
         <div class="avatar-lg mx-auto mb-3">
@@ -712,8 +712,8 @@ const testConnection = async () => {
                 <i class="ri-bank-card-line"></i>
             </div>
         </div>
-        <h5 class="mt-2">Tipo de integração não encontrado</h5>
-        <p class="text-muted mb-0">Atualmente não há tipos de integrações bancárias cadastrados no sistema.</p>
+        <h5 class="mt-2">Gateway de pagamento não encontrado</h5>
+        <p class="text-muted mb-0">Atualmente não há gateways de pagamento cadastrados no sistema.</p>
         <p class="text-muted mt-2">Por favor, acesse as configurações do sistema para criar os tipos disponíveis.</p>
       </div>
 
@@ -732,7 +732,7 @@ const testConnection = async () => {
               <span class="fw-medium">{{ tipo.nome }}</span>
               <i v-if="getBankConfig(tipo.nome)?.is_padrao" class="ri-checkbox-circle-fill ms-auto fs-16"
                 :class="currentBankTab === index ? 'text-white' : 'text-success'"
-                title="Integração Padrão"></i>
+                title="Gateway Padrão"></i>
             </button>
           </div>
         </div>
@@ -745,7 +745,7 @@ const testConnection = async () => {
 
               <form @submit.prevent="saveBankConfig">
                 <div class="d-flex align-items-center mb-4">
-                  <h5 class="mb-0">Configuração API - {{ tipo.nome }}</h5>
+                  <h5 class="mb-0">Gateway de Pagamento - {{ tipo.nome }}</h5>
                   <div class="ms-auto d-flex gap-3">
                     <div class="form-check form-switch form-switch-info">
                       <input class="form-check-input" type="checkbox" :id="'padraoBankSwitch-' + index"

@@ -8,8 +8,14 @@ class AccountController extends Controller
 {
     public function index()
     {
-        // Ao carregar todas as clínicas, já incluímos os itens secundários
-        $clinicas = \App\Models\Account::with(['totens.opcoes', 'paineis', 'salas.profissionalSaude', 'guiches', 'configuracoesBancarias', 'pixConfig'])->get();
+        $query = \App\Models\Account::with(['totens.opcoes', 'paineis', 'salas.profissionalSaude', 'guiches', 'configuracoesBancarias', 'pixConfig']);
+        
+        $currentAccountId = session('current_account_id', auth()->user()->account_id ?? 1);
+        if ($currentAccountId != 1) {
+            $query->where('id', $currentAccountId);
+        }
+        
+        $clinicas = $query->get();
         $profissionais = \App\Models\Pessoa::get(['id', 'nome']);
         $tiposIntegracaoBancaria = \App\Models\TipoIntegracaoBancaria::select('id', 'nome', 'logo')->get();
 

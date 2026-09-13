@@ -406,9 +406,9 @@
 
 
                         <!-- TIPO INTEGRACAO BANCARIA -->
-                        <BTab title="Integrações Bancárias">
+                        <BTab title="Gateways de Pagamento">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="mb-0">Tipos de Integração Bancária</h6>
+                                <h6 class="mb-0">Tipos de Gateway de Pagamento</h6>
                             </div>
                             <div class="border rounded p-3 bg-light-subtle mb-4">
                                 <form @submit.prevent="saveIntegracaoBancaria">
@@ -460,7 +460,7 @@
                                         <template v-else>
                                             <td colspan="4">
                                                 <div class="d-flex gap-2">
-                                                    <input v-model="editIntegracaoBancaria.nome" type="text" placeholder="Nome do Banco"
+                                                    <input v-model="editIntegracaoBancaria.nome" type="text" placeholder="Nome do Gateway"
                                                         class="form-control w-25" />
                                                     <input type="file" @input="editIntegracaoBancaria.logo = $event.target.files[0]"
                                                         class="form-control w-50" accept="image/*" />

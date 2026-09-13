@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ContaPagar extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\BelongsToAccount;
 
     protected $fillable = [
         'account_id',

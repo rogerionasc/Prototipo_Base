@@ -8,7 +8,7 @@
                 <div class="logo-circle bg-primary-subtle d-flex justify-content-center align-items-center rounded-circle" style="width: 60px; height: 60px;">
                     <i class="ri-hospital-line text-primary display-5"></i>
                 </div>
-                <h1 class="text-primary m-0 fw-bold display-5">Clínica Velzon</h1>
+                <h1 class="text-primary m-0 fw-bold display-5">{{ $page.props.current_account?.name || 'Clínica' }}</h1>
             </div>
             <div class="text-end">
                 <div class="display-6 fw-bold text-primary">{{ currentTime }}</div>
@@ -68,7 +68,7 @@
             <i class="ri-megaphone-line display-6 me-4 ms-2"></i>
             <div class="ticker-wrap flex-grow-1">
                 <div class="ticker">
-                    <span class="fs-2 fw-medium me-5">Bem-vindo à Clínica Velzon!</span>
+                    <span class="fs-2 fw-medium me-5">Bem-vindo à {{ $page.props.current_account?.name || 'Clínica' }}!</span>
                     <span class="fs-2 fw-medium me-5">Acesse o portal do paciente para ver os resultados dos seus exames diretamente de casa.</span>
                     <span class="fs-2 fw-medium me-5">Mantenha seus dados cadastrais atualizados na recepção.</span>
                 </div>
