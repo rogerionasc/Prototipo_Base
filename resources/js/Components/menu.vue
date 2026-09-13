@@ -69,7 +69,7 @@ export default {
                         { href: "/contas-pagar", label: "Contas a Pagar" },
                         { href: "#", label: "Fluxo de Caixa" },
                         { href: "#", label: "Relatórios" },
-                        { href: "/financeiro/configuracoes/cobranca", label: "Cobrança Bancária" }
+                        { href: "/financeiro/configuracoes/cobranca", label: "Gateways de Pagamento" }
                     ]
                 },
                 {

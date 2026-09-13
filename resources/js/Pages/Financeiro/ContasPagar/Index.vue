@@ -220,7 +220,7 @@ const currentCols = computed(() => {
     ];
 
     if (activeFilter.value !== 'PENDENTE') {
-        cols.push({ id: "banco_nome", name: "Banco", width: "150px" });
+        cols.push({ id: "banco_nome", name: "Gateway", width: "150px" });
     }
 
     cols.push({ id: "data_vencimento", name: "Vencimento", width: "120px", formatter: (cell) => formatDateTime(cell) });

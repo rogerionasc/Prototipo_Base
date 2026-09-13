@@ -22,6 +22,7 @@ trait BelongsToAccount
                     $table = is_string($from) && stripos($from, ' as ') !== false 
                         ? trim(explode(' as ', str_ireplace(' AS ', ' as ', $from))[1]) 
                         : (is_string($from) ? $from : $builder->getModel()->getTable());
+                    \Illuminate\Support\Facades\Log::info("BelongsToAccount Global Scope: table=$table, accountId=$accountId");
                     $builder->where($table . '.account_id', $accountId);
                 } else {
                     $builder->whereRaw('0 = 1'); // Autenticado, mas sem conta
