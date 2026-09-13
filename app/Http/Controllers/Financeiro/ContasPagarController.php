@@ -74,7 +74,7 @@ class ContasPagarController extends Controller
                   ->whereBetween('cp.data_pagamento', [$startOfYear, $endOfYear]);
         }
 
-        if ($request->wantsJson() || $request->get('is_api') == 1) {
+        if ($request->get('is_api') == 1) {
             $limit = (int) $request->get('limit', 10);
             $offset = (int) $request->get('offset', 0);
 
@@ -90,16 +90,51 @@ class ContasPagarController extends Controller
             ]);
         }
 
-        // KPIs (Calculados quando não for API json)
+        // KPIs (Calculados via Inertia)
         $todayStr = now()->format('Y-m-d');
         $baseKpiQuery = \Illuminate\Support\Facades\DB::table('conta_pagars as cp');
+
+        // Por padrão (PENDENTE) os cards retornam do mês, como solicitado.
+        $kpiFilterType = $filterType === 'PENDENTE' ? 'MENSAL' : $filterType;
+
+        $startDate = null;
+        $endDate = null;
         
-        $totalPendente = (clone $baseKpiQuery)->whereIn('status', ['Pendente', 'Vencida'])->sum('valor');
-        $totalVencido = (clone $baseKpiQuery)->whereIn('status', ['Pendente', 'Vencida'])->whereDate('data_vencimento', '<', $todayStr)->sum('valor');
-        $totalAVencer = (clone $baseKpiQuery)->where('status', 'Pendente')->where(function($q) use ($todayStr) {
+        if ($kpiFilterType === 'SEMANAL') {
+            $startDate = now()->startOfWeek()->format('Y-m-d');
+            $endDate = now()->endOfWeek()->format('Y-m-d');
+        } elseif ($kpiFilterType === 'MENSAL') {
+            $startDate = now()->startOfMonth()->format('Y-m-d');
+            $endDate = now()->endOfMonth()->format('Y-m-d');
+        } elseif ($kpiFilterType === 'ANUAL') {
+            $startDate = now()->startOfYear()->format('Y-m-d');
+            $endDate = now()->endOfYear()->format('Y-m-d');
+        }
+
+        // Helper para aplicar filtro de data
+        $applyDateFilter = function ($q, $column) use ($startDate, $endDate) {
+            if ($startDate && $endDate) {
+                $q->whereBetween($column, [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            }
+        };
+
+        $qPendente = (clone $baseKpiQuery)->whereIn('status', ['Pendente', 'Vencida']);
+        $applyDateFilter($qPendente, 'data_vencimento');
+        $totalPendente = $qPendente->sum('valor');
+
+        $qVencido = (clone $baseKpiQuery)->whereIn('status', ['Pendente', 'Vencida'])->whereDate('data_vencimento', '<', $todayStr);
+        $applyDateFilter($qVencido, 'data_vencimento');
+        $totalVencido = $qVencido->sum('valor');
+
+        $qAVencer = (clone $baseKpiQuery)->where('status', 'Pendente')->where(function($q) use ($todayStr) {
             $q->whereNull('data_vencimento')->orWhereDate('data_vencimento', '>=', $todayStr);
-        })->sum('valor');
-        $totalPago = (clone $baseKpiQuery)->where('status', 'Paga')->sum('valor_pago'); // Or 'valor' depending on logic, 'valor' is fine but 'valor_pago' is safer for actual money left
+        });
+        $applyDateFilter($qAVencer, 'data_vencimento');
+        $totalAVencer = $qAVencer->sum('valor');
+
+        $qPago = (clone $baseKpiQuery)->where('status', 'Paga');
+        $applyDateFilter($qPago, 'data_pagamento');
+        $totalPago = $qPago->sum('valor_pago');
 
         return \Inertia\Inertia::render('Financeiro/ContasPagar/Index', [
             'categoriasFinanceiras' => $categoriasFinanceiras,

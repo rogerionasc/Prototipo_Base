@@ -161,8 +161,14 @@ const selectedConta = ref(null);
 const activeFilter = ref('PENDENTE');
 const gridRef = ref(null);
 
-watch(activeFilter, () => {
-  if (gridRef.value) gridRef.value.reload();
+watch(activeFilter, (newVal) => {
+    router.reload({
+        only: ['kpis'],
+        data: { filterType: newVal },
+        preserveState: true,
+        preserveScroll: true
+    });
+    if (gridRef.value) gridRef.value.reload();
 });
 
 const formatCurrency = (value) => {
