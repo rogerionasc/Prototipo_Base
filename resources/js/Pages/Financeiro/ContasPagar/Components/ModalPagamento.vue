@@ -1,42 +1,39 @@
 <template>
-  <Modal v-model="isVisible" title="Registrar Pagamento / Baixa" size="lg" nameButton="Registrar Pagamento" @save="save">
-    <form @submit.prevent="save">
+  <Modal v-model="isVisible" title="Registrar Pagamento / Baixa" size="lg" nameButton="Registrar Pagamento" :processing="form.processing" @save="save">
+    <form @submit.prevent="save" v-if="isVisible">
       <div class="row g-3">
         <div class="col-md-12">
           <div class="alert alert-info">
-              <strong>Conta:</strong> {{ form.conta_id }} - Parcela {{ form.parcela_num }}<br>
-              <strong>Fornecedor:</strong> {{ form.fornecedor_id }}<br>
-              <strong>Valor Base:</strong> {{ formatCurrency(form.valor_base) }}
+              <strong>Conta:</strong> {{ form.conta_id }}<br>
+              <strong>Categoria:</strong> {{ form.categoria }}<br>
+              <strong>Valor:</strong> {{ formatCurrency(form.valor) }}
           </div>
         </div>
         <div class="col-md-6">
           <label class="form-label">Data do Pagamento</label>
-          <input type="date" class="form-control" v-model="form.data_pagamento">
+          <flatPickr v-model="form.data_pagamento" :config="flatpickrConfig" :class="{'form-control': true, 'is-invalid': form.errors.data_pagamento}" placeholder="Selecione a data" />
+          <div class="invalid-feedback" v-if="form.errors.data_pagamento">{{ form.errors.data_pagamento }}</div>
         </div>
         <div class="col-md-6">
           <label class="form-label">Conta Bancária / Caixa de Origem</label>
-          <input type="text" class="form-control" v-model="form.conta_bancaria_id" placeholder="Ex: Conta Banco do Brasil">
+          <select data-choices :class="{'form-select': true, 'is-invalid': form.errors.conta_bancaria_id}" v-model="form.conta_bancaria_id">
+            <option value="" disabled>Selecione o banco / origem...</option>
+            <option v-for="b in bancos" :key="b.id" :value="b.id">
+                {{ b.provedor }}
+            </option>
+          </select>
+          <div class="invalid-feedback" v-if="form.errors.conta_bancaria_id">{{ form.errors.conta_bancaria_id }}</div>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Juros (R$)</label>
-          <input type="number" step="0.01" class="form-control" v-model="form.juros">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Multa (R$)</label>
-          <input type="number" step="0.01" class="form-control" v-model="form.multa">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Desconto (R$)</label>
-          <input type="number" step="0.01" class="form-control" v-model="form.desconto">
-        </div>
+      </div>
+      <div class="row g-3 mt-1">
         <div class="col-md-6">
-          <label class="form-label fw-bold text-primary">Valor a Pagar (Líquido)</label>
-          <input type="text" class="form-control" disabled :value="formatCurrency(valorLiquido)">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label fw-bold text-success">Valor Efetivamente Pago</label>
-          <input type="number" step="0.01" class="form-control" v-model="form.valor_pago">
-          <small class="text-muted">Altere para registrar pagamento parcial.</small>
+          <label class="form-label">Valor Efetivamente Pago</label>
+          <div class="input-group">
+            <span class="input-group-text">R$</span>
+            <input type="number" step="0.01" :class="{'form-control': true, 'is-invalid': form.errors.valor_pago}" v-model="form.valor_pago">
+          </div>
+          <div class="text-danger small mt-1" v-if="form.errors.valor_pago">{{ form.errors.valor_pago }}</div>
+          <small class="text-muted">Informe o valor exato pago.</small>
         </div>
         
         <!-- Drag and Drop Anexos -->
@@ -64,23 +61,36 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useForm } from '@inertiajs/vue3';
 import Modal from '@/Components/modal.vue';
+
+import flatPickr from 'vue-flatpickr-component';
+import 'flatpickr/dist/flatpickr.css';
+import { Portuguese } from 'flatpickr/dist/l10n/pt.js';
+
+const flatpickrConfig = {
+    locale: Portuguese,
+    dateFormat: "Y-m-d",
+    altInput: true,
+    altFormat: "d M, Y"
+};
+
+const props = defineProps({
+    bancos: { type: Array, default: () => [] }
+});
 
 const emit = defineEmits(['saved']);
 const isVisible = ref(false);
 const fileInput = ref(null);
 
-const form = ref({
+const form = useForm({
     conta_id: null,
-    parcela_num: 1,
-    fornecedor_id: '',
-    valor_base: 0,
+    categoria: '',
+    valor: 0,
     data_pagamento: new Date().toISOString().split('T')[0],
     conta_bancaria_id: '',
-    juros: 0,
-    multa: 0,
-    desconto: 0,
-    valor_pago: 0
+    valor_pago: 0,
+    files: []
 });
 
 const files = ref([]);
@@ -89,27 +99,24 @@ const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 };
 
-const valorLiquido = computed(() => {
-    const base = parseFloat(form.value.valor_base) || 0;
-    const jur = parseFloat(form.value.juros) || 0;
-    const mult = parseFloat(form.value.multa) || 0;
-    const desc = parseFloat(form.value.desconto) || 0;
-    return base + jur + mult - desc;
-});
+import { watch } from 'vue';
+
+watch(files, (newVal) => {
+    form.files = newVal;
+}, { deep: true });
 
 const show = (conta) => {
-    form.value = {
-        conta_id: conta.id,
-        parcela_num: conta.parcela_num,
-        fornecedor_id: conta.fornecedor_id,
-        valor_base: conta.valor_base,
-        data_pagamento: new Date().toISOString().split('T')[0],
-        conta_bancaria_id: '',
-        juros: 0,
-        multa: 0,
-        desconto: 0,
-        valor_pago: conta.valor_base
-    };
+    form.reset();
+    form.clearErrors();
+    if (fileInput.value) fileInput.value.value = null;
+    
+    form.conta_id = conta.id;
+    form.categoria = conta.categoria_nome || '';
+    form.valor = conta.valor;
+    form.data_pagamento = new Date().toISOString().split('T')[0];
+    form.conta_bancaria_id = '';
+    form.valor_pago = conta.valor;
+    form.files = [];
     files.value = [];
     isVisible.value = true;
 };
@@ -133,10 +140,19 @@ const removeFile = (index) => {
 };
 
 const save = () => {
-    console.log("Registrando Pagamento:", form.value);
-    console.log("Comprovantes anexados:", files.value);
-    emit('saved');
-    isVisible.value = false;
+    form.files = files.value;
+    form.post(route('financeiro.contas_pagar.pagar', form.conta_id), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            emit('saved');
+            isVisible.value = false;
+            form.reset();
+            form.clearErrors();
+            files.value = [];
+            if (fileInput.value) fileInput.value.value = null;
+        }
+    });
 };
 
 defineExpose({ show });

@@ -13,23 +13,16 @@ return new class extends Migration
     {
         Schema::create('conta_pagars', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('despesa_id')->nullable()->constrained('despesas')->nullOnDelete();
-            $table->string('fornecedor_id')->nullable();
-            $table->string('categoria_id')->nullable();
-            $table->string('centro_custo_id')->nullable();
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+            $table->foreignId('despesa_id')->nullable()->constrained('despesas')->cascadeOnDelete();
             $table->string('descricao')->nullable();
-            $table->integer('parcela_num')->default(1);
+            $table->decimal('valor', 15, 2)->default(0);
+            $table->foreignId('categoria_id')->nullable()->constrained('categoria_despesas')->nullOnDelete();
+            $table->date('data_competencia')->nullable();
             $table->date('data_vencimento')->nullable();
-            $table->decimal('valor_base', 15, 2)->default(0);
-            $table->decimal('desconto', 15, 2)->default(0);
-            $table->decimal('juros', 15, 2)->default(0);
-            $table->decimal('multa', 15, 2)->default(0);
-            $table->decimal('valor_pago', 15, 2)->default(0);
-            $table->string('status')->default('Pendente'); // Pendente, Vencida, Paga, Cancelada, Agendada
+            $table->string('anexo')->nullable();
+            $table->string('status')->default('Pendente');
             $table->date('data_pagamento')->nullable();
-            $table->string('forma_pagamento_id')->nullable();
-            $table->string('conta_bancaria_id')->nullable();
-            $table->json('anexos')->nullable();
             $table->timestamps();
         });
     }

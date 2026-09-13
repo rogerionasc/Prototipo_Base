@@ -1,128 +1,125 @@
 <template>
-  <Modal v-model="isVisible" title="Nova Despesa" size="xl" nameButton="Salvar e Gerar Contas" @save="save">
-    <form @submit.prevent="save">
+  <Modal v-model="isVisible" :title="form.id ? 'Editar Despesa' : 'Nova Despesa'" size="xl" :nameButton="form.id ? 'Salvar Alterações' : 'Salvar e Gerar Contas'" :processing="form.processing" @save="save">
+    <form @submit.prevent="save" v-if="isVisible">
       <div class="row g-3">
         <!-- Dados Principais -->
         <div class="col-md-12">
           <h6 class="fw-semibold text-uppercase text-muted border-bottom pb-2">Dados da Despesa</h6>
         </div>
         <div class="col-md-6">
-          <label class="form-label">Fornecedor</label>
-          <input type="text" class="form-control" v-model="form.fornecedor_id" placeholder="Ex: CEMIG, Fornecedor S/A">
-        </div>
-        <div class="col-md-3">
           <label class="form-label">Categoria</label>
-          <input type="text" class="form-control" v-model="form.categoria_id" placeholder="Ex: Energia">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Centro de Custo</label>
-          <input type="text" class="form-control" v-model="form.centro_custo_id" placeholder="Ex: Administrativo">
+          <select class="form-select" data-choices v-model="form.categoria_id">
+            <option value="" disabled>Selecione...</option>
+            <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.descricao }}</option>
+          </select>
         </div>
         <div class="col-md-6">
           <label class="form-label">Descrição / Histórico</label>
-          <input type="text" class="form-control" v-model="form.descricao">
+          <input type="text" class="form-control" placeholder="Ex: Conta de Luz, Material de Escritório..." v-model="form.descricao">
         </div>
-        <div class="col-md-3">
-          <label class="form-label">Documento / NF</label>
-          <input type="text" class="form-control" v-model="form.documento_nf">
-        </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label class="form-label">Valor Total</label>
-          <input type="number" step="0.01" class="form-control" v-model="form.valor_total">
+          <input type="number" step="0.01" class="form-control" v-model="form.valor">
+        </div>
+        <div class="col-md-4" v-if="form.id">
+          <label class="form-label">Status</label>
+          <select class="form-select" data-choices v-model="form.status">
+            <option value="Pendente">Pendente</option>
+            <option value="Agendada">Agendada</option>
+            <option value="Cancelada">Cancelada</option>
+          </select>
         </div>
 
         <!-- Datas -->
         <div class="col-md-4">
-          <label class="form-label">Data Emissão</label>
-          <input type="date" class="form-control" v-model="form.data_emissao">
-        </div>
-        <div class="col-md-4">
           <label class="form-label">Data Competência</label>
-          <input type="date" class="form-control" v-model="form.data_competencia">
+          <flatPickr v-model="form.data_competencia" :config="flatpickrConfig" class="form-control" placeholder="Selecione a data" />
         </div>
         <div class="col-md-4">
-          <label class="form-label">1º Vencimento</label>
-          <input type="date" class="form-control" v-model="form.data_vencimento">
+          <label class="form-label">Vencimento</label>
+          <flatPickr v-model="form.data_vencimento" :config="flatpickrConfig" class="form-control" placeholder="Selecione a data" />
         </div>
 
-        <!-- Recorrência e Parcelamento -->
+        <!-- Recorrência -->
         <div class="col-md-12 mt-4">
-          <h6 class="fw-semibold text-uppercase text-muted border-bottom pb-2">Parcelamento e Recorrência</h6>
+          <h6 class="fw-semibold text-uppercase text-muted border-bottom pb-2">Recorrência</h6>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Nº de Parcelas</label>
-          <input type="number" min="1" class="form-control" v-model="form.parcelas">
-          <small class="text-muted">Gera N contas a pagar.</small>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Recorrência</label>
-          <select class="form-select" v-model="form.recorrencia_tipo">
-            <option value="">Nenhuma</option>
-            <option value="mensal">Mensal</option>
-            <option value="semanal">Semanal</option>
-            <option value="anual">Anual</option>
-          </select>
-        </div>
-        <div class="col-md-4" v-if="form.recorrencia_tipo">
-          <label class="form-label">Fim da Recorrência</label>
-          <input type="date" class="form-control" v-model="form.recorrencia_fim">
+        <div class="col-md-12">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="switchRecorrente" v-model="form.is_recorrente">
+            <label class="form-check-label" for="switchRecorrente">É uma despesa recorrente?</label>
+          </div>
         </div>
 
-        <!-- Drag and Drop Anexos -->
-        <div class="col-md-12 mt-4">
-          <h6 class="fw-semibold text-uppercase text-muted border-bottom pb-2">Anexos / Documentos</h6>
-          <div class="p-5 border border-dashed rounded text-center bg-light" 
-                @dragover.prevent 
-                @drop.prevent="onFileDrop"
-                style="cursor: pointer;"
-                @click="triggerFileInput">
-            <i class="ri-upload-cloud-2-line fs-1 mb-2 text-muted"></i>
-            <p class="mb-0 text-muted">Arraste e solte o comprovante ou NF aqui, ou <strong>clique para selecionar</strong>.</p>
-            <input type="file" ref="fileInput" class="d-none" multiple @change="onFileSelect">
-          </div>
-          <div class="mt-3 d-flex flex-wrap gap-2" v-if="files.length > 0">
-              <div v-for="(file, index) in files" :key="index" class="badge bg-primary fs-12 p-2">
-                {{ file.name }} <i class="ri-close-line ms-1 cursor-pointer" @click.stop="removeFile(index)"></i>
-              </div>
-          </div>
-        </div>
+
       </div>
     </form>
   </Modal>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch, onMounted } from 'vue';
+import { useForm } from '@inertiajs/vue3';
 import Modal from '@/Components/modal.vue';
+
+import flatPickr from 'vue-flatpickr-component';
+import 'flatpickr/dist/flatpickr.css';
+import { Portuguese } from 'flatpickr/dist/l10n/pt.js';
+
+const flatpickrConfig = {
+    locale: Portuguese,
+    dateFormat: "Y-m-d",
+    altInput: true,
+    altFormat: "d M, Y"
+};
+
+const props = defineProps({
+    categorias: { type: Array, default: () => [] }
+});
 
 const emit = defineEmits(['saved']);
 const isVisible = ref(false);
 const fileInput = ref(null);
 
-const form = ref({
-    fornecedor_id: '',
+const form = useForm({
+    id: null,
     categoria_id: '',
-    centro_custo_id: '',
     descricao: '',
-    documento_nf: '',
-    valor_total: 0,
-    data_emissao: '',
+    valor: 0,
     data_competencia: '',
     data_vencimento: '',
-    parcelas: 1,
-    recorrencia_tipo: '',
-    recorrencia_fim: ''
+    is_recorrente: false,
+    status: 'Pendente',
+    files: [],
+    _method: 'post'
 });
 
 const files = ref([]);
 
-const show = () => {
-    form.value = {
-        fornecedor_id: '', categoria_id: '', centro_custo_id: '', descricao: '', documento_nf: '',
-        valor_total: 0, data_emissao: '', data_competencia: '', data_vencimento: '',
-        parcelas: 1, recorrencia_tipo: '', recorrencia_fim: ''
-    };
+watch(files, (newVal) => {
+    form.files = newVal;
+}, { deep: true });
+
+const show = (data = null) => {
+    form.reset();
+    form.clearErrors();
     files.value = [];
+    
+    if (data) {
+        form.id = data.id;
+        form.categoria_id = data.categoria_id;
+        form.descricao = data.descricao;
+        form.valor = data.valor;
+        form.data_competencia = data.data_competencia || '';
+        form.data_vencimento = data.data_vencimento || '';
+        form.is_recorrente = !!data.is_recorrente;
+        form.status = data.status || 'Pendente';
+        form._method = 'put';
+    } else {
+        form.id = null;
+        form._method = 'post';
+    }
+    
     isVisible.value = true;
 };
 
@@ -145,10 +142,18 @@ const removeFile = (index) => {
 };
 
 const save = () => {
-    console.log("Salvando despesa:", form.value);
-    console.log("Anexos:", files.value);
-    emit('saved');
-    isVisible.value = false;
+    const url = form.id ? `/contas-pagar/${form.id}` : '/contas-pagar';
+    
+    form.post(url, {
+        onSuccess: () => {
+            emit('saved');
+            isVisible.value = false;
+            form.reset();
+            form.clearErrors();
+            files.value = [];
+        },
+        preserveScroll: true
+    });
 };
 
 defineExpose({ show });

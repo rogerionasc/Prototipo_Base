@@ -198,6 +198,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post("/contas-receber/{id}/gerar-cobranca", [ContasReceberController::class, "gerarCobranca"])->whereNumber('id')->name('financeiro.contas_receber.gerar_cobranca');
         
         Route::get("/contas-pagar", [ContasPagarController::class, "index"])->name('financeiro.contas_pagar.index');
+        Route::post("/contas-pagar", [ContasPagarController::class, "store"])->name('financeiro.contas_pagar.store');
+        Route::put("/contas-pagar/{id}", [ContasPagarController::class, "update"])->whereNumber('id')->name('financeiro.contas_pagar.update');
+        Route::delete("/contas-pagar/{id}", [ContasPagarController::class, "destroy"])->whereNumber('id')->name('financeiro.contas_pagar.destroy');
+        Route::post("/contas-pagar/{id}/pagar", [ContasPagarController::class, "pagar"])->whereNumber('id')->name('financeiro.contas_pagar.pagar');
 
         // Cobrança Bancária
         Route::get("/financeiro/configuracoes/cobranca", [\App\Http\Controllers\Financeiro\ConfiguracaoBancariaController::class, "index"])->name('financeiro.configuracoes.cobranca.index');
@@ -255,6 +259,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::delete("/profissionais-saude/{id}", [\App\Http\Controllers\PessoaController::class, "destroy"])->name('pessoas.destroy');
 
         // Parametrização routes
+        Route::post("/parametros/categoria-financeira", [VelzonRoutesController::class, "parametros_store_categoria_financeira"])->name('parametros.categoria_financeira.store');
+        Route::put("/parametros/categoria-financeira/{id}", [VelzonRoutesController::class, "parametros_update_categoria_financeira"])->name('parametros.categoria_financeira.update');
+        Route::delete("/parametros/categoria-financeira/{id}", [VelzonRoutesController::class, "parametros_destroy_categoria_financeira"])->name('parametros.categoria_financeira.destroy');
+
         Route::post("/parametros/estado-civil", [VelzonRoutesController::class, "parametros_store_estado_civil"])->name('parametros.estado_civil.store');
         Route::post("/parametros/tipo-sanguineo", [VelzonRoutesController::class, "parametros_store_tipo_sanguineo"])->name('parametros.tipo_sanguineo.store');
         Route::put("/parametros/estado-civil/{id}", [VelzonRoutesController::class, "parametros_update_estado_civil"])->name('parametros.estado_civil.update');

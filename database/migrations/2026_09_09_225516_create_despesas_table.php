@@ -13,17 +13,15 @@ return new class extends Migration
     {
         Schema::create('despesas', function (Blueprint $table) {
             $table->id();
-            $table->string('fornecedor_id')->nullable(); // String for prototype, standard is foreignId
-            $table->string('categoria_id')->nullable();
-            $table->string('centro_custo_id')->nullable();
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $table->string('descricao')->nullable();
-            $table->string('documento_nf')->nullable();
+            $table->decimal('valor', 15, 2)->default(0);
+            $table->foreignId('categoria_id')->nullable()->constrained('categoria_despesas')->nullOnDelete();
             $table->date('data_competencia')->nullable();
-            $table->date('data_emissao')->nullable();
-            $table->decimal('valor_total', 15, 2)->default(0);
-            $table->json('anexos')->nullable();
-            $table->string('recorrencia_tipo')->nullable(); // mensal, semanal
-            $table->date('recorrencia_fim')->nullable();
+            $table->date('data_vencimento')->nullable();
+            $table->string('anexo')->nullable();
+            $table->string('status')->default('Pendente');
+            $table->boolean('is_recorrente')->default(false);
             $table->timestamps();
         });
     }

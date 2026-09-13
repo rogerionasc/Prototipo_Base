@@ -6,8 +6,65 @@
                 </BCardHeader>
                 <BCardBody>
                     <BTabs nav-class="nav-tabs-custom text-muted mb-4">
+                        <!-- CATEGORIAS DE DESPESA -->
+                        <BTab title="Categorias de Despesa" active>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Lista de Categorias Financeiras</h6>
+                            </div>
+                            <div class="border rounded p-3 bg-light-subtle mb-4">
+                                <form @submit.prevent="saveCategoriaFinanceira">
+                                    <BRow class="g-3 align-items-end">
+                                        <BCol md="8">
+                                            <label class="form-label">Descrição da Categoria</label>
+                                            <input v-model="formCategoriaFinanceira.descricao" type="text" class="form-control"
+                                                :class="{ 'is-invalid': formCategoriaFinanceira.errors.descricao }"
+                                                placeholder="Ex.: Insumos, Aluguel..." />
+                                            <div class="invalid-feedback">{{ formCategoriaFinanceira.errors.descricao }}</div>
+                                        </BCol>
+                                        <BCol md="4">
+                                            <button type="submit" class="btn btn-primary w-100"
+                                                :disabled="formCategoriaFinanceira.processing"><i
+                                                    class="ri-add-line align-bottom me-1"></i> Adicionar</button>
+                                        </BCol>
+                                    </BRow>
+                                </form>
+                            </div>
+                            <SimpleTable variant="borderless" tableClass="table-hover align-middle table-nowrap mb-0"
+                                :items="categoriasFinanceirasLocal" :columns="parametrosColumns" emptyTitle=""
+                                emptyMessage="Nenhum registro encontrado.">
+                                <template #body="{ items }">
+                                    <tr v-for="cf in items" :key="cf.id">
+                                        <template v-if="editingCategoriaFinanceiraId !== cf.id">
+                                            <td style="width:80px">#{{ cf.id }}</td>
+                                            <td>{{ cf.descricao }}</td>
+                                            <td class="text-end" style="width:150px">
+                                                <button type="button" class="btn btn-sm btn-soft-info me-2"
+                                                    @click="startEditCategoriaFinanceira(cf)" title="Editar"><i
+                                                        class="ri-pencil-line"></i></button>
+                                                <button type="button" class="btn btn-sm btn-soft-danger"
+                                                    @click="destroyCategoriaFinanceira(cf.id)" title="Excluir"><i
+                                                        class="ri-delete-bin-line"></i></button>
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td colspan="3">
+                                                <div class="d-flex gap-2">
+                                                    <input v-model="editCategoriaFinanceira.descricao" type="text"
+                                                        class="form-control" />
+                                                    <button type="button" class="btn btn-success"
+                                                        @click="updateCategoriaFinanceira">Salvar</button>
+                                                    <button type="button" class="btn btn-light"
+                                                        @click="cancelEditCategoriaFinanceira">Cancelar</button>
+                                                </div>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </SimpleTable>
+                        </BTab>
+
                         <!-- ESTADO CIVIL -->
-                        <BTab title="Estado Civil" active>
+                        <BTab title="Estado Civil">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="mb-0">Lista de Estados Civis</h6>
                             </div>
@@ -449,6 +506,7 @@ const props = defineProps({
     categoriasProcedimento: { type: Array, default: () => [] },
     comorbidades: { type: Array, default: () => [] },
     tiposIntegracaoBancaria: { type: Array, default: () => [] },
+    categoriasFinanceiras: { type: Array, default: () => [] },
 });
 
 const estadosCivisLocal = ref([...(props.estadosCivis || [])]);
@@ -457,6 +515,7 @@ const canaisAvisoLocal = ref([...(props.canaisAviso || [])]);
 const parentescosLocal = ref([...(props.parentescos || [])]);
 const categoriasLocal = ref([...(props.categoriasProcedimento || [])]);
 const comorbidadesLocal = ref([...(props.comorbidades || [])]);
+const categoriasFinanceirasLocal = ref([...(props.categoriasFinanceiras || [])]);
 
 watch(() => props.estadosCivis, (v) => { estadosCivisLocal.value = [...(v || [])]; });
 watch(() => props.tiposSanguineos, (v) => { tiposSanguineosLocal.value = [...(v || [])]; });
@@ -465,10 +524,15 @@ watch(() => props.parentescos, (v) => { parentescosLocal.value = [...(v || [])];
 watch(() => props.categoriasProcedimento, (v) => { categoriasLocal.value = [...(v || [])]; });
 watch(() => props.comorbidades, (v) => { comorbidadesLocal.value = [...(v || [])]; });
 watch(() => props.tiposIntegracaoBancaria, (v) => { integracoesBancariasLocal.value = [...(v || [])]; });
+watch(() => props.categoriasFinanceiras, (v) => { categoriasFinanceirasLocal.value = [...(v || [])]; });
 
 const formEstadoCivil = useForm({ descricao: "" });
 const editEstadoCivil = useForm({ descricao: "" });
 const editingEstadoCivilId = ref(null);
+
+const formCategoriaFinanceira = useForm({ descricao: "" });
+const editCategoriaFinanceira = useForm({ descricao: "" });
+const editingCategoriaFinanceiraId = ref(null);
 
 const formTipoSang = useForm({ descricao: "" });
 const editTipoSang = useForm({ descricao: "" });
@@ -505,6 +569,7 @@ const deleteTitle = computed(() => {
     if (t === 'parentesco') return 'Excluir Parentesco';
     if (t === 'categoria_procedimento') return 'Excluir Categoria de Procedimento';
     if (t === 'comorbidade') return 'Excluir Comorbidade';
+    if (t === 'categoria_financeira') return 'Excluir Categoria de Despesa';
     return 'Excluir';
 });
 const deleteSubTitleComputed = computed(() => {
@@ -541,6 +606,40 @@ const updateEstadoCivil = () => {
 const destroyEstadoCivil = (id) => {
     const item = (props.estadosCivis || []).find(e => e.id === id);
     deleteContext.value = { type: 'estado_civil', id, nome: item?.descricao || '' };
+    deleteModal.value = true;
+};
+
+const saveCategoriaFinanceira = () => {
+    formCategoriaFinanceira.post("/parametros/categoria-financeira", {
+        onSuccess: () => {
+            formCategoriaFinanceira.reset();
+            router.reload({ only: ['categoriasFinanceiras'] });
+        },
+        preserveScroll: true,
+    });
+};
+
+const startEditCategoriaFinanceira = (cf) => {
+    editingCategoriaFinanceiraId.value = cf.id;
+    editCategoriaFinanceira.descricao = cf.descricao;
+};
+const cancelEditCategoriaFinanceira = () => {
+    editingCategoriaFinanceiraId.value = null;
+    editCategoriaFinanceira.reset();
+};
+const updateCategoriaFinanceira = () => {
+    editCategoriaFinanceira.put(`/parametros/categoria-financeira/${editingCategoriaFinanceiraId.value}`, {
+        onSuccess: () => {
+            editingCategoriaFinanceiraId.value = null;
+            editCategoriaFinanceira.reset();
+            router.reload({ only: ['categoriasFinanceiras'] });
+        },
+        preserveScroll: true,
+    });
+};
+const destroyCategoriaFinanceira = (id) => {
+    const item = (props.categoriasFinanceiras || []).find(e => e.id === id);
+    deleteContext.value = { type: 'categoria_financeira', id, nome: item?.descricao || '' };
     deleteModal.value = true;
 };
 
@@ -750,6 +849,14 @@ const confirmDelete = () => {
             preserveScroll: true,
             onSuccess: () => {
                 estadosCivisLocal.value = (estadosCivisLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
+            }
+        });
+    } else if (ctx.type === 'categoria_financeira') {
+        f.delete(`/parametros/categoria-financeira/${ctx.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                categoriasFinanceirasLocal.value = (categoriasFinanceirasLocal.value || []).filter(e => String(e.id) !== String(ctx.id));
+                router.reload({ only: ['categoriasFinanceiras'] });
             }
         });
     } else if (ctx.type === 'tipo_sanguineo') {

@@ -13,7 +13,7 @@
               <div>
                 <p class="text-uppercase fw-medium text-muted text-truncate mb-2">A Receber</p>
                 <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-primary">{{
-                  formatCurrency(totalAReceber) }}</span></h4>
+                  formatCurrency(props.kpis.totalAReceber) }}</span></h4>
               </div>
               <div class="avatar-sm flex-shrink-0">
                 <span class="avatar-title bg-primary-subtle text-primary rounded fs-3">
@@ -32,7 +32,7 @@
               <div>
                 <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Vencidas</p>
                 <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-danger">{{
-                  formatCurrency(totalVencido) }}</span></h4>
+                  formatCurrency(props.kpis.totalVencido) }}</span></h4>
               </div>
               <div class="avatar-sm flex-shrink-0">
                 <span class="avatar-title bg-danger-subtle text-danger rounded fs-3">
@@ -51,7 +51,7 @@
               <div>
                 <p class="text-uppercase fw-medium text-muted text-truncate mb-2">Recebidas</p>
                 <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="text-success">{{
-                  formatCurrency(totalRecebido) }}</span></h4>
+                  formatCurrency(props.kpis.totalRecebido) }}</span></h4>
               </div>
               <div class="avatar-sm flex-shrink-0">
                 <span class="avatar-title bg-success-subtle text-success rounded fs-3">
@@ -68,7 +68,7 @@
     <div class="row">
       <!-- Master List -->
       <div :class="selectedConta ? 'col-lg-8' : 'col-lg-12'">
-        <TableGrid :columns="currentCols" :data="currentRows" tableTitle="Títulos a Receber" :showCheckbox="false"
+        <TableGrid ref="gridRef" :columns="currentCols" :serverUrl="route('financeiro.contas_receber.index')" :serverQuery="{ filterType: activeFilter, is_api: 1 }" tableTitle="Títulos a Receber" :showCheckbox="false"
           :search="true" :showAddButton="false" :showStatus="false" :showActions="true"
           :actionsConfig="currentActionsConfig" @receive="onReceive" @charge="onCharge" @show="onShowGuias"
           @procedure="onProcedureClick">
@@ -326,17 +326,22 @@ import axios from "axios";
 import { html } from "gridjs";
 import TableGrid from "@/Components/Tables/TableGrid.vue";
 import Modal from "@/Components/Modal.vue";
+import { watch } from "vue";
 
 const props = defineProps({
-  contas: { type: Array, default: () => [] },
+  kpis: { type: Object, default: () => ({ totalAReceber: 0, totalVencido: 0, totalRecebido: 0 }) },
 });
-
-const rows = toRef(props, "contas");
 
 const activeFilter = ref("TODOS");
 const selectedConta = ref(null);
 const loadingGuias = ref(false);
 const guiasLoteList = ref([]);
+const gridRef = ref(null);
+const activeRow = ref(null);
+
+watch(activeFilter, () => {
+  if (gridRef.value) gridRef.value.reload();
+});
 
 function parseDateBR(dmy) {
   if (!dmy) return null;
@@ -354,23 +359,11 @@ function isVencida(row) {
   return v < h;
 }
 
-const totalAReceber = computed(() => {
-  return (rows.value || [])
-    .filter(r => String(r.status || "").toUpperCase() !== "RECEBIDO" && String(r.status || "").toUpperCase() !== "CANCELADO" && !isVencida(r))
-    .reduce((acc, curr) => acc + Number(curr.valor || 0), 0);
-});
+const totalAReceber = computed(() => Number(props.kpis?.totalAReceber || 0));
 
-const totalVencido = computed(() => {
-  return (rows.value || [])
-    .filter(r => String(r.status || "").toUpperCase() !== "RECEBIDO" && String(r.status || "").toUpperCase() !== "CANCELADO" && isVencida(r))
-    .reduce((acc, curr) => acc + Number(curr.valor || 0), 0);
-});
+const totalVencido = computed(() => Number(props.kpis?.totalVencido || 0));
 
-const totalRecebido = computed(() => {
-  return (rows.value || [])
-    .filter(r => String(r.status || "").toUpperCase() === "RECEBIDO")
-    .reduce((acc, curr) => acc + Number(curr.valor || 0), 0);
-});
+const totalRecebido = computed(() => Number(props.kpis?.totalRecebido || 0));
 
 function formatCurrency(n) {
   const v = Number(n || 0);
@@ -404,15 +397,10 @@ function loteFormatter(cell, row) {
 }
 
 function statusFormatter(cell, row) {
-  const v = parseDateBR(row.cells[7].data); // Vencimento is at index 7 in all cols
   let badgeClass = getBadgeClass(cell);
   if (String(cell || "").toUpperCase() !== "RECEBIDO" && String(cell || "").toUpperCase() !== "CANCELADO") {
-    const h = new Date();
-    h.setHours(0, 0, 0, 0);
-    if (v && v < h) {
-      badgeClass = 'bg-danger';
-      cell = 'VENCIDO';
-    }
+    // Verificação de vencido do servidor pode ser feita no SQL.
+    // Opcionalmente podemos verificar aqui usando v.
   }
   return html(`<span class="badge ${badgeClass}">${formatStatus(cell)}</span>`);
 }
@@ -465,16 +453,6 @@ const currentCols = computed(() => {
   return cols;
 });
 
-const currentRows = computed(() => {
-  let list = rows.value || [];
-  if (activeFilter.value === 'PARTICULAR') {
-    list = list.filter(r => String(r.tipo_convenio || "").toUpperCase() !== "CONVENIO");
-  } else if (activeFilter.value === 'CONVENIO') {
-    list = list.filter(r => String(r.tipo_convenio || "").toUpperCase() === "CONVENIO");
-  }
-  return list;
-});
-
 const currentActionsConfig = computed(() => {
   if (activeFilter.value === 'PARTICULAR') {
     return { delete: false, edit: false, show: true, diary: false, print: false, download: false, restore: false, receive: false, charge: false };
@@ -498,8 +476,7 @@ const receiveForm = useForm({
 });
 
 const receiveInfo = computed(() => {
-  const id = receiveId.value;
-  const r = (rows.value || []).find(x => String(x.id) === String(id)) || {};
+  const r = activeRow.value || {};
   return {
     convenio: r?.convenio || "—",
     paciente: r?.paciente || "—",
@@ -517,7 +494,8 @@ function toDateInput(dmy) {
 
 function onReceive(id, row) {
   receiveId.value = id ?? row?.id ?? null;
-  const r = (rows.value || []).find(x => String(x.id) === String(receiveId.value)) || {};
+  activeRow.value = row;
+  const r = row || {};
   receiveForm.valor = String(r?.valor ?? "");
   receiveForm.forma_pagamento = "TRANSFERENCIA";
   receiveForm.data_pagamento = toDateInput(r?.vencimento);
@@ -538,8 +516,7 @@ const chargeForm = useForm({
 });
 
 const chargeInfo = computed(() => {
-  const id = chargeId.value;
-  const r = (rows.value || []).find(x => String(x.conta_id) === String(id) || String(x.id) === String(id)) || {};
+  const r = activeRow.value || {};
   return {
     pagador: r?.pagador || "—",
     valor: formatCurrency(r?.valor || 0),
@@ -549,6 +526,7 @@ const chargeInfo = computed(() => {
 
 function onCharge(id, row) {
   chargeId.value = row?.conta_id || id;
+  activeRow.value = row;
   chargeForm.billingType = "UNDEFINED";
   showCharge.value = true;
 }
@@ -596,7 +574,7 @@ function confirmReceive() {
 
 // Replaced the old guias modal with selectConta logic
 function onShowGuias(id, row) {
-  selectedConta.value = (rows.value || []).find(x => String(x.id) === String(id)) || null;
+  selectedConta.value = row || null;
   if (selectedConta.value) {
     loadingGuias.value = true;
     guiasLoteList.value = [];
@@ -613,9 +591,8 @@ function onShowGuias(id, row) {
 const showGuiasModal = ref(false);
 const guiasModalLoteName = ref("");
 
-function onProcedureClick(id) {
-  const r = (rows.value || []).find(x => String(x.id) === String(id));
-  openGuiasModal(id, r?.lote || id);
+function onProcedureClick(id, row) {
+  openGuiasModal(id, row?.lote || id);
 }
 
 async function openGuiasModal(faturamentoId, loteName) {

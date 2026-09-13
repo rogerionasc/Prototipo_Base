@@ -15,6 +15,7 @@ use App\Models\Procedimento;
 use App\Models\Comorbidade;
 use App\Models\TipoIntegracaoBancaria;
 use Illuminate\Support\Facades\Storage;
+use App\Models\CategoriaDespesa;
 
 class VelzonRoutesController extends Controller
 {
@@ -54,6 +55,7 @@ class VelzonRoutesController extends Controller
         $categoriasProcedimento = CategoriaProcedimento::select('id', 'nome')->orderBy('nome')->get();
         $comorbidades = Comorbidade::select('id', 'nome')->orderBy('nome')->get();
         $tiposIntegracaoBancaria = TipoIntegracaoBancaria::select('id', 'nome', 'logo')->orderBy('nome')->get();
+        $categoriasFinanceiras = CategoriaDespesa::select('id', 'descricao')->orderBy('descricao')->get();
 
         return Inertia::render('Parametrizacao/Sistema/Index', [
             'estadosCivis' => $estados,
@@ -63,6 +65,7 @@ class VelzonRoutesController extends Controller
             'categoriasProcedimento' => $categoriasProcedimento,
             'comorbidades' => $comorbidades,
             'tiposIntegracaoBancaria' => $tiposIntegracaoBancaria,
+            'categoriasFinanceiras' => $categoriasFinanceiras,
         ]);
     }
 
@@ -240,6 +243,38 @@ class VelzonRoutesController extends Controller
             'canaisAviso' => $canais,
             'parentescos' => $parentescos,
         ]);
+    }
+
+    public function parametros_store_categoria_financeira(Request $request)
+    {
+        $data = $request->validate([
+            'descricao' => ['required', 'string', 'max:100', 'unique:categoria_despesas,descricao'],
+        ], [
+            'descricao.required' => 'Informe a descrição.',
+            'descricao.unique' => 'Esta categoria já está cadastrada.',
+        ]);
+        CategoriaDespesa::create($data);
+        return back()->with('success', 'Categoria financeira cadastrada');
+    }
+
+    public function parametros_update_categoria_financeira(Request $request, int $id)
+    {
+        $data = $request->validate([
+            'descricao' => ['required', 'string', 'max:100', 'unique:categoria_despesas,descricao,' . $id],
+        ], [
+            'descricao.required' => 'Informe a descrição.',
+            'descricao.unique' => 'Esta categoria já está cadastrada.',
+        ]);
+        $categoria = CategoriaDespesa::findOrFail($id);
+        $categoria->update($data);
+        return back()->with('success', 'Categoria financeira atualizada');
+    }
+
+    public function parametros_destroy_categoria_financeira(int $id)
+    {
+        $categoria = CategoriaDespesa::findOrFail($id);
+        $categoria->delete();
+        return back()->with('success', 'Categoria financeira removida');
     }
 
     public function parametros_store_estado_civil(Request $request)

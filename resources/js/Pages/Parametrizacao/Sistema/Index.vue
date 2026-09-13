@@ -10,6 +10,7 @@
       :categoriasProcedimento="props.categoriasProcedimento"
       :comorbidades="props.comorbidades"
       :tiposIntegracaoBancaria="props.tiposIntegracaoBancaria"
+      :categoriasFinanceiras="props.categoriasFinanceiras"
     />
   </Layout>
 </template>
@@ -26,5 +27,6 @@ const props = defineProps({
   categoriasProcedimento: { type: Array, default: () => [] },
   comorbidades: { type: Array, default: () => [] },
   tiposIntegracaoBancaria: { type: Array, default: () => [] },
+  categoriasFinanceiras: { type: Array, default: () => [] },
 });
 </script>

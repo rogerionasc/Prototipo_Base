@@ -9,9 +9,9 @@ use App\Models\Pagamento;
 
 class ContasReceberController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $rows = DB::table('contas_receber as cr')
+        $query = DB::table('contas_receber as cr')
             ->leftJoin('faturamentos as f', 'f.id', '=', 'cr.faturamento_id')
             ->leftJoin('pacientes as p', 'p.id', '=', 'cr.paciente_id')
             ->leftJoin('convenios as c', 'c.id', '=', 'cr.convenio_id')
@@ -33,14 +33,61 @@ class ContasReceberController extends Controller
                 'cr.status',
                 DB::raw("(SELECT p.nu_pagamento FROM pagamentos p WHERE p.faturamento_id = cr.faturamento_id ORDER BY p.id DESC LIMIT 1) as nu_pagamento"),
                 DB::raw("(SELECT DATE_FORMAT(MAX(p.data_pagamento), '%d/%m/%Y %H:%i') FROM pagamentos p WHERE p.faturamento_id = cr.faturamento_id AND p.status = 'PAGO') as data_pagamento")
-            )
-            ->orderByDesc('cr.updated_at')
-            ->orderByDesc('cr.id')
-            ->limit(1000)
-            ->get();
+            );
+
+        // Filters
+        $filterType = $request->get('filterType', 'TODOS');
+        if ($filterType === 'PARTICULAR') {
+            $query->where(DB::raw("IFNULL(c.tipo, 'PARTICULAR')"), '!=', 'CONVENIO');
+        } elseif ($filterType === 'CONVENIO') {
+            $query->where(DB::raw("IFNULL(c.tipo, 'PARTICULAR')"), '=', 'CONVENIO');
+        }
+
+        // Search
+        $q = $request->get('q', '');
+        if (!empty($q)) {
+            $query->where(function ($query) use ($q) {
+                $query->where('p.nome', 'like', "%{$q}%")
+                      ->orWhere('c.descricao', 'like', "%{$q}%")
+                      ->orWhere('f.numero_lote', 'like', "%{$q}%");
+            });
+        }
+
+        if ($request->wantsJson() || $request->get('is_api') == 1) {
+            $limit = (int) $request->get('limit', 10);
+            $offset = (int) $request->get('offset', 0);
+
+            $total = $query->count();
+            $data = $query->orderByDesc('cr.updated_at')
+                          ->orderByDesc('cr.id')
+                          ->offset($offset)
+                          ->limit($limit)
+                          ->get();
+
+            return response()->json([
+                'data' => $data,
+                'total' => $total
+            ]);
+        }
+
+        // Se for requisição Inertia, enviamos apenas os KPIs na inicialização,
+        // pois a tabela em si fará fetch via API.
+        
+        $baseQuery = DB::table('contas_receber as cr')
+            ->leftJoin('convenios as c', 'c.id', '=', 'cr.convenio_id');
+            
+        $recebidas = (clone $baseQuery)->where('cr.status', 'RECEBIDO')->sum('cr.valor');
+        
+        // Pendentes e vencidas que não são recebidas nem canceladas
+        $pendentes = (clone $baseQuery)->whereNotIn('cr.status', ['RECEBIDO', 'CANCELADO'])->whereDate('cr.vencimento', '>=', now()->toDateString())->sum('cr.valor');
+        $vencidas = (clone $baseQuery)->whereNotIn('cr.status', ['RECEBIDO', 'CANCELADO'])->whereDate('cr.vencimento', '<', now()->toDateString())->sum('cr.valor');
 
         return Inertia::render('Financeiro/ContasReceber/Index', [
-            'contas' => $rows,
+            'kpis' => [
+                'totalAReceber' => (float)$pendentes,
+                'totalVencido' => (float)$vencidas,
+                'totalRecebido' => (float)$recebidas,
+            ]
         ]);
     }
 

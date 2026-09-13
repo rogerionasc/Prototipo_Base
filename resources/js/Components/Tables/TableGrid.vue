@@ -452,21 +452,33 @@ function initGrid() {
                 if (!row || !row.cells || !Array.isArray(row.cells)) {
                     return html(`<div class="d-flex gap-2"></div>`);
                 }
-                const idIndex = props.showCheckbox ? 1 : 0;
-                const firstCell = row.cells[idIndex]?.data;
-                let idCol;
-                if (visibleBaseColumns[0] && typeof visibleBaseColumns[0] === 'object') {
-                    idCol = visibleBaseColumns[0].id || visibleBaseColumns[0].name;
-                } else {
-                    idCol = visibleBaseColumns[0];
-                }
+                
                 const rowBase = props.serverUrl ? (lastServerRows.value || []) : (props.data || []);
-                const rowData = rowBase.find(r => {
-                    const matchId = r.id && String(r.id) === String(firstCell);
-                    const matchCol = idCol && String(r[idCol]) === String(firstCell);
-                    return matchId || matchCol;
-                }) || {};
-                const rowId = rowData?.id || firstCell;
+                let rowData = {};
+                
+                // cell already contains r.id because we mapped it in server block
+                if (cell !== undefined && cell !== null && String(cell).trim() !== '') {
+                    rowData = rowBase.find(r => String(r.id) === String(cell)) || {};
+                }
+                
+                // Fallback Se cell não tiver o ID
+                if (!rowData.id) {
+                    const idIndex = props.showCheckbox ? 1 : 0;
+                    const firstCell = row.cells[idIndex]?.data;
+                    let idCol;
+                    if (visibleBaseColumns[0] && typeof visibleBaseColumns[0] === 'object') {
+                        idCol = visibleBaseColumns[0].id || visibleBaseColumns[0].name;
+                    } else {
+                        idCol = visibleBaseColumns[0];
+                    }
+                    rowData = rowBase.find(r => {
+                        const matchId = r.id && String(r.id) === String(firstCell);
+                        const matchCol = idCol && String(r[idCol]) === String(firstCell);
+                        return matchId || matchCol;
+                    }) || {};
+                }
+                
+                const rowId = rowData?.id || cell;
                 const rowDataStr = JSON.stringify(rowData).replace(/'/g, "&#39;");
                 const ac = props.actionsConfig || { delete: true, edit: true, show: true, diary: false };
                 const al = props.actionsLabels || {};
@@ -588,7 +600,7 @@ function initGrid() {
                 return rows.map((r) => gridColumns.map((c) => {
                     const key = c?.id;
                     if (!key) return null;
-                    if (key === 'select' || key === 'actions') return null;
+                    if (key === 'select' || key === 'actions') return r.id ?? Date.now() + Math.random();
                     return r?.[key] ?? null;
                 }));
             },
